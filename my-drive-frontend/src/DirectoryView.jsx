@@ -3,9 +3,10 @@ import "./directoryview.css";
 import ItemsList from "./ItemsList";
 import { useParams } from "react-router-dom";
 import { SERVER_URL } from "./api";
-import { joinUrl } from "./utils";
+import { getUser, joinUrl } from "./utils";
 import { useNavigate } from "react-router-dom";
 import TransferMenu from "./TransferMenu";
+import FileUploadModal from "./FileUploadModal";
 
 const DirectoryView = () => {
   const [directoryName, setDirectoryName] = useState("Root");
@@ -13,6 +14,8 @@ const DirectoryView = () => {
   const [filesList, setFilesList] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [isDirectoryEmpty, setIsDirectoryEmpty] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [user, setUser] = useState();
 
   const params = useParams();
   const dirId = params["dirId"];
@@ -45,16 +48,20 @@ const DirectoryView = () => {
     };
     fetchData();
   }
+
+  useEffect(() => {
+    getUser(setUser);
+  }, []);
+
   useEffect(() => {
     getFiles();
+    console.log(user);
   }, [dirId]);
 
-  async function uploadFiles(e) {
-    const files = Array.from(e.target.files);
+  async function handleModalUpload(files) {
     for (const file of files) {
       await transferRef.current.uploadFile(file, dirId);
     }
-    e.target.value = null;
     getFiles();
   }
 
@@ -80,7 +87,7 @@ const DirectoryView = () => {
 
   // --- Unified Handlers ---
 
-  async function handleRename(item, type) {
+  async function handleRename(itemId, type) {
     if (!inputValue) {
       alert("Please enter a new name in the input field.");
       return;
@@ -88,7 +95,7 @@ const DirectoryView = () => {
     const endpoint = type === "directory" ? "directory" : "file";
     const bodyKey = type === "directory" ? "newDirName" : "newFileName";
 
-    const res = await fetch(`${SERVER_URL}/${endpoint}/${item.id}`, {
+    const res = await fetch(`${SERVER_URL}/${endpoint}/${itemId}`, {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -100,9 +107,9 @@ const DirectoryView = () => {
     setInputValue("");
   }
 
-  async function handleDelete(item, type) {
+  async function handleDelete(itemId, type) {
     const endpoint = type === "directory" ? "directory" : "file";
-    const res = await fetch(`${SERVER_URL}/${endpoint}/${item.id}`, {
+    const res = await fetch(`${SERVER_URL}/${endpoint}/${itemId}`, {
       method: "DELETE",
       credentials: "include",
     });
@@ -135,12 +142,7 @@ const DirectoryView = () => {
             <span>{directoryName}</span>
             <button
               className="rename-root-btn"
-              onClick={() =>
-                handleRename(
-                  { id: dirId || "root", name: directoryName },
-                  "directory",
-                )
-              }
+              onClick={() => handleRename(user.rootDirectoryId, "directory")}
               title="Rename Folder"
             >
               <img src="/features/edit.png" alt="Rename" />
@@ -158,33 +160,14 @@ const DirectoryView = () => {
           </button>
         </div>
         <div className="upload-files">
-          <input
-            id="fileInput"
-            type="file"
-            multiple
-            hidden
-            onChange={uploadFiles}
-          />
-
-          <label
-            htmlFor="fileInput"
+          <button
+            className="upload-trigger"
+            onClick={() => setIsUploadModalOpen(true)}
             title="Upload files"
-            style={{
-              cursor: "pointer",
-              width: "max-content",
-              display: "flex",
-              alignItems: "center",
-              gap: "15px",
-              marginInline: "auto",
-            }}
           >
             Upload Files
-            <img
-              src="/features/upload.png"
-              alt="Upload"
-              style={{ width: "30px" }}
-            />
-          </label>
+            <img src="/features/upload.png" alt="Upload" />
+          </button>
         </div>
         <input
           type="text"
@@ -202,8 +185,8 @@ const DirectoryView = () => {
             type="directory"
             serverUrl={SERVER_URL}
             onDownload={downloadDirectoryHandler}
-            onRename={(item) => handleRename(item, "directory")}
-            onDelete={(item) => handleDelete(item, "directory")}
+            onRename={(item) => handleRename(item.id, "directory")}
+            onDelete={(item) => handleDelete(item.id, "directory")}
           />
         )}
 
@@ -212,13 +195,18 @@ const DirectoryView = () => {
             items={filesList}
             type="file"
             serverUrl={SERVER_URL}
-            onRename={(item) => handleRename(item, "file")}
-            onDelete={(item) => handleDelete(item, "file")}
+            onRename={(item) => handleRename(item.id, "file")}
+            onDelete={(item) => handleDelete(item.id, "file")}
             onDownload={downloadFileHandler}
           />
         )}
       </div>
       <TransferMenu ref={transferRef} />
+      <FileUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onUpload={handleModalUpload}
+      />
     </div>
   );
 };

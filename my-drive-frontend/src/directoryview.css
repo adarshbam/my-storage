@@ -98,7 +98,7 @@
   margin-bottom: 20px;
 }
 
-.upload-files label {
+.upload-files .upload-trigger {
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -108,19 +108,20 @@
   border-radius: 50px;
   font-size: 0.95rem;
   font-weight: 600;
+  width: max-content;
   color: #333;
   transition: all 0.2s;
   border: 1px solid #e0e0e0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.upload-files label:hover {
+.upload-files .upload-trigger:hover {
   background-color: #ededed;
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
 }
 
-.upload-files label img {
+.upload-files .upload-trigger img {
   width: 20px !important;
   opacity: 0.7;
 }

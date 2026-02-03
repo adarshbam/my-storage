@@ -13,9 +13,12 @@ const BASE = "storage";
 router.get("/", checkAuth, (req, res) => {
   const user = req.user;
   console.log(user);
-  return res
-    .status(200)
-    .json({ name: user.name, email: user.email, profilepic: user.profilepic });
+  return res.status(200).json({
+    name: user.name,
+    email: user.email,
+    profilepic: user.profilepic,
+    rootDirectoryId: user.rootDirId,
+  });
 });
 
 router.post("/register", async (req, res) => {
