@@ -1,0 +1,8 @@
+my-drive-backend-with-express/node_modules/
+my-drive-backend-with-express/storage/
+my-drive-frontend/node_modules/
+node_modules/
+storage/
+.env
+*.log
+.DS_Store

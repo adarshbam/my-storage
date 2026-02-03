@@ -1,0 +1,173 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+  background-color: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 450px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  animation: scaleUp 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleUp {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.modal-header h2 {
+  font-size: 1.25rem;
+  color: #fff;
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  width: auto;
+}
+
+.close-btn:hover {
+  color: #fff;
+}
+
+.drop-zone {
+  border: 2px dashed #444;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background-color: #222;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-active {
+  border-color: #fff;
+  background-color: #2a2a2a;
+}
+
+.upload-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.upload-placeholder p {
+  color: #aaa;
+  margin: 0.25rem 0;
+}
+
+.upload-placeholder span {
+  color: #fff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.upload-hint {
+  font-size: 0.8rem;
+  color: #666 !important;
+}
+
+.file-preview {
+  color: #fff;
+}
+
+.remove-file-btn {
+  background: none;
+  border: 1px solid #ff4d4d;
+  color: #ff4d4d;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  cursor: pointer;
+  width: auto;
+}
+
+.remove-file-btn:hover {
+  background-color: rgba(255, 77, 77, 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.cancel-btn,
+.upload-submit-btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  font-weight: 500;
+  width: auto;
+}
+
+.cancel-btn {
+  background-color: transparent;
+  color: #aaa;
+}
+
+.cancel-btn:hover {
+  color: #fff;
+}
+
+.upload-submit-btn {
+  background-color: #fff;
+  color: #000;
+  transition: opacity 0.2s;
+}
+
+.upload-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.upload-submit-btn:hover:not(:disabled) {
+  background-color: #e0e0e0;
+}

@@ -1,0 +1,40 @@
+header {
+  background-color: #222;
+  position: fixed;
+  width: 100%;
+  padding: 0.625rem 2.5rem;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #fff;
+  margin: 0 auto;
+  max-width: 1280px;
+}
+
+.navbar ul {
+  display: flex;
+  flex-direction: row;
+  list-style: none;
+}
+
+.navbar a {
+  width: 2.5rem;
+  display: block;
+}
+
+.navbar a img {
+  width: 100%;
+}
+
+button {
+  width: 1.875rem;
+}
+
+@media (max-width: 768px) {
+  header {
+    padding: 10px 20px;
+  }
+}

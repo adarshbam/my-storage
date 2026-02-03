@@ -1,0 +1,25 @@
+* {
+  box-sizing: border-box;
+  font-family: "Open Sans", sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  text-decoration: none;
+  color: #000;
+  font-size: 0.875rem;
+}
+
+img {
+  transition: transform 0.25s ease-in-out;
+}
+
+a:hover img,
+button:hover img,
+label:hover img {
+  transform: scale(1.1);
+}
