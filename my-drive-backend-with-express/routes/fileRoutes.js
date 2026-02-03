@@ -5,9 +5,13 @@ import { createReadStream, createWriteStream } from "fs";
 import filesData from "../filesDB.json" with { type: "json" };
 import directoriesData from "../directoryDB.json" with { type: "json" };
 import trashDB from "../trashDB.json" with { type: "json" };
+import validateIdMiddleware from "../middlewares/validateIdMiddleware.js";
 
 const router = express.Router();
 const BASE = "storage";
+
+router.param("parentDirId", validateIdMiddleware);
+router.param("fileId", validateIdMiddleware);
 
 router.get("/:fileId", async (req, res) => {
   try {
@@ -37,8 +41,6 @@ router.get("/:fileId", async (req, res) => {
 
     res.setHeader("Content-Type", "application/octet-stream");
     res.setHeader("X-Total-Size", fileSize);
-
-    // ❌ DO NOT set Content-Disposition here
 
     if (range) {
       const start = Number(range.replace(/\D/g, ""));

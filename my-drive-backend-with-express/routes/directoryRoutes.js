@@ -5,13 +5,22 @@ import filesData from "../filesDB.json" with { type: "json" };
 import directoriesData from "../directoryDB.json" with { type: "json" };
 import trashDB from "../trashDB.json" with { type: "json" };
 import path from "path";
+import validateIdMiddleware from "../middlewares/validateIdMiddleware.js";
 
 const BASE = "storage";
 
 const router = express.Router();
 
+router.param("parentDirId", validateIdMiddleware);
+router.param("dirId", validateIdMiddleware);
+
 router.get("/{:dirId}", async (req, res) => {
   const rootDirId = decodeURIComponent(req.cookies.rootDirId);
+  console.log(rootDirId);
+
+  if (!rootDirId) {
+    res.redirect(`http://localhost:5173/login`);
+  }
 
   try {
     const dirId = req.params.dirId || rootDirId;

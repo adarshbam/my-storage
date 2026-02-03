@@ -4,7 +4,7 @@ import directoryDB from "../directoryDB.json" with { type: "json" };
 import { rm, writeFile } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
 import path from "node:path";
-import checkAuth from "../auth.js";
+import checkAuth from "../middlewares/authMiddleware.js";
 import filesData from "../filesDB.json" with { type: "json" };
 
 const router = express.Router();

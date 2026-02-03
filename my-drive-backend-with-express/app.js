@@ -6,7 +6,8 @@ import trashRouter from "./routes/trashRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 
 import cors from "cors";
-import checkAuth from "./auth.js";
+import checkAuth from "./middlewares/authMiddleware.js";
+
 const app = express();
 
 app.use(

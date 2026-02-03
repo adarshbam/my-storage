@@ -1,4 +1,4 @@
-import usersDB from "./usersDB.json" with { type: "json" };
+import usersDB from "../usersDB.json" with { type: "json" };
 
 function checkAuth(req, res, next) {
   const userId = decodeURIComponent(req.cookies.userId);
