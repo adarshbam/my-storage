@@ -1,58 +1,67 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import getFileImage from "./FileImages";
 
 const ItemsList = ({
   items,
   type, // "directory" | "file"
   serverUrl,
+  selectedItems = [],
+  onToggleSelection = () => {},
   onRename,
   onDelete,
   onDownload,
   onRestore,
 }) => {
+  const navigate = useNavigate();
+
   if (!items || items.length === 0) return null;
+
+  const handleDoubleClick = (item) => {
+    if (type === "directory") {
+      navigate(`/directory/${item.id}?action=open`);
+    } else {
+      // For files, open in new tab/download
+      window.location.href = `${serverUrl}/file/${item.id}?action=open`;
+    }
+  };
+
+  const handleClick = (e, item) => {
+    e.preventDefault(); // Prevent default link behavior if we wrap in Link/a
+    onToggleSelection(item);
+  };
 
   return (
     <ul>
       {items.map((item) => {
+        const isSelected = selectedItems.some((i) => i.id === item.id);
         return (
-          <li key={item.id} style={{ listStyle: "none" }}>
-            {/* OPEN / NAVIGATE */}
-            {type === "directory" ? (
-              <Link
-                to={`/directory/${item.id}?action=open`}
-                title="Open Directory"
-                style={{ display: "flex", alignItems: "center" }}
-              >
-                <img
-                  src={"/folder.png"}
-                  alt={item.name}
-                  style={{
-                    width: "1.875rem",
-                    verticalAlign: "middle",
-                    marginRight: ".625rem",
-                  }}
-                />
-                {item.name}
-              </Link>
-            ) : (
-              <a
-                href={`${serverUrl}/file/${item.id}?action=open`}
-                title="Open File"
-                style={{ display: "flex", alignItems: "center" }}
-              >
-                <img
-                  src={getFileImage(item.extension.slice(1))}
-                  alt={item.name}
-                  style={{
-                    width: "1.875rem",
-                    verticalAlign: "middle",
-                    marginRight: ".3125rem",
-                  }}
-                />
-                {item.name}
-              </a>
-            )}
+          <li
+            key={item.id}
+            className={isSelected ? "active" : ""}
+            onClick={(e) => handleClick(e, item)}
+            onDoubleClick={() => handleDoubleClick(item)}
+            style={{ listStyle: "none", cursor: "pointer" }}
+          >
+            {/* ITEM CONTENT */}
+            <div
+              title={type === "directory" ? "Open Directory" : "Open File"}
+              style={{ display: "flex", alignItems: "center", flex: 1 }}
+            >
+              <img
+                src={
+                  type === "directory"
+                    ? "/folder.png"
+                    : getFileImage(item.extension?.slice(1))
+                }
+                alt={item.name}
+                style={{
+                  width: "1.875rem",
+                  verticalAlign: "middle",
+                  marginRight: type === "directory" ? ".625rem" : ".3125rem",
+                }}
+              />
+              {item.name}
+            </div>
 
             {/* ACTION BUTTONS */}
             <div
@@ -62,6 +71,8 @@ const ItemsList = ({
                 marginLeft: "auto",
                 verticalAlign: "middle",
               }}
+              onClick={(e) => e.stopPropagation()} // Prevent selection when clicking actions
+              onDoubleClick={(e) => e.stopPropagation()}
             >
               {/* DOWNLOAD */}
               {onDownload && (
@@ -70,24 +81,11 @@ const ItemsList = ({
                   title={`Download ${type === "directory" ? "Directory" : "File"}`}
                   style={{ width: "2.5rem" }}
                 >
-                  {type === "directory" ? (
-                    <img src="/features/download.png" alt="Download" />
-                  ) : (
-                    // For files, we can use a direct download link if onDownload isn't custom logic,
-                    // but the original used a simpler valid anchor inside a button?
-                    // Original FilesList: <a href... download> inside <button>
-                    // Let's preserve the original behavior for file download if it was just a link,
-                    // OR standardise on a handler.
-                    // The original FilesList had:
-                    // <a href={`${serverUrl}/file/${item.id}?action=download`} download>...</a>
-                    // to maintain exact behavior for files without a handler:
-
-                    <img
-                      src="/features/download.png"
-                      alt="Download"
-                      style={{ width: "100%" }}
-                    />
-                  )}
+                  <img
+                    src="/features/download.png"
+                    alt="Download"
+                    style={{ width: "100%" }}
+                  />
                 </button>
               )}
 

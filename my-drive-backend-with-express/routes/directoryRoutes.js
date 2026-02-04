@@ -1,11 +1,12 @@
 import archiver from "archiver";
-import { writeFile, stat } from "fs/promises";
+import { stat } from "fs/promises";
 import express from "express";
 import filesData from "../filesDB.json" with { type: "json" };
 import directoriesData from "../directoryDB.json" with { type: "json" };
 import trashDB from "../trashDB.json" with { type: "json" };
 import path from "path";
 import validateIdMiddleware from "../middlewares/validateIdMiddleware.js";
+import { writeJSON } from "../utils/jsonDB.js";
 
 const BASE = "storage";
 
@@ -154,7 +155,7 @@ router.post("/{:parentDirId}", async (req, res) => {
       directories: [],
     });
 
-    await writeFile("./directoryDB.json", JSON.stringify(directoriesData));
+    await writeJSON("./directoryDB.json", directoriesData);
     return res.status(201).send("Folder created successfully");
   } catch (err) {
     if (err.code === "EEXIST") {
@@ -177,7 +178,7 @@ router.patch("/:dirId", async (req, res) => {
     }
     const { newDirName } = req.body;
     directoryData.name = newDirName;
-    await writeFile("./directoryDB.json", JSON.stringify(directoriesData));
+    await writeJSON("./directoryDB.json", directoriesData);
     return res.status(200).send("Folder renamed successfully");
   } catch {
     return res.status(404).send("Folder not found");
@@ -211,8 +212,8 @@ router.delete("/:dirId", async (req, res) => {
     console.log(parentDirectory);
     trashDB.push(directoriesData.splice(dirIndex, 1)[0]);
 
-    await writeFile("./directoryDB.json", JSON.stringify(directoriesData));
-    await writeFile("./trashDB.json", JSON.stringify(trashDB));
+    await writeJSON("./directoryDB.json", directoriesData);
+    await writeJSON("./trashDB.json", trashDB);
 
     return res.status(200).send("File deleted successfully");
   } catch {

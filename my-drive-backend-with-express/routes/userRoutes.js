@@ -1,9 +1,10 @@
 import express from "express";
 import usersDB from "../usersDB.json" with { type: "json" };
 import directoryDB from "../directoryDB.json" with { type: "json" };
-import { rm, writeFile } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
 import path from "node:path";
+import { writeJSON } from "../utils/jsonDB.js";
 import checkAuth from "../middlewares/authMiddleware.js";
 import filesData from "../filesDB.json" with { type: "json" };
 
@@ -54,8 +55,8 @@ router.post("/register", async (req, res) => {
   });
 
   try {
-    await writeFile("usersDB.json", JSON.stringify(usersDB));
-    await writeFile("directoryDB.json", JSON.stringify(directoryDB));
+    await writeJSON("usersDB.json", usersDB);
+    await writeJSON("directoryDB.json", directoryDB);
     return res.status(200).json({ message: "Registered" });
   } catch (err) {
     console.error(err);
@@ -148,8 +149,8 @@ router.post("/profilepic", checkAuth, async (req, res) => {
 
   user.profilepic = profilePicId;
   try {
-    await writeFile("usersDB.json", JSON.stringify(usersDB));
-    await writeFile("filesDB.json", JSON.stringify(filesData)); // Save filesDB too
+    await writeJSON("usersDB.json", usersDB);
+    await writeJSON("filesDB.json", filesData); // Save filesDB too
 
     writeStream.on("finish", () => {
       return res.status(200).json({ message: "Profile pic updated" });

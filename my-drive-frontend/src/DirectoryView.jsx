@@ -17,6 +17,19 @@ const DirectoryView = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [user, setUser] = useState();
 
+  // Selection Logic
+  const [selectedItems, setSelectedItems] = useState([]);
+
+  function toggleSelection(item) {
+    if (selectedItems.some((i) => i.id === item.id)) {
+      // Deselect
+      setSelectedItems((prev) => prev.filter((i) => i.id !== item.id));
+    } else {
+      // Select
+      setSelectedItems((prev) => [...prev, item]);
+    }
+  }
+
   const params = useParams();
   const dirId = params["dirId"];
   const navigate = useNavigate();
@@ -85,6 +98,15 @@ const DirectoryView = () => {
     setInputValue("");
   }
 
+  function deleteSelectedItems() {
+    console.log(selectedItems);
+    selectedItems.forEach((item) => {
+      handleDelete(item.id, item.type);
+    });
+    setSelectedItems([]);
+    getFiles();
+  }
+
   // --- Unified Handlers ---
 
   async function handleRename(itemId, type) {
@@ -148,16 +170,27 @@ const DirectoryView = () => {
               <img src="/features/edit.png" alt="Rename" />
             </button>
           </h1>
-          <button
-            className="create-folder-btn"
-            onClick={createFolder}
-            title="Create New Folder"
-          >
-            <div className="folder-icon-wrapper">
-              <img src="/folder.png" alt="Create Folder" />
-              <span className="plus-badge">+</span>
-            </div>
-          </button>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <button
+              className="create-folder-btn"
+              onClick={deleteSelectedItems}
+              title="Delete Selected Items"
+            >
+              <div className="folder-icon-wrapper">
+                <img src="/features/delete.png" alt="Delete" />
+              </div>
+            </button>
+            <button
+              className="create-folder-btn"
+              onClick={createFolder}
+              title="Create New Folder"
+            >
+              <div className="folder-icon-wrapper">
+                <img src="/folder.png" alt="Create Folder" />
+                <span className="plus-badge">+</span>
+              </div>
+            </button>
+          </div>
         </div>
         <div className="upload-files">
           <button
@@ -184,6 +217,8 @@ const DirectoryView = () => {
             items={directoriesList}
             type="directory"
             serverUrl={SERVER_URL}
+            selectedItems={selectedItems}
+            onToggleSelection={toggleSelection}
             onDownload={downloadDirectoryHandler}
             onRename={(item) => handleRename(item.id, "directory")}
             onDelete={(item) => handleDelete(item.id, "directory")}
@@ -195,6 +230,8 @@ const DirectoryView = () => {
             items={filesList}
             type="file"
             serverUrl={SERVER_URL}
+            selectedItems={selectedItems}
+            onToggleSelection={toggleSelection}
             onRename={(item) => handleRename(item.id, "file")}
             onDelete={(item) => handleDelete(item.id, "file")}
             onDownload={downloadFileHandler}

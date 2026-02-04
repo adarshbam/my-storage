@@ -1,7 +1,8 @@
 import express from "express";
 import path from "path";
-import { writeFile, stat } from "fs/promises";
+import { stat } from "fs/promises";
 import { createReadStream, createWriteStream } from "fs";
+import { writeJSON } from "../utils/jsonDB.js";
 import filesData from "../filesDB.json" with { type: "json" };
 import directoriesData from "../directoryDB.json" with { type: "json" };
 import trashDB from "../trashDB.json" with { type: "json" };
@@ -125,13 +126,10 @@ router.post("/{:parentDirId}", async (req, res) => {
 
         if (parentDirData && parentDirData.files) {
           parentDirData.files.push(id);
-          await writeFile(
-            "./directoryDB.json",
-            JSON.stringify(directoriesData),
-          );
+          await writeJSON("./directoryDB.json", directoriesData);
         }
 
-        await writeFile("./filesDB.json", JSON.stringify(filesData));
+        await writeJSON("./filesDB.json", filesData);
       }
 
       if (!res.writableEnded) return res.status(201).send("File uploaded");
@@ -157,7 +155,7 @@ router.patch("/:fileId", async (req, res) => {
     }
     const { newFileName } = req.body;
     file.name = newFileName;
-    await writeFile("./filesDB.json", JSON.stringify(filesData));
+    await writeJSON("./filesDB.json", filesData);
     return res.status(200).send("File renamed successfully");
   } catch {
     return res.status(500).send("Internal Server Error");
@@ -184,11 +182,11 @@ router.delete("/:fileId", async (req, res) => {
       (fId) => fId !== fileId,
     );
     console.log(parentDirectory);
-    await writeFile("./directoryDB.json", JSON.stringify(directoriesData));
+    await writeJSON("./directoryDB.json", directoriesData);
 
     trashDB.push(filesData.splice(fileIndex, 1)[0]);
-    await writeFile("./filesDB.json", JSON.stringify(filesData));
-    await writeFile("./trashDB.json", JSON.stringify(trashDB));
+    await writeJSON("./filesDB.json", filesData);
+    await writeJSON("./trashDB.json", trashDB);
 
     return res.status(200).send("File deleted successfully");
   } catch {
