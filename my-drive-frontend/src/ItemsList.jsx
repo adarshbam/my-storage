@@ -11,6 +11,9 @@ const ItemsList = ({
   onDelete,
   onDownload,
   onRestore,
+  onDragStart,
+  onDragOver,
+  onDrop,
 }) => {
   const navigate = useNavigate();
 
@@ -41,6 +44,10 @@ const ItemsList = ({
             onClick={(e) => handleClick(e, item)}
             onDoubleClick={() => handleDoubleClick(item)}
             style={{ listStyle: "none", cursor: "pointer" }}
+            onDragStart={(e) => onDragStart(e, item)}
+            onDragOver={onDrop ? (e) => onDragOver(e, item) : undefined}
+            onDrop={onDrop ? (e) => onDrop(e, item) : undefined}
+            draggable={true}
           >
             {/* ITEM CONTENT */}
             <div

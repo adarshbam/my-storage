@@ -38,6 +38,22 @@
   color: #333; /* Dark text for light theme */
 }
 
+/* Back Button Styles */
+.back-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+  padding: 0;
+}
+
+.back-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
 .rename-root-btn {
   width: 24px;
   height: 24px;
@@ -63,8 +79,8 @@
 
 .folder-icon-wrapper {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 32px; /* Reduced from 40px to match text better */
+  height: 32px;
 }
 
 .folder-icon-wrapper img {
@@ -79,14 +95,14 @@
   right: -2px;
   background-color: #333; /* Dark badge */
   color: #fff;
-  width: 16px;
-  height: 16px;
+  width: 14px; /* Slightly smaller badge */
+  height: 14px;
   border-radius: 50%;
   border: 2px solid #fff; /* White border to separate from icon */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 10px;
   font-weight: bold;
   line-height: 1;
 }

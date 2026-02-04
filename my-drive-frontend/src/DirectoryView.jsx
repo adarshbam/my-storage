@@ -11,6 +11,7 @@ import FileUploadModal from "./FileUploadModal";
 const DirectoryView = () => {
   const [directoryName, setDirectoryName] = useState("Root");
   const [directoriesList, setDirectoriesList] = useState([]);
+  const [parentDirId, setParentDirId] = useState(null);
   const [filesList, setFilesList] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [isDirectoryEmpty, setIsDirectoryEmpty] = useState(false);
@@ -52,6 +53,7 @@ const DirectoryView = () => {
 
       setDirectoryName(data?.name);
       setDirectoriesList(data?.directories);
+      setParentDirId(data?.parentDir);
 
       setFilesList(data?.files);
       setIsDirectoryEmpty(
@@ -156,12 +158,69 @@ const DirectoryView = () => {
     );
   }
 
+  // --- Drag and Drop Handlers ---
+
+  function handleDragStart(e, item) {
+    e.dataTransfer.setData("draggedData", JSON.stringify(item));
+  }
+
+  function handleDragOver(e, itemId) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }
+
+  async function handleDrop(e, targetId) {
+    e.preventDefault();
+    e.stopPropagation();
+    const draggedItem = JSON.parse(e.dataTransfer.getData("draggedData"));
+    if (targetId === draggedItem.id) {
+      return;
+    }
+    let draggedItems;
+    if (selectedItems.length !== 0) {
+      draggedItems = selectedItems;
+    } else {
+      draggedItems = [draggedItem];
+      console.log(draggedItems);
+    }
+    console.log(draggedItems, targetId);
+    const res = await fetch(`${SERVER_URL}/directory/${targetId}/move`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(draggedItems),
+    });
+    const data = await res.json();
+    console.log(data);
+    if (res.ok) {
+      getFiles();
+    }
+  }
+
   return (
     <div className="directory-container">
       <div className="directory-view">
         <div className="directory-header">
           <h1 className="directory-title">
-            <span>{directoryName}</span>
+            {dirId && (
+              <button
+                className="back-btn"
+                onClick={() =>
+                  navigate(parentDirId ? `/directory/${parentDirId}` : "/")
+                }
+                title="Go Back"
+                onDrop={(e) => handleDrop(e, parentDirId)}
+                onDragOver={(e) => handleDragOver(e, parentDirId)}
+              >
+                <img src="/features/return.png" alt="Back" />
+              </button>
+            )}
+            <span
+              onDrop={(e) => handleDrop(e, dirId)}
+              onDragOver={(e) => handleDragOver(e, dirId)}
+            >
+              {directoryName}
+            </span>
             <button
               className="rename-root-btn"
               onClick={() => handleRename(user.rootDirectoryId, "directory")}
@@ -170,25 +229,23 @@ const DirectoryView = () => {
               <img src="/features/edit.png" alt="Rename" />
             </button>
           </h1>
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
             <button
-              className="create-folder-btn"
+              className="create-folder-btn folder-icon-wrapper"
               onClick={deleteSelectedItems}
               title="Delete Selected Items"
             >
-              <div className="folder-icon-wrapper">
+              <div style={{ width: "28px", height: "28px" }}>
                 <img src="/features/delete.png" alt="Delete" />
               </div>
             </button>
             <button
-              className="create-folder-btn"
+              className="create-folder-btn folder-icon-wrapper"
               onClick={createFolder}
               title="Create New Folder"
             >
-              <div className="folder-icon-wrapper">
-                <img src="/folder.png" alt="Create Folder" />
-                <span className="plus-badge">+</span>
-              </div>
+              <img src="/folder.png" alt="Create Folder" />
+              <span className="plus-badge">+</span>
             </button>
           </div>
         </div>
@@ -222,6 +279,9 @@ const DirectoryView = () => {
             onDownload={downloadDirectoryHandler}
             onRename={(item) => handleRename(item.id, "directory")}
             onDelete={(item) => handleDelete(item.id, "directory")}
+            onDragStart={(e, item) => handleDragStart(e, item)}
+            onDragOver={(e, item) => handleDragOver(e, item.id)}
+            onDrop={(e, item) => handleDrop(e, item.id)}
           />
         )}
 
@@ -235,6 +295,8 @@ const DirectoryView = () => {
             onRename={(item) => handleRename(item.id, "file")}
             onDelete={(item) => handleDelete(item.id, "file")}
             onDownload={downloadFileHandler}
+            onDragStart={(e, item) => handleDragStart(e, item)}
+            onDragOver={(e, item) => handleDragOver(e, item.id)}
           />
         )}
       </div>

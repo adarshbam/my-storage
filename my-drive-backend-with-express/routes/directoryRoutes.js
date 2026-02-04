@@ -7,6 +7,7 @@ import trashDB from "../trashDB.json" with { type: "json" };
 import path from "path";
 import validateIdMiddleware from "../middlewares/validateIdMiddleware.js";
 import { writeJSON } from "../utils/jsonDB.js";
+import checkAuth from "../middlewares/authMiddleware.js";
 
 const BASE = "storage";
 
@@ -218,6 +219,63 @@ router.delete("/:dirId", async (req, res) => {
     return res.status(200).send("File deleted successfully");
   } catch {
     return res.status(500).send("Internal Server Error");
+  }
+});
+
+router.patch("/:dirId/move", checkAuth, async (req, res) => {
+  try {
+    const { dirId } = req.params;
+    const transfers = req.body;
+
+    const targetDir = directoriesData.find((dir) => dir.id === dirId);
+    if (!targetDir) {
+      return res.status(404).json({ message: "Target folder not found" });
+    }
+
+    transfers.forEach((transfer) => {
+      if (transfer.id === dirId) {
+        return;
+      }
+      if (transfer.type === "directory") {
+        const directory = directoriesData.find((d) => d.id === transfer.id);
+        if (!directory) return;
+
+        // 🔴 remove from old parent
+        const oldParent = directoriesData.find(
+          (d) => d.id === directory.parentDir,
+        );
+        if (oldParent) {
+          oldParent.directories = oldParent.directories.filter(
+            (id) => id !== directory.id,
+          );
+        }
+
+        // 🟢 add to new parent
+        targetDir.directories.push(directory.id);
+        directory.parentDir = dirId;
+      } else {
+        const file = filesData.find((f) => f.id === transfer.id);
+        if (!file) return;
+
+        // 🔴 remove from old parent
+        const oldParent = directoriesData.find((d) => d.id === file.parentDir);
+        if (oldParent) {
+          oldParent.files = oldParent.files.filter((id) => id !== file.id);
+        }
+
+        // 🟢 add to new parent
+        targetDir.files.push(file.id);
+        file.parentDir = dirId;
+      }
+    });
+
+    await writeJSON("./directoryDB.json", directoriesData);
+    await writeJSON("./filesDB.json", filesData);
+
+    return res.status(200).json({ message: "Items moved successfully" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Move failed" });
   }
 });
 
