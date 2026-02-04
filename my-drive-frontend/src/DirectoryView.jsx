@@ -173,6 +173,7 @@ const DirectoryView = () => {
     e.preventDefault();
     e.stopPropagation();
     const draggedItem = JSON.parse(e.dataTransfer.getData("draggedData"));
+    console.log(draggedItem, targetId);
     if (targetId === draggedItem.id) {
       return;
     }
@@ -202,7 +203,7 @@ const DirectoryView = () => {
       <div className="directory-view">
         <div className="directory-header">
           <h1 className="directory-title">
-            {dirId && (
+            {dirId !== user?.rootDirectoryId && (
               <button
                 className="back-btn"
                 onClick={() =>
