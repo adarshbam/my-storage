@@ -182,9 +182,13 @@ router.delete("/:fileId", async (req, res) => {
       (fId) => fId !== fileId,
     );
     console.log(parentDirectory);
-    await writeJSON("./directoryDB.json", directoriesData);
 
-    trashDB.push(filesData.splice(fileIndex, 1)[0]);
+    // CRITICAL FIX: Perform all in-memory updates synchronously BEFORE any await
+    // This prevents race conditions where indices become stale during async writes
+    const deletedFile = filesData.splice(fileIndex, 1)[0];
+    trashDB.push(deletedFile);
+
+    await writeJSON("./directoryDB.json", directoriesData);
     await writeJSON("./filesDB.json", filesData);
     await writeJSON("./trashDB.json", trashDB);
 
