@@ -2,11 +2,19 @@ import express from "express";
 import path from "path";
 import { stat } from "fs/promises";
 import { createReadStream, createWriteStream } from "fs";
-import { writeJSON } from "../utils/jsonDB.js";
-import filesData from "../filesDB.json" with { type: "json" };
-import directoriesData from "../directoryDB.json" with { type: "json" };
-import trashDB from "../trashDB.json" with { type: "json" };
 import validateIdMiddleware from "../middlewares/validateIdMiddleware.js";
+import checkAuth from "../middlewares/authMiddleware.js";
+import sharp from "sharp";
+import ffmpeg from "fluent-ffmpeg";
+import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
+import { connectToDB } from "../utils/db.js";
+
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+
+const db = await connectToDB();
+const filesCollection = db.collection("files");
+const directoriesCollection = db.collection("directories");
+const trashCollection = db.collection("trash");
 
 const router = express.Router();
 const BASE = "storage";
@@ -14,21 +22,150 @@ const BASE = "storage";
 router.param("parentDirId", validateIdMiddleware);
 router.param("fileId", validateIdMiddleware);
 
+const getAllDescendantIds = (rootDirId, allDirs) => {
+  const descendants = new Set();
+  const stack = [rootDirId];
+
+  while (stack.length > 0) {
+    const currentId = stack.pop();
+    descendants.add(currentId);
+
+    const children = allDirs.filter((d) => d.parentDir === currentId);
+    for (const child of children) {
+      stack.push(child.id);
+    }
+  }
+  return descendants;
+};
+
+// Search Endpoint - MUST BE BEFORE /:fileId
+router.get("/search", checkAuth, async (req, res) => {
+  try {
+    const { q, parentId } = req.query;
+    if (!q) return res.status(400).send("Search query required");
+
+    const query = q.toLowerCase();
+
+    // Ensure users have loaded data (though imports should handle it)
+    if (!req.user || !req.user.id) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    let validParentIds = null;
+    if (parentId && parentId !== "null" && parentId !== "undefined") {
+      const allDirs = await directoriesCollection.find().toArray();
+      validParentIds = getAllDescendantIds(parentId, allDirs);
+    }
+
+    // Filter DirectoryDB
+    const matchingDirs = await directoriesCollection
+      .find({
+        userId: req.user.id,
+        name: { $regex: query, $options: "i" },
+      })
+      .toArray();
+
+    const finalMatchingDirs = validParentIds
+      ? matchingDirs.filter((d) => validParentIds.has(d.id))
+      : matchingDirs;
+
+    // Filter FilesDB
+    const matchingFiles = await filesCollection
+      .find({
+        userId: req.user.id,
+        name: { $regex: query, $options: "i" },
+      })
+      .toArray();
+
+    const finalMatchingFiles = validParentIds
+      ? matchingFiles.filter((f) => validParentIds.has(f.parentDir))
+      : matchingFiles;
+
+    // Structure result similar to directory content response
+    return res.status(200).json({
+      name: "Search Results",
+      directories: finalMatchingDirs,
+      files: finalMatchingFiles,
+      parentDir: null, // No parent for flat search results
+    });
+  } catch (err) {
+    console.error("Search error:", err);
+    return res.status(500).send("Internal Server Error");
+  }
+});
+
+router.get("/:fileId/thumbnail", async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const file = await filesCollection.findOne({ id: fileId });
+
+    if (!file) return res.status(404).send("File not found");
+    if (file.userId !== req.user.id) {
+      return res.status(403).send("Unauthorized");
+    }
+
+    const thumbnailPath = path.resolve(`./storage/thumbnails/${fileId}.jpg`);
+
+    // Check if thumbnail exists
+    try {
+      await stat(thumbnailPath);
+      res.sendFile(thumbnailPath);
+    } catch {
+      res.status(404).send("Thumbnail not available");
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
+  }
+});
+
 router.get("/:fileId", async (req, res) => {
   try {
     const { fileId } = req.params;
     const { action } = req.query;
-    const file = filesData.find((f) => f.id === fileId);
+    const file = await filesCollection.findOne({ id: fileId });
+
+    // Check if file exists first
+    if (!file) return res.status(404).send("File not found");
 
     if (file.userId !== req.user.id) {
       return res.status(403).send("You are not authorized to access this file");
     }
-    if (!file) return res.status(404).send("File not found");
 
     const filePath = path.join(BASE, `${fileId}${file.extension}`);
 
     // If action is NOT download, just send the file simple way (fixes Open File)
     if (action !== "download") {
+      const textExtensions = [
+        ".txt",
+        ".md",
+        ".js",
+        ".jsx",
+        ".ts",
+        ".tsx",
+        ".json",
+        ".css",
+        ".html",
+        ".xml",
+        ".yml",
+        ".py",
+        ".java",
+        ".c",
+        ".cpp",
+        ".h",
+        ".sql",
+        ".sh",
+        ".bat",
+        ".log",
+        ".env",
+        ".gitignore",
+      ];
+      if (
+        file.extension &&
+        textExtensions.includes(file.extension.toLowerCase())
+      ) {
+        res.setHeader("Content-Type", "text/plain");
+      }
       return res.sendFile(path.resolve(filePath));
     }
 
@@ -62,8 +199,9 @@ router.get("/:fileId", async (req, res) => {
   }
 });
 
-// Make parentDirId optional using ?
-router.post("/{:parentDirId}", async (req, res) => {
+// Allow both root upload (no param) and param upload
+// Note: router.param middleware will NOT run for "/"
+router.post(["/", "/:parentDirId"], async (req, res) => {
   try {
     // Robustly handle missing or "undefined" string param
     let parentDirId = req.params.parentDirId;
@@ -92,44 +230,89 @@ router.post("/{:parentDirId}", async (req, res) => {
     });
 
     writeStream.on("finish", async () => {
-      // If we are appending, the file might already exist in DB?
-      // In this simple implementation, we only add to DB if it's NOT already there.
-      // Ideally, we only add to DB when the *entire* file is done.
-      // But for simplicity, let's just check if it exists in DB.
+      const exists = await filesCollection.findOne({ id });
 
-      const exists = filesData.find((f) => f.id === id);
+      const stats = await stat(filePath);
+      const fileSize = stats.size;
+      let hasThumbnail = false;
+
+      // Generate thumbnail if image or video
+      const imageExtensions = [
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".webp",
+        ".tiff",
+      ];
+      const videoExtensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"];
+
+      try {
+        const thumbnailPath = `./storage/thumbnails/${id}.jpg`;
+        const fileExt = ext.toLowerCase();
+
+        if (imageExtensions.includes(fileExt)) {
+          await sharp(filePath)
+            .resize(128, 128, { fit: "cover" }) // Resize to 128x128 as requested
+            .jpeg({ quality: 80 })
+            .toFile(thumbnailPath);
+          hasThumbnail = true;
+        } else if (videoExtensions.includes(fileExt)) {
+          await new Promise((resolve, reject) => {
+            ffmpeg(filePath)
+              .on("end", () => {
+                hasThumbnail = true;
+                resolve();
+              })
+              .on("error", (err) => {
+                console.error("Failed to generate video thumbnail", err);
+                resolve(); // resolve anyway to continue file upload
+              })
+              .screenshots({
+                timestamps: ["1"], // capture at 1 second
+                filename: `${id}.jpg`,
+                folder: "./storage/thumbnails",
+                size: "128x128",
+              });
+          });
+        }
+      } catch (err) {
+        console.error("Failed to generate thumbnail", err);
+      }
 
       if (!exists) {
-        filesData.push({
+        await filesCollection.insertOne({
           id,
           extension: ext,
           type: "file",
           userId: req.cookies.userId,
+          size: fileSize,
           name: fileName,
           parentDir: parentDirId,
+          hasThumbnail,
         });
 
         // Find parent directory to update its children
         // Note: parentDirId might be the string "undefined" from params if not careful,
         // generally safe to fallback to root if not found.
-        let parentDirData = directoriesData.find(
-          (directory) => directory.id === parentDirId,
-        );
+        let parentDirData = await directoriesCollection.findOne({
+          id: parentDirId,
+        });
 
         if (!parentDirData) {
           // Fallback to root if parent not found matching ID
           // This ensures we don't crash if an invalid ID was passed
-          parentDirData = directoriesData.find(
-            (directory) => directory.id === rootDirId,
+          parentDirData = await directoriesCollection.findOne({
+            id: rootDirId,
+          });
+        }
+
+        if (parentDirData) {
+          await directoriesCollection.updateOne(
+            { id: parentDirData.id },
+            { $push: { files: id } },
           );
         }
-
-        if (parentDirData && parentDirData.files) {
-          parentDirData.files.push(id);
-          await writeJSON("./directoryDB.json", directoriesData);
-        }
-
-        await writeJSON("./filesDB.json", filesData);
       }
 
       if (!res.writableEnded) return res.status(201).send("File uploaded");
@@ -145,17 +328,19 @@ router.post("/{:parentDirId}", async (req, res) => {
 router.patch("/:fileId", async (req, res) => {
   try {
     const { fileId } = req.params;
-    const file = filesData.find((file) => file.id === fileId);
+    const file = await filesCollection.findOne({ id: fileId });
 
-    if (file.userId !== req.user.id) {
-      return res.status(403).send("You are not authorized to rename this file");
-    }
     if (!file) {
       return res.status(404).send("File not found");
     }
+    if (file.userId !== req.user.id) {
+      return res.status(403).send("You are not authorized to rename this file");
+    }
     const { newFileName } = req.body;
-    file.name = newFileName;
-    await writeJSON("./filesDB.json", filesData);
+    await filesCollection.updateOne(
+      { id: fileId },
+      { $set: { name: newFileName } },
+    );
     return res.status(200).send("File renamed successfully");
   } catch {
     return res.status(500).send("Internal Server Error");
@@ -165,32 +350,25 @@ router.patch("/:fileId", async (req, res) => {
 router.delete("/:fileId", async (req, res) => {
   try {
     const { fileId } = req.params;
-    const fileIndex = filesData.findIndex((file) => file.id === fileId);
-    const fileData = filesData[fileIndex];
+    const fileData = await filesCollection.findOne({ id: fileId });
 
-    if (fileData.userId !== req.user.id) {
-      return res.status(403).send("You are not authorized to delete this file");
-    }
     if (!fileData) {
       return res.status(404).send("File not found");
     }
+    if (fileData.userId !== req.user.id) {
+      return res.status(403).send("You are not authorized to delete this file");
+    }
 
-    const parentDirectory = directoriesData.find(
-      (directory) => directory.id === fileData.parentDir,
+    await directoriesCollection.updateOne(
+      { id: fileData.parentDir },
+      { $pull: { files: fileId } },
     );
-    parentDirectory.files = parentDirectory.files.filter(
-      (fId) => fId !== fileId,
-    );
-    console.log(parentDirectory);
 
-    // CRITICAL FIX: Perform all in-memory updates synchronously BEFORE any await
-    // This prevents race conditions where indices become stale during async writes
-    const deletedFile = filesData.splice(fileIndex, 1)[0];
-    trashDB.push(deletedFile);
-
-    await writeJSON("./directoryDB.json", directoriesData);
-    await writeJSON("./filesDB.json", filesData);
-    await writeJSON("./trashDB.json", trashDB);
+    const deletedFile = await filesCollection.findOne({ id: fileId });
+    if (deletedFile) {
+      await filesCollection.deleteOne({ id: fileId });
+      await trashCollection.insertOne(deletedFile);
+    }
 
     return res.status(200).send("File deleted successfully");
   } catch {

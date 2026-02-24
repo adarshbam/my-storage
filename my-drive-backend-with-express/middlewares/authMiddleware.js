@@ -1,10 +1,12 @@
-import { readJSON } from "../utils/jsonDB.js";
+import { connectToDB } from "../utils/db.js";
 
 async function checkAuth(req, res, next) {
   const userId = decodeURIComponent(req.cookies.userId);
   try {
-    const usersDB = await readJSON("./usersDB.json");
-    const user = usersDB.find((user) => user.id === userId);
+    const db = await connectToDB();
+    const usersDB = db.collection("users");
+    const user = await usersDB.findOne({ id: userId });
+
     if (!userId || !user) {
       return res.status(401).json({ message: "Not logged in" });
     }

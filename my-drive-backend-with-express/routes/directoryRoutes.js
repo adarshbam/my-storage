@@ -1,13 +1,15 @@
 import archiver from "archiver";
 import { stat } from "fs/promises";
 import express from "express";
-import filesData from "../filesDB.json" with { type: "json" };
-import directoriesData from "../directoryDB.json" with { type: "json" };
-import trashDB from "../trashDB.json" with { type: "json" };
 import path from "path";
 import validateIdMiddleware from "../middlewares/validateIdMiddleware.js";
-import { writeJSON } from "../utils/jsonDB.js";
 import checkAuth from "../middlewares/authMiddleware.js";
+import { connectToDB } from "../utils/db.js";
+
+const db = await connectToDB();
+const filesCollection = db.collection("files");
+const directoriesCollection = db.collection("directories");
+const trashCollection = db.collection("trash");
 
 const BASE = "storage";
 
@@ -28,14 +30,14 @@ router.get("/{:dirId}", async (req, res) => {
     const dirId = req.params.dirId || rootDirId;
     const { action } = req.query;
 
-    const directoryData = directoriesData.find((d) => d.id === dirId);
+    const directoryData = await directoriesCollection.findOne({ id: dirId });
+    if (!directoryData) {
+      return res.status(404).json({ error: "Directory not found" });
+    }
     if (directoryData.userId !== req.user.id) {
       return res
         .status(403)
         .send("You are not authorized to access this directory");
-    }
-    if (!directoryData) {
-      return res.status(404).json({ error: "Directory not found" });
     }
 
     if (action === "download") {
@@ -59,11 +61,11 @@ router.get("/{:dirId}", async (req, res) => {
       const getDirectorySize = async (dirId) => {
         let totalSize = 0;
         let totalFiles = 0;
-        const dir = directoriesData.find((d) => d.id === dirId);
+        const dir = await directoriesCollection.findOne({ id: dirId });
         if (!dir) return { size: 0, count: 0 };
 
         for (const fileId of dir.files) {
-          const file = filesData.find((f) => f.id === fileId);
+          const file = await filesCollection.findOne({ id: fileId });
           if (file) {
             try {
               const filePath = path.join(BASE, `${file.id}${file.extension}`);
@@ -77,7 +79,7 @@ router.get("/{:dirId}", async (req, res) => {
         }
 
         for (const subDirId of dir.directories) {
-          const subDir = directoriesData.find((d) => d.id === subDirId);
+          const subDir = await directoriesCollection.findOne({ id: subDirId });
           if (subDir) {
             const { size, count } = await getDirectorySize(subDir.id);
             totalSize += size;
@@ -92,11 +94,11 @@ router.get("/{:dirId}", async (req, res) => {
       res.setHeader("X-Total-Files", count);
 
       const addDirectory = async (dirId, zipPath) => {
-        const dir = directoriesData.find((d) => d.id === dirId);
+        const dir = await directoriesCollection.findOne({ id: dirId });
         if (!dir) return;
 
         for (const fileId of dir.files) {
-          const file = filesData.find((f) => f.id === fileId);
+          const file = await filesCollection.findOne({ id: fileId });
           if (file) {
             const filePath = path.join(BASE, `${file.id}${file.extension}`);
             archive.file(filePath, {
@@ -106,7 +108,7 @@ router.get("/{:dirId}", async (req, res) => {
         }
 
         for (const subDirId of dir.directories) {
-          const subDir = directoriesData.find((d) => d.id === subDirId);
+          const subDir = await directoriesCollection.findOne({ id: subDirId });
           if (subDir) {
             await addDirectory(subDir.id, path.join(zipPath, subDir.name));
           }
@@ -118,15 +120,25 @@ router.get("/{:dirId}", async (req, res) => {
       return; // 🔥 CRITICAL
     }
 
-    const files = directoryData.files
-      .map((id) => filesData.find((f) => f.id === id))
-      .filter(Boolean);
+    const files = await Promise.all(
+      directoryData.files.map((id) => filesCollection.findOne({ id })),
+    );
+    const validFiles = files.filter(Boolean);
 
-    const directories = directoryData.directories
-      .map((id) => directoriesData.find((d) => d.id === id))
-      .filter(Boolean);
+    const directories = await Promise.all(
+      directoryData.directories.map((id) =>
+        directoriesCollection.findOne({ id }),
+      ),
+    );
+    const validDirectories = directories.filter(Boolean);
 
-    return res.status(200).json({ ...directoryData, directories, files });
+    return res
+      .status(200)
+      .json({
+        ...directoryData,
+        directories: validDirectories,
+        files: validFiles,
+      });
   } catch (err) {
     if (!res.headersSent) {
       return res.status(500).send("Internal Server Error");
@@ -141,12 +153,14 @@ router.post("/{:parentDirId}", async (req, res) => {
     console.log(parentDirId);
     const dirName = req.body.foldername ?? "new-folder";
     console.log(dirName);
-    const parentDir = directoriesData.find((dir) => dir.id === parentDirId);
+    const parentDir = await directoriesCollection.findOne({ id: parentDirId });
 
-    const dirId = crypto.randomUUID();
-    parentDir.directories.push(dirId);
+    await directoriesCollection.updateOne(
+      { id: parentDirId },
+      { $push: { directories: dirId } },
+    );
 
-    directoriesData.push({
+    await directoriesCollection.insertOne({
       id: dirId,
       name: dirName,
       userId: req.cookies.userId,
@@ -156,7 +170,6 @@ router.post("/{:parentDirId}", async (req, res) => {
       directories: [],
     });
 
-    await writeJSON("./directoryDB.json", directoriesData);
     return res.status(201).send("Folder created successfully");
   } catch (err) {
     if (err.code === "EEXIST") {
@@ -170,7 +183,7 @@ router.post("/{:parentDirId}", async (req, res) => {
 router.patch("/:dirId", async (req, res) => {
   try {
     const { dirId } = req.params;
-    const directoryData = directoriesData.find((dir) => dir.id === dirId);
+    const directoryData = await directoriesCollection.findOne({ id: dirId });
 
     if (directoryData.userId !== req.user.id) {
       return res
@@ -178,8 +191,10 @@ router.patch("/:dirId", async (req, res) => {
         .send("You are not authorized to rename this directory");
     }
     const { newDirName } = req.body;
-    directoryData.name = newDirName;
-    await writeJSON("./directoryDB.json", directoriesData);
+    await directoriesCollection.updateOne(
+      { id: dirId },
+      { $set: { name: newDirName } },
+    );
     return res.status(200).send("Folder renamed successfully");
   } catch {
     return res.status(404).send("Folder not found");
@@ -189,8 +204,7 @@ router.patch("/:dirId", async (req, res) => {
 router.delete("/:dirId", async (req, res) => {
   try {
     const { dirId } = req.params;
-    const dirIndex = directoriesData.findIndex((dir) => dir.id === dirId);
-    const dirData = directoriesData[dirIndex];
+    const dirData = await directoriesCollection.findOne({ id: dirId });
 
     if (dirData.userId !== req.user.id) {
       return res
@@ -202,19 +216,16 @@ router.delete("/:dirId", async (req, res) => {
       return res.status(404).send("Folder not found");
     }
 
-    const parentDirectory = directoriesData.find(
-      (directory) => directory.id === dirData.parentDir,
+    const parentDirectory = await directoriesCollection.findOne({
+      id: dirData.parentDir,
+    });
+
+    await directoriesCollection.updateOne(
+      { id: dirData.parentDir },
+      { $pull: { directories: dirId } },
     );
 
-    parentDirectory.directories = parentDirectory.directories.filter(
-      (directoryId) => directoryId !== dirId,
-    );
-
-    console.log(parentDirectory);
-    trashDB.push(directoriesData.splice(dirIndex, 1)[0]);
-
-    await writeJSON("./directoryDB.json", directoriesData);
-    await writeJSON("./trashDB.json", trashDB);
+    await directoriesCollection.deleteOne({ id: dirId });
 
     return res.status(200).send("File deleted successfully");
   } catch {
@@ -227,50 +238,61 @@ router.patch("/:dirId/move", checkAuth, async (req, res) => {
     const { dirId } = req.params;
     const transfers = req.body;
 
-    const targetDir = directoriesData.find((dir) => dir.id === dirId);
+    const targetDir = await directoriesCollection.findOne({ id: dirId });
     if (!targetDir) {
       return res.status(404).json({ message: "Target folder not found" });
     }
 
-    transfers.forEach((transfer) => {
+    for (const transfer of transfers) {
       if (transfer.id === dirId) {
-        return;
+        continue;
       }
       if (transfer.type === "directory") {
-        const directory = directoriesData.find((d) => d.id === transfer.id);
-        if (!directory) return;
+        const directory = await directoriesCollection.findOne({
+          id: transfer.id,
+        });
+        if (!directory) continue;
 
         // 🔴 remove from old parent
-        const oldParent = directoriesData.find(
-          (d) => d.id === directory.parentDir,
+        await directoriesCollection.updateOne(
+          { id: directory.parentDir },
+          { $pull: { directories: directory.id } },
         );
-        if (oldParent) {
-          oldParent.directories = oldParent.directories.filter(
-            (id) => id !== directory.id,
-          );
-        }
 
         // 🟢 add to new parent
-        targetDir.directories.push(directory.id);
-        directory.parentDir = dirId;
+        await directoriesCollection.updateOne(
+          { id: dirId },
+          { $push: { directories: directory.id } },
+        );
+
+        // update moving dir's parent
+        await directoriesCollection.updateOne(
+          { id: directory.id },
+          { $set: { parentDir: dirId } },
+        );
       } else {
-        const file = filesData.find((f) => f.id === transfer.id);
-        if (!file) return;
+        const file = await filesCollection.findOne({ id: transfer.id });
+        if (!file) continue;
 
         // 🔴 remove from old parent
-        const oldParent = directoriesData.find((d) => d.id === file.parentDir);
-        if (oldParent) {
-          oldParent.files = oldParent.files.filter((id) => id !== file.id);
-        }
+        await directoriesCollection.updateOne(
+          { id: file.parentDir },
+          { $pull: { files: file.id } },
+        );
 
         // 🟢 add to new parent
-        targetDir.files.push(file.id);
-        file.parentDir = dirId;
-      }
-    });
+        await directoriesCollection.updateOne(
+          { id: dirId },
+          { $push: { files: file.id } },
+        );
 
-    await writeJSON("./directoryDB.json", directoriesData);
-    await writeJSON("./filesDB.json", filesData);
+        // update moving file's parent
+        await filesCollection.updateOne(
+          { id: file.id },
+          { $set: { parentDir: dirId } },
+        );
+      }
+    }
 
     return res.status(200).json({ message: "Items moved successfully" });
   } catch (err) {

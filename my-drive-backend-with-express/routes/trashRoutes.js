@@ -1,35 +1,75 @@
 import express from "express";
-import { rm, writeFile } from "fs/promises";
-import filesData from "../filesDB.json" with { type: "json" };
-import directoriesData from "../directoryDB.json" with { type: "json" };
-import trashDB from "../trashDB.json" with { type: "json" };
+import { rm } from "fs/promises";
+import { connectToDB } from "../utils/db.js";
+
+const db = await connectToDB();
+const filesCollection = db.collection("files");
+const directoriesCollection = db.collection("directories");
+const trashCollection = db.collection("trash");
 
 const router = express.Router();
 
-router.get("/", (req, res, next) => {
-  return res.send(trashDB);
+router.get("/", async (req, res, next) => {
+  try {
+    const trashItems = await trashCollection.find().toArray();
+    return res.send(trashItems);
+  } catch (err) {
+    return res.status(500).send("Internal Server Error");
+  }
+});
+
+router.delete("/", async (req, res) => {
+  try {
+    const trashItems = await trashCollection.find().toArray();
+    for (const trashFile of trashItems) {
+      if (trashFile.type === "directory") continue;
+      const filePath = `./storage/${trashFile.id}${trashFile.extension}`;
+      try {
+        await rm(filePath, { recursive: true, force: true });
+
+        // Also try to delete thumbnail if exists
+        const thumbPath = `./storage/thumbnails/${trashFile.id}.jpg`;
+        await rm(thumbPath, { force: true }).catch(() => {});
+      } catch (err) {
+        console.error(`Failed to delete file ${filePath}:`, err);
+      }
+    }
+
+    await trashCollection.deleteMany({});
+    return res.status(200).send("Trash emptied successfully");
+  } catch (err) {
+    console.error("Empty trash error:", err);
+    return res.status(500).send("Internal Server Error");
+  }
 });
 
 router.post("/:id/restore", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const tranhFileIndex = trashDB.findIndex((file) => file.id === id);
-    const trashfile = trashDB[tranhFileIndex];
+    const trashfile = await trashCollection.findOne({ id });
     if (!trashfile) {
       return res.status(404).send("File not found in trash");
     }
-    const parentDirData = directoriesData.find(
-      (directory) => directory.id === trashfile.parentDir,
-    );
-    parentDirData.files.push(id);
-    filesData.push(trashDB.splice(tranhFileIndex, 1)[0]);
 
-    console.log(filesData, parentDirData);
-    await writeFile("./filesDB.json", JSON.stringify(filesData));
-    await writeFile("./trashDB.json", JSON.stringify(trashDB));
-    await writeFile("./directoryDB.json", JSON.stringify(directoriesData));
+    let parentDirData = await directoriesCollection.findOne({
+      id: trashfile.parentDir,
+    });
+
+    if (!parentDirData) {
+      trashfile.parentDir = null;
+    } else {
+      await directoriesCollection.updateOne(
+        { id: parentDirData.id },
+        { $push: { files: id } },
+      );
+    }
+
+    await filesCollection.insertOne(trashfile);
+    await trashCollection.deleteOne({ id });
+
     return res.status(201).send("File restored successfully");
-  } catch {
+  } catch (err) {
+    console.error(err);
     return res.status(500).send("Internal Server Error");
   }
 });
@@ -37,74 +77,89 @@ router.post("/:id/restore", async (req, res, next) => {
 router.delete("/:fileid", async (req, res) => {
   try {
     const { fileid } = req.params;
-    const trashFileIndex = trashDB.findIndex((file) => file.id === fileid);
-    if (trashFileIndex === -1) {
+    const trashFile = await trashCollection.findOne({ id: fileid });
+    if (!trashFile) {
       return res.status(404).send("File not found in trash");
     }
 
-    const trashFile = trashDB[trashFileIndex];
-    console.log(trashFile, trashFileIndex);
+    console.log("Deleting forever:", trashFile);
 
-    await rm(`./storage/${trashFile.id}${trashFile.extension}`, {
-      recursive: true,
-    });
+    const filePath = `./storage/${trashFile.id}${trashFile.extension}`;
+    try {
+      await rm(filePath, { recursive: true, force: true });
 
-    trashDB.splice(trashFileIndex, 1)[0];
-    console.log(trashDB);
-    await writeFile("./trashDB.json", JSON.stringify(trashDB));
-    return res.status(200).send("File fully deleted from trash successfully");
-  } catch {
+      // Also delete thumbnail
+      await rm(`./storage/thumbnails/${trashFile.id}.jpg`, {
+        force: true,
+      }).catch(() => {});
+    } catch (err) {
+      console.error(`Failed to delete file on disk ${filePath}:`, err);
+    }
+
+    await trashCollection.deleteOne({ id: fileid });
+    return res.status(200).send("File deleted forever");
+  } catch (err) {
+    console.error("Delete forever API error:", err);
     return res.status(500).send("Internal Server Error");
   }
 });
 
 async function deleteByParentChain(parentId) {
-  // 1️⃣ Delete files whose parentDir === parentId
-  const filesToDelete = filesData.filter((f) => f.parentDir === parentId);
+  const filesToDelete = await filesCollection
+    .find({ parentDir: parentId })
+    .toArray();
 
   for (const file of filesToDelete) {
-    await rm(`./storage/${file.id}${file.extension}`);
-
-    const idx = filesData.findIndex((f) => f.id === file.id);
-    if (idx !== -1) filesData.splice(idx, 1);
+    await rm(`./storage/${file.id}${file.extension}`, { force: true }).catch(
+      () => {},
+    );
+    // Delete thumbnail
+    await rm(`./storage/thumbnails/${file.id}.jpg`, { force: true }).catch(
+      () => {},
+    );
+    await filesCollection.deleteOne({ id: file.id });
   }
 
-  // 2️⃣ Find child directories by parentDir
-  const childDirs = directoriesData.filter((d) => d.parentDir === parentId);
+  const childDirs = await directoriesCollection
+    .find({ parentDir: parentId })
+    .toArray();
 
   for (const dir of childDirs) {
     await deleteByParentChain(dir.id);
-
-    const idx = directoriesData.findIndex((d) => d.id === dir.id);
-    if (idx !== -1) directoriesData.splice(idx, 1);
+    await directoriesCollection.deleteOne({ id: dir.id });
   }
 }
 
-function removeFromTrash(dirId) {
-  const idx = trashDB.findIndex((d) => d.id === dirId);
-  if (idx !== -1) trashDB.splice(idx, 1);
+async function removeFromTrash(dirId) {
+  await trashCollection.deleteOne({ id: dirId });
 }
 
 router.post("/directory/:dirId/restore", async (req, res, next) => {
   try {
     const { dirId } = req.params;
-    const tranhDirIndex = trashDB.findIndex((dir) => dir.id === dirId);
-    const trashDir = trashDB[tranhDirIndex];
+    const trashDir = await trashCollection.findOne({ id: dirId });
     if (!trashDir) {
       return res.status(404).send("Directory not found in trash");
     }
-    const parentDirData = directoriesData.find(
-      (directory) => directory.id === trashDir.parentDir,
-    );
-    parentDirData.directories.push(dirId);
+    const parentDirData = await directoriesCollection.findOne({
+      id: trashDir.parentDir,
+    });
 
-    directoriesData.push(trashDB.splice(tranhDirIndex, 1)[0]);
+    if (parentDirData) {
+      await directoriesCollection.updateOne(
+        { id: parentDirData.id },
+        { $push: { directories: dirId } },
+      );
+    } else {
+      trashDir.parentDir = null; // optional logic
+    }
 
-    console.log(directoriesData, parentDirData);
-    await writeFile("./trashDB.json", JSON.stringify(trashDB));
-    await writeFile("./directoryDB.json", JSON.stringify(directoriesData));
+    await directoriesCollection.insertOne(trashDir);
+    await trashCollection.deleteOne({ id: dirId });
+
     return res.status(201).send("Directory restored successfully");
-  } catch {
+  } catch (err) {
+    console.error(err);
     return res.status(500).send("Internal Server Error");
   }
 });
@@ -114,11 +169,7 @@ router.delete("/directory/:dirId", async (req, res) => {
     const { dirId } = req.params;
 
     await deleteByParentChain(dirId);
-    removeFromTrash(dirId);
-
-    await writeFile("./trashDB.json", JSON.stringify(trashDB));
-    await writeFile("./filesDB.json", JSON.stringify(filesData));
-    await writeFile("./directoryDB.json", JSON.stringify(directoriesData));
+    await removeFromTrash(dirId);
 
     return res
       .status(200)
@@ -128,6 +179,43 @@ router.delete("/directory/:dirId", async (req, res) => {
       return res.status(404).send(err.message);
     }
     return res.status(403).send("Forbidden");
+  }
+});
+
+router.post("/delete-batch", async (req, res) => {
+  try {
+    const { items } = req.body; // Expects { items: [{ id, type }] }
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).send("Invalid items array");
+    }
+
+    console.log(`Processing batch delete for ${items.length} items`);
+
+    for (const item of items) {
+      if (item.type === "directory") {
+        await deleteByParentChain(item.id);
+        await removeFromTrash(item.id);
+      } else {
+        const trashFile = await trashCollection.findOne({ id: item.id });
+        if (trashFile) {
+          const filePath = `./storage/${trashFile.id}${trashFile.extension}`;
+          try {
+            await rm(filePath, { recursive: true, force: true });
+            await rm(`./storage/thumbnails/${trashFile.id}.jpg`, {
+              force: true,
+            }).catch(() => {});
+          } catch (err) {
+            console.error(`Failed to delete file on disk ${filePath}:`, err);
+          }
+          await trashCollection.deleteOne({ id: item.id });
+        }
+      }
+    }
+
+    return res.status(200).send("Batch delete completed successfully");
+  } catch (err) {
+    console.error("Batch delete error:", err);
+    return res.status(500).send("Internal Server Error");
   }
 });
 

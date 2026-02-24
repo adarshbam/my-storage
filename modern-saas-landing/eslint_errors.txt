@@ -1,0 +1,36 @@
+
+C:\Users\Dell\Desktop\Projects\my-storage-frontend\modern-saas-landing\src\components\sections\FeatureHighlights.jsx
+  1:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Dell\Desktop\Projects\my-storage-frontend\modern-saas-landing\src\components\sections\FinalCTA.jsx
+  1:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Dell\Desktop\Projects\my-storage-frontend\modern-saas-landing\src\components\sections\Hero.jsx
+  1:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Dell\Desktop\Projects\my-storage-frontend\modern-saas-landing\src\components\sections\HowItWorks.jsx
+  1:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Dell\Desktop\Projects\my-storage-frontend\modern-saas-landing\src\components\sections\Integrations.jsx
+  1:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Dell\Desktop\Projects\my-storage-frontend\modern-saas-landing\src\components\sections\Navbar.jsx
+  2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Dell\Desktop\Projects\my-storage-frontend\modern-saas-landing\src\components\sections\Pricing.jsx
+  2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Dell\Desktop\Projects\my-storage-frontend\modern-saas-landing\src\components\sections\ScaleSecurity.jsx
+  1:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Dell\Desktop\Projects\my-storage-frontend\modern-saas-landing\src\components\ui\Button.jsx
+  1:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Dell\Desktop\Projects\my-storage-frontend\modern-saas-landing\src\components\ui\Card.jsx
+  1:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Dell\Desktop\Projects\my-storage-frontend\modern-saas-landing\src\components\ui\ThemeProvider.jsx
+  51:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+✖ 11 problems (11 errors, 0 warnings)
+

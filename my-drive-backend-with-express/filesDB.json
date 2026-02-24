@@ -1,1 +1,178 @@
-[{"id":"97425f3b-3b83-4440-8d75-7d258362869c","extension":".png","type":"file","userId":"ba700c3d-57f7-4f75-bd2b-0acf65be4d9d","name":"profile.png","parentDir":"7a79e855-fe53-466b-b48a-c47c46168942"},{"id":"ecb235af-38df-4325-9c59-9611366746bc","extension":".png","type":"file","userId":"ba700c3d-57f7-4f75-bd2b-0acf65be4d9d","name":"boy.png","parentDir":"7a79e855-fe53-466b-b48a-c47c46168942"},{"id":"7b077334-fc66-448c-a942-70cc018d2964","extension":".js","type":"file","userId":"ba700c3d-57f7-4f75-bd2b-0acf65be4d9d","name":"client.js","parentDir":"7a79e855-fe53-466b-b48a-c47c46168942"},{"id":"67a6bbc6-c868-4d81-a460-4b30f9cfc41d","extension":".json","type":"file","userId":"ba700c3d-57f7-4f75-bd2b-0acf65be4d9d","name":"package.json","parentDir":"7a79e855-fe53-466b-b48a-c47c46168942"},{"id":"f492fbc7-1351-4c1f-bfea-fe967459a69e","extension":".js","type":"file","userId":"ba700c3d-57f7-4f75-bd2b-0acf65be4d9d","name":"app.js","parentDir":"5845024d-4cbd-4515-a545-04c82f1b89f6"},{"id":"6459a87e-a23b-4b59-8bd2-95d9ec2516b8","extension":".png","type":"file","userId":"ba700c3d-57f7-4f75-bd2b-0acf65be4d9d","name":"profile (1).png","parentDir":"7a79e855-fe53-466b-b48a-c47c46168942"}]
+[
+  {
+    "id": "97425f3b-3b83-4440-8d75-7d258362869c",
+    "extension": ".png",
+    "type": "file",
+    "userId": "ba700c3d-57f7-4f75-bd2b-0acf65be4d9d",
+    "name": "profile.png",
+    "parentDir": "7a79e855-fe53-466b-b48a-c47c46168942"
+  },
+  {
+    "id": "7b077334-fc66-448c-a942-70cc018d2964",
+    "extension": ".js",
+    "type": "file",
+    "userId": "ba700c3d-57f7-4f75-bd2b-0acf65be4d9d",
+    "name": "client.js",
+    "parentDir": "7a79e855-fe53-466b-b48a-c47c46168942"
+  },
+  {
+    "id": "f492fbc7-1351-4c1f-bfea-fe967459a69e",
+    "extension": ".js",
+    "type": "file",
+    "userId": "ba700c3d-57f7-4f75-bd2b-0acf65be4d9d",
+    "name": "app.js",
+    "parentDir": "5845024d-4cbd-4515-a545-04c82f1b89f6"
+  },
+  {
+    "id": "9fcd47fe-d4cc-4c57-8bae-501ca3156266",
+    "extension": ".png",
+    "type": "file",
+    "userId": "ba700c3d-57f7-4f75-bd2b-0acf65be4d9d",
+    "name": "profile.png",
+    "parentDir": "7a79e855-fe53-466b-b48a-c47c46168942"
+  },
+  {
+    "id": "409a2507-5b9b-4434-949c-81137d3514e9",
+    "extension": ".json",
+    "type": "file",
+    "userId": "ba700c3d-57f7-4f75-bd2b-0acf65be4d9d",
+    "name": "package.json",
+    "parentDir": "4a63ecac-f255-413e-9d05-1092e9ee199e"
+  },
+  {
+    "id": "14aaf013-c317-434b-a737-b01bc83310d2",
+    "extension": ".js",
+    "type": "file",
+    "userId": "ba700c3d-57f7-4f75-bd2b-0acf65be4d9d",
+    "name": "client.js",
+    "parentDir": "4a63ecac-f255-413e-9d05-1092e9ee199e"
+  },
+  {
+    "id": "6459a87e-a23b-4b59-8bd2-95d9ec2516b8",
+    "extension": ".png",
+    "type": "file",
+    "userId": "ba700c3d-57f7-4f75-bd2b-0acf65be4d9d",
+    "name": "profile (1).png",
+    "parentDir": "7a79e855-fe53-466b-b48a-c47c46168942"
+  },
+  {
+    "id": "67a6bbc6-c868-4d81-a460-4b30f9cfc41d",
+    "extension": ".json",
+    "type": "file",
+    "userId": "ba700c3d-57f7-4f75-bd2b-0acf65be4d9d",
+    "name": "package.json",
+    "parentDir": "7a79e855-fe53-466b-b48a-c47c46168942"
+  },
+  {
+    "id": "d1da37e7-4be4-4cc2-ab97-c98ebaa5f353",
+    "extension": ".mp4",
+    "type": "file",
+    "userId": "ba700c3d-57f7-4f75-bd2b-0acf65be4d9d",
+    "name": "Big-File-1 (2) (1).mp4",
+    "parentDir": "7a79e855-fe53-466b-b48a-c47c46168942"
+  },
+  {
+    "id": "9feb7ca3-ea19-49d1-bc5a-5a55b210adea",
+    "extension": ".png",
+    "type": "file",
+    "userId": "9bc3a6e4-fa06-4302-b8c4-44358c90cb01",
+    "name": "landing.png",
+    "parentDir": "61419338-599a-4d28-b050-7301228c7c6b"
+  },
+  {
+    "id": "e27c6bd4-abe5-4031-88cc-34dbee78a4ec",
+    "extension": ".png",
+    "type": "file",
+    "userId": "9bc3a6e4-fa06-4302-b8c4-44358c90cb01",
+    "size": 12346,
+    "name": "folder (1).png",
+    "parentDir": "61419338-599a-4d28-b050-7301228c7c6b",
+    "hasThumbnail": true
+  },
+  {
+    "id": "5ba0ffd0-8e65-4f24-9a8d-2d39cf4cd0b2",
+    "extension": ".png",
+    "type": "file",
+    "userId": "9bc3a6e4-fa06-4302-b8c4-44358c90cb01",
+    "size": 13175,
+    "name": "upload (9).png",
+    "parentDir": "1693d053-376d-4dd3-acce-56676ac372fb",
+    "hasThumbnail": true
+  },
+  {
+    "id": "2eaf0e0f-7a26-41de-b63f-f241b41e42b5",
+    "extension": ".png",
+    "type": "file",
+    "userId": "9bc3a6e4-fa06-4302-b8c4-44358c90cb01",
+    "size": 8381,
+    "name": "open-folder.png",
+    "parentDir": "1693d053-376d-4dd3-acce-56676ac372fb",
+    "hasThumbnail": true
+  },
+  {
+    "id": "6a4c2bde-be64-463a-9d01-36bc19f75093",
+    "extension": ".png",
+    "type": "file",
+    "userId": "9bc3a6e4-fa06-4302-b8c4-44358c90cb01",
+    "name": "boy.png",
+    "parentDir": "61419338-599a-4d28-b050-7301228c7c6b"
+  },
+  {
+    "id": "f2388664-e1f6-4d25-953c-793a46a01ac9",
+    "extension": ".png",
+    "type": "file",
+    "userId": "9bc3a6e4-fa06-4302-b8c4-44358c90cb01",
+    "name": "profile.png",
+    "parentDir": "61419338-599a-4d28-b050-7301228c7c6b"
+  },
+  {
+    "id": "7240dec1-cd84-44d5-9604-ba47bda41691",
+    "extension": ".json",
+    "type": "file",
+    "userId": "9bc3a6e4-fa06-4302-b8c4-44358c90cb01",
+    "size": 0,
+    "name": "package.json",
+    "parentDir": "61419338-599a-4d28-b050-7301228c7c6b",
+    "hasThumbnail": false
+  },
+  {
+    "id": "d6ce6021-dacc-4815-8f65-b3d6dcf45030",
+    "extension": ".js",
+    "type": "file",
+    "userId": "9bc3a6e4-fa06-4302-b8c4-44358c90cb01",
+    "size": 1318,
+    "name": "app.js",
+    "parentDir": "61419338-599a-4d28-b050-7301228c7c6b",
+    "hasThumbnail": false
+  },
+  {
+    "id": "28329ec4-f9f8-4290-a3cb-28e37b705f67",
+    "extension": ".mp4",
+    "type": "file",
+    "userId": "9bc3a6e4-fa06-4302-b8c4-44358c90cb01",
+    "size": 17862856,
+    "name": "Shirt to not shirt (2).mp4",
+    "parentDir": "c0b7baa5-22d7-4819-9c2b-38eb243735aa",
+    "hasThumbnail": false
+  },
+  {
+    "id": "5d82dd77-9790-4c29-aa81-f933ec0a2125",
+    "extension": ".mp4",
+    "type": "file",
+    "userId": "9bc3a6e4-fa06-4302-b8c4-44358c90cb01",
+    "size": 1657344376,
+    "name": "Big-File-Copy.mp4",
+    "parentDir": "c0b7baa5-22d7-4819-9c2b-38eb243735aa",
+    "hasThumbnail": false
+  },
+  {
+    "id": "a4a20e55-f98e-4ea3-9470-240e8cbfcc79",
+    "extension": ".jpg",
+    "type": "file",
+    "userId": "9bc3a6e4-fa06-4302-b8c4-44358c90cb01",
+    "size": 363503,
+    "name": "cutie (2).jpg",
+    "parentDir": "61419338-599a-4d28-b050-7301228c7c6b",
+    "hasThumbnail": true
+  }
+]
