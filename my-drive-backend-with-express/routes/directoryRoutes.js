@@ -2,6 +2,7 @@ import archiver from "archiver";
 import { stat } from "fs/promises";
 import express from "express";
 import path from "path";
+import crypto from "crypto";
 import validateIdMiddleware from "../middlewares/validateIdMiddleware.js";
 import checkAuth from "../middlewares/authMiddleware.js";
 import { connectToDB } from "../utils/db.js";
@@ -18,12 +19,12 @@ const router = express.Router();
 router.param("parentDirId", validateIdMiddleware);
 router.param("dirId", validateIdMiddleware);
 
-router.get("/{:dirId}", async (req, res) => {
+router.get(["/", "/:dirId"], async (req, res) => {
   const rootDirId = decodeURIComponent(req.cookies.rootDirId);
   console.log(rootDirId);
 
   if (!rootDirId) {
-    res.redirect(`http://localhost:5173/login`);
+    return res.redirect(`http://localhost:5173/login`);
   }
 
   try {
@@ -132,13 +133,11 @@ router.get("/{:dirId}", async (req, res) => {
     );
     const validDirectories = directories.filter(Boolean);
 
-    return res
-      .status(200)
-      .json({
-        ...directoryData,
-        directories: validDirectories,
-        files: validFiles,
-      });
+    return res.status(200).json({
+      ...directoryData,
+      directories: validDirectories,
+      files: validFiles,
+    });
   } catch (err) {
     if (!res.headersSent) {
       return res.status(500).send("Internal Server Error");
@@ -146,7 +145,7 @@ router.get("/{:dirId}", async (req, res) => {
   }
 });
 
-router.post("/{:parentDirId}", async (req, res) => {
+router.post(["/", "/:parentDirId"], async (req, res) => {
   const rootDirId = decodeURIComponent(req.cookies.rootDirId);
   try {
     const parentDirId = req.params.parentDirId ?? rootDirId;
@@ -154,6 +153,7 @@ router.post("/{:parentDirId}", async (req, res) => {
     const dirName = req.body.foldername ?? "new-folder";
     console.log(dirName);
     const parentDir = await directoriesCollection.findOne({ id: parentDirId });
+    const dirId = crypto.randomUUID();
 
     await directoriesCollection.updateOne(
       { id: parentDirId },
@@ -225,9 +225,13 @@ router.delete("/:dirId", async (req, res) => {
       { $pull: { directories: dirId } },
     );
 
-    await directoriesCollection.deleteOne({ id: dirId });
+    const deletedDirectory = await directoriesCollection.findOne({ id: dirId });
+    if (deletedDirectory) {
+      await directoriesCollection.deleteOne({ id: dirId });
+      await trashCollection.insertOne(deletedDirectory);
+    }
 
-    return res.status(200).send("File deleted successfully");
+    return res.status(200).send("Folder deleted successfully");
   } catch {
     return res.status(500).send("Internal Server Error");
   }

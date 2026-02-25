@@ -4,8 +4,6 @@ import directoryRouter from "./routes/directoryRoutes.js";
 import fileRouter from "./routes/fileRoutes.js";
 import trashRouter from "./routes/trashRoutes.js";
 import userRouter from "./routes/userRoutes.js";
-import { connectToDB } from "./utils/db.js";
-
 import cors from "cors";
 import checkAuth from "./middlewares/authMiddleware.js";
 
@@ -20,8 +18,6 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.json());
-
-connectToDB();
 
 app.use("/directory", checkAuth, directoryRouter);
 app.use("/file", checkAuth, fileRouter);

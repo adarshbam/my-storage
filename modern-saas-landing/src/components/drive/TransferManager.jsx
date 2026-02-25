@@ -125,6 +125,10 @@ const TransferManager = forwardRef((props, ref) => {
       }
     };
 
+    xhr.upload.onload = () => {
+      updateTransfer(id, { progress: 100 });
+    };
+
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         updateTransfer(id, {
@@ -262,7 +266,10 @@ const TransferManager = forwardRef((props, ref) => {
         }
 
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          updateTransfer(id, { progress: 100, loaded: total });
+          break;
+        }
 
         await saveChunk(id, startByte + received, value);
         received += value.length;
@@ -279,7 +286,7 @@ const TransferManager = forwardRef((props, ref) => {
         if (now - lastUpdate >= 100 || totalLoaded >= total) {
           updateTransfer(id, {
             loaded: totalLoaded,
-            progress: Math.min((totalLoaded / total) * 100, 100),
+            progress: total ? Math.min((totalLoaded / total) * 100, 100) : 100,
             speed,
             timeRemaining: speed ? (total - totalLoaded) / speed : 0,
           });
@@ -468,7 +475,13 @@ const TransferManager = forwardRef((props, ref) => {
                                 ? "bg-yellow-500"
                                 : "bg-blue-500",
                         )}
-                        style={{ width: `${transfer.progress}%` }}
+                        style={{
+                          width: `${
+                            transfer.status === "completed"
+                              ? 100
+                              : transfer.progress
+                          }%`,
+                        }}
                       />
                     </div>
 
@@ -485,7 +498,12 @@ const TransferManager = forwardRef((props, ref) => {
                         {transfer.status === "completed" && "Completed"}
                         {transfer.status === "error" && "Error"}
                       </span>
-                      <span>{Math.round(transfer.progress)}%</span>
+                      <span>
+                        {transfer.status === "completed"
+                          ? 100
+                          : Math.round(transfer.progress)}
+                        %
+                      </span>
                     </div>
                   </div>
                 </div>

@@ -18,3 +18,9 @@ export async function connectToDB() {
   console.log("✅ MongoDB connected");
   return db;
 }
+
+process.on("SIGINT", async () => {
+  await client.close();
+  console.log("MongoDB connection closed");
+  process.exit(0);
+});
