@@ -65,9 +65,21 @@ router.get("/search", checkAuth, async (req, res) => {
       })
       .toArray();
 
-    const finalMatchingDirs = validParentIds
+    const finalMatchingDirsRaw = validParentIds
       ? matchingDirs.filter((d) => validParentIds.has(d.id))
       : matchingDirs;
+
+    const finalMatchingDirs = await Promise.all(
+      finalMatchingDirsRaw.map(async (dir) => {
+        const fileCount = await filesCollection.countDocuments({
+          parentDir: dir.id,
+        });
+        const dirCount = await directoriesCollection.countDocuments({
+          parentDir: dir.id,
+        });
+        return { ...dir, itemCount: fileCount + dirCount };
+      }),
+    );
 
     // Filter FilesDB
     const matchingFiles = await filesCollection

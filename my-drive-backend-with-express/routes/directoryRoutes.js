@@ -32,6 +32,26 @@ router.get(["/", "/:dirId"], async (req, res) => {
     const { action } = req.query;
 
     const directoryData = await directoriesCollection.findOne({ id: dirId });
+    directoryData.files = await filesCollection
+      .find({ parentDir: dirId })
+      .toArray();
+    const childDirs = await directoriesCollection
+      .find({ parentDir: dirId })
+      .toArray();
+
+    directoryData.directories = await Promise.all(
+      childDirs.map(async (dir) => {
+        const fileCount = await filesCollection.countDocuments({
+          parentDir: dir.id,
+        });
+        const dirCount = await directoriesCollection.countDocuments({
+          parentDir: dir.id,
+        });
+        return { ...dir, itemCount: fileCount + dirCount };
+      }),
+    );
+
+    console.log(directoryData);
     if (!directoryData) {
       return res.status(404).json({ error: "Directory not found" });
     }
@@ -121,23 +141,7 @@ router.get(["/", "/:dirId"], async (req, res) => {
       return; // 🔥 CRITICAL
     }
 
-    const files = await Promise.all(
-      directoryData.files.map((id) => filesCollection.findOne({ id })),
-    );
-    const validFiles = files.filter(Boolean);
-
-    const directories = await Promise.all(
-      directoryData.directories.map((id) =>
-        directoriesCollection.findOne({ id }),
-      ),
-    );
-    const validDirectories = directories.filter(Boolean);
-
-    return res.status(200).json({
-      ...directoryData,
-      directories: validDirectories,
-      files: validFiles,
-    });
+    return res.status(200).json(directoryData);
   } catch (err) {
     if (!res.headersSent) {
       return res.status(500).send("Internal Server Error");
@@ -166,8 +170,6 @@ router.post(["/", "/:parentDirId"], async (req, res) => {
       userId: req.cookies.userId,
       type: "directory",
       parentDir: parentDirId,
-      files: [],
-      directories: [],
     });
 
     return res.status(201).send("Folder created successfully");
