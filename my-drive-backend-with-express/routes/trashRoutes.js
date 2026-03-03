@@ -105,6 +105,7 @@ async function deleteByParentChain(parentId) {
     .toArray();
 
   const fileIds = filesToDelete.map((file) => file.id);
+  let idsToDelete = [...fileIds];
   if (fileIds.length > 0) {
     await filesCollection.deleteMany({ id: { $in: fileIds } });
   }
@@ -124,17 +125,16 @@ async function deleteByParentChain(parentId) {
     .toArray();
 
   for (const dir of childDirs) {
-    await deleteByParentChain(dir.id);
+    idsToDelete = [...idsToDelete, ...(await deleteByParentChain(dir.id))];
   }
 
   const dirIds = childDirs.map((dir) => dir.id);
   if (dirIds.length > 0) {
     await directoriesCollection.deleteMany({ id: { $in: dirIds } });
+    idsToDelete = [...idsToDelete, ...dirIds];
   }
-}
 
-async function removeFromTrash(dirId) {
-  await trashCollection.deleteOne({ id: dirId });
+  return idsToDelete;
 }
 
 router.post("/directory/:dirId/restore", async (req, res, next) => {
@@ -166,8 +166,9 @@ router.delete("/directory/:dirId", async (req, res) => {
   try {
     const { dirId } = req.params;
 
-    await deleteByParentChain(dirId);
-    await removeFromTrash(dirId);
+    const idsToDelete = await deleteByParentChain(dirId);
+    idsToDelete.push(dirId);
+    await trashCollection.deleteMany({ id: { $in: idsToDelete } });
 
     return res
       .status(200)
@@ -189,10 +190,14 @@ router.post("/delete-batch", async (req, res) => {
 
     console.log(`Processing batch delete for ${items.length} items`);
 
+    let allIdsToDeleteFromTrash = [];
+
     for (const item of items) {
+      allIdsToDeleteFromTrash.push(item.id);
+
       if (item.type === "directory") {
-        await deleteByParentChain(item.id);
-        await removeFromTrash(item.id);
+        const ids = await deleteByParentChain(item.id);
+        allIdsToDeleteFromTrash = [...allIdsToDeleteFromTrash, ...ids];
       } else {
         const trashFile = await trashCollection.findOne({ id: item.id });
         if (trashFile) {
@@ -205,9 +210,14 @@ router.post("/delete-batch", async (req, res) => {
           } catch (err) {
             console.error(`Failed to delete file on disk ${filePath}:`, err);
           }
-          await trashCollection.deleteOne({ id: item.id });
         }
       }
+    }
+
+    if (allIdsToDeleteFromTrash.length > 0) {
+      await trashCollection.deleteMany({
+        id: { $in: allIdsToDeleteFromTrash },
+      });
     }
 
     return res.status(200).send("Batch delete completed successfully");
