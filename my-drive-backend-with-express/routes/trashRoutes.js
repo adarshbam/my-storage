@@ -104,6 +104,11 @@ async function deleteByParentChain(parentId) {
     .find({ parentDir: parentId })
     .toArray();
 
+  const fileIds = filesToDelete.map((file) => file.id);
+  if (fileIds.length > 0) {
+    await filesCollection.deleteMany({ id: { $in: fileIds } });
+  }
+
   for (const file of filesToDelete) {
     await rm(`./storage/${file.id}${file.extension}`, { force: true }).catch(
       () => {},
@@ -112,7 +117,6 @@ async function deleteByParentChain(parentId) {
     await rm(`./storage/thumbnails/${file.id}.jpg`, { force: true }).catch(
       () => {},
     );
-    await filesCollection.deleteOne({ id: file.id });
   }
 
   const childDirs = await directoriesCollection
@@ -121,7 +125,11 @@ async function deleteByParentChain(parentId) {
 
   for (const dir of childDirs) {
     await deleteByParentChain(dir.id);
-    await directoriesCollection.deleteOne({ id: dir.id });
+  }
+
+  const dirIds = childDirs.map((dir) => dir.id);
+  if (dirIds.length > 0) {
+    await directoriesCollection.deleteMany({ id: { $in: dirIds } });
   }
 }
 
