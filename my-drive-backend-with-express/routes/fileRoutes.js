@@ -303,28 +303,6 @@ router.post(["/", "/:parentDirId"], async (req, res) => {
           parentDir: parentDirId,
           hasThumbnail,
         });
-
-        // Find parent directory to update its children
-        // Note: parentDirId might be the string "undefined" from params if not careful,
-        // generally safe to fallback to root if not found.
-        let parentDirData = await directoriesCollection.findOne({
-          id: parentDirId,
-        });
-
-        if (!parentDirData) {
-          // Fallback to root if parent not found matching ID
-          // This ensures we don't crash if an invalid ID was passed
-          parentDirData = await directoriesCollection.findOne({
-            id: rootDirId,
-          });
-        }
-
-        if (parentDirData) {
-          await directoriesCollection.updateOne(
-            { id: parentDirData.id },
-            { $push: { files: id } },
-          );
-        }
       }
 
       if (!res.writableEnded) return res.status(201).send("File uploaded");
@@ -370,11 +348,6 @@ router.delete("/:fileId", async (req, res) => {
     if (fileData.userId !== req.user.id) {
       return res.status(403).send("You are not authorized to delete this file");
     }
-
-    await directoriesCollection.updateOne(
-      { id: fileData.parentDir },
-      { $pull: { files: fileId } },
-    );
 
     const deletedFile = await filesCollection.findOne({ id: fileId });
     if (deletedFile) {

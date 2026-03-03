@@ -57,11 +57,6 @@ router.post("/:id/restore", async (req, res, next) => {
 
     if (!parentDirData) {
       trashfile.parentDir = null;
-    } else {
-      await directoriesCollection.updateOne(
-        { id: parentDirData.id },
-        { $push: { files: id } },
-      );
     }
 
     await filesCollection.insertOne(trashfile);
@@ -145,12 +140,7 @@ router.post("/directory/:dirId/restore", async (req, res, next) => {
       id: trashDir.parentDir,
     });
 
-    if (parentDirData) {
-      await directoriesCollection.updateOne(
-        { id: parentDirData.id },
-        { $push: { directories: dirId } },
-      );
-    } else {
+    if (!parentDirData) {
       trashDir.parentDir = null; // optional logic
     }
 

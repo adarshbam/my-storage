@@ -82,11 +82,15 @@ router.get(["/", "/:dirId"], async (req, res) => {
       const getDirectorySize = async (dirId) => {
         let totalSize = 0;
         let totalFiles = 0;
-        const dir = await directoriesCollection.findOne({ id: dirId });
-        if (!dir) return { size: 0, count: 0 };
+        const dirDirectories = await directoriesCollection
+          .find({ parentDir: dirId })
+          .toArray();
+        const dirfiles = await filesCollection
+          .find({ parentDir: dirId })
+          .toArray();
+        if (!dirfiles) return { size: 0, count: 0 };
 
-        for (const fileId of dir.files) {
-          const file = await filesCollection.findOne({ id: fileId });
+        for (const file of dirfiles) {
           if (file) {
             try {
               const filePath = path.join(BASE, `${file.id}${file.extension}`);
@@ -94,13 +98,12 @@ router.get(["/", "/:dirId"], async (req, res) => {
               totalSize += fileStat.size;
               totalFiles++;
             } catch (e) {
-              console.error(`Error getting size for file ${fileId}:`, e);
+              console.error(`Error getting size for file ${file.name}:`, e);
             }
           }
         }
 
-        for (const subDirId of dir.directories) {
-          const subDir = await directoriesCollection.findOne({ id: subDirId });
+        for (const subDir of dirDirectories) {
           if (subDir) {
             const { size, count } = await getDirectorySize(subDir.id);
             totalSize += size;
@@ -118,8 +121,10 @@ router.get(["/", "/:dirId"], async (req, res) => {
         const dir = await directoriesCollection.findOne({ id: dirId });
         if (!dir) return;
 
-        for (const fileId of dir.files) {
-          const file = await filesCollection.findOne({ id: fileId });
+        const dirFiles = await filesCollection
+          .find({ parentDir: dirId })
+          .toArray();
+        for (const file of dirFiles) {
           if (file) {
             const filePath = path.join(BASE, `${file.id}${file.extension}`);
             archive.file(filePath, {
@@ -128,8 +133,10 @@ router.get(["/", "/:dirId"], async (req, res) => {
           }
         }
 
-        for (const subDirId of dir.directories) {
-          const subDir = await directoriesCollection.findOne({ id: subDirId });
+        const childDirs = await directoriesCollection
+          .find({ parentDir: dirId })
+          .toArray();
+        for (const subDir of childDirs) {
           if (subDir) {
             await addDirectory(subDir.id, path.join(zipPath, subDir.name));
           }
@@ -158,11 +165,6 @@ router.post(["/", "/:parentDirId"], async (req, res) => {
     console.log(dirName);
     const parentDir = await directoriesCollection.findOne({ id: parentDirId });
     const dirId = crypto.randomUUID();
-
-    await directoriesCollection.updateOne(
-      { id: parentDirId },
-      { $push: { directories: dirId } },
-    );
 
     await directoriesCollection.insertOne({
       id: dirId,
@@ -222,11 +224,6 @@ router.delete("/:dirId", async (req, res) => {
       id: dirData.parentDir,
     });
 
-    await directoriesCollection.updateOne(
-      { id: dirData.parentDir },
-      { $pull: { directories: dirId } },
-    );
-
     const deletedDirectory = await directoriesCollection.findOne({ id: dirId });
     if (deletedDirectory) {
       await directoriesCollection.deleteOne({ id: dirId });
@@ -259,18 +256,6 @@ router.patch("/:dirId/move", checkAuth, async (req, res) => {
         });
         if (!directory) continue;
 
-        // 🔴 remove from old parent
-        await directoriesCollection.updateOne(
-          { id: directory.parentDir },
-          { $pull: { directories: directory.id } },
-        );
-
-        // 🟢 add to new parent
-        await directoriesCollection.updateOne(
-          { id: dirId },
-          { $push: { directories: directory.id } },
-        );
-
         // update moving dir's parent
         await directoriesCollection.updateOne(
           { id: directory.id },
@@ -279,18 +264,6 @@ router.patch("/:dirId/move", checkAuth, async (req, res) => {
       } else {
         const file = await filesCollection.findOne({ id: transfer.id });
         if (!file) continue;
-
-        // 🔴 remove from old parent
-        await directoriesCollection.updateOne(
-          { id: file.parentDir },
-          { $pull: { files: file.id } },
-        );
-
-        // 🟢 add to new parent
-        await directoriesCollection.updateOne(
-          { id: dirId },
-          { $push: { files: file.id } },
-        );
 
         // update moving file's parent
         await filesCollection.updateOne(

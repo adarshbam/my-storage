@@ -52,8 +52,6 @@ router.post("/register", async (req, res) => {
     userId,
     type: "directory",
     parentDir: null,
-    files: [],
-    directories: [],
   };
 
   try {
