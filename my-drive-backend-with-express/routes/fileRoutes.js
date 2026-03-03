@@ -1,6 +1,6 @@
 import express from "express";
 import path from "path";
-import { stat } from "fs/promises";
+import { stat, unlink } from "fs/promises";
 import { createReadStream, createWriteStream } from "fs";
 import validateIdMiddleware from "../middlewares/validateIdMiddleware.js";
 import checkAuth from "../middlewares/authMiddleware.js";
@@ -236,9 +236,26 @@ router.post(["/", "/:parentDirId"], async (req, res) => {
 
     const writeStream = createWriteStream(filePath, { flags });
 
-    writeStream.on("error", (err) => {
+    writeStream.on("error", async (err) => {
       console.error("Write stream error:", err);
-      return res.status(500).send("Error writing file");
+
+      try {
+        // Delete the physical file that was being uploaded
+        await unlink(filePath).catch(() => {});
+
+        // Delete the thumbnail if it exists
+        const thumbnailPath = `./storage/thumbnails/${id}.jpg`;
+        await unlink(thumbnailPath).catch(() => {});
+
+        // Remove the file entry from the database
+        await filesCollection.deleteOne({ id });
+      } catch (cleanupErr) {
+        console.error("Error during cleanup:", cleanupErr);
+      }
+
+      if (!res.headersSent) {
+        return res.status(500).send("Error writing file");
+      }
     });
 
     writeStream.on("finish", async () => {

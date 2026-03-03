@@ -1,5 +1,4 @@
 import archiver from "archiver";
-import { stat } from "fs/promises";
 import express from "express";
 import path from "path";
 import crypto from "crypto";
@@ -93,9 +92,7 @@ router.get(["/", "/:dirId"], async (req, res) => {
         for (const file of dirfiles) {
           if (file) {
             try {
-              const filePath = path.join(BASE, `${file.id}${file.extension}`);
-              const fileStat = await stat(filePath);
-              totalSize += fileStat.size;
+              totalSize += file.size;
               totalFiles++;
             } catch (e) {
               console.error(`Error getting size for file ${file.name}:`, e);
@@ -219,10 +216,6 @@ router.delete("/:dirId", async (req, res) => {
     if (!dirData) {
       return res.status(404).send("Folder not found");
     }
-
-    const parentDirectory = await directoriesCollection.findOne({
-      id: dirData.parentDir,
-    });
 
     const deletedDirectory = await directoriesCollection.findOne({ id: dirId });
     if (deletedDirectory) {
