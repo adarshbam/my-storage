@@ -20,7 +20,7 @@ router.param("dirId", validateIdMiddleware);
 
 router.get(["/", "/:dirId"], async (req, res) => {
   const rootDirId = decodeURIComponent(req.cookies.rootDirId);
-  console.log(rootDirId);
+  // console.log(rootDirId);
 
   if (!rootDirId) {
     return res.redirect(`http://localhost:5173/login`);
@@ -50,7 +50,7 @@ router.get(["/", "/:dirId"], async (req, res) => {
       }),
     );
 
-    console.log(directoryData);
+    // console.log(directoryData);
     if (!directoryData) {
       return res.status(404).json({ error: "Directory not found" });
     }
@@ -157,10 +157,9 @@ router.post(["/", "/:parentDirId"], async (req, res) => {
   const rootDirId = decodeURIComponent(req.cookies.rootDirId);
   try {
     const parentDirId = req.params.parentDirId ?? rootDirId;
-    console.log(parentDirId);
+    // console.log(parentDirId);
     const dirName = req.body.foldername ?? "new-folder";
-    console.log(dirName);
-    const parentDir = await directoriesCollection.findOne({ id: parentDirId });
+    // console.log(dirName);
     const dirId = crypto.randomUUID();
 
     await directoriesCollection.insertOne({
@@ -234,37 +233,32 @@ router.patch("/:dirId/move", checkAuth, async (req, res) => {
     const { dirId } = req.params;
     const transfers = req.body;
 
-    const targetDir = await directoriesCollection.findOne({ id: dirId });
+    const rootDirId = req.cookies.rootDirId
+      ? decodeURIComponent(req.cookies.rootDirId)
+      : null;
+    let targetDir = null;
+
+    if (dirId === rootDirId) {
+      targetDir = { id: rootDirId };
+    } else {
+      targetDir = await directoriesCollection.findOne({ id: dirId });
+    }
+
     if (!targetDir) {
       return res.status(404).json({ message: "Target folder not found" });
     }
 
-    for (const transfer of transfers) {
-      if (transfer.id === dirId) {
-        continue;
-      }
-      if (transfer.type === "directory") {
-        const directory = await directoriesCollection.findOne({
-          id: transfer.id,
-        });
-        if (!directory) continue;
+    const itemIds = transfers.map((t) => t.id);
 
-        // update moving dir's parent
-        await directoriesCollection.updateOne(
-          { id: directory.id },
-          { $set: { parentDir: dirId } },
-        );
-      } else {
-        const file = await filesCollection.findOne({ id: transfer.id });
-        if (!file) continue;
+    await directoriesCollection.updateMany(
+      { id: { $in: itemIds } },
+      { $set: { parentDir: dirId } },
+    );
 
-        // update moving file's parent
-        await filesCollection.updateOne(
-          { id: file.id },
-          { $set: { parentDir: dirId } },
-        );
-      }
-    }
+    await filesCollection.updateMany(
+      { id: { $in: itemIds } },
+      { $set: { parentDir: dirId } },
+    );
 
     return res.status(200).json({ message: "Items moved successfully" });
   } catch (err) {
