@@ -6,13 +6,21 @@ import trashRouter from "./routes/trashRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 import cors from "cors";
 import checkAuth from "./middlewares/authMiddleware.js";
+import https from "https";
+import { readFileSync } from "fs";
 
 const app = express();
 
 app.use(
   cors({
     exposedHeaders: ["X-Total-Size", "X-Total-Files"],
-    origin: "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5173",
+
+      "http://192.168.31.10:5173",
+      "http://[2409:40e3:40ea:818b:f5a2:c64b:63e3:59a6]:5173",
+    ],
     credentials: true,
   }),
 );
@@ -41,6 +49,13 @@ app.get("/", (req, res) => {
   return res.send("Server running");
 });
 
-app.listen(4000, () => {
-  console.log("Server is running on port 4000");
+const sslOptions = {
+  key: readFileSync("server.key"),
+  cert: readFileSync("server.cert"),
+};
+
+const httpsServer = https.createServer(sslOptions, app);
+
+httpsServer.listen(4000, () => {
+  console.log(`HTTPS Server running on port 4000`);
 });

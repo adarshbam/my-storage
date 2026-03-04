@@ -1,7 +1,7 @@
 import { MongoClient } from "mongodb";
 
 // 🔴 paste YOUR atlas or local URL here
-const uri = "mongodb://localhost:27017";
+const uri = "mongodb://192.168.31.10:27017";
 // OR Atlas:
 // const uri = "mongodb+srv://username:password@cluster.mongodb.net/";
 

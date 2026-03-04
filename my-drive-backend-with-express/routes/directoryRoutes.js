@@ -23,7 +23,9 @@ router.get(["/", "/:dirId"], async (req, res) => {
   // console.log(rootDirId);
 
   if (!rootDirId) {
-    return res.redirect(`http://localhost:5173/login`);
+    return res.redirect(
+      `http://[2409:40e3:40ea:818b:f5a2:c64b:63e3:59a6]:5173/login`,
+    );
   }
 
   try {
