@@ -1,5 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import { MoreVertical, Download, Edit2, Trash2 } from "lucide-react";
+import {
+  MoreVertical,
+  Download,
+  Edit2,
+  Trash2,
+  ExternalLink,
+} from "lucide-react";
 import getFileImage from "../../lib/FileImages";
 import { formatSize } from "../../lib/utils";
 import { SERVER_URL } from "../../lib/api";
@@ -111,15 +117,26 @@ export default function FileCard({
               onClick={(e) => e.stopPropagation()}
             >
               {!isTrash && (
-                <button
-                  onClick={() => {
-                    setShowMenu(false);
-                    onRename(item);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
-                >
-                  <Edit2 size={14} /> Rename
-                </button>
+                <>
+                  <button
+                    onClick={(e) => {
+                      setShowMenu(false);
+                      handleDoubleClick(e);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                  >
+                    <ExternalLink size={14} /> Open
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onRename(item);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                  >
+                    <Edit2 size={14} /> Rename
+                  </button>
+                </>
               )}
 
               <button
