@@ -9,7 +9,6 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { X, Pause, Play, Trash2, Minimize2, Maximize2 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
-import { getChunks, clearFile, saveChunk } from "../../lib/downloadDB";
 import { formatSize, formatSpeed, formatTime, cn } from "../../lib/utils";
 import getFileImage from "../../lib/FileImages";
 import Card from "../ui/Card";
@@ -20,6 +19,7 @@ const TransferManager = forwardRef((props, ref) => {
   const [minimized, setMinimized] = useState(false);
   const downloadReaders = useRef({});
   const abortControllers = useRef({});
+  const downloadWritables = useRef({});
 
   // --- HELPER: Update a specific transfer's status/progress ---
   const updateTransfer = useCallback((id, updates) => {
@@ -212,6 +212,39 @@ const TransferManager = forwardRef((props, ref) => {
 
   // --- DOWNLOAD LOGIC ---
   const downloadFile = async (url, filename, id = uuidv4(), startByte = 0) => {
+    const hasFileSystemAccess = "showSaveFilePicker" in window;
+
+    // Fallback for Firefox/Safari or browsers without File System Access API
+    if (!hasFileSystemAccess) {
+      const a = document.createElement("a");
+      a.href = url + (url.includes("?") ? "&" : "?") + "action=download";
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return;
+    }
+
+    let writable;
+    try {
+      if (startByte === 0 || !downloadWritables.current[id]) {
+        const fileHandle = await window.showSaveFilePicker({
+          suggestedName: filename,
+        });
+        writable = await fileHandle.createWritable();
+        downloadWritables.current[id] = writable;
+      } else {
+        writable = downloadWritables.current[id];
+      }
+    } catch (err) {
+      if (err.name === "AbortError") {
+        console.log("User cancelled file picker");
+      } else {
+        console.error("File picker error:", err);
+      }
+      return;
+    }
+
     const controller = new AbortController();
     abortControllers.current[id] = controller;
 
@@ -271,7 +304,15 @@ const TransferManager = forwardRef((props, ref) => {
           break;
         }
 
-        await saveChunk(id, startByte + received, value);
+        if (startByte + received === 0) {
+          await writable.write(value);
+        } else {
+          await writable.write({
+            type: "write",
+            position: startByte + received,
+            data: value,
+          });
+        }
         received += value.length;
 
         const totalLoaded = startByte + received;
@@ -294,11 +335,8 @@ const TransferManager = forwardRef((props, ref) => {
         }
       }
 
-      const chunks = await getChunks(id);
-      const blob = new Blob(chunks, { type: "application/octet-stream" });
-      triggerFileDownload(blob, filename);
-      await clearFile(id);
-
+      await writable.close();
+      delete downloadWritables.current[id];
       updateTransfer(id, { status: "completed" });
     } catch (err) {
       if (err.name === "AbortError") {
@@ -310,22 +348,17 @@ const TransferManager = forwardRef((props, ref) => {
       } else {
         console.error("Download error:", err);
         updateTransfer(id, { status: "error" });
+        if (writable) {
+          try {
+            await writable.abort();
+            delete downloadWritables.current[id];
+          } catch (e) {}
+        }
       }
     } finally {
       delete abortControllers.current[id];
       delete downloadReaders.current[id];
     }
-  };
-
-  const triggerFileDownload = (blob, filename) => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
   };
 
   const cancelTransfer = (id) => {
@@ -342,6 +375,10 @@ const TransferManager = forwardRef((props, ref) => {
           abortControllers.current[id].abort();
         }
       }
+    }
+    if (downloadWritables.current[id]) {
+      downloadWritables.current[id].abort().catch(() => {});
+      delete downloadWritables.current[id];
     }
     setTransfers((prev) => prev.filter((t) => t.id !== id));
   };
