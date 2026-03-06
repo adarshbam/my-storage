@@ -19,7 +19,7 @@ app.use(
       "http://localhost:5173",
 
       "http://192.168.31.10:5173",
-      "http://[2409:40e3:40ea:818b:f5a2:c64b:63e3:59a6]:5173",
+      "http://[2409:40e3:176:1a68:eb0f:b7fd:bb7a:937e]:5173",
     ],
     credentials: true,
   }),

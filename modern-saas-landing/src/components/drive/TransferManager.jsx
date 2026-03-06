@@ -214,10 +214,13 @@ const TransferManager = forwardRef((props, ref) => {
   const downloadFile = async (url, filename, id = uuidv4(), startByte = 0) => {
     const hasFileSystemAccess = "showSaveFilePicker" in window;
 
-    // Fallback for Firefox/Safari or browsers without File System Access API
     if (!hasFileSystemAccess) {
+      const urlObj = new URL(url, window.location.origin);
+      if (!urlObj.searchParams.has("action")) {
+        urlObj.searchParams.set("action", "download");
+      }
       const a = document.createElement("a");
-      a.href = url + (url.includes("?") ? "&" : "?") + "action=download";
+      a.href = urlObj.toString();
       a.download = filename;
       document.body.appendChild(a);
       a.click();

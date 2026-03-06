@@ -4,6 +4,7 @@ import { createWriteStream } from "node:fs";
 import path from "node:path";
 import checkAuth from "../middlewares/authMiddleware.js";
 import { connectToDB } from "../utils/db.js";
+import { error } from "node:console";
 
 const db = await connectToDB();
 const usersCollection = db.collection("users");
@@ -60,7 +61,12 @@ router.post("/register", async (req, res) => {
     return res.status(200).json({ message: "Registered" });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ message: "Internal Server Error" });
+
+    if (err.code === 121) {
+      return res.status(400).json({ error: "Invalid Fields"   });
+    } else {
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
   }
 });
 
