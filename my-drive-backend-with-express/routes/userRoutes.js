@@ -3,8 +3,7 @@ import { rm } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
 import path from "node:path";
 import checkAuth from "../middlewares/authMiddleware.js";
-import { connectToDB } from "../utils/db.js";
-import { error } from "node:console";
+import { client, connectToDB } from "../utils/db.js";
 
 const db = await connectToDB();
 const usersCollection = db.collection("users");
@@ -55,15 +54,19 @@ router.post("/register", async (req, res) => {
     parentDir: null,
   };
 
+  const session = client.startSession();
+
   try {
-    await usersCollection.insertOne(newUser);
-    await directoriesCollection.insertOne(rootDir);
+    session.startTransaction();
+    await usersCollection.insertOne(newUser, { session });
+    await directoriesCollection.insertOne(rootDir, { session });
+    await session.commitTransaction();
     return res.status(200).json({ message: "Registered" });
   } catch (err) {
     console.error(err);
-
+    await session.abortTransaction();
     if (err.code === 121) {
-      return res.status(400).json({ error: "Invalid Fields"   });
+      return res.status(400).json({ error: "Invalid Fields" });
     } else {
       return res.status(500).json({ error: "Internal Server Error" });
     }
