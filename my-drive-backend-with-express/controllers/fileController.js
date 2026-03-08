@@ -179,6 +179,7 @@ export const getFileById = async (req, res) => {
     const range = req.headers.range;
 
     // ✅ IMPORTANT HEADERS
+    res.setHeader("Content-Disposition", `attachment; filename="${file.name}"`);
     res.setHeader("Accept-Ranges", "bytes");
 
     res.setHeader("Content-Type", "application/octet-stream");
