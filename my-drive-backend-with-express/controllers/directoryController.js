@@ -1,11 +1,10 @@
 import archiver from "archiver";
 import path from "path";
 import crypto from "crypto";
+import mongoose from "mongoose";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import Trash from "../models/trashModel.js";
-
-const BASE = "storage";
 
 export const getDirectoryById = async (req, res) => {
   const rootDirId = decodeURIComponent(req.cookies.rootDirId);
@@ -112,7 +111,10 @@ export const getDirectoryById = async (req, res) => {
         const dirFiles = await File.find({ parentDir: dirId }).lean();
         for (const file of dirFiles) {
           if (file) {
-            const filePath = path.join(BASE, `${file.id}${file.extension}`);
+            const filePath = path.join(
+              "storage",
+              `${file.id}${file.extension}`,
+            );
             archive.file(filePath, {
               name: path.join(zipPath, file.name),
             });
@@ -208,13 +210,26 @@ export const deleteDirectory = async (req, res) => {
         .send("You are not authorized to delete this directory");
     }
 
-    const deletedDirectory = await Directory.findOne({ id: dirId }).lean();
-    if (deletedDirectory) {
-      await Directory.deleteOne({ id: dirId });
-      await Trash.create(deletedDirectory);
-    }
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    return res.status(200).send("Folder deleted successfully");
+    try {
+      const deletedDirectory = await Directory.findOne({ id: dirId })
+        .session(session)
+        .lean();
+      if (deletedDirectory) {
+        await Directory.deleteOne({ id: dirId }).session(session);
+        await Trash.create([deletedDirectory], { session });
+      }
+
+      await session.commitTransaction();
+      return res.status(200).send("Folder deleted successfully");
+    } catch (txError) {
+      await session.abortTransaction();
+      throw txError;
+    } finally {
+      session.endSession();
+    }
   } catch (error) {
     console.error("Delete Error:", error);
     return res.status(500).send("Internal Server Error");
@@ -243,17 +258,28 @@ export const moveDirectory = async (req, res) => {
 
     const itemIds = transfers.map((t) => t.id);
 
-    await Directory.updateMany(
-      { id: { $in: itemIds } },
-      { $set: { parentDir: dirId } },
-    );
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    await File.updateMany(
-      { id: { $in: itemIds } },
-      { $set: { parentDir: dirId } },
-    );
+    try {
+      await Directory.updateMany(
+        { id: { $in: itemIds } },
+        { $set: { parentDir: dirId } },
+      ).session(session);
 
-    return res.status(200).json({ message: "Items moved successfully" });
+      await File.updateMany(
+        { id: { $in: itemIds } },
+        { $set: { parentDir: dirId } },
+      ).session(session);
+
+      await session.commitTransaction();
+      return res.status(200).json({ message: "Items moved successfully" });
+    } catch (txError) {
+      await session.abortTransaction();
+      throw txError;
+    } finally {
+      session.endSession();
+    }
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Move failed" });

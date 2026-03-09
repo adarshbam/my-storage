@@ -1,19 +1,15 @@
-import { connectToDB } from "../utils/db.js";
 import { createReadStream, createWriteStream } from "fs";
 import path from "path";
 import { stat, unlink } from "fs/promises";
 import sharp from "sharp";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
+import mongoose from "mongoose";
+import File from "../models/fileModel.js";
+import Directory from "../models/directoryModel.js";
+import Trash from "../models/trashModel.js";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-
-const db = await connectToDB();
-const filesCollection = db.collection("files");
-const directoriesCollection = db.collection("directories");
-const trashCollection = db.collection("trash");
-
-const BASE = "storage";
 
 const getAllDescendantIds = (rootDirId, allDirs) => {
   const descendants = new Set();
@@ -45,17 +41,15 @@ export const search = async (req, res) => {
 
     let validParentIds = null;
     if (parentId && parentId !== "null" && parentId !== "undefined") {
-      const allDirs = await directoriesCollection.find().toArray();
+      const allDirs = await Directory.find().lean();
       validParentIds = getAllDescendantIds(parentId, allDirs);
     }
 
     // Filter DirectoryDB
-    const matchingDirs = await directoriesCollection
-      .find({
-        userId: req.user.id,
-        name: { $regex: query, $options: "i" },
-      })
-      .toArray();
+    const matchingDirs = await Directory.find({
+      userId: req.user.id,
+      name: { $regex: query, $options: "i" },
+    }).toArray();
 
     const finalMatchingDirsRaw = validParentIds
       ? matchingDirs.filter((d) => validParentIds.has(d.id))
@@ -63,10 +57,10 @@ export const search = async (req, res) => {
 
     const finalMatchingDirs = await Promise.all(
       finalMatchingDirsRaw.map(async (dir) => {
-        const fileCount = await filesCollection.countDocuments({
+        const fileCount = await File.countDocuments({
           parentDir: dir.id,
         });
-        const dirCount = await directoriesCollection.countDocuments({
+        const dirCount = await Directory.countDocuments({
           parentDir: dir.id,
         });
         return { ...dir, itemCount: fileCount + dirCount };
@@ -74,12 +68,10 @@ export const search = async (req, res) => {
     );
 
     // Filter FilesDB
-    const matchingFiles = await filesCollection
-      .find({
-        userId: req.user.id,
-        name: { $regex: query, $options: "i" },
-      })
-      .toArray();
+    const matchingFiles = await File.find({
+      userId: req.user.id,
+      name: { $regex: query, $options: "i" },
+    }).toArray();
 
     const finalMatchingFiles = validParentIds
       ? matchingFiles.filter((f) => validParentIds.has(f.parentDir))
@@ -101,7 +93,7 @@ export const search = async (req, res) => {
 export const getThumbnail = async (req, res) => {
   try {
     const { fileId } = req.params;
-    const file = await filesCollection.findOne({ id: fileId });
+    const file = await File.findOne({ id: fileId }).lean();
 
     if (!file) return res.status(404).send("File not found");
     if (file.userId !== req.user.id) {
@@ -127,7 +119,7 @@ export const getFileById = async (req, res) => {
   try {
     const { fileId } = req.params;
     const { action } = req.query;
-    const file = await filesCollection.findOne({ id: fileId });
+    const file = await File.findOne({ id: fileId }).lean();
 
     // Check if file exists first
     if (!file) return res.status(404).send("File not found");
@@ -136,7 +128,7 @@ export const getFileById = async (req, res) => {
       return res.status(403).send("You are not authorized to access this file");
     }
 
-    const filePath = path.join(BASE, `${fileId}${file.extension}`);
+    const filePath = path.join("storage", `${fileId}${file.extension}`);
 
     // If action is NOT download, just send the file simple way (fixes Open File)
     if (action !== "download") {
@@ -239,7 +231,7 @@ export const uploadFile = async (req, res) => {
         await unlink(thumbnailPath).catch(() => {});
 
         // Remove the file entry from the database
-        await filesCollection.deleteOne({ id });
+        await File.deleteOne({ id });
       } catch (cleanupErr) {
         console.error("Error during cleanup:", cleanupErr);
       }
@@ -250,7 +242,7 @@ export const uploadFile = async (req, res) => {
     });
 
     writeStream.on("finish", async () => {
-      const exists = await filesCollection.findOne({ id });
+      const exists = await File.findOne({ id }).lean();
 
       const stats = await stat(filePath);
       const fileSize = stats.size;
@@ -301,7 +293,7 @@ export const uploadFile = async (req, res) => {
       }
 
       if (!exists) {
-        await filesCollection.insertOne({
+        await File.create({
           id,
           extension: ext,
           type: "file",
@@ -326,7 +318,7 @@ export const uploadFile = async (req, res) => {
 export const renameFile = async (req, res) => {
   try {
     const { fileId } = req.params;
-    const file = await filesCollection.findOne({ id: fileId });
+    const file = await File.findOne({ id: fileId }).lean();
 
     if (!file) {
       return res.status(404).send("File not found");
@@ -335,10 +327,7 @@ export const renameFile = async (req, res) => {
       return res.status(403).send("You are not authorized to rename this file");
     }
     const { newFileName } = req.body;
-    await filesCollection.updateOne(
-      { id: fileId },
-      { $set: { name: newFileName } },
-    );
+    await File.updateOne({ id: fileId }, { $set: { name: newFileName } });
     return res.status(200).send("File renamed successfully");
   } catch {
     return res.status(500).send("Internal Server Error");
@@ -348,7 +337,7 @@ export const renameFile = async (req, res) => {
 export const deleteFile = async (req, res) => {
   try {
     const { fileId } = req.params;
-    const fileData = await filesCollection.findOne({ id: fileId });
+    const fileData = await File.findOne({ id: fileId }).lean();
 
     if (!fileData) {
       return res.status(404).send("File not found");
@@ -357,14 +346,28 @@ export const deleteFile = async (req, res) => {
       return res.status(403).send("You are not authorized to delete this file");
     }
 
-    const deletedFile = await filesCollection.findOne({ id: fileId });
-    if (deletedFile) {
-      await filesCollection.deleteOne({ id: fileId });
-      await trashCollection.insertOne(deletedFile);
-    }
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    return res.status(200).send("File deleted successfully");
-  } catch {
+    try {
+      const deletedFile = await File.findOne({ id: fileId })
+        .session(session)
+        .lean();
+      if (deletedFile) {
+        await File.deleteOne({ id: fileId }).session(session);
+        await Trash.create([deletedFile], { session });
+      }
+
+      await session.commitTransaction();
+      return res.status(200).send("File deleted successfully");
+    } catch (txError) {
+      await session.abortTransaction();
+      throw txError;
+    } finally {
+      session.endSession();
+    }
+  } catch (error) {
+    console.error("Delete Error:", error);
     return res.status(500).send("Internal Server Error");
   }
 };

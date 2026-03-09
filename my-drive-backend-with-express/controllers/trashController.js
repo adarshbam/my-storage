@@ -1,14 +1,12 @@
 import { rm } from "fs/promises";
-import { connectToDB } from "../utils/db.js";
-
-const db = await connectToDB();
-const filesCollection = db.collection("files");
-const directoriesCollection = db.collection("directories");
-const trashCollection = db.collection("trash");
+import mongoose from "mongoose";
+import File from "../models/fileModel.js";
+import Directory from "../models/directoryModel.js";
+import Trash from "../models/trashModel.js";
 
 export const getTrashItems = async (req, res, next) => {
   try {
-    const trashItems = await trashCollection.find().toArray();
+    const trashItems = await Trash.find().lean();
     return res.send(trashItems);
   } catch (err) {
     return res.status(500).send("Internal Server Error");
@@ -17,7 +15,7 @@ export const getTrashItems = async (req, res, next) => {
 
 export const emptyTrash = async (req, res) => {
   try {
-    const trashItems = await trashCollection.find().toArray();
+    const trashItems = await Trash.find().lean();
     for (const trashFile of trashItems) {
       if (trashFile.type === "directory") continue;
       const filePath = `./storage/${trashFile.id}${trashFile.extension}`;
@@ -32,7 +30,7 @@ export const emptyTrash = async (req, res) => {
       }
     }
 
-    await trashCollection.deleteMany({});
+    await Trash.deleteMany({});
     return res.status(200).send("Trash emptied successfully");
   } catch (err) {
     console.error("Empty trash error:", err);
@@ -43,23 +41,34 @@ export const emptyTrash = async (req, res) => {
 export const restoreFile = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const trashfile = await trashCollection.findOne({ id });
+    const trashfile = await Trash.findOne({ id }).lean();
     if (!trashfile) {
       return res.status(404).send("File not found in trash");
     }
 
-    let parentDirData = await directoriesCollection.findOne({
+    let parentDirData = await Directory.findOne({
       id: trashfile.parentDir,
-    });
+    }).lean();
 
     if (!parentDirData) {
       trashfile.parentDir = null;
     }
 
-    await filesCollection.insertOne(trashfile);
-    await trashCollection.deleteOne({ id });
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    return res.status(201).send("File restored successfully");
+    try {
+      await File.create([trashfile], { session });
+      await Trash.deleteOne({ id }).session(session);
+
+      await session.commitTransaction();
+      return res.status(201).send("File restored successfully");
+    } catch (txError) {
+      await session.abortTransaction();
+      throw txError;
+    } finally {
+      session.endSession();
+    }
   } catch (err) {
     console.error(err);
     return res.status(500).send("Internal Server Error");
@@ -69,7 +78,7 @@ export const restoreFile = async (req, res, next) => {
 export const deleteFileForever = async (req, res) => {
   try {
     const { fileid } = req.params;
-    const trashFile = await trashCollection.findOne({ id: fileid });
+    const trashFile = await Trash.findOne({ id: fileid }).lean();
     if (!trashFile) {
       return res.status(404).send("File not found in trash");
     }
@@ -88,7 +97,7 @@ export const deleteFileForever = async (req, res) => {
       console.error(`Failed to delete file on disk ${filePath}:`, err);
     }
 
-    await trashCollection.deleteOne({ id: fileid });
+    await Trash.deleteOne({ id: fileid });
     return res.status(200).send("File deleted forever");
   } catch (err) {
     console.error("Delete forever API error:", err);
@@ -97,14 +106,12 @@ export const deleteFileForever = async (req, res) => {
 };
 
 async function deleteByParentChain(parentId) {
-  const filesToDelete = await filesCollection
-    .find({ parentDir: parentId })
-    .toArray();
+  const filesToDelete = await File.find({ parentDir: parentId }).lean();
 
   const fileIds = filesToDelete.map((file) => file.id);
   let idsToDelete = [...fileIds];
   if (fileIds.length > 0) {
-    await filesCollection.deleteMany({ id: { $in: fileIds } });
+    await File.deleteMany({ id: { $in: fileIds } });
   }
 
   for (const file of filesToDelete) {
@@ -117,9 +124,7 @@ async function deleteByParentChain(parentId) {
     );
   }
 
-  const childDirs = await directoriesCollection
-    .find({ parentDir: parentId })
-    .toArray();
+  const childDirs = await Directory.find({ parentDir: parentId }).lean();
 
   for (const dir of childDirs) {
     idsToDelete = [...idsToDelete, ...(await deleteByParentChain(dir.id))];
@@ -127,7 +132,7 @@ async function deleteByParentChain(parentId) {
 
   const dirIds = childDirs.map((dir) => dir.id);
   if (dirIds.length > 0) {
-    await directoriesCollection.deleteMany({ id: { $in: dirIds } });
+    await Directory.deleteMany({ id: { $in: dirIds } });
     idsToDelete = [...idsToDelete, ...dirIds];
   }
 
@@ -137,22 +142,33 @@ async function deleteByParentChain(parentId) {
 export const restoreDirectory = async (req, res, next) => {
   try {
     const { dirId } = req.params;
-    const trashDir = await trashCollection.findOne({ id: dirId });
+    const trashDir = await Trash.findOne({ id: dirId }).lean();
     if (!trashDir) {
       return res.status(404).send("Directory not found in trash");
     }
-    const parentDirData = await directoriesCollection.findOne({
+    const parentDirData = await Directory.findOne({
       id: trashDir.parentDir,
-    });
+    }).lean();
 
     if (!parentDirData) {
       trashDir.parentDir = null; // optional logic
     }
 
-    await directoriesCollection.insertOne(trashDir);
-    await trashCollection.deleteOne({ id: dirId });
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    return res.status(201).send("Directory restored successfully");
+    try {
+      await Directory.create([trashDir], { session });
+      await Trash.deleteOne({ id: dirId }).session(session);
+
+      await session.commitTransaction();
+      return res.status(201).send("Directory restored successfully");
+    } catch (txError) {
+      await session.abortTransaction();
+      throw txError;
+    } finally {
+      session.endSession();
+    }
   } catch (err) {
     console.error(err);
     return res.status(500).send("Internal Server Error");
@@ -165,7 +181,7 @@ export const deleteDirectoryForever = async (req, res) => {
 
     const idsToDelete = await deleteByParentChain(dirId);
     idsToDelete.push(dirId);
-    await trashCollection.deleteMany({ id: { $in: idsToDelete } });
+    await Trash.deleteMany({ id: { $in: idsToDelete } });
 
     return res
       .status(200)
@@ -196,7 +212,7 @@ export const batchDelete = async (req, res) => {
         const ids = await deleteByParentChain(item.id);
         allIdsToDeleteFromTrash = [...allIdsToDeleteFromTrash, ...ids];
       } else {
-        const trashFile = await trashCollection.findOne({ id: item.id });
+        const trashFile = await Trash.findOne({ id: item.id }).lean();
         if (trashFile) {
           const filePath = `./storage/${trashFile.id}${trashFile.extension}`;
           try {
@@ -212,7 +228,7 @@ export const batchDelete = async (req, res) => {
     }
 
     if (allIdsToDeleteFromTrash.length > 0) {
-      await trashCollection.deleteMany({
+      await Trash.deleteMany({
         id: { $in: allIdsToDeleteFromTrash },
       });
     }

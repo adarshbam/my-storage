@@ -9,8 +9,6 @@ const usersCollection = db.collection("users");
 const directoriesCollection = db.collection("directories");
 const filesCollection = db.collection("files");
 
-const BASE = "storage";
-
 export const getUser = (req, res) => {
   const user = req.user;
   return res.status(200).json({
