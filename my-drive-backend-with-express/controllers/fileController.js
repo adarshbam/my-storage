@@ -112,7 +112,7 @@ export const getThumbnail = async (req, res) => {
     const file = await File.findOne({ _id: fileId }).select("userId").lean();
 
     if (!file) return res.status(404).send("File not found");
-    if (file.userId !== req.user.id) {
+    if (file.userId.toString() !== req.user.id) {
       return res.status(403).send("Unauthorized");
     }
 
@@ -142,7 +142,7 @@ export const getFileById = async (req, res) => {
     // Check if file exists first
     if (!file) return res.status(404).send("File not found");
 
-    if (file.userId !== req.user.id) {
+    if (file.userId.toString() !== req.user.id) {
       return res.status(403).send("You are not authorized to access this file");
     }
 
@@ -342,7 +342,7 @@ export const renameFile = async (req, res) => {
     if (!file) {
       return res.status(404).send("File not found");
     }
-    if (file.userId !== req.user.id) {
+    if (file.userId.toString() !== req.user.id) {
       return res.status(403).send("You are not authorized to rename this file");
     }
     const { newFileName } = req.body;
@@ -363,7 +363,7 @@ export const deleteFile = async (req, res) => {
     if (!fileData) {
       return res.status(404).send("File not found");
     }
-    if (fileData.userId !== req.user.id) {
+    if (fileData.userId.toString() !== req.user.id) {
       return res.status(403).send("You are not authorized to delete this file");
     }
 
