@@ -2,12 +2,10 @@ import { rm } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
 import path from "node:path";
 import crypto from "crypto";
-import { client, connectToDB } from "../utils/db.js";
-
-const db = await connectToDB();
-const usersCollection = db.collection("users");
-const directoriesCollection = db.collection("directories");
-const filesCollection = db.collection("files");
+import User from "../models/userModel.js";
+import Directory from "../models/directoryModel.js";
+import File from "../models/fileModel.js";
+import mongoose from "mongoose";
 
 export const getUser = (req, res) => {
   const user = req.user;
@@ -22,7 +20,7 @@ export const getUser = (req, res) => {
 export const registerUser = async (req, res) => {
   const { name, email, password } = req.body;
 
-  const user = await usersCollection.findOne({ email });
+  const user = await User.findOne({ email }).lean();
 
   if (user) {
     return res.status(409).json({ message: "User already exists" });
@@ -33,7 +31,7 @@ export const registerUser = async (req, res) => {
 
   const newUser = {
     id: userId,
-    name,
+    name: "user",
     email,
     profilepic: "",
     rootDirId,
@@ -48,14 +46,14 @@ export const registerUser = async (req, res) => {
     parentDir: null,
   };
 
-  const session = client.startSession();
+  const session = await mongoose.startSession();
 
   try {
     session.startTransaction();
-    await usersCollection.insertOne(newUser, { session });
-    await directoriesCollection.insertOne(rootDir, { session });
+    await User.create([newUser], { session });
+    await Directory.create([rootDir], { session });
     await session.commitTransaction();
-    return res.status(200).json({ message: "Registered" });
+    return res.status(201).json({ message: "Registered" });
   } catch (err) {
     console.error(err);
     await session.abortTransaction();
@@ -73,7 +71,7 @@ export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await usersCollection.findOne({ email });
+    const user = await User.findOne({ email }).lean();
 
     if (!user) {
       return res.status(404).json({ emailerr: "Email not registered" });
@@ -83,7 +81,7 @@ export const loginUser = async (req, res) => {
       return res.status(404).json({ passworderr: "Invalid password" });
     }
 
-    const rootDir = await directoriesCollection.findOne({ id: user.rootDirId });
+    const rootDir = await Directory.findOne({ id: user.rootDirId }).lean();
     if (!rootDir) {
       return res.status(500).json({ message: "Internal Server Error" });
     }
@@ -123,7 +121,7 @@ export const logoutUser = (req, res) => {
 };
 
 export const uploadProfilePic = async (req, res) => {
-  const user = await usersCollection.findOne({ id: req.user.id });
+  const user = await User.findOne({ id: req.user.id }).lean();
 
   if (!user) {
     return res.status(404).json({ message: "User not found" });
@@ -140,19 +138,19 @@ export const uploadProfilePic = async (req, res) => {
     type: "file",
     userId: req.cookies.userId,
     name: fileName,
-    parentDir: user.rootDirId,
+    parentDir: null,
   };
 
-  await filesCollection.insertOne(newProfilePic);
+  await File.create(newProfilePic);
 
   const filePath = `./storage/${profilePicId}${ext}`;
 
   if (user.profilepic) {
-    const oldProfilePic = await filesCollection.findOne({
+    const oldProfilePic = await File.findOne({
       id: user.profilepic,
     });
     if (oldProfilePic) {
-      await filesCollection.deleteOne({ id: oldProfilePic.id });
+      await File.deleteOne({ id: oldProfilePic.id });
       await rm(`./storage/${oldProfilePic.id}${oldProfilePic.extension}`).catch(
         () => {},
       );
@@ -162,7 +160,7 @@ export const uploadProfilePic = async (req, res) => {
   const writeStream = createWriteStream(filePath);
 
   try {
-    await usersCollection.updateOne(
+    await User.updateOne(
       { id: user.id },
       { $set: { profilepic: profilePicId } },
     );
@@ -181,7 +179,7 @@ export const getProfilePic = async (req, res) => {
   if (!req.user.profilepic) {
     return res.status(404).send("No profile pic set");
   }
-  const profilePic = await filesCollection.findOne({ id: req.user.profilepic });
+  const profilePic = await File.findOne({ id: req.user.profilepic }).lean();
 
   if (!profilePic) {
     return res.status(404).send("Profile pic not found");
@@ -201,7 +199,7 @@ export const storeSearchedItem = async (req, res) => {
   const { searchItem } = req.body;
 
   try {
-    const user = await usersCollection.findOne({ id: req.user.id });
+    const user = await User.findOne({ id: req.user.id }).lean();
 
     if (!user) return res.status(404).send("User not found");
 
@@ -209,7 +207,7 @@ export const storeSearchedItem = async (req, res) => {
 
     if (!searchItem || searchItem.trim() === "") {
       recentlySearchedItems = [];
-      await usersCollection.updateOne(
+      await User.updateOne(
         { id: user.id },
         { $set: { recentlySearchedItems } },
       );
@@ -227,10 +225,7 @@ export const storeSearchedItem = async (req, res) => {
       recentlySearchedItems = recentlySearchedItems.slice(-5);
     }
 
-    await usersCollection.updateOne(
-      { id: user.id },
-      { $set: { recentlySearchedItems } },
-    );
+    await User.updateOne({ id: user.id }, { $set: { recentlySearchedItems } });
     res.status(201).json({ msg: "Succesfully Stored Searched Item" });
   } catch (err) {
     console.error(err);
