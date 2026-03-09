@@ -3,7 +3,7 @@ import { Schema, model } from "mongoose";
 const fileSchema = new Schema(
   {
     name: { type: String, required: true },
-    userId: { type: Schema.Types.ObjectId, required: true },
+    userId: { type: Schema.Types.ObjectId, required: false },
     parentDir: { type: Schema.Types.ObjectId, default: null },
     type: { type: String, default: "file" },
     extension: { type: String, default: "" },

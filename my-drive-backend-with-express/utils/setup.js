@@ -35,7 +35,7 @@ export async function schemaUpdate() {
       collMod: "directories",
       validator: {
         $jsonSchema: {
-          required: ["name", "parentDir", "userId"],
+          required: ["name", "parentDir"],
           properties: {
             _id: {
               bsonType: "objectId",
@@ -68,7 +68,6 @@ export async function schemaUpdate() {
           required: [
             "name",
             "parentDir",
-            "userId",
             "size",
             "type",
             "extension",
@@ -113,7 +112,7 @@ export async function schemaUpdate() {
       collMod: "trash",
       validator: {
         $jsonSchema: {
-          required: ["name", "parentDir", "userId", "type"],
+          required: ["name", "parentDir", "type"],
           properties: {
             _id: {
               bsonType: "objectId",
