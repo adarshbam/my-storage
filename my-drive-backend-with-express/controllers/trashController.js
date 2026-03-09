@@ -7,7 +7,21 @@ import Trash from "../models/trashModel.js";
 export const getTrashItems = async (req, res, next) => {
   try {
     const trashItems = await Trash.find().lean();
-    return res.send(trashItems);
+
+    const itemsWithCount = await Promise.all(
+      trashItems.map(async (item) => {
+        if (item.type === "directory") {
+          const fileCount = await File.countDocuments({ parentDir: item.id });
+          const dirCount = await Directory.countDocuments({
+            parentDir: item.id,
+          });
+          return { ...item, itemCount: fileCount + dirCount };
+        }
+        return item;
+      }),
+    );
+
+    return res.send(itemsWithCount);
   } catch (err) {
     return res.status(500).send("Internal Server Error");
   }
