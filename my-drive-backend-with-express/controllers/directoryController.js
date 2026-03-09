@@ -20,24 +20,36 @@ export const getDirectoryById = async (req, res) => {
     const dirId = req.params.dirId || rootDirId;
     const { action } = req.query;
 
-    const directoryData = await Directory.findOne({ id: dirId }).lean();
+    const directoryData = await Directory.findOne({ _id: dirId })
+      .select("-__v")
+      .lean();
     // console.log(directoryData);
 
     if (!directoryData) {
       return res.status(404).json({ error: "Directory not found" });
     }
-    directoryData.files = await File.find({ parentDir: dirId }).lean();
-    const childDirs = await Directory.find({ parentDir: dirId }).lean();
+
+    directoryData.id = directoryData._id.toString();
+    const files = await File.find({ parentDir: dirId }).select("-__v").lean();
+    directoryData.files = files.map((f) => ({ ...f, id: f._id.toString() }));
+
+    const childDirs = await Directory.find({ parentDir: dirId })
+      .select("-__v")
+      .lean();
 
     directoryData.directories = await Promise.all(
       childDirs.map(async (dir) => {
         const fileCount = await File.countDocuments({
-          parentDir: dir.id,
+          parentDir: dir._id.toString(),
         });
         const dirCount = await Directory.countDocuments({
-          parentDir: dir.id,
+          parentDir: dir._id.toString(),
         });
-        return { ...dir, itemCount: fileCount + dirCount };
+        return {
+          ...dir,
+          id: dir._id.toString(),
+          itemCount: fileCount + dirCount,
+        };
       }),
     );
 
@@ -70,8 +82,12 @@ export const getDirectoryById = async (req, res) => {
         let totalFiles = 0;
         const dirDirectories = await Directory.find({
           parentDir: dirId,
-        }).lean();
-        const dirfiles = await File.find({ parentDir: dirId }).lean();
+        })
+          .select("_id")
+          .lean();
+        const dirfiles = await File.find({ parentDir: dirId })
+          .select("size name")
+          .lean();
         if (!dirfiles) return { size: 0, count: 0 };
 
         for (const file of dirfiles) {
@@ -87,7 +103,9 @@ export const getDirectoryById = async (req, res) => {
 
         for (const subDir of dirDirectories) {
           if (subDir) {
-            const { size, count } = await getDirectorySize(subDir.id);
+            const { size, count } = await getDirectorySize(
+              subDir._id.toString(),
+            );
             totalSize += size;
             totalFiles += count;
           }
@@ -105,15 +123,19 @@ export const getDirectoryById = async (req, res) => {
       archive.pipe(res);
 
       const addDirectory = async (dirId, zipPath) => {
-        const dir = await Directory.findOne({ id: dirId });
+        const dir = await Directory.findOne({ _id: dirId })
+          .select("_id")
+          .lean();
         if (!dir) return;
 
-        const dirFiles = await File.find({ parentDir: dirId }).lean();
+        const dirFiles = await File.find({ parentDir: dirId })
+          .select("_id extension name")
+          .lean();
         for (const file of dirFiles) {
           if (file) {
             const filePath = path.join(
               "storage",
-              `${file.id}${file.extension}`,
+              `${file._id.toString()}${file.extension}`,
             );
             archive.file(filePath, {
               name: path.join(zipPath, file.name),
@@ -123,10 +145,15 @@ export const getDirectoryById = async (req, res) => {
 
         const childDirs = await Directory.find({
           parentDir: dirId,
-        }).lean();
+        })
+          .select("_id name")
+          .lean();
         for (const subDir of childDirs) {
           if (subDir) {
-            await addDirectory(subDir.id, path.join(zipPath, subDir.name));
+            await addDirectory(
+              subDir._id.toString(),
+              path.join(zipPath, subDir.name),
+            );
           }
         }
       };
@@ -151,10 +178,10 @@ export const createDirectory = async (req, res) => {
     // console.log(parentDirId);
     const dirName = req.body.foldername ?? "new-folder";
     // console.log(dirName);
-    const dirId = crypto.randomUUID();
+    const dirId = new mongoose.Types.ObjectId();
 
     await Directory.create({
-      id: dirId,
+      _id: dirId,
       name: dirName,
       userId: req.cookies.userId,
       type: "directory",
@@ -174,7 +201,9 @@ export const createDirectory = async (req, res) => {
 export const renameDirectory = async (req, res) => {
   try {
     const { dirId } = req.params;
-    const directoryData = await Directory.findOne({ id: dirId }).lean();
+    const directoryData = await Directory.findOne({ _id: dirId })
+      .select("userId")
+      .lean();
     console.log(directoryData);
 
     if (!directoryData) {
@@ -187,7 +216,7 @@ export const renameDirectory = async (req, res) => {
         .send("You are not authorized to rename this directory");
     }
     const { newDirName } = req.body;
-    await Directory.updateOne({ id: dirId }, { $set: { name: newDirName } });
+    await Directory.updateOne({ _id: dirId }, { $set: { name: newDirName } });
     return res.status(200).send("Folder renamed successfully");
   } catch (error) {
     console.error("Rename Error:", error);
@@ -198,7 +227,9 @@ export const renameDirectory = async (req, res) => {
 export const deleteDirectory = async (req, res) => {
   try {
     const { dirId } = req.params;
-    const dirData = await Directory.findOne({ id: dirId }).lean();
+    const dirData = await Directory.findOne({ _id: dirId })
+      .select("userId")
+      .lean();
 
     if (!dirData) {
       return res.status(404).send("Folder not found");
@@ -214,11 +245,12 @@ export const deleteDirectory = async (req, res) => {
     session.startTransaction();
 
     try {
-      const deletedDirectory = await Directory.findOne({ id: dirId })
+      const deletedDirectory = await Directory.findOne({ _id: dirId })
+        .select("-__v")
         .session(session)
         .lean();
       if (deletedDirectory) {
-        await Directory.deleteOne({ id: dirId }).session(session);
+        await Directory.deleteOne({ _id: dirId }).session(session);
         await Trash.create([deletedDirectory], { session });
       }
 
@@ -247,9 +279,9 @@ export const moveDirectory = async (req, res) => {
     let targetDir = null;
 
     if (dirId === rootDirId) {
-      targetDir = { id: rootDirId };
+      targetDir = { _id: rootDirId };
     } else {
-      targetDir = await Directory.findOne({ id: dirId });
+      targetDir = await Directory.findOne({ _id: dirId }).select("_id").lean();
     }
 
     if (!targetDir) {
@@ -263,12 +295,12 @@ export const moveDirectory = async (req, res) => {
 
     try {
       await Directory.updateMany(
-        { id: { $in: itemIds } },
+        { _id: { $in: itemIds } },
         { $set: { parentDir: dirId } },
       ).session(session);
 
       await File.updateMany(
-        { id: { $in: itemIds } },
+        { _id: { $in: itemIds } },
         { $set: { parentDir: dirId } },
       ).session(session);
 

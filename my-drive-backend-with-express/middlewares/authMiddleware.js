@@ -3,11 +3,12 @@ import User from "../models/userModel.js";
 async function checkAuth(req, res, next) {
   const userId = decodeURIComponent(req.cookies.userId);
   try {
-    const user = await User.findOne({ id: userId }).lean();
+    const user = await User.findOne({ _id: userId }).lean();
 
     if (!userId || !user) {
       return res.status(401).json({ message: "Not logged in" });
     }
+    user.id = user._id.toString(); // Map for backwards compat in controllers
     req.user = user;
     next();
   } catch (err) {

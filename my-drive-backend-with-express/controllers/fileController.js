@@ -41,29 +41,38 @@ export const search = async (req, res) => {
 
     let validParentIds = null;
     if (parentId && parentId !== "null" && parentId !== "undefined") {
-      const allDirs = await Directory.find().lean();
-      validParentIds = getAllDescendantIds(parentId, allDirs);
+      const allDirs = await Directory.find().select("_id parentDir").lean();
+      validParentIds = getAllDescendantIds(
+        parentId,
+        allDirs.map((d) => ({ ...d, id: d._id.toString() })),
+      );
     }
 
     // Filter DirectoryDB
     const matchingDirs = await Directory.find({
       userId: req.user.id,
       name: { $regex: query, $options: "i" },
-    }).toArray();
+    })
+      .select("-_id -__v")
+      .lean();
 
     const finalMatchingDirsRaw = validParentIds
-      ? matchingDirs.filter((d) => validParentIds.has(d.id))
+      ? matchingDirs.filter((d) => validParentIds.has(d._id.toString()))
       : matchingDirs;
 
     const finalMatchingDirs = await Promise.all(
       finalMatchingDirsRaw.map(async (dir) => {
         const fileCount = await File.countDocuments({
-          parentDir: dir.id,
+          parentDir: dir._id.toString(),
         });
         const dirCount = await Directory.countDocuments({
-          parentDir: dir.id,
+          parentDir: dir._id.toString(),
         });
-        return { ...dir, itemCount: fileCount + dirCount };
+        return {
+          ...dir,
+          id: dir._id.toString(),
+          itemCount: fileCount + dirCount,
+        };
       }),
     );
 
@@ -71,17 +80,24 @@ export const search = async (req, res) => {
     const matchingFiles = await File.find({
       userId: req.user.id,
       name: { $regex: query, $options: "i" },
-    }).toArray();
+    })
+      .select("-_id -__v")
+      .lean();
 
     const finalMatchingFiles = validParentIds
       ? matchingFiles.filter((f) => validParentIds.has(f.parentDir))
       : matchingFiles;
 
+    const finalMatchingFilesProcessed = finalMatchingFiles.map((f) => ({
+      ...f,
+      id: f._id.toString(),
+    }));
+
     // Structure result similar to directory content response
     return res.status(200).json({
       name: "Search Results",
       directories: finalMatchingDirs,
-      files: finalMatchingFiles,
+      files: finalMatchingFilesProcessed,
       parentDir: null, // No parent for flat search results
     });
   } catch (err) {
@@ -93,7 +109,7 @@ export const search = async (req, res) => {
 export const getThumbnail = async (req, res) => {
   try {
     const { fileId } = req.params;
-    const file = await File.findOne({ id: fileId }).lean();
+    const file = await File.findOne({ _id: fileId }).select("userId").lean();
 
     if (!file) return res.status(404).send("File not found");
     if (file.userId !== req.user.id) {
@@ -119,7 +135,9 @@ export const getFileById = async (req, res) => {
   try {
     const { fileId } = req.params;
     const { action } = req.query;
-    const file = await File.findOne({ id: fileId }).lean();
+    const file = await File.findOne({ _id: fileId })
+      .select("userId name extension")
+      .lean();
 
     // Check if file exists first
     if (!file) return res.status(404).send("File not found");
@@ -207,7 +225,8 @@ export const uploadFile = async (req, res) => {
     }
 
     // Support client-provided ID for resumption, or generate new one
-    const id = req.headers["x-file-id"] || crypto.randomUUID();
+    const id =
+      req.headers["x-file-id"] || new mongoose.Types.ObjectId().toString();
     const fileName = req.headers.filename;
     const startByte = parseInt(req.headers["x-start-byte"] || "0", 10);
     const ext = path.extname(fileName);
@@ -231,7 +250,7 @@ export const uploadFile = async (req, res) => {
         await unlink(thumbnailPath).catch(() => {});
 
         // Remove the file entry from the database
-        await File.deleteOne({ id });
+        await File.deleteOne({ _id: id });
       } catch (cleanupErr) {
         console.error("Error during cleanup:", cleanupErr);
       }
@@ -242,7 +261,7 @@ export const uploadFile = async (req, res) => {
     });
 
     writeStream.on("finish", async () => {
-      const exists = await File.findOne({ id }).lean();
+      const exists = await File.findOne({ _id: id }).select("_id").lean();
 
       const stats = await stat(filePath);
       const fileSize = stats.size;
@@ -294,7 +313,7 @@ export const uploadFile = async (req, res) => {
 
       if (!exists) {
         await File.create({
-          id,
+          _id: id,
           extension: ext,
           type: "file",
           userId: req.cookies.userId,
@@ -318,7 +337,7 @@ export const uploadFile = async (req, res) => {
 export const renameFile = async (req, res) => {
   try {
     const { fileId } = req.params;
-    const file = await File.findOne({ id: fileId }).lean();
+    const file = await File.findOne({ _id: fileId }).select("userId").lean();
 
     if (!file) {
       return res.status(404).send("File not found");
@@ -327,7 +346,7 @@ export const renameFile = async (req, res) => {
       return res.status(403).send("You are not authorized to rename this file");
     }
     const { newFileName } = req.body;
-    await File.updateOne({ id: fileId }, { $set: { name: newFileName } });
+    await File.updateOne({ _id: fileId }, { $set: { name: newFileName } });
     return res.status(200).send("File renamed successfully");
   } catch {
     return res.status(500).send("Internal Server Error");
@@ -337,7 +356,9 @@ export const renameFile = async (req, res) => {
 export const deleteFile = async (req, res) => {
   try {
     const { fileId } = req.params;
-    const fileData = await File.findOne({ id: fileId }).lean();
+    const fileData = await File.findOne({ _id: fileId })
+      .select("userId")
+      .lean();
 
     if (!fileData) {
       return res.status(404).send("File not found");
@@ -350,11 +371,12 @@ export const deleteFile = async (req, res) => {
     session.startTransaction();
 
     try {
-      const deletedFile = await File.findOne({ id: fileId })
+      const deletedFile = await File.findOne({ _id: fileId })
+        .select("-__v")
         .session(session)
         .lean();
       if (deletedFile) {
-        await File.deleteOne({ id: fileId }).session(session);
+        await File.deleteOne({ _id: fileId }).session(session);
         await Trash.create([deletedFile], { session });
       }
 

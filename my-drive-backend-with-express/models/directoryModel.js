@@ -2,20 +2,16 @@ import { Schema, model } from "mongoose";
 
 const directorySchema = new Schema(
   {
-    id: {
-      type: String,
-      required: true,
-    },
     name: {
       type: String,
       required: true,
     },
     userId: {
-      type: String,
+      type: Schema.Types.ObjectId,
       required: true,
     },
     parentDir: {
-      type: String,
+      type: Schema.Types.ObjectId,
       default: null,
     },
     type: {

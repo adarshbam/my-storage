@@ -23,7 +23,7 @@ export async function schemaUpdate() {
               bsonType: "string",
             },
             rootDirId: {
-              bsonType: "string",
+              bsonType: "objectId",
             },
           },
         },
@@ -35,7 +35,7 @@ export async function schemaUpdate() {
       collMod: "directories",
       validator: {
         $jsonSchema: {
-          required: ["_id", "name", "parentDir", "userId"],
+          required: ["name", "parentDir", "userId"],
           properties: {
             _id: {
               bsonType: "objectId",
@@ -44,18 +44,15 @@ export async function schemaUpdate() {
               bsonType: "string",
             },
             parentDir: {
-              bsonType: ["string", "null"],
+              bsonType: ["objectId", "null"],
             },
             userId: {
-              bsonType: "string",
+              bsonType: "objectId",
             },
             rootDirId: {
-              bsonType: "string",
+              bsonType: "objectId",
             },
             type: {
-              bsonType: "string",
-            },
-            id: {
               bsonType: "string",
             },
           },
@@ -69,7 +66,6 @@ export async function schemaUpdate() {
       validator: {
         $jsonSchema: {
           required: [
-            "_id",
             "name",
             "parentDir",
             "userId",
@@ -86,13 +82,13 @@ export async function schemaUpdate() {
               bsonType: "string",
             },
             parentDir: {
-              bsonType: ["string", "null"],
+              bsonType: ["objectId", "null"],
             },
             userId: {
-              bsonType: "string",
+              bsonType: "objectId",
             },
             rootDirId: {
-              bsonType: "string",
+              bsonType: "objectId",
             },
             size: {
               bsonType: "number",
@@ -105,9 +101,6 @@ export async function schemaUpdate() {
             },
             hasThumbnail: {
               bsonType: "bool",
-            },
-            id: {
-              bsonType: "string",
             },
           },
         },
@@ -120,16 +113,7 @@ export async function schemaUpdate() {
       collMod: "trash",
       validator: {
         $jsonSchema: {
-          required: [
-            "_id",
-            "name",
-            "parentDir",
-            "userId",
-            "size",
-            "type",
-            "extension",
-            "hasThumbnail",
-          ],
+          required: ["name", "parentDir", "userId", "type"],
           properties: {
             _id: {
               bsonType: "objectId",
@@ -138,13 +122,13 @@ export async function schemaUpdate() {
               bsonType: "string",
             },
             parentDir: {
-              bsonType: ["string", "null"],
+              bsonType: ["objectId", "null"],
             },
             userId: {
-              bsonType: "string",
+              bsonType: "objectId",
             },
             rootDirId: {
-              bsonType: "string",
+              bsonType: "objectId",
             },
             size: {
               bsonType: "number",
@@ -157,9 +141,6 @@ export async function schemaUpdate() {
             },
             hasThumbnail: {
               bsonType: "bool",
-            },
-            id: {
-              bsonType: "string",
             },
           },
         },

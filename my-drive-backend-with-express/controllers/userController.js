@@ -18,30 +18,30 @@ export const getUser = (req, res) => {
 };
 
 export const registerUser = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { email, password } = req.body;
 
-  const user = await User.findOne({ email }).lean();
+  const user = await User.findOne({ email }).select("_id").lean();
 
   if (user) {
     return res.status(409).json({ message: "User already exists" });
   }
 
-  const rootDirId = crypto.randomUUID();
-  const userId = crypto.randomUUID();
+  const rootDirId = new mongoose.Types.ObjectId();
+  const userId = new mongoose.Types.ObjectId();
 
   const newUser = {
-    id: userId,
+    _id: userId,
     name: "user",
     email,
-    profilepic: "",
-    rootDirId,
+    profilepic: null,
+    rootDirId: rootDirId,
     password,
   };
 
   const rootDir = {
-    id: rootDirId,
+    _id: rootDirId,
     name: "root",
-    userId,
+    userId: userId,
     type: "directory",
     parentDir: null,
   };
@@ -71,7 +71,9 @@ export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email }).lean();
+    const user = await User.findOne({ email })
+      .select("password rootDirId name")
+      .lean();
 
     if (!user) {
       return res.status(404).json({ emailerr: "Email not registered" });
@@ -81,18 +83,20 @@ export const loginUser = async (req, res) => {
       return res.status(404).json({ passworderr: "Invalid password" });
     }
 
-    const rootDir = await Directory.findOne({ id: user.rootDirId }).lean();
+    const rootDir = await Directory.findOne({ _id: user.rootDirId })
+      .select("_id")
+      .lean();
     if (!rootDir) {
       return res.status(500).json({ message: "Internal Server Error" });
     }
 
-    res.cookie("rootDirId", encodeURIComponent(rootDir.id), {
+    res.cookie("rootDirId", encodeURIComponent(rootDir._id.toString()), {
       httpOnly: true,
       secure: true,
       sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    res.cookie("userId", encodeURIComponent(user.id), {
+    res.cookie("userId", encodeURIComponent(user._id.toString()), {
       httpOnly: true,
       secure: true,
       sameSite: "none",
@@ -121,7 +125,9 @@ export const logoutUser = (req, res) => {
 };
 
 export const uploadProfilePic = async (req, res) => {
-  const user = await User.findOne({ id: req.user.id }).lean();
+  const user = await User.findOne({ _id: req.user.id })
+    .select("rootDirId profilepic")
+    .lean();
 
   if (!user) {
     return res.status(404).json({ message: "User not found" });
@@ -130,10 +136,10 @@ export const uploadProfilePic = async (req, res) => {
   const fileName = req.headers.filename;
   const ext = path.extname(fileName);
 
-  const profilePicId = crypto.randomUUID();
+  const profilePicId = new mongoose.Types.ObjectId();
 
   const newProfilePic = {
-    id: profilePicId,
+    _id: profilePicId,
     extension: ext,
     type: "file",
     userId: req.cookies.userId,
@@ -143,17 +149,19 @@ export const uploadProfilePic = async (req, res) => {
 
   await File.create(newProfilePic);
 
-  const filePath = `./storage/${profilePicId}${ext}`;
+  const filePath = `./storage/${profilePicId.toString()}${ext}`;
 
   if (user.profilepic) {
     const oldProfilePic = await File.findOne({
-      id: user.profilepic,
-    });
+      _id: user.profilepic,
+    })
+      .select("extension")
+      .lean();
     if (oldProfilePic) {
-      await File.deleteOne({ id: oldProfilePic.id });
-      await rm(`./storage/${oldProfilePic.id}${oldProfilePic.extension}`).catch(
-        () => {},
-      );
+      await File.deleteOne({ _id: oldProfilePic._id });
+      await rm(
+        `./storage/${oldProfilePic._id.toString()}${oldProfilePic.extension}`,
+      ).catch(() => {});
     }
   }
 
@@ -161,8 +169,8 @@ export const uploadProfilePic = async (req, res) => {
 
   try {
     await User.updateOne(
-      { id: user.id },
-      { $set: { profilepic: profilePicId } },
+      { _id: user._id },
+      { $set: { profilepic: profilePicId.toString() } },
     );
 
     writeStream.on("finish", () => {
@@ -179,14 +187,16 @@ export const getProfilePic = async (req, res) => {
   if (!req.user.profilepic) {
     return res.status(404).send("No profile pic set");
   }
-  const profilePic = await File.findOne({ id: req.user.profilepic }).lean();
+  const profilePic = await File.findOne({ _id: req.user.profilepic })
+    .select("extension")
+    .lean();
 
   if (!profilePic) {
     return res.status(404).send("Profile pic not found");
   }
 
   const filePath = path.resolve(
-    `./storage/${profilePic.id}${profilePic.extension}`,
+    `./storage/${profilePic._id.toString()}${profilePic.extension}`,
   );
   return res.status(200).sendFile(filePath);
 };
@@ -199,7 +209,9 @@ export const storeSearchedItem = async (req, res) => {
   const { searchItem } = req.body;
 
   try {
-    const user = await User.findOne({ id: req.user.id }).lean();
+    const user = await User.findOne({ _id: req.user.id })
+      .select("recentlySearchedItems")
+      .lean();
 
     if (!user) return res.status(404).send("User not found");
 
@@ -208,7 +220,7 @@ export const storeSearchedItem = async (req, res) => {
     if (!searchItem || searchItem.trim() === "") {
       recentlySearchedItems = [];
       await User.updateOne(
-        { id: user.id },
+        { _id: user._id },
         { $set: { recentlySearchedItems } },
       );
       return res.status(200).json({ msg: "Search history cleared" });
@@ -225,7 +237,10 @@ export const storeSearchedItem = async (req, res) => {
       recentlySearchedItems = recentlySearchedItems.slice(-5);
     }
 
-    await User.updateOne({ id: user.id }, { $set: { recentlySearchedItems } });
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { recentlySearchedItems } },
+    );
     res.status(201).json({ msg: "Succesfully Stored Searched Item" });
   } catch (err) {
     console.error(err);
