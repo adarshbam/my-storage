@@ -8,6 +8,7 @@ import cors from "cors";
 import checkAuth from "./middlewares/authMiddleware.js";
 import https from "https";
 import { readFileSync } from "fs";
+import "./utils/mongoose.js";
 
 const app = express();
 

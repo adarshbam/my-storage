@@ -44,7 +44,7 @@ export const registerUser = async (req, res) => {
 
   const rootDir = {
     id: rootDirId,
-    name,
+    name: "root",
     userId,
     type: "directory",
     parentDir: null,
