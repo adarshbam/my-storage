@@ -142,7 +142,7 @@ export const uploadProfilePic = async (req, res) => {
     _id: profilePicId,
     extension: ext,
     type: "file",
-    userId: req.cookies.userId,
+    userId: req.user.id,
     name: fileName,
     parentDir: null,
   };

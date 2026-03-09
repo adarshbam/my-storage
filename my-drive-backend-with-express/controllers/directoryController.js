@@ -7,17 +7,13 @@ import File from "../models/fileModel.js";
 import Trash from "../models/trashModel.js";
 
 export const getDirectoryById = async (req, res) => {
-  const rootDirId = decodeURIComponent(req.cookies.rootDirId);
-  // console.log(rootDirId);
-
-  if (!rootDirId) {
-    return res.redirect(
-      `http://[2409:40e3:40ea:818b:f5a2:c64b:63e3:59a6]:5173/login`,
-    );
-  }
+  const rootDirId = req.user.rootDirId.toString();
 
   try {
-    const dirId = req.params.dirId || rootDirId;
+    let dirId = req.params.dirId;
+    if (!dirId || dirId === "undefined") {
+      dirId = rootDirId;
+    }
     const { action } = req.query;
 
     const directoryData = await Directory.findOne({ _id: dirId })
@@ -172,9 +168,12 @@ export const getDirectoryById = async (req, res) => {
 };
 
 export const createDirectory = async (req, res) => {
-  const rootDirId = decodeURIComponent(req.cookies.rootDirId);
+  const rootDirId = req.user.rootDirId.toString();
   try {
-    const parentDirId = req.params.parentDirId ?? rootDirId;
+    let parentDirId = req.params.parentDirId;
+    if (!parentDirId || parentDirId === "undefined") {
+      parentDirId = rootDirId;
+    }
     // console.log(parentDirId);
     const dirName = req.body.foldername ?? "new-folder";
     // console.log(dirName);
@@ -183,7 +182,7 @@ export const createDirectory = async (req, res) => {
     await Directory.create({
       _id: dirId,
       name: dirName,
-      userId: req.cookies.userId,
+      userId: req.user.id,
       type: "directory",
       parentDir: parentDirId,
     });
@@ -273,12 +272,10 @@ export const moveDirectory = async (req, res) => {
     const { dirId } = req.params;
     const transfers = req.body;
 
-    const rootDirId = req.cookies.rootDirId
-      ? decodeURIComponent(req.cookies.rootDirId)
-      : null;
+    const rootDirId = req.user.rootDirId.toString();
     let targetDir = null;
 
-    if (dirId === rootDirId) {
+    if (dirId === rootDirId || dirId === "undefined") {
       targetDir = { _id: rootDirId };
     } else {
       targetDir = await Directory.findOne({ _id: dirId }).select("_id").lean();

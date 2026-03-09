@@ -218,7 +218,7 @@ export const uploadFile = async (req, res) => {
   try {
     // Robustly handle missing or "undefined" string param
     let parentDirId = req.params.parentDirId;
-    const rootDirId = decodeURIComponent(req.cookies.rootDirId);
+    const rootDirId = req.user.rootDirId.toString();
 
     if (!parentDirId || parentDirId === "undefined") {
       parentDirId = rootDirId;
@@ -316,7 +316,7 @@ export const uploadFile = async (req, res) => {
           _id: id,
           extension: ext,
           type: "file",
-          userId: req.cookies.userId,
+          userId: req.user.id,
           size: fileSize,
           name: fileName,
           parentDir: parentDirId,
