@@ -66,11 +66,17 @@ export const restoreFile = async (req, res, next) => {
       return res.status(404).send("File not found in trash");
     }
 
-    let parentDirData = await Directory.findOne({
-      _id: trashfile.parentDir,
-    })
-      .select("_id")
-      .lean();
+    let parentDirData = null;
+    if (
+      trashfile.parentDir &&
+      mongoose.Types.ObjectId.isValid(trashfile.parentDir)
+    ) {
+      parentDirData = await Directory.findOne({
+        _id: trashfile.parentDir,
+      })
+        .select("_id")
+        .lean();
+    }
 
     if (!parentDirData) {
       trashfile.parentDir = null;
@@ -177,11 +183,17 @@ export const restoreDirectory = async (req, res, next) => {
     if (!trashDir) {
       return res.status(404).send("Directory not found in trash");
     }
-    const parentDirData = await Directory.findOne({
-      _id: trashDir.parentDir,
-    })
-      .select("_id")
-      .lean();
+    let parentDirData = null;
+    if (
+      trashDir.parentDir &&
+      mongoose.Types.ObjectId.isValid(trashDir.parentDir)
+    ) {
+      parentDirData = await Directory.findOne({
+        _id: trashDir.parentDir,
+      })
+        .select("_id")
+        .lean();
+    }
 
     if (!parentDirData) {
       trashDir.parentDir = null; // optional logic
@@ -191,7 +203,8 @@ export const restoreDirectory = async (req, res, next) => {
     session.startTransaction();
 
     try {
-      await Directory.create([trashDir], { session });
+      const { extension, size, hasThumbnail, ...validDirData } = trashDir;
+      await Directory.create([validDirData], { session });
       await Trash.deleteOne({ _id: dirId }).session(session);
 
       await session.commitTransaction();
@@ -203,7 +216,7 @@ export const restoreDirectory = async (req, res, next) => {
       session.endSession();
     }
   } catch (err) {
-    console.error(err);
+    console.error("Restore Directory Error:", err);
     return res.status(500).send("Internal Server Error");
   }
 };
