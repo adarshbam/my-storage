@@ -53,7 +53,7 @@ export const search = async (req, res) => {
       userId: req.user.id,
       name: { $regex: query, $options: "i" },
     })
-      .select("-_id -__v")
+      .select("-__v")
       .lean();
 
     const finalMatchingDirsRaw = validParentIds
@@ -81,7 +81,7 @@ export const search = async (req, res) => {
       userId: req.user.id,
       name: { $regex: query, $options: "i" },
     })
-      .select("-_id -__v")
+      .select("-__v")
       .lean();
 
     const finalMatchingFiles = validParentIds
@@ -109,7 +109,12 @@ export const search = async (req, res) => {
 export const getThumbnail = async (req, res) => {
   try {
     const { fileId } = req.params;
-    const file = await File.findOne({ _id: fileId }).select("userId").lean();
+    let file = await File.findOne({ _id: fileId }).select("userId").lean();
+
+    // If not found in File collection, check Trash collection
+    if (!file) {
+      file = await Trash.findOne({ _id: fileId }).select("userId").lean();
+    }
 
     if (!file) return res.status(404).send("File not found");
     if (file.userId.toString() !== req.user.id) {
