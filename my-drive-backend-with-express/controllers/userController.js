@@ -20,12 +20,6 @@ export const getUser = (req, res) => {
 export const registerUser = async (req, res) => {
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email }).select("_id").lean();
-
-  if (user) {
-    return res.status(409).json({ message: "User already exists" });
-  }
-
   const rootDirId = new mongoose.Types.ObjectId();
   const userId = new mongoose.Types.ObjectId();
 
@@ -59,6 +53,8 @@ export const registerUser = async (req, res) => {
     await session.abortTransaction();
     if (err.code === 121) {
       return res.status(400).json({ error: "Invalid Fields" });
+    } else if (err.code === 11000 && err.keyValue.email) {
+      return res.status(409).json({ error: "Email already exists" });
     } else {
       return res.status(500).json({ error: "Internal Server Error" });
     }

@@ -5,3 +5,9 @@ await mongoose.connect(
 );
 
 console.log("✅ MongoDB connected with mongoose");
+
+process.on("SIGINT", async () => {
+  await mongoose.disconnect();
+  console.log("✅ MongoDB disconnected");
+  process.exit(0);
+});
