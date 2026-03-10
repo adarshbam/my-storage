@@ -87,6 +87,7 @@ export default function FileCard({
                   alt="thumbnail"
                   className="w-8 h-8 object-cover rounded"
                   onError={() => setImageError(true)}
+                  crossOrigin="use-credentials"
                 />
               ) : (
                 <img

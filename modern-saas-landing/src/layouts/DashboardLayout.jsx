@@ -225,6 +225,7 @@ export default function DashboardLayout() {
                 src={profilePicUrl || "/profile.png"}
                 alt="Profile"
                 className="w-full h-full object-cover"
+                crossOrigin="use-credentials"
               />
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200">
                 <Settings className="text-white w-4 h-4" />

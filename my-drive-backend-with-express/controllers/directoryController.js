@@ -51,7 +51,10 @@ export const getDirectoryById = async (req, res) => {
 
     // console.log(directoryData);
 
-    if (directoryData.userId.toString() !== req.user.id) {
+    if (
+      directoryData.userId &&
+      directoryData.userId.toString() !== req.user.id
+    ) {
       return res
         .status(403)
         .send("You are not authorized to access this directory");
@@ -209,7 +212,10 @@ export const renameDirectory = async (req, res) => {
       return res.status(404).send("Folder not found");
     }
 
-    if (directoryData.userId.toString() !== req.user.id) {
+    if (
+      directoryData.userId &&
+      directoryData.userId.toString() !== req.user.id
+    ) {
       return res
         .status(403)
         .send("You are not authorized to rename this directory");
@@ -234,7 +240,7 @@ export const deleteDirectory = async (req, res) => {
       return res.status(404).send("Folder not found");
     }
 
-    if (dirData.userId.toString() !== req.user.id) {
+    if (dirData.userId && dirData.userId.toString() !== req.user.id) {
       return res
         .status(403)
         .send("You are not authorized to delete this directory");

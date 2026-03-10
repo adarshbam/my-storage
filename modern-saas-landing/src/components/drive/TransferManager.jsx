@@ -6,13 +6,18 @@ import {
   useImperativeHandle,
   useEffect,
 } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { X, Pause, Play, Trash2, Minimize2, Maximize2 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
-import { formatSize, formatSpeed, formatTime, cn } from "../../lib/utils";
+import { formatSpeed, formatTime, cn } from "../../lib/utils";
 import getFileImage from "../../lib/FileImages";
 import Card from "../ui/Card";
-import Button from "../ui/Button";
+
+// Custom helper to generate 24 character hex strings for MongoDB ObjectId compatibility
+const generateObjectId = () => {
+  return [...Array(24)]
+    .map(() => Math.floor(Math.random() * 16).toString(16))
+    .join("");
+};
 
 const TransferManager = forwardRef((props, ref) => {
   const [transfers, setTransfers] = useState([]);
@@ -163,7 +168,7 @@ const TransferManager = forwardRef((props, ref) => {
 
   const uploadFile = useCallback(
     (file, dirId, existingId = null, startByte = 0) => {
-      const id = existingId || uuidv4();
+      const id = existingId || generateObjectId();
 
       if (!existingId) {
         setTransfers((prev) => [
@@ -193,7 +198,7 @@ const TransferManager = forwardRef((props, ref) => {
 
   const uploadFiles = useCallback((files, dirId) => {
     const newTransfers = files.map((file) => ({
-      id: uuidv4(),
+      id: generateObjectId(),
       type: "upload",
       name: file.name,
       progress: 0,
@@ -211,7 +216,12 @@ const TransferManager = forwardRef((props, ref) => {
   }, []);
 
   // --- DOWNLOAD LOGIC ---
-  const downloadFile = async (url, filename, id = uuidv4(), startByte = 0) => {
+  const downloadFile = async (
+    url,
+    filename,
+    id = generateObjectId(),
+    startByte = 0,
+  ) => {
     const hasFileSystemAccess = "showSaveFilePicker" in window;
 
     if (!hasFileSystemAccess) {

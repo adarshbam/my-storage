@@ -138,6 +138,7 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
             src={fileUrl}
             alt={file.name}
             className="max-w-full max-h-full object-contain"
+            crossOrigin="use-credentials"
           />
         </div>
       );
@@ -146,7 +147,12 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
     if (isVideo(ext)) {
       return (
         <div className="flex items-center justify-center h-full bg-slate-950/50 rounded-lg overflow-hidden">
-          <video src={fileUrl} controls className="max-w-full max-h-full" />
+          <video
+            src={fileUrl}
+            controls
+            className="max-w-full max-h-full"
+            crossOrigin="use-credentials"
+          />
         </div>
       );
     }
@@ -164,7 +170,12 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
     if (isAudio(ext)) {
       return (
         <div className="flex items-center justify-center h-full bg-slate-950/50 rounded-lg overflow-hidden">
-          <audio src={fileUrl} controls className="w-full max-w-md" />
+          <audio
+            src={fileUrl}
+            controls
+            className="w-full max-w-md"
+            crossOrigin="use-credentials"
+          />
         </div>
       );
     }
