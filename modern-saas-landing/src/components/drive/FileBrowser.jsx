@@ -12,7 +12,7 @@ import { joinUrl } from "../../lib/utils";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import FileCard from "./FileCard";
-import { Upload, FolderPlus, Loader2, Trash2 } from "lucide-react";
+import { Upload, FolderPlus, Loader2, Trash2, Edit2 } from "lucide-react";
 
 // Lazy load the preview modal since it contains heavy syntax highlighter dependencies
 const FilePreviewModal = lazy(() => import("./FilePreviewModal"));
@@ -244,7 +244,7 @@ export default function FileBrowser() {
         return;
       }
 
-      const typeEndpoint = data.directories.find((d) => d.id === modalItem.id)
+      const typeEndpoint = (modalItem.type === "directory" || data.directories.find((d) => d.id === modalItem.id))
         ? "directory"
         : "file";
       const bodyKey =
@@ -451,8 +451,21 @@ export default function FileBrowser() {
               ←
             </button>
           )}
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
             {dirName}
+            {folderId && !isSearch && (
+              <button
+                onClick={() => {
+                  setModalItem({ id: folderId, name: dirName, type: 'directory' });
+                  setModalInput(dirName);
+                  setModalType("rename");
+                }}
+                className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-all"
+                title="Rename Folder"
+              >
+                <Edit2 size={18} />
+              </button>
+            )}
           </h2>
         </div>
 
