@@ -18,6 +18,10 @@ const directorySchema = new Schema(
       type: String,
       default: "directory",
     },
+    size: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     strict: "throw",

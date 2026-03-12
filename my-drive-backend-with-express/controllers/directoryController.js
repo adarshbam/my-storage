@@ -41,6 +41,23 @@ export const getDirectoryById = async (req, res) => {
         const dirCount = await Directory.countDocuments({
           parentDir: dir._id.toString(),
         });
+        if (!dir.size) {
+          const files = await File.find({ parentDir: dir._id.toString() })
+            .select("size")
+            .lean();
+          const dirFiles = await Directory.find({
+            parentDir: dir._id.toString(),
+          })
+            .select("size")
+            .lean();
+          dir.size = files.reduce((acc, file) => acc + file.size, 0);
+          dir.size += dirFiles.reduce((acc, dir) => acc + dir.size, 0);
+          await Directory.updateOne(
+            { _id: dir._id.toString() },
+            { $set: { size: dir.size } },
+          );
+        }
+
         return {
           ...dir,
           id: dir._id.toString(),

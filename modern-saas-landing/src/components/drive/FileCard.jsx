@@ -177,7 +177,8 @@ export default function FileCard({
           {item.name}
         </h3>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          {type === "file" && formatSize(item.size)}
+          {formatSize(item.size)}
+          {` `}
           {type === "directory" &&
             `${item.itemCount !== undefined ? item.itemCount : (item.files?.length || 0) + (item.directories?.length || 0)} items`}
         </p>

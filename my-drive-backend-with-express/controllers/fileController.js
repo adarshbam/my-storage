@@ -270,6 +270,11 @@ export const uploadFile = async (req, res) => {
 
       const stats = await stat(filePath);
       const fileSize = stats.size;
+      const parentDir = await Directory.findOne({ _id: parentDirId })
+        .select("size")
+        .lean();
+      parentDir.size += fileSize;
+      await parentDir.save();
       let hasThumbnail = false;
 
       // Generate thumbnail if image or video
