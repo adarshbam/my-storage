@@ -1,7 +1,7 @@
 import User from "../models/userModel.js";
 
 async function checkAuth(req, res, next) {
-  const userId = decodeURIComponent(req.cookies.userId);
+  const userId = decodeURIComponent(req.cookies.userId).substring(0, 24);
   userId == "undefined" && res.status(200).json({ message: "Not logged in" });
   try {
     const user = await User.findOne({ _id: userId }).lean();

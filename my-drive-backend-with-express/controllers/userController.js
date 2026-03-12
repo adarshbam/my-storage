@@ -1,11 +1,11 @@
 import { rm } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
 import path from "node:path";
-import crypto from "crypto";
 import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import mongoose from "mongoose";
+import { error } from "node:console";
 
 export const getUser = (req, res) => {
   const user = req.user;
@@ -72,11 +72,11 @@ export const loginUser = async (req, res) => {
       .lean();
 
     if (!user) {
-      return res.status(404).json({ emailerr: "Email not registered" });
+      return res.status(404).json({ error: "Email not registered" });
     }
 
     if (user.password !== password) {
-      return res.status(404).json({ passworderr: "Invalid password" });
+      return res.status(404).json({ error: "Invalid password" });
     }
 
     const rootDir = await Directory.findOne({ _id: user.rootDirId })
@@ -92,7 +92,7 @@ export const loginUser = async (req, res) => {
       sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    res.cookie("userId", encodeURIComponent(user._id.toString()), {
+    res.cookie("userId", user._id.toString() + Math.round(Date.now() / 1000), {
       httpOnly: true,
       secure: true,
       sameSite: "none",
@@ -102,7 +102,7 @@ export const loginUser = async (req, res) => {
     return res.status(200).json({ message: `Login successful ${user.name}` });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
