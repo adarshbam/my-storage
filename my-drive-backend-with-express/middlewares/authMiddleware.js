@@ -1,23 +1,36 @@
 import User from "../models/userModel.js";
+import crypto from "crypto";
+import { secretKey } from "../controllers/userController.js";
 
 async function checkAuth(req, res, next) {
-  const userId = req.cookies.userId;
-  if (!userId) {
+  const token = req.cookies.token;
+  if (!token) {
     return res.status(401).json({ message: "Not logged in" });
   }
-  const { id, expiry } = JSON.parse(Buffer.from(userId, "base64").toString());
-  console.log(id, expiry);
-  console.log(id.toString());
+
+  const signedUserId = Buffer.from(token, "base64url").toString();
+  const cookiePayload = JSON.parse(signedUserId.split(".")[0]);
+  const { id, expiry } = cookiePayload;
+
+  const tokenHash = signedUserId.split(".")[1];
+
+  const tokenHashCalculated = crypto
+    .createHash("sha256")
+    .update(secretKey)
+    .update(JSON.stringify(cookiePayload))
+    .update(secretKey)
+    .digest("base64url");
+
   const expiryInSeconds = parseInt(expiry);
   const currentTime = Math.round(Date.now() / 1000);
-  console.log(expiryInSeconds, currentTime);
-  if (expiryInSeconds < currentTime) {
+
+  if (expiryInSeconds < currentTime || tokenHash !== tokenHashCalculated) {
     res.clearCookie("rootDirId", {
       httpOnly: true,
       secure: true,
       sameSite: "none",
     });
-    res.clearCookie("userId", {
+    res.clearCookie("token", {
       httpOnly: true,
       secure: true,
       sameSite: "none",

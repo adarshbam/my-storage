@@ -5,6 +5,9 @@ import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import mongoose from "mongoose";
+import crypto from "crypto";
+
+export const secretKey = "my-storage-secret-key";
 
 export const getUser = (req, res) => {
   const user = req.user;
@@ -85,10 +88,21 @@ export const loginUser = async (req, res) => {
       return res.status(500).json({ message: "Internal Server Error" });
     }
 
-    const cookiePayload = {
+    const cookiePayload = JSON.stringify({
       expiry: Math.round(Date.now() / 1000 + 40),
       id: user._id.toString(),
-    };
+    });
+
+    const userIdHash = crypto
+      .createHash("sha256")
+      .update(secretKey)
+      .update(cookiePayload)
+      .update(secretKey)
+      .digest("base64url");
+
+    const signedCookiePayload = Buffer.from(
+      cookiePayload + "." + userIdHash,
+    ).toString("base64url");
 
     res.cookie("rootDirId", encodeURIComponent(rootDir._id.toString()), {
       httpOnly: true,
@@ -96,16 +110,12 @@ export const loginUser = async (req, res) => {
       sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    res.cookie(
-      "userId",
-      Buffer.from(JSON.stringify(cookiePayload)).toString("base64"),
-      {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      },
-    );
+    res.cookie("token", signedCookiePayload, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     return res.status(200).json({ message: `Login successful ${user.name}` });
   } catch (err) {
@@ -120,7 +130,7 @@ export const logoutUser = (req, res) => {
     secure: true,
     sameSite: "none",
   });
-  res.clearCookie("userId", {
+  res.clearCookie("token", {
     httpOnly: true,
     secure: true,
     sameSite: "none",
