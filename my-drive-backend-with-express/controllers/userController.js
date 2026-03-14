@@ -5,6 +5,7 @@ import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import mongoose from "mongoose";
+import crypto from "node:crypto";
 
 export const getUser = (req, res) => {
   const user = req.user;
@@ -22,13 +23,18 @@ export const registerUser = async (req, res) => {
   const rootDirId = new mongoose.Types.ObjectId();
   const userId = new mongoose.Types.ObjectId();
 
+  const hashPassword = crypto
+    .createHash("sha256")
+    .update(password)
+    .digest("base64url");
+
   const newUser = {
     _id: userId,
     name: "user",
     email,
     profilepic: null,
     rootDirId: rootDirId,
-    password,
+    password: hashPassword,
   };
 
   const rootDir = {
@@ -65,6 +71,11 @@ export const registerUser = async (req, res) => {
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
+  const enterenedhashPassword = crypto
+    .createHash("sha256")
+    .update(password)
+    .digest("base64url");
+
   try {
     const user = await User.findOne({ email })
       .select("password rootDirId name")
@@ -74,7 +85,7 @@ export const loginUser = async (req, res) => {
       return res.status(404).json({ error: "Email not registered" });
     }
 
-    if (user.password !== password) {
+    if (user.password !== enterenedhashPassword) {
       return res.status(404).json({ error: "Invalid password" });
     }
 
@@ -86,7 +97,7 @@ export const loginUser = async (req, res) => {
     }
 
     const cookiePayload = JSON.stringify({
-      expiry: Math.round(Date.now() / 1000 + 10),
+      expiry: Math.round(Date.now() / 1000 + 7 * 24 * 60 * 60),
       id: user._id.toString(),
     });
 
@@ -96,13 +107,18 @@ export const loginUser = async (req, res) => {
       sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    res.cookie("token", Buffer.from(cookiePayload).toString("base64url"), {
-      httpOnly: true,
-      secure: true,
-      signed: true,
-      sameSite: "none",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+
+    res.cookie(
+      "my_storage_token",
+      Buffer.from(cookiePayload).toString("base64url"),
+      {
+        httpOnly: true,
+        secure: true,
+        signed: true,
+        sameSite: "none",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      },
+    );
 
     return res.status(200).json({ message: `Login successful ${user.name}` });
   } catch (err) {
@@ -117,11 +133,13 @@ export const logoutUser = (req, res) => {
     secure: true,
     sameSite: "none",
   });
-  res.clearCookie("token", {
+  res.clearCookie("my_storage_token", {
     httpOnly: true,
     secure: true,
+    signed: true,
     sameSite: "none",
   });
+
   return res.status(200).json({ message: "Logout successful" });
 };
 

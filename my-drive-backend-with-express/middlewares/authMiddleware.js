@@ -1,8 +1,11 @@
 import User from "../models/userModel.js";
 
 async function checkAuth(req, res, next) {
-  const token = req.signedCookies.token;
-  if (!token) {
+  const token = req.signedCookies.my_storage_token;
+
+  if (token === false) {
+    return res.status(401).json({ message: "Invalid cookie signature" });
+  } else if (!token) {
     return res.status(401).json({ message: "Not logged in" });
   }
 
@@ -17,9 +20,10 @@ async function checkAuth(req, res, next) {
       secure: true,
       sameSite: "none",
     });
-    res.clearCookie("token", {
+    res.clearCookie("my_storage_token", {
       httpOnly: true,
       secure: true,
+      signed: true,
       sameSite: "none",
     });
     return res.status(401).json({ message: "Session expired" });
