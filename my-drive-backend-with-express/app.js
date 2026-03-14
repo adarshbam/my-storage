@@ -25,7 +25,7 @@ app.use(
     credentials: true,
   }),
 );
-app.use(cookieParser());
+app.use(cookieParser("my-storage-secret-key"));
 app.use(express.json());
 
 app.use("/directory", checkAuth, directoryRouter);

@@ -41,8 +41,8 @@ export default function Register() {
           navigate("/login");
         }
       } else {
-        const data = await response.text();
-        setError(data || "Registration failed");
+        const data = await response.json();
+        setError(data.error || "Registration failed");
       }
     } catch (err) {
       setError("An error occurred. Please try again.");

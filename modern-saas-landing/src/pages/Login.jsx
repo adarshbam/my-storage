@@ -40,8 +40,8 @@ export default function Login() {
           setError("Failed to load user data");
         }
       } else {
-        const data = await response.text();
-        setError(data || "Login failed");
+        const data = await response.json();
+        setError(data.error || "Login failed");
       }
     } catch (err) {
       setError("An error occurred. Please try again.");

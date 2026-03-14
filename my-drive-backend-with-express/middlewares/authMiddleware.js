@@ -1,13 +1,35 @@
 import User from "../models/userModel.js";
 
 async function checkAuth(req, res, next) {
-  const userId = decodeURIComponent(req.cookies.userId);
-  userId == "undefined" && res.status(200).json({ message: "Not logged in" });
-  try {
-    const user = await User.findOne({ _id: userId }).lean();
+  const token = req.signedCookies.token;
+  if (!token) {
+    return res.status(401).json({ message: "Not logged in" });
+  }
 
-    if (!userId || !user) {
-      return res.status(401).json({ message: "Not logged in" });
+  const { id, expiry } = JSON.parse(Buffer.from(token, "base64url").toString());
+
+  const expiryInSeconds = parseInt(expiry);
+  const currentTime = Math.round(Date.now() / 1000);
+
+  if (expiryInSeconds < currentTime) {
+    res.clearCookie("rootDirId", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
+    return res.status(401).json({ message: "Session expired" });
+  }
+
+  try {
+    const user = await User.findOne({ _id: id }).lean();
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
     }
     user.id = user._id.toString(); // Map for backwards compat in controllers
     req.user = user;
