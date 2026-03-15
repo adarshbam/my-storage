@@ -23,10 +23,14 @@ export const registerUser = async (req, res) => {
   const rootDirId = new mongoose.Types.ObjectId();
   const userId = new mongoose.Types.ObjectId();
 
-  const hashPassword = crypto
-    .createHash("sha256")
-    .update(password)
-    .digest("base64url");
+  const salt = crypto.randomBytes(16);
+
+  const hash = crypto.pbkdf2Sync(password, salt, 100000, 32, "sha256");
+
+  const hashedPassword =
+    hash.toString("base64url") + "." + salt.toString("base64url");
+
+  console.log(hashedPassword);
 
   const newUser = {
     _id: userId,
@@ -34,7 +38,7 @@ export const registerUser = async (req, res) => {
     email,
     profilepic: null,
     rootDirId: rootDirId,
-    password: hashPassword,
+    password: hashedPassword,
   };
 
   const rootDir = {
@@ -71,11 +75,6 @@ export const registerUser = async (req, res) => {
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
-  const enterenedhashPassword = crypto
-    .createHash("sha256")
-    .update(password)
-    .digest("base64url");
-
   try {
     const user = await User.findOne({ email })
       .select("password rootDirId name")
@@ -85,7 +84,15 @@ export const loginUser = async (req, res) => {
       return res.status(404).json({ error: "Email not registered" });
     }
 
-    if (user.password !== enterenedhashPassword) {
+    const salt = Buffer.from(user.password.split(".")[1], "base64url");
+    const hashedPassword = user.password.split(".")[0];
+    const enterenedhashPassword = crypto
+      .pbkdf2Sync(password, salt, 100000, 32, "sha256")
+      .toString("base64url");
+
+    console.log(enterenedhashPassword, hashedPassword);
+
+    if (enterenedhashPassword !== hashedPassword) {
       return res.status(404).json({ error: "Invalid password" });
     }
 
