@@ -61,6 +61,8 @@ export const registerUser = async (req, res) => {
     console.error(err);
     await session.abortTransaction();
     if (err.code === 121) {
+      console.log(JSON.stringify(err.errInfo.details, null, 2));
+
       return res.status(400).json({ error: "Invalid Fields" });
     } else if (err.code === 11000 && err.keyValue.email) {
       return res.status(409).json({ error: "Email already exists" });
