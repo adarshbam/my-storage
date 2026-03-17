@@ -39,6 +39,9 @@ export async function schemaUpdate() {
             rootDirId: {
               bsonType: "objectId",
             },
+            __v: {
+              bsonType: "int",
+            },
           },
         },
       },
@@ -73,6 +76,9 @@ export async function schemaUpdate() {
             },
             profilepic: {
               bsonType: ["string", "null"],
+            },
+            __v: {
+              bsonType: "int",
             },
           },
         },
@@ -121,6 +127,9 @@ export async function schemaUpdate() {
             hasThumbnail: {
               bsonType: "bool",
             },
+            __v: {
+              bsonType: "int",
+            },
           },
         },
       },
@@ -162,6 +171,9 @@ export async function schemaUpdate() {
             },
             hasThumbnail: {
               bsonType: "bool",
+            },
+            __v: {
+              bsonType: "int",
             },
           },
         },
