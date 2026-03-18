@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Outlet, Link, useNavigate } from "react-router-dom";
 import { SERVER_URL } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
-import { Cloud, Folder, Trash2, LogOut, Search, Settings, Menu, X } from "lucide-react";
+import { Cloud, Folder, Trash2, LogOut, Search, Settings, Menu, X, SlidersHorizontal } from "lucide-react";
 import Button from "../components/ui/Button";
 import TransferManager from "../components/drive/TransferManager";
 import FileUploadModal from "../components/drive/FileUploadModal";
@@ -20,6 +20,7 @@ export default function DashboardLayout() {
   const [recentSearches, setRecentSearches] = useState([]);
   const [showRecentSearches, setShowRecentSearches] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetchRecentSearches();
@@ -288,17 +289,18 @@ export default function DashboardLayout() {
           >
             <Menu size={24} />
           </button>
-          <div className="relative flex-1 md:w-96 md:flex-none group">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer z-10"
-              size={18}
-              onClick={() => handleSearch(searchQuery)}
-            />
-            <input
-              type="text"
-              placeholder="Search files..."
-              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-full focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              value={searchQuery}
+          <div className="relative flex-1 md:w-96 md:flex-none group flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer z-10"
+                size={18}
+                onClick={() => handleSearch(searchQuery)}
+              />
+              <input
+                type="text"
+                placeholder="Search files..."
+                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                value={searchQuery}
               onChange={(e) => {
                 const val = e.target.value;
                 setSearchQuery(val);
@@ -309,9 +311,20 @@ export default function DashboardLayout() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSearch(searchQuery);
               }}
-              onFocus={() => setShowRecentSearches(true)}
-              onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
-            />
+                onFocus={() => setShowRecentSearches(true)}
+                onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`p-2 rounded-lg border transition-colors ${
+                showFilters 
+                  ? "bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" 
+                  : "bg-transparent border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+              }`}
+            >
+              <SlidersHorizontal size={20} />
+            </button>
             {showRecentSearches && recentSearches.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl z-20 overflow-hidden">
                 <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 dark:bg-slate-800/50">
@@ -327,6 +340,37 @@ export default function DashboardLayout() {
                     {term}
                   </div>
                 ))}
+              </div>
+            )}
+            {showFilters && (
+              <div className="absolute top-full left-0 md:left-auto md:right-0 mt-2 w-72 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-20 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+                  <h3 className="font-semibold text-slate-900 dark:text-white">Filters</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Refine your search results.</p>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">Extensions</label>
+                    <input type="text" placeholder="e.g. pdf, png, docx" className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">Size</label>
+                    <select className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200">
+                      <option>Any Size</option>
+                      <option>&lt; 1MB</option>
+                      <option>1MB - 10MB</option>
+                      <option>10MB - 100MB</option>
+                      <option>&gt; 100MB</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-sm font-medium text-slate-900 dark:text-white">Starred Only</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" />
+                      <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-400 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-500 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                </div>
               </div>
             )}
           </div>

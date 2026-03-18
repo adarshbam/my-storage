@@ -12,7 +12,7 @@ import { joinUrl } from "../../lib/utils";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import FileCard from "./FileCard";
-import { Upload, FolderPlus, Loader2, Trash2, Edit2 } from "lucide-react";
+import { Upload, FolderPlus, Loader2, Trash2, Edit2, LayoutGrid, List } from "lucide-react";
 
 // Lazy load the preview modal since it contains heavy syntax highlighter dependencies
 const FilePreviewModal = lazy(() => import("./FilePreviewModal"));
@@ -35,6 +35,7 @@ export default function FileBrowser() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [previewFile, setPreviewFile] = useState(null);
   const [lastSelectedId, setLastSelectedId] = useState(null);
+  const [viewMode, setViewMode] = useState("grid");
 
   // --- DRAG SELECTION STATE ---
   const [isDragging, setIsDragging] = useState(false);
@@ -470,19 +471,43 @@ export default function FileBrowser() {
         </div>
 
         <div className="flex items-center gap-3">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1 mr-2 hidden md:flex">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === "grid"
+                  ? "bg-white dark:bg-slate-900 shadow-sm text-blue-600 dark:text-blue-400"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              }`}
+              title="Grid view"
+            >
+              <LayoutGrid size={18} />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === "list"
+                  ? "bg-white dark:bg-slate-900 shadow-sm text-blue-600 dark:text-blue-400"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              }`}
+              title="List view"
+            >
+              <List size={18} />
+            </button>
+          </div>
           <button
             onClick={handleCreateClick}
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-medium"
           >
             <FolderPlus size={18} />
-            <span>New Folder</span>
+            <span className="hidden sm:inline">New Folder</span>
           </button>
           <button
             onClick={openUploadModal}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg shadow-blue-500/20"
           >
             <Upload size={18} />
-            <span>Upload</span>
+            <span className="hidden sm:inline">Upload</span>
           </button>
         </div>
       </div>
@@ -493,7 +518,11 @@ export default function FileBrowser() {
         </div>
       ) : (
         <div
-          className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pb-20 relative select-none flex-1 content-start"
+          className={`pb-20 relative select-none flex-1 content-start ${
+            viewMode === "list" 
+              ? "flex flex-col gap-2" 
+              : "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
+          }`}
           onMouseDown={handleMouseDown}
         >
           {/* Selection Box Overlay */}
@@ -525,6 +554,7 @@ export default function FileBrowser() {
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
+              viewMode={viewMode}
             />
           ))}
           {data.files.map((file) => (
@@ -543,6 +573,7 @@ export default function FileBrowser() {
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
+              viewMode={viewMode}
             />
           ))}
 
