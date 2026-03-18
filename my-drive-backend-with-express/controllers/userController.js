@@ -19,13 +19,12 @@ export const getUser = (req, res) => {
 
 export const registerUser = async (req, res) => {
   const { email, password } = req.body;
+  console.log(email, password);
 
   const rootDirId = new mongoose.Types.ObjectId();
   const userId = new mongoose.Types.ObjectId();
 
   const hashedPassword = await bcrypt.hash(password, 12);
-
-  console.log(hashedPassword);
 
   const newUser = {
     _id: userId,

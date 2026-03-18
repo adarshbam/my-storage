@@ -55,9 +55,9 @@ export default function FileCard({
 
   return (
     <div
-      className={`relative group bg-white dark:bg-slate-900 border rounded-xl p-4 transition-all duration-200 cursor-pointer hover:shadow-md ${
+      className={`relative group bg-white dark:bg-slate-900 border rounded-xl overflow-hidden transition-all duration-200 cursor-pointer hover:shadow-md flex flex-col ${
         selected
-          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-500"
+          ? "border-blue-500 ring-2 ring-blue-500"
           : "border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700"
       }`}
       onClick={(e) => {
@@ -71,44 +71,47 @@ export default function FileCard({
       onDrop={(e) => onDrop(e, item)}
       {...props}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-          {type === "directory" ? (
-            <img
-              src="/folder.png"
-              alt="folder"
-              className="w-8 h-8 object-contain"
-            />
-          ) : (
-            <>
-              {item.hasThumbnail && !imageError ? (
-                <img
-                  src={`${SERVER_URL}/file/${item.id}/thumbnail`}
-                  alt="thumbnail"
-                  className="w-8 h-8 object-cover rounded"
-                  onError={() => setImageError(true)}
-                  crossOrigin="use-credentials"
-                />
-              ) : (
+      {/* Thumbnail Area */}
+      <div className="relative w-full aspect-square bg-slate-100 dark:bg-slate-800/50 flex items-center justify-center overflow-hidden">
+        {type === "directory" ? (
+          <img
+            src="/folder.png"
+            alt="folder"
+            className="w-20 h-20 object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <>
+            {item.hasThumbnail && !imageError ? (
+              <img
+                src={`${SERVER_URL}/file/${item.id}/thumbnail`}
+                alt="thumbnail"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={() => setImageError(true)}
+                crossOrigin="use-credentials"
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center p-4">
                 <img
                   src={getFileImage(item.extension?.slice(1))}
                   alt="file"
-                  className="w-8 h-8 object-contain"
+                  className="w-16 h-16 object-contain mb-2 drop-shadow-sm group-hover:scale-105 transition-transform duration-300"
                   onError={(e) => (e.target.src = "/file-images/file.png")}
                 />
-              )}
-            </>
-          )}
-        </div>
-        <div className="relative">
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Options Menu Overlay */}
+        <div className="absolute top-2 right-2">
           <button
             onClick={(e) => {
               e.stopPropagation();
               setShowMenu(!showMenu);
             }}
-            className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="p-1.5 rounded-lg bg-black/40 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/60 focus:opacity-100"
           >
-            <MoreVertical size={18} />
+            <MoreVertical size={16} />
           </button>
 
           {showMenu && (
@@ -169,7 +172,8 @@ export default function FileCard({
         </div>
       </div>
 
-      <div>
+      {/* Info Area */}
+      <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex-1 flex flex-col justify-between">
         <h3
           className="text-sm font-medium text-slate-900 dark:text-white truncate mb-1"
           title={item.name}

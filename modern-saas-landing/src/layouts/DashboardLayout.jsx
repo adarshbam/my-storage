@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Outlet, Link, useNavigate } from "react-router-dom";
 import { SERVER_URL } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
-import { Cloud, Folder, Trash2, LogOut, Search, Settings } from "lucide-react";
+import { Cloud, Folder, Trash2, LogOut, Search, Settings, Menu, X } from "lucide-react";
 import Button from "../components/ui/Button";
 import TransferManager from "../components/drive/TransferManager";
 import FileUploadModal from "../components/drive/FileUploadModal";
@@ -19,6 +19,7 @@ export default function DashboardLayout() {
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState([]);
   const [showRecentSearches, setShowRecentSearches] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchRecentSearches();
@@ -175,11 +176,23 @@ export default function DashboardLayout() {
   const openUploadModal = () => setShowUploadModal(true);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-300 relative">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed h-full z-10 transition-colors duration-300">
-        <div className="p-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
-          <Link to="/" className="flex items-center gap-2">
+      <aside
+        className={`w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed h-full z-50 transition-transform duration-300 ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0`}
+      >
+        <div className="p-6 flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800">
+          <Link to="/" className="flex items-center gap-2" onClick={() => setIsSidebarOpen(false)}>
             <div className="bg-blue-600 p-1.5 rounded-lg">
               <Cloud className="text-white" size={20} />
             </div>
@@ -187,11 +200,20 @@ export default function DashboardLayout() {
               Storifyy
             </span>
           </Link>
+          <button
+            className="md:hidden text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white transition-colors"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <X size={20} />
+          </button>
         </div>
 
         <div className="p-4 flex-1">
           <Button
-            onClick={openUploadModal}
+            onClick={() => {
+              openUploadModal();
+              setIsSidebarOpen(false);
+            }}
             className="w-full shadow-lg shadow-blue-500/20"
           >
             + New Upload
@@ -200,6 +222,7 @@ export default function DashboardLayout() {
           <nav className="space-y-1 mt-6">
             <Link
               to="/dashboard"
+              onClick={() => setIsSidebarOpen(false)}
               className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
             >
               <Folder size={18} />
@@ -207,6 +230,7 @@ export default function DashboardLayout() {
             </Link>
             <Link
               to="/dashboard/trash"
+              onClick={() => setIsSidebarOpen(false)}
               className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
             >
               <Trash2 size={18} />
@@ -255,10 +279,16 @@ export default function DashboardLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 p-8 flex flex-col">
+      <main className="flex-1 md:ml-64 p-4 md:p-8 flex flex-col min-h-screen overflow-x-hidden">
         {/* Header */}
-        <header className="flex items-center justify-between mb-8">
-          <div className="relative w-96 group">
+        <header className="flex items-center justify-between mb-8 gap-4">
+          <button
+            className="md:hidden p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            onClick={() => setIsSidebarOpen(true)}
+          >
+            <Menu size={24} />
+          </button>
+          <div className="relative flex-1 md:w-96 md:flex-none group">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer z-10"
               size={18}
