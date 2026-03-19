@@ -294,7 +294,7 @@ export const uploadFile = async (req, res) => {
 
         if (imageExtensions.includes(fileExt)) {
           await sharp(filePath)
-            .resize(128, 128, { fit: "cover" }) // Resize to 128x128 as requested
+            .resize(256, 128, { fit: "cover" }) // Resize to 256x128 as requested (16:8 ratio)
             .jpeg({ quality: 80 })
             .toFile(thumbnailPath);
           hasThumbnail = true;
@@ -313,7 +313,7 @@ export const uploadFile = async (req, res) => {
                 timestamps: ["1"], // capture at 1 second
                 filename: `${id}.jpg`,
                 folder: "./storage/thumbnails",
-                size: "128x128",
+                size: "256x128",
               });
           });
         }
