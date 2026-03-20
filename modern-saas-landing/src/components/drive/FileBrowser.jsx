@@ -20,12 +20,15 @@ import {
   Edit2,
   LayoutGrid,
   List,
+  Search,
+  Settings,
+  SlidersHorizontal,
 } from "lucide-react";
 
 // Lazy load the preview modal since it contains heavy syntax highlighter dependencies
 const FilePreviewModal = lazy(() => import("./FilePreviewModal"));
 
-export default function FileBrowser() {
+export default function FileBrowser({ specialView }) {
   const { folderId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -35,6 +38,14 @@ export default function FileBrowser() {
     downloadFile,
     setCurrentFolderId,
     refreshTrigger,
+    searchQuery: inputSearchQuery,
+    setSearchQuery: setInputSearchQuery,
+    handleSearch,
+    recentSearches,
+    showRecentSearches,
+    setShowRecentSearches,
+    showFilters,
+    setShowFilters,
   } = useOutletContext();
 
   const [data, setData] = useState({ directories: [], files: [] });
@@ -64,6 +75,15 @@ export default function FileBrowser() {
     setLoading(true);
     try {
       let url = joinUrl(SERVER_URL, "directory", folderId || "");
+
+      if (specialView === "shared") {
+        url = `${SERVER_URL}/file/shared`;
+      } else if (specialView === "recent") {
+        url = `${SERVER_URL}/file/recent`;
+      } else if (specialView === "starred") {
+        url = `${SERVER_URL}/file/starred`;
+      }
+
       if (isSearch) {
         if (!searchQuery) {
           setLoading(false);
@@ -84,10 +104,24 @@ export default function FileBrowser() {
           parentDir: result.parentDir,
         });
         setDirName(
-          result.name || (isSearch ? `Search: ${searchQuery}` : "Home"),
+          result.name || 
+          (isSearch ? `Search: ${searchQuery}` : 
+           specialView === "shared" ? "Shared with me" : 
+           specialView === "recent" ? "Recent" : 
+           specialView === "starred" ? "Starred" : 
+           "Home"),
         );
       } else {
         console.error("Failed to fetch files");
+        // Fallback title on failure
+        setDirName(
+           isSearch ? `Search: ${searchQuery}` : 
+           specialView === "shared" ? "Shared with me" : 
+           specialView === "recent" ? "Recent" : 
+           specialView === "starred" ? "Starred" : 
+           "Home"
+        );
+        setData({ directories: [], files: [] });
       }
     } catch (error) {
       console.error(error);
@@ -101,7 +135,7 @@ export default function FileBrowser() {
     setSelectedItems([]);
     setLastSelectedId(null);
     setCurrentFolderId(folderId || null);
-  }, [folderId, refreshTrigger, location.pathname, searchQuery]);
+  }, [folderId, refreshTrigger, location.pathname, searchQuery, specialView]);
 
   // --- HANDLERS ---
 
@@ -434,8 +468,8 @@ export default function FileBrowser() {
       onDrop={handleZoneDrop}
       onDragOver={handleZoneDragOver}
     >
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-2 pb-5 mb-5 -mx-4 px-4 md:-mx-8 md:px-8 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 order-1">
           {data.parentDir && (
             <button
               onClick={() => {
@@ -484,7 +518,95 @@ export default function FileBrowser() {
           </h2>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* MIDDLE SECTION: Search Bar from Context */}
+        <div className="relative w-full md:flex-1 md:max-w-md xl:max-w-lg flex items-center gap-2 mx-0 md:mx-4 group order-3 md:order-2">
+          <div className="relative flex-1 opacity-90 hover:opacity-100 transition-opacity">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer z-10"
+              size={18}
+              onClick={() => handleSearch(inputSearchQuery)}
+            />
+            <input
+              type="text"
+              placeholder="Search files..."
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-100/50 dark:bg-[#12141D] border border-slate-200/50 dark:border-slate-800/40 text-slate-900 dark:text-white rounded-xl focus:bg-white dark:focus:bg-[#151822] focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500/30 outline-none transition-all shadow-sm text-sm font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              value={inputSearchQuery || ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setInputSearchQuery(val);
+                if (!val) {
+                  handleSearch("");
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSearch(inputSearchQuery);
+              }}
+              onFocus={() => setShowRecentSearches(true)}
+              onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`p-2.5 rounded-xl border transition-all ${
+              showFilters 
+                ? "bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" 
+                : "bg-slate-100/50 dark:bg-[#12141D] border-slate-200/50 dark:border-slate-800/40 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 shadow-sm"
+            }`}
+          >
+            <SlidersHorizontal size={18} />
+          </button>
+          
+          {showRecentSearches && recentSearches && recentSearches.length > 0 && (
+            <div className="absolute top-full left-0 right-20 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl z-20 overflow-hidden">
+              <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 dark:bg-slate-800/50">
+                Recent Searches
+              </div>
+              {recentSearches.map((term, index) => (
+                <div
+                  key={index}
+                  className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"
+                  onClick={() => handleSearch(term)}
+                >
+                  <Search size={14} className="text-slate-400" />
+                  {term}
+                </div>
+              ))}
+            </div>
+          )}
+          {showFilters && (
+            <div className="absolute top-full left-0 md:left-auto md:right-20 mt-2 w-72 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-20 overflow-hidden">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="font-semibold text-slate-900 dark:text-white">Filters</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Refine your search results.</p>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">Extensions</label>
+                  <input type="text" placeholder="e.g. pdf, png, docx" className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">Size</label>
+                  <select className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200">
+                    <option>Any Size</option>
+                    <option>&lt; 1MB</option>
+                    <option>1MB - 10MB</option>
+                    <option>10MB - 100MB</option>
+                    <option>&gt; 100MB</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-sm font-medium text-slate-900 dark:text-white">Starred Only</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" />
+                    <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-400 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-500 peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0 order-2 md:order-3">
           <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1 mr-2 hidden md:flex">
             <button
               onClick={() => setViewMode("grid")}

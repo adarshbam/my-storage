@@ -66,6 +66,9 @@ function App() {
                   <Route index element={<FileBrowser />} />
                   <Route path="folder/:folderId" element={<FileBrowser />} />
                   <Route path="search" element={<FileBrowser />} />
+                  <Route path="shared" element={<FileBrowser specialView="shared" />} />
+                  <Route path="recent" element={<FileBrowser specialView="recent" />} />
+                  <Route path="starred" element={<FileBrowser specialView="starred" />} />
                   <Route path="trash" element={<TrashView />} />
                 </Route>
               </Route>

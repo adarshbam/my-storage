@@ -56,15 +56,15 @@ export default function FileCard({
 
   return (
     <div
-      className={`relative group bg-[rgb(15,15,15)] border rounded-xl overflow-hidden transition-all duration-200 cursor-pointer hover:shadow-md ${
+      className={`relative group bg-white dark:bg-[#0f0f0f] border rounded-xl overflow-hidden transition-all duration-200 cursor-pointer hover:shadow-md ${
         viewMode === "list"
-          ? "grid grid-cols-[1fr,100px,150px,40px] items-center p-2 pr-2 gap-4 hover:bg-[rgb(20,20,20)] bg-transparent border-transparent hover:border-slate-800"
-          : "flex flex-col px-5 py-3 gap-1.5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700"
+          ? "grid grid-cols-[1fr,100px,150px,40px] items-center p-2 pr-2 gap-4 hover:bg-slate-50 dark:hover:bg-[rgb(20,20,20)] border-transparent hover:border-slate-300 dark:hover:border-slate-800"
+          : "flex flex-col px-5 py-3 gap-1.5 border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700"
       } ${
         selected && viewMode !== "list"
           ? "border-blue-500 ring-2 ring-blue-500"
           : selected && viewMode === "list"
-            ? "bg-[rgb(20,20,20)] border-slate-700"
+            ? "bg-slate-100 dark:bg-[rgb(20,20,20)] border-slate-300 dark:border-slate-700"
             : ""
       }`}
       onClick={(e) => {
@@ -95,7 +95,7 @@ export default function FileCard({
             />
             {viewMode === "list" && (
               <h3
-                className="text-sm font-medium text-slate-200 truncate w-full"
+                className="text-sm font-medium text-slate-900 dark:text-slate-200 truncate w-full"
                 title={item.name}
               >
                 {item.name}
@@ -130,7 +130,7 @@ export default function FileCard({
                   onError={(e) => (e.target.src = "/file-images/file.png")}
                 />
                 <h3
-                  className="text-sm font-medium text-slate-200 truncate w-full"
+                  className="text-sm font-medium text-slate-900 dark:text-slate-200 truncate w-full"
                   title={item.name}
                 >
                   {item.name}
@@ -186,7 +186,7 @@ export default function FileCard({
           }}
           className={`p-1.5 rounded-lg backdrop-blur-sm transition-opacity focus:opacity-100 ${
             viewMode === "list"
-              ? "text-slate-500 hover:bg-slate-800 opacity-100"
+              ? "text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 opacity-100"
               : "opacity-0 group-hover:opacity-100 bg-black/40 text-white hover:bg-black/60"
           }`}
         >

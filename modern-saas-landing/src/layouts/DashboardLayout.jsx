@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Outlet, Link, useNavigate } from "react-router-dom";
 import { SERVER_URL } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
-import { Cloud, Folder, Trash2, LogOut, Search, Settings, Menu, X, SlidersHorizontal } from "lucide-react";
+import { Cloud, Folder, Trash2, LogOut, Search, Settings, Menu, X, SlidersHorizontal, PanelLeft, Sun, Moon, Users, Clock, Star, HardDrive, ChevronRight } from "lucide-react";
 import Button from "../components/ui/Button";
 import TransferManager from "../components/drive/TransferManager";
 import FileUploadModal from "../components/drive/FileUploadModal";
@@ -21,6 +21,23 @@ export default function DashboardLayout() {
   const [showRecentSearches, setShowRecentSearches] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState("");
+  const [showGlobalFilters, setShowGlobalFilters] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
+
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
 
   useEffect(() => {
     fetchRecentSearches();
@@ -177,8 +194,106 @@ export default function DashboardLayout() {
   const openUploadModal = () => setShowUploadModal(true);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-300 relative">
-      {/* Mobile Sidebar Overlay */}
+    <div className="h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors duration-300 overflow-hidden">
+      {/* Global Top Navbar */}
+      <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6 z-50 shrink-0">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => {
+              setIsSidebarOpen((prev) => !prev);
+              setIsDesktopSidebarOpen((prev) => !prev);
+            }}
+            className="p-1.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+          >
+            <PanelLeft size={20} />
+          </button>
+          <Link to="/" className="flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-blue-500 transition-colors hidden sm:flex">
+            <span>Home</span>
+            <ChevronRight size={16} className="text-slate-400 mt-0.5" />
+          </Link>
+        </div>
+
+        <div className="flex-1 max-w-2xl mx-4">
+          <div className="relative hidden sm:block">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              type="text"
+              placeholder="Search files globally..."
+              value={globalSearchQuery}
+              onChange={(e) => setGlobalSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && globalSearchQuery.trim()) {
+                  navigate(`/dashboard/search?q=${encodeURIComponent(globalSearchQuery.trim())}`);
+                }
+              }}
+              className="w-full pl-10 pr-10 py-2 bg-slate-100 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            />
+            <button
+              onClick={() => setShowGlobalFilters(!showGlobalFilters)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-colors"
+              title="Toggle Filters"
+            >
+              <SlidersHorizontal size={16} />
+            </button>
+            {showGlobalFilters && (
+              <div className="absolute top-full left-0 md:left-auto md:right-0 mt-2 w-72 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-20 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+                  <h3 className="font-semibold text-slate-900 dark:text-white">Filters</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Refine your search results.</p>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">Extensions</label>
+                    <input type="text" placeholder="e.g. pdf, png, docx" className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">Size</label>
+                    <select className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200">
+                      <option>Any Size</option>
+                      <option>&lt; 1MB</option>
+                      <option>1MB - 10MB</option>
+                      <option>10MB - 100MB</option>
+                      <option>&gt; 100MB</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-sm font-medium text-slate-900 dark:text-white">Starred Only</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" />
+                      <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-400 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-500 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <button 
+            onClick={toggleTheme}
+            className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors hidden sm:block">
+            {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 font-bold overflow-hidden cursor-pointer"
+               onClick={() => fileInputRef.current?.click()}
+               title="Current User (Click to update avatar)">
+             {profilePicUrl ? (
+                <img
+                  src={profilePicUrl}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                  crossOrigin="use-credentials"
+                />
+             ) : (
+                <span className="text-sm">{user?.email?.[0]?.toUpperCase() || 'A'}</span>
+             )}
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
@@ -188,11 +303,11 @@ export default function DashboardLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed h-full z-50 transition-transform duration-300 ${
+        className={`w-64 shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col absolute md:relative inset-y-0 left-0 z-40 transition-all duration-300 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0`}
+        } md:translate-x-0 ${isDesktopSidebarOpen ? "md:ml-0" : "md:-ml-64"}`}
       >
-        <div className="p-6 flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800">
+        <div className="p-6 pb-4 flex items-center justify-between gap-2">
           <Link to="/" className="flex items-center gap-2" onClick={() => setIsSidebarOpen(false)}>
             <div className="bg-blue-600 p-1.5 rounded-lg">
               <Cloud className="text-white" size={20} />
@@ -209,7 +324,7 @@ export default function DashboardLayout() {
           </button>
         </div>
 
-        <div className="p-4 flex-1">
+        <div className="px-6 pb-6 border-b border-slate-200 dark:border-slate-800">
           <Button
             onClick={() => {
               openUploadModal();
@@ -219,15 +334,41 @@ export default function DashboardLayout() {
           >
             + New Upload
           </Button>
+        </div>
 
-          <nav className="space-y-1 mt-6">
+        <div className="p-4 flex-1">
+          <nav className="space-y-1">
             <Link
               to="/dashboard"
               onClick={() => setIsSidebarOpen(false)}
               className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
             >
-              <Folder size={18} />
+              <HardDrive size={18} />
               <span>My Drive</span>
+            </Link>
+            <Link
+              to="/dashboard/shared"
+              onClick={() => setIsSidebarOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              <Users size={18} />
+              <span>Shared with me</span>
+            </Link>
+            <Link
+              to="/dashboard/recent"
+              onClick={() => setIsSidebarOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              <Clock size={18} />
+              <span>Recent</span>
+            </Link>
+            <Link
+              to="/dashboard/starred"
+              onClick={() => setIsSidebarOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              <Star size={18} />
+              <span>Starred</span>
             </Link>
             <Link
               to="/dashboard/trash"
@@ -280,107 +421,7 @@ export default function DashboardLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-4 md:p-8 flex flex-col min-h-screen overflow-x-hidden">
-        {/* Header */}
-        <header className="flex items-center justify-between mb-8 gap-4">
-          <button
-            className="md:hidden p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-            onClick={() => setIsSidebarOpen(true)}
-          >
-            <Menu size={24} />
-          </button>
-          <div className="relative flex-1 md:w-96 md:flex-none group flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer z-10"
-                size={18}
-                onClick={() => handleSearch(searchQuery)}
-              />
-              <input
-                type="text"
-                placeholder="Search files..."
-                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                value={searchQuery}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSearchQuery(val);
-                if (!val) {
-                  handleSearch("");
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSearch(searchQuery);
-              }}
-                onFocus={() => setShowRecentSearches(true)}
-                onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
-              />
-            </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`p-2 rounded-lg border transition-colors ${
-                showFilters 
-                  ? "bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" 
-                  : "bg-transparent border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50"
-              }`}
-            >
-              <SlidersHorizontal size={20} />
-            </button>
-            {showRecentSearches && recentSearches.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl z-20 overflow-hidden">
-                <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 dark:bg-slate-800/50">
-                  Recent Searches
-                </div>
-                {recentSearches.map((term, index) => (
-                  <div
-                    key={index}
-                    className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"
-                    onClick={() => handleSearch(term)}
-                  >
-                    <Search size={14} className="text-slate-400" />
-                    {term}
-                  </div>
-                ))}
-              </div>
-            )}
-            {showFilters && (
-              <div className="absolute top-full left-0 md:left-auto md:right-0 mt-2 w-72 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-20 overflow-hidden">
-                <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-                  <h3 className="font-semibold text-slate-900 dark:text-white">Filters</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Refine your search results.</p>
-                </div>
-                <div className="p-4 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">Extensions</label>
-                    <input type="text" placeholder="e.g. pdf, png, docx" className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">Size</label>
-                    <select className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200">
-                      <option>Any Size</option>
-                      <option>&lt; 1MB</option>
-                      <option>1MB - 10MB</option>
-                      <option>10MB - 100MB</option>
-                      <option>&gt; 100MB</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-sm font-medium text-slate-900 dark:text-white">Starred Only</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" />
-                      <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-400 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-500 peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-              <Settings size={20} />
-            </button>
-          </div>
-        </header>
-
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col relative bg-slate-50 dark:bg-slate-950">
         <Outlet
           context={{
             openUploadModal,
@@ -388,6 +429,14 @@ export default function DashboardLayout() {
             downloadFile: handleDownload,
             setCurrentFolderId,
             refreshTrigger,
+            searchQuery,
+            setSearchQuery,
+            handleSearch,
+            recentSearches,
+            showRecentSearches,
+            setShowRecentSearches,
+            showFilters,
+            setShowFilters
           }}
         />
         <TransferManager
@@ -400,6 +449,7 @@ export default function DashboardLayout() {
           onUpload={handleUpload}
         />
       </main>
+      </div>
     </div>
   );
 }
