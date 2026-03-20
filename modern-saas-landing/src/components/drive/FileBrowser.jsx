@@ -12,7 +12,15 @@ import { joinUrl } from "../../lib/utils";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import FileCard from "./FileCard";
-import { Upload, FolderPlus, Loader2, Trash2, Edit2, LayoutGrid, List } from "lucide-react";
+import {
+  Upload,
+  FolderPlus,
+  Loader2,
+  Trash2,
+  Edit2,
+  LayoutGrid,
+  List,
+} from "lucide-react";
 
 // Lazy load the preview modal since it contains heavy syntax highlighter dependencies
 const FilePreviewModal = lazy(() => import("./FilePreviewModal"));
@@ -31,7 +39,7 @@ export default function FileBrowser() {
 
   const [data, setData] = useState({ directories: [], files: [] });
   const [loading, setLoading] = useState(true);
-  const [dirName, setDirName] = useState("Root");
+  const [dirName, setDirName] = useState("Home");
   const [selectedItems, setSelectedItems] = useState([]);
   const [previewFile, setPreviewFile] = useState(null);
   const [lastSelectedId, setLastSelectedId] = useState(null);
@@ -76,7 +84,7 @@ export default function FileBrowser() {
           parentDir: result.parentDir,
         });
         setDirName(
-          result.name || (isSearch ? `Search: ${searchQuery}` : "Root"),
+          result.name || (isSearch ? `Search: ${searchQuery}` : "Home"),
         );
       } else {
         console.error("Failed to fetch files");
@@ -245,9 +253,11 @@ export default function FileBrowser() {
         return;
       }
 
-      const typeEndpoint = (modalItem.type === "directory" || data.directories.find((d) => d.id === modalItem.id))
-        ? "directory"
-        : "file";
+      const typeEndpoint =
+        modalItem.type === "directory" ||
+        data.directories.find((d) => d.id === modalItem.id)
+          ? "directory"
+          : "file";
       const bodyKey =
         typeEndpoint === "directory" ? "newDirName" : "newFileName";
 
@@ -452,12 +462,16 @@ export default function FileBrowser() {
               ←
             </button>
           )}
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+          <h2 className="text-2xl capitalize font-bold text-slate-800 dark:text-white flex items-center gap-2">
             {dirName}
             {folderId && !isSearch && (
               <button
                 onClick={() => {
-                  setModalItem({ id: folderId, name: dirName, type: 'directory' });
+                  setModalItem({
+                    id: folderId,
+                    name: dirName,
+                    type: "directory",
+                  });
                   setModalInput(dirName);
                   setModalType("rename");
                 }}
@@ -519,12 +533,21 @@ export default function FileBrowser() {
       ) : (
         <div
           className={`pb-20 relative select-none flex-1 content-start ${
-            viewMode === "list" 
-              ? "flex flex-col gap-2" 
-              : "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
+            viewMode === "list"
+              ? "flex flex-col gap-1"
+              : "grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-4"
           }`}
           onMouseDown={handleMouseDown}
         >
+          {viewMode === "list" && (
+            <div className="grid grid-cols-[1fr,100px,150px,40px] gap-4 px-4 py-3 text-sm font-semibold text-slate-500 border-b border-slate-200/50 dark:border-slate-800/50 mb-2 items-center sticky top-0 bg-transparent z-10">
+              <div>Name</div>
+              <div className="text-right">Size</div>
+              <div className="text-right pr-4">Modified</div>
+              <div></div>
+            </div>
+          )}
+
           {/* Selection Box Overlay */}
           {isDragging && selectionBox && (
             <div
