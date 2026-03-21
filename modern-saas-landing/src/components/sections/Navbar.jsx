@@ -106,7 +106,7 @@ const Navbar = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 overflow-hidden"
+            className="md:hidden bg-white/80 dark:bg-white/[0.04] backdrop-blur-2xl border-b border-black/5 dark:border-white/[0.06] overflow-hidden"
           >
             <div className="px-6 py-4 flex flex-col gap-4">
               {navLinks.map((link) => (
@@ -119,7 +119,7 @@ const Navbar = () => {
                   {link}
                 </a>
               ))}
-              <div className="h-px bg-slate-200 dark:bg-slate-800 my-2" />
+              <div className="h-px bg-black/5 dark:bg-white/[0.06] my-2" />
               {user ? (
                 <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
                   <Button className="w-full">Go to Dashboard</Button>

@@ -11,7 +11,7 @@ const Hero = () => {
   return (
     <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
       {/* Animated Background Elements */}
-      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none bg-slate-50 dark:bg-brand-950 transition-colors duration-500">
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none transition-colors duration-500">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-brand-500/20 dark:bg-brand-500/10 rounded-[100%] blur-[120px]" />
         
         <motion.div

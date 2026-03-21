@@ -6,7 +6,10 @@ import { ArrowRight } from "lucide-react";
 const FinalCTA = () => {
   return (
     <section className="py-32 relative overflow-hidden mt-12 mb-12 lg:mb-24 mx-4 lg:mx-auto max-w-7xl">
-      <div className="container mx-auto px-6 relative z-10 text-center py-20 glass-panel rounded-[3rem] shadow-[0_0_50px_rgba(16,185,129,0.1)]">
+      {/* Glow orbs behind the CTA */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[#14b8a6]/15 dark:bg-[#14b8a6]/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 right-[10%] w-[300px] h-[300px] bg-[#a855f7]/10 dark:bg-[#a855f7]/8 rounded-full blur-[100px] pointer-events-none" />
+      <div className="container mx-auto px-6 relative z-10 text-center py-20 glass-panel rounded-[3rem] shadow-[0_0_60px_rgba(20,184,166,0.15)] dark:shadow-[0_0_60px_rgba(20,184,166,0.2)]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

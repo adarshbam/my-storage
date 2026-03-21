@@ -71,7 +71,7 @@ const Pricing = () => {
             </span>
             <button
               onClick={() => setIsYearly(!isYearly)}
-              className="relative w-14 h-8 bg-slate-200 dark:bg-slate-800 rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#14b8a6]"
+              className="relative w-14 h-8 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#14b8a6] border border-black/5 dark:border-white/[0.08]"
             >
               <motion.div
                 className="w-6 h-6 bg-[#2dd4bf] rounded-full shadow-[0_0_10px_rgba(45,212,191,0.5)]"
@@ -150,7 +150,7 @@ const Pricing = () => {
 
                 <Link to="/register" className="w-full">
                   <Button
-                    variant={plan.popular ? "masterclass" : "outline"}
+                    variant={plan.popular ? "masterclass" : "secondary"}
                     className="w-full justify-center"
                   >
                     {plan.price === "0" ? "Start Free" : "Get Started"}

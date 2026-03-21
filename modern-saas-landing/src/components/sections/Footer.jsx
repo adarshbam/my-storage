@@ -8,10 +8,10 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           <div className="md:col-span-1">
             <div className="flex items-center gap-2 mb-6 text-slate-900 dark:text-white">
-              <div className="bg-gradient-to-br from-brand-500 to-brand-700 p-2 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+              <div className="bg-gradient-to-br from-[#14b8a6] to-[#0f463e] p-2 rounded-xl shadow-[0_0_15px_rgba(20,184,166,0.3)]">
                 <Cloud className="text-white fill-white/20" size={20} />
               </div>
-              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-brand-400 dark:from-brand-400 dark:to-brand-200">
+              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#14b8a6] to-[#3b82f6]">
                 Storifyy
               </span>
             </div>
@@ -25,7 +25,7 @@ const Footer = () => {
                   key={i}
                   whileHover={{ y: -3 }}
                   href="#"
-                  className="w-10 h-10 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 hover:text-brand-500 hover:border-brand-500 transition-colors shadow-sm"
+                  className="w-10 h-10 rounded-full bg-white/60 dark:bg-white/[0.04] backdrop-blur-xl border border-black/5 dark:border-white/[0.08] flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-[#14b8a6] hover:border-[#14b8a6]/40 hover:shadow-[0_0_15px_rgba(20,184,166,0.15)] transition-all duration-300 shadow-sm"
                 >
                   <Icon size={18} />
                 </motion.a>
@@ -72,7 +72,7 @@ const Footer = () => {
                 <li key={item}>
                   <a
                     href="#"
-                    className="text-white/50 text-sm hover:text-white transition-colors"
+                    className="text-slate-500 dark:text-white/50 text-sm hover:text-slate-900 dark:hover:text-white transition-colors"
                   >
                     {item}
                   </a>
@@ -95,7 +95,7 @@ const Footer = () => {
                 <li key={item}>
                   <a
                     href="#"
-                    className="text-white/50 text-sm hover:text-white transition-colors"
+                    className="text-slate-500 dark:text-white/50 text-sm hover:text-slate-900 dark:hover:text-white transition-colors"
                   >
                     {item}
                   </a>
