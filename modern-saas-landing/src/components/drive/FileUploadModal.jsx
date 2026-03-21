@@ -78,8 +78,8 @@ export default function FileUploadModal({ isOpen, onClose, onUpload }) {
           className={cn(
             "relative border-2 border-dashed rounded-xl p-8 transition-all duration-200 flex flex-col items-center justify-center text-center cursor-pointer",
             dragActive
-              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/10"
-              : "border-slate-300 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-600 bg-slate-50 dark:bg-slate-900",
+              ? "border-[#14b8a6] bg-[#14b8a6]/5 dark:bg-[#14b8a6]/5"
+              : "border-black/10 dark:border-white/[0.08] hover:border-[#14b8a6]/40 dark:hover:border-[#14b8a6]/30 bg-white/30 dark:bg-white/[0.03]",
           )}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -95,7 +95,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload }) {
             onChange={handleChange}
           />
 
-          <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4">
+          <div className="w-16 h-16 bg-[#14b8a6]/10 dark:bg-[#14b8a6]/10 text-[#14b8a6] rounded-full flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(20,184,166,0.1)]">
             <Upload size={32} />
           </div>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
@@ -115,7 +115,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload }) {
               {files.map((file, index) => (
                 <div
                   key={`${file.name}-${index}`}
-                  className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:shadow-sm transition-shadow"
+                  className="flex items-center justify-between p-3 bg-white/60 dark:bg-white/[0.04] rounded-xl border border-black/5 dark:border-white/[0.06] hover:shadow-sm transition-shadow"
                 >
                   <div className="flex items-center gap-3 overflow-hidden">
                     <div className="p-2 bg-slate-100 dark:bg-slate-700/50 rounded-lg">

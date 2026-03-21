@@ -440,7 +440,7 @@ const TransferManager = forwardRef((props, ref) => {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 w-80 md:w-96 shadow-2xl">
-      <Card className="p-0 overflow-hidden border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
+      <Card className="p-0 overflow-hidden border-black/10 dark:border-white/[0.08] bg-white/90 dark:bg-white/[0.05] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)]">
         <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
           <span className="font-medium text-sm text-slate-900 dark:text-white">
             Transfers ({transfers.length})

@@ -252,7 +252,7 @@ export default function TrashView() {
             <input
               type="text"
               placeholder="Search trash..."
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-100/50 dark:bg-[#12141D] border border-slate-200/50 dark:border-slate-800/40 text-slate-900 dark:text-white rounded-xl focus:bg-white dark:focus:bg-[#151822] focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500/30 outline-none transition-all shadow-sm text-sm font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              className="w-full pl-10 pr-4 py-2.5 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:bg-white/80 dark:focus:bg-white/[0.08] focus:ring-1 focus:ring-[#14b8a6]/40 focus:border-[#14b8a6]/30 dark:focus:shadow-[0_0_12px_rgba(20,184,166,0.12)] outline-none transition-all duration-300 shadow-sm text-sm font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
               value={inputSearchQuery}
               onChange={(e) => setInputSearchQuery(e.target.value)}
             />
@@ -261,8 +261,8 @@ export default function TrashView() {
             onClick={() => setShowFilters(!showFilters)}
             className={`p-2.5 rounded-xl border transition-all ${
               showFilters 
-                ? "bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" 
-                : "bg-slate-100/50 dark:bg-[#12141D] border-slate-200/50 dark:border-slate-800/40 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 shadow-sm"
+                ? "bg-white/80 dark:bg-white/[0.08] border-black/10 dark:border-white/10 text-slate-900 dark:text-white" 
+                : "bg-white/40 dark:bg-white/[0.04] border-black/5 dark:border-white/[0.06] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 shadow-sm"
             }`}
           >
             <SlidersHorizontal size={18} />
@@ -270,12 +270,12 @@ export default function TrashView() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0 order-2 md:order-3">
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1 mr-2 hidden md:flex">
+          <div className="flex items-center bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm rounded-xl p-1 mr-2 hidden md:flex border border-black/5 dark:border-white/[0.06]">
             <button
               onClick={() => setViewMode("grid")}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === "grid"
-                  ? "bg-white dark:bg-slate-900 shadow-sm text-blue-600 dark:text-blue-400"
+                  ? "bg-white dark:bg-white/10 shadow-sm text-[#14b8a6]"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               }`}
               title="Grid view"
@@ -286,7 +286,7 @@ export default function TrashView() {
               onClick={() => setViewMode("list")}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === "list"
-                  ? "bg-white dark:bg-slate-900 shadow-sm text-blue-600 dark:text-blue-400"
+                  ? "bg-white dark:bg-white/10 shadow-sm text-[#14b8a6]"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               }`}
               title="List view"
@@ -368,7 +368,7 @@ export default function TrashView() {
 
       {/* Floating Bulk Action Bar */}
       {selectedItems.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/80 dark:bg-white/[0.06] backdrop-blur-2xl text-slate-900 dark:text-white px-6 py-3 rounded-full shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-black/10 dark:border-white/[0.08] flex items-center gap-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
           <span className="font-medium text-sm">
             {selectedItems.length} selected
           </span>

@@ -529,7 +529,7 @@ export default function FileBrowser({ specialView }) {
             <input
               type="text"
               placeholder="Search files..."
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-100/50 dark:bg-[#12141D] border border-slate-200/50 dark:border-slate-800/40 text-slate-900 dark:text-white rounded-xl focus:bg-white dark:focus:bg-[#151822] focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500/30 outline-none transition-all shadow-sm text-sm font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              className="w-full pl-10 pr-4 py-2.5 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:bg-white/80 dark:focus:bg-white/[0.08] focus:ring-1 focus:ring-[#14b8a6]/40 focus:border-[#14b8a6]/30 dark:focus:shadow-[0_0_12px_rgba(20,184,166,0.12)] outline-none transition-all duration-300 shadow-sm text-sm font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
               value={inputSearchQuery || ""}
               onChange={(e) => {
                 const val = e.target.value;
@@ -549,15 +549,15 @@ export default function FileBrowser({ specialView }) {
             onClick={() => setShowFilters(!showFilters)}
             className={`p-2.5 rounded-xl border transition-all ${
               showFilters 
-                ? "bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" 
-                : "bg-slate-100/50 dark:bg-[#12141D] border-slate-200/50 dark:border-slate-800/40 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 shadow-sm"
+                ? "bg-white/80 dark:bg-white/[0.08] border-black/10 dark:border-white/10 text-slate-900 dark:text-white" 
+                : "bg-white/40 dark:bg-white/[0.04] border-black/5 dark:border-white/[0.06] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 shadow-sm"
             }`}
           >
             <SlidersHorizontal size={18} />
           </button>
           
           {showRecentSearches && recentSearches && recentSearches.length > 0 && (
-            <div className="absolute top-full left-0 right-20 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl z-20 overflow-hidden">
+            <div className="absolute top-full left-0 right-20 mt-2 bg-white/90 dark:bg-white/[0.06] backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] rounded-xl shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-20 overflow-hidden">
               <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 dark:bg-slate-800/50">
                 Recent Searches
               </div>
@@ -574,7 +574,7 @@ export default function FileBrowser({ specialView }) {
             </div>
           )}
           {showFilters && (
-            <div className="absolute top-full left-0 md:left-auto md:right-20 mt-2 w-72 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-20 overflow-hidden">
+            <div className="absolute top-full left-0 md:left-auto md:right-20 mt-2 w-72 bg-white/90 dark:bg-white/[0.05] backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] rounded-xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-20 overflow-hidden">
               <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                 <h3 className="font-semibold text-slate-900 dark:text-white">Filters</h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Refine your search results.</p>
@@ -607,12 +607,12 @@ export default function FileBrowser({ specialView }) {
         </div>
 
         <div className="flex items-center gap-3 shrink-0 order-2 md:order-3">
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1 mr-2 hidden md:flex">
+          <div className="flex items-center bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm rounded-xl p-1 mr-2 hidden md:flex border border-black/5 dark:border-white/[0.06]">
             <button
               onClick={() => setViewMode("grid")}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === "grid"
-                  ? "bg-white dark:bg-slate-900 shadow-sm text-blue-600 dark:text-blue-400"
+                  ? "bg-white dark:bg-white/10 shadow-sm text-[#14b8a6]"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               }`}
               title="Grid view"
@@ -623,7 +623,7 @@ export default function FileBrowser({ specialView }) {
               onClick={() => setViewMode("list")}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === "list"
-                  ? "bg-white dark:bg-slate-900 shadow-sm text-blue-600 dark:text-blue-400"
+                  ? "bg-white dark:bg-white/10 shadow-sm text-[#14b8a6]"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               }`}
               title="List view"
@@ -635,14 +635,14 @@ export default function FileBrowser({ specialView }) {
             <>
               <button
                 onClick={handleCreateClick}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm text-slate-700 dark:text-slate-200 rounded-xl hover:bg-white/80 dark:hover:bg-white/[0.08] transition-all duration-300 font-medium border border-black/5 dark:border-white/[0.06]"
               >
                 <FolderPlus size={18} />
                 <span className="hidden sm:inline">New Folder</span>
               </button>
               <button
                 onClick={openUploadModal}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg shadow-blue-500/20"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white rounded-xl hover:shadow-[0_0_20px_rgba(20,184,166,0.4)] hover:scale-[1.03] transition-all duration-300 font-medium shadow-lg shadow-[#14b8a6]/20"
               >
                 <Upload size={18} />
                 <span className="hidden sm:inline">Upload</span>
@@ -735,7 +735,7 @@ export default function FileBrowser({ specialView }) {
               ) : (
                 <>
                   <div
-                    className="bg-slate-100 dark:bg-slate-800/50 p-6 rounded-full mb-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                    className="bg-white/40 dark:bg-white/[0.03] p-6 rounded-full mb-4 cursor-pointer hover:bg-white/60 dark:hover:bg-white/[0.06] transition-all duration-300 shadow-[0_0_30px_rgba(20,184,166,0.06)] dark:shadow-[0_0_30px_rgba(20,184,166,0.1)]"
                     onClick={openUploadModal}
                   >
                     <Upload size={40} />
@@ -757,7 +757,7 @@ export default function FileBrowser({ specialView }) {
 
       {/* Floating Bulk Action Bar */}
       {selectedItems.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/80 dark:bg-white/[0.06] backdrop-blur-2xl text-slate-900 dark:text-white px-6 py-3 rounded-full shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-black/10 dark:border-white/[0.08] flex items-center gap-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
           <span className="font-medium text-sm">
             {selectedItems.length} selected
           </span>

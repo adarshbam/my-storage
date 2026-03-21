@@ -211,7 +211,7 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
 
     return (
       <div className="flex flex-col items-center justify-center h-full text-slate-400">
-        <div className="bg-slate-800 p-4 rounded-full mb-4">
+        <div className="bg-slate-200 dark:bg-slate-800 p-4 rounded-full mb-4">
           {ext === ".zip" ? <AlertCircle size={32} /> : <FileText size={32} />}
         </div>
         <p className="text-lg font-medium mb-4">Preview not available</p>
@@ -225,11 +225,11 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-5xl flex flex-col h-[70vh] border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+      <div className="relative bg-white/90 dark:bg-white/[0.05] backdrop-blur-2xl rounded-[20px] shadow-[0_8px_32px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)] w-full max-w-5xl flex flex-col h-[70vh] border border-black/10 dark:border-white/[0.08] animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
+            <div className="p-2 bg-[#14b8a6]/10 rounded-lg text-[#14b8a6]">
               {isTextOrCode(file.extension) ? (
                 <FileCode size={20} />
               ) : isAudio(file.extension) ? (

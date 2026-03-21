@@ -18,10 +18,10 @@ export default function Modal({ isOpen, onClose, title, children, className }) {
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 dark:bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div
         className={cn(
-          "relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200",
+          "relative w-full max-w-lg bg-white/90 dark:bg-white/[0.05] backdrop-blur-2xl rounded-[20px] shadow-[0_8px_32px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)] border border-black/10 dark:border-white/[0.08] animate-in zoom-in-95 duration-200",
           className,
         )}
       >

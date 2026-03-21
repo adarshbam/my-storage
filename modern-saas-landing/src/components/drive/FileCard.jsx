@@ -56,15 +56,15 @@ export default function FileCard({
 
   return (
     <div
-      className={`relative group bg-white dark:bg-[#0f0f0f] border rounded-xl overflow-hidden transition-all duration-200 cursor-pointer hover:shadow-md ${
+      className={`relative group bg-white/60 dark:bg-white/[0.04] backdrop-blur-xl border rounded-xl overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-[0_0_20px_rgba(20,184,166,0.08)] dark:hover:shadow-[0_0_25px_rgba(20,184,166,0.12)] ${
         viewMode === "list"
-          ? "grid grid-cols-[1fr,100px,150px,40px] items-center p-2 pr-2 gap-4 hover:bg-slate-50 dark:hover:bg-[rgb(20,20,20)] border-transparent hover:border-slate-300 dark:hover:border-slate-800"
-          : "flex flex-col px-5 py-3 gap-1.5 border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700"
+          ? "grid grid-cols-[1fr,100px,150px,40px] items-center p-2 pr-2 gap-4 hover:bg-white/80 dark:hover:bg-white/[0.06] border-transparent hover:border-black/10 dark:hover:border-white/10"
+          : "flex flex-col px-5 py-3 gap-1.5 border-black/5 dark:border-white/[0.06] hover:border-[#14b8a6]/30 dark:hover:border-[#14b8a6]/30 hover:scale-[1.02]"
       } ${
         selected && viewMode !== "list"
-          ? "border-blue-500 ring-2 ring-blue-500"
+          ? "border-[#14b8a6]/60 ring-2 ring-[#14b8a6]/30 shadow-[0_0_20px_rgba(20,184,166,0.15)]"
           : selected && viewMode === "list"
-            ? "bg-slate-100 dark:bg-[rgb(20,20,20)] border-slate-300 dark:border-slate-700"
+            ? "bg-white/80 dark:bg-white/[0.06] border-[#14b8a6]/30 dark:border-[#14b8a6]/20"
             : ""
       }`}
       onClick={(e) => {
@@ -83,7 +83,7 @@ export default function FileCard({
         className={
           viewMode === "list"
             ? "flex flex-row items-center min-w-0"
-            : "relative w-full aspect-square bg-slate-100 dark:bg-slate-800/50 flex items-center justify-center overflow-hidden rounded-lg"
+            : "relative w-full aspect-square bg-white/30 dark:bg-white/[0.03] flex items-center justify-center overflow-hidden rounded-lg"
         }
       >
         {type === "directory" ? (
@@ -196,7 +196,7 @@ export default function FileCard({
         {showMenu && (
           <div
             ref={menuRef}
-            className={`absolute right-0 ${viewMode === "list" ? "top-8" : "top-full mt-1"} w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl z-[60] py-1`}
+            className={`absolute right-0 ${viewMode === "list" ? "top-8" : "top-full mt-1"} w-48 bg-white/90 dark:bg-white/[0.06] backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] rounded-xl shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-[60] py-1`}
             onClick={(e) => e.stopPropagation()}
           >
             {!isTrash && (
