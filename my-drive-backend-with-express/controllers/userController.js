@@ -5,7 +5,7 @@ import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import mongoose from "mongoose";
-import crypto from "node:crypto";
+import argon2 from "argon2";
 
 export const getUser = (req, res) => {
   const user = req.user;
@@ -23,14 +23,7 @@ export const registerUser = async (req, res) => {
   const rootDirId = new mongoose.Types.ObjectId();
   const userId = new mongoose.Types.ObjectId();
 
-  const salt = crypto.randomBytes(16);
-
-  const hash = crypto.pbkdf2Sync(password, salt, 100000, 32, "sha256");
-
-  const hashedPassword =
-    hash.toString("base64url") + "." + salt.toString("base64url");
-
-  console.log(hashedPassword);
+  const hashedPassword = await argon2.hash(password);
 
   const newUser = {
     _id: userId,
@@ -84,15 +77,9 @@ export const loginUser = async (req, res) => {
       return res.status(404).json({ error: "Email not registered" });
     }
 
-    const salt = Buffer.from(user.password.split(".")[1], "base64url");
-    const hashedPassword = user.password.split(".")[0];
-    const enterenedhashPassword = crypto
-      .pbkdf2Sync(password, salt, 100000, 32, "sha256")
-      .toString("base64url");
+    const isMatch = await argon2.verify(user.password, password);
 
-    console.log(enterenedhashPassword, hashedPassword);
-
-    if (enterenedhashPassword !== hashedPassword) {
+    if (!isMatch) {
       return res.status(404).json({ error: "Invalid password" });
     }
 
