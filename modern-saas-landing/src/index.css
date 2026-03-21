@@ -7,6 +7,33 @@
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50;
+    /* Using extremely dark green for dark mode, pink-tinted slate for light mode */
+    @apply bg-[#faf5f7] dark:bg-[#022c22] text-slate-900 dark:text-slate-50 transition-colors duration-300;
   }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-white/20 dark:bg-black/30 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)];
+  }
+  .glass-panel {
+    @apply bg-white/40 dark:bg-brand-950/50 backdrop-blur-lg border border-white/50 dark:border-white/5;
+  }
+  .text-glow {
+    text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 dark:bg-brand-800 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400 dark:bg-brand-700;
 }

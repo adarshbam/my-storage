@@ -52,35 +52,35 @@ const ScaleSecurity = () => {
   return (
     <section
       id="security"
-      className="py-24 relative overflow-hidden bg-white dark:bg-slate-950"
+      className="py-24 relative overflow-hidden bg-[#01140f] dark:bg-[#01140f] transition-colors duration-300"
     >
-      {/* Grid Background */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+      {/* Darker Grid Background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(20,184,166,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(20,184,166,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
 
-      {/* Soft Radial Gradient */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-gradient-to-b from-pink-500/5 to-transparent blur-[100px] pointer-events-none" />
+      {/* Darker Glassform Gradient Bg */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-gradient-to-b from-[#0f463e]/20 via-[#01140f]/50 to-transparent blur-[120px] pointer-events-none" />
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="text-center mb-20">
           <motion.span
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
-            className="text-pink-500 font-bold tracking-widest text-xs uppercase mb-4 block"
+            className="text-brand-400 font-bold tracking-widest text-xs uppercase mb-4 block"
           >
             Why Storifyy?
           </motion.span>
           <motion.h2
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
-            className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white mb-6"
+            className="text-4xl md:text-6xl font-black text-white mb-6"
           >
-            Engineered for <span className="text-pink-500">Privacy</span> &{" "}
-            <span className="text-pink-500">Security</span>
+            Engineered for <span className="text-[#2dd4bf]">Privacy</span> &{" "}
+            <span className="text-[#E76F51]">Security</span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
-            className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto"
+            className="text-xl text-brand-100/70 max-w-2xl mx-auto"
           >
             Your data is yours alone. We provide the vault, you hold the keys.
           </motion.p>
@@ -99,72 +99,52 @@ const ScaleSecurity = () => {
               }
             >
               <Card
-                variant={item.variant}
+                variant="dark"
                 className="h-full flex flex-col justify-between overflow-hidden relative"
               >
-                {/* Rotating Rings Animation for global access card */}
-                {index === 3 && (
-                  <div className="absolute top-1/2 right-[-20%] -translate-y-1/2 w-48 h-48 opacity-50 pointer-events-none">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 20,
-                        ease: "linear",
-                      }}
-                      className="absolute inset-0 border-[12px] border-blue-500/20 rounded-full border-t-blue-500/60"
-                    />
-                    <motion.div
-                      animate={{ rotate: -360 }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 15,
-                        ease: "linear",
-                      }}
-                      className="absolute inset-4 border-[12px] border-blue-400/20 rounded-full border-b-blue-400/60"
-                    />
-                  </div>
-                )}
-
+                {/* Rotating Rings Animation for global access card Removed for Performance/Speed */}
+                
                 <div>
                   <div
-                    className={`w-14 h-14 rounded-full flex items-center justify-center mb-6 
-                                        ${item.variant === "green" ? "bg-green-500 text-white" : ""}
-                                        ${item.variant === "blue" ? "bg-blue-500 text-white" : ""}
-                                        ${item.variant === "purple" ? "bg-purple-500 text-white" : ""}
-                                        ${item.variant === "orange" ? "bg-slate-800 text-green-400" : ""} 
-                                    `}
+                    className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-inner border border-brand-500/20
+                      ${item.variant === "green" ? "bg-brand-500/10 text-brand-400" : ""}
+                      ${item.variant === "blue" ? "bg-accent-500/10 text-accent-400" : ""}
+                      ${item.variant === "purple" ? "bg-fuchsia-500/10 text-fuchsia-400" : ""}
+                      ${item.variant === "orange" ? "bg-brand-900/50 text-[#E76F51] border-brand-500/30" : ""} 
+                    `}
                   >
-                    <item.icon size={28} />
+                    <item.icon size={28} strokeWidth={1.5} />
                   </div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">
+                  <h3 className="text-2xl font-bold text-white mb-3">
                     {item.title}
                   </h3>
-                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  <p className="text-slate-400 font-medium leading-relaxed">
                     {item.desc}
                   </p>
                 </div>
 
                 {/* Custom dark card style for "Privacy Vault" */}
                 {item.title === "Privacy Vault" && (
-                  <div className="mt-8 bg-slate-900 rounded-xl p-4 font-mono text-xs text-green-400 relative overflow-hidden border border-slate-800">
-                    <div className="flex gap-1 mb-2">
-                      <div className="w-2 h-2 rounded-full bg-red-500" />
-                      <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <div className="mt-8 bg-slate-950 dark:bg-black/80 rounded-xl p-4 font-mono text-xs text-brand-400/80 relative overflow-hidden border border-brand-500/20 shadow-inner">
+                    <div className="flex gap-1.5 mb-3">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-brand-500/80" />
                     </div>
                     <p>unlock_vault(password)</p>
-                    <p className="text-emerald-500">Verified. Decrypting...</p>
-                    <motion.div
-                      className="h-1 bg-green-500 mt-2 rounded-full"
-                      initial={{ width: "0%" }}
-                      whileInView={{ width: "100%" }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Infinity,
-                        repeatDelay: 2,
-                      }}
-                    />
+                    <p className="text-brand-400 animate-pulse mt-1 glow-text">Verified. Decrypting...</p>
+                    <div className="h-1 bg-brand-900/50 mt-2 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-brand-500 rounded-full"
+                        initial={{ width: "0%" }}
+                        whileInView={{ width: "100%" }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          repeatDelay: 1,
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
               </Card>
@@ -180,32 +160,34 @@ const ScaleSecurity = () => {
           className="mt-8"
         >
           <Card
-            variant="blue"
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 border-none text-white relative overflow-hidden"
+            variant="brand"
+            className="bg-gradient-to-r from-brand-600 to-brand-800 border border-brand-500/30 text-white relative overflow-hidden shadow-[0_10px_40px_rgba(16,185,129,0.2)]"
           >
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-400/20 rounded-full blur-[80px] -mr-48 -mt-48 pointer-events-none" />
+            
             <div className="flex flex-col md:flex-row items-center justify-between relative z-10">
               <div className="max-w-xl">
-                <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-6 text-white backdrop-blur-sm">
-                  <Smartphone size={24} />
+                <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center mb-6 text-white backdrop-blur-md border border-white/30 shadow-inner">
+                  <Smartphone size={28} strokeWidth={1.5} />
                 </div>
-                <h3 className="text-3xl font-bold mb-4">
+                <h3 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">
                   Files at your fingertips
                 </h3>
-                <p className="text-blue-100 text-lg opacity-90">
+                <p className="text-brand-50 text-lg opacity-90 font-medium">
                   Backup photos, access docs, and play videos offline with the
-                  Storifyy mobile app. Rated 4.9 stars on App Store.
+                  Storifyy mobile app. Designed for speed.
                 </p>
               </div>
-              <div className="mt-8 md:mt-0 relative">
+              <div className="mt-12 md:mt-0 relative">
                 {/* Abstract Phone/App Illustration */}
-                <div className="w-64 h-32 bg-white/10 backdrop-blur-md rounded-tl-2xl rounded-tr-2xl border-t border-l border-r border-white/20 p-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="h-2 w-20 bg-white/20 rounded-full" />
-                    <div className="h-6 w-6 rounded-full bg-white/20" />
+                <div className="w-64 h-40 bg-white/10 backdrop-blur-xl rounded-tl-[2rem] rounded-tr-[2rem] border-t border-l border-r border-white/20 p-5 shadow-2xl">
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="h-2 w-20 bg-white/30 rounded-full" />
+                    <div className="h-6 w-6 rounded-full bg-brand-400/40 border border-white/20" />
                   </div>
-                  <div className="space-y-2">
-                    <div className="h-12 w-full bg-white/10 rounded-lg" />
-                    <div className="h-12 w-full bg-white/10 rounded-lg" />
+                  <div className="space-y-3">
+                    <div className="h-10 w-full bg-white/10 rounded-xl" />
+                    <div className="h-10 w-full bg-white/10 rounded-xl" />
                   </div>
                 </div>
               </div>

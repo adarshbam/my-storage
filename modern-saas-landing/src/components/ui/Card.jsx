@@ -4,14 +4,13 @@ import { cn } from "../../lib/utils";
 const Card = ({ children, className, variant = "default", ...props }) => {
   const variants = {
     default:
-      "bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 hover:shadow-blue-500/5 dark:hover:shadow-blue-500/10",
-    blue: "bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-slate-900/50 border-blue-100 dark:border-blue-800 hover:shadow-blue-500/20",
-    purple:
-      "bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-slate-900/50 border-purple-100 dark:border-purple-800 hover:shadow-purple-500/20",
-    orange:
-      "bg-gradient-to-br from-orange-50 to-white dark:from-orange-900/20 dark:to-slate-900/50 border-orange-100 dark:border-orange-800 hover:shadow-orange-500/20",
-    green:
-      "bg-gradient-to-br from-green-50 to-white dark:from-green-900/20 dark:to-slate-900/50 border-green-100 dark:border-green-800 hover:shadow-green-500/20",
+      "glass-card",
+    brand: 
+      "bg-gradient-to-br from-brand-50 to-white dark:from-brand-900/20 dark:to-brand-950/40 border border-brand-200 dark:border-brand-800/50 hover:shadow-[0_0_30px_rgba(16,185,129,0.15)]",
+    accent:
+      "bg-gradient-to-br from-accent-50 to-white dark:from-accent-900/10 dark:to-brand-950/40 border border-accent-200 dark:border-accent-800/50 hover:shadow-[0_0_30px_rgba(236,72,153,0.15)]",
+    dark:
+      "bg-[#0D1520] dark:bg-[#080c13] border border-brand-500/10 hover:border-brand-500/30 transition-colors shadow-2xl",
   };
 
   return (

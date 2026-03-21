@@ -3,15 +3,15 @@ import { motion } from "framer-motion";
 
 const Footer = () => {
   return (
-    <footer className="bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 pt-16 pb-8">
+    <footer className="bg-[#011c16] border-t border-brand-500/10 pt-16 pb-8">
       <div className="container mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           <div className="md:col-span-1">
             <div className="flex items-center gap-2 mb-6 text-slate-900 dark:text-white">
-              <div className="bg-blue-600 p-2 rounded-lg">
-                <Cloud className="text-white" size={20} />
+              <div className="bg-gradient-to-br from-brand-500 to-brand-700 p-2 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                <Cloud className="text-white fill-white/20" size={20} />
               </div>
-              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-500">
+              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-brand-400 dark:from-brand-400 dark:to-brand-200">
                 Storifyy
               </span>
             </div>
@@ -25,7 +25,7 @@ const Footer = () => {
                   key={i}
                   whileHover={{ y: -3 }}
                   href="#"
-                  className="w-10 h-10 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 hover:text-blue-500 hover:border-blue-500 transition-colors"
+                  className="w-10 h-10 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 hover:text-brand-500 hover:border-brand-500 transition-colors shadow-sm"
                 >
                   <Icon size={18} />
                 </motion.a>
@@ -48,7 +48,7 @@ const Footer = () => {
                 <li key={item}>
                   <a
                     href="#"
-                    className="text-slate-600 dark:text-slate-400 text-sm hover:text-blue-500 transition-colors"
+                    className="text-slate-600 dark:text-slate-400 text-sm hover:text-brand-500 transition-colors"
                   >
                     {item}
                   </a>
@@ -72,7 +72,7 @@ const Footer = () => {
                 <li key={item}>
                   <a
                     href="#"
-                    className="text-slate-600 dark:text-slate-400 text-sm hover:text-blue-500 transition-colors"
+                    className="text-slate-600 dark:text-slate-400 text-sm hover:text-brand-500 transition-colors"
                   >
                     {item}
                   </a>
@@ -95,7 +95,7 @@ const Footer = () => {
                 <li key={item}>
                   <a
                     href="#"
-                    className="text-slate-600 dark:text-slate-400 text-sm hover:text-blue-500 transition-colors"
+                    className="text-slate-600 dark:text-slate-400 text-sm hover:text-brand-500 transition-colors"
                   >
                     {item}
                   </a>

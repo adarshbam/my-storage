@@ -32,11 +32,11 @@ const Navbar = () => {
     >
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="bg-blue-600 p-1.5 rounded-lg">
-            <Cloud className="text-white" size={20} />
+        <div className="flex items-center gap-2 group cursor-pointer">
+          <div className="bg-gradient-to-br from-brand-500 to-brand-700 p-2 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.3)] group-hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] transition-all">
+            <Cloud className="text-white fill-white/20" size={20} />
           </div>
-          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-500">
+          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-brand-400 dark:from-brand-400 dark:to-brand-200">
             Storifyy
           </span>
         </div>
@@ -47,7 +47,7 @@ const Navbar = () => {
             <a
               key={link}
               href={`#${link.toLowerCase()}`}
-              className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
             >
               {link}
             </a>
@@ -66,7 +66,7 @@ const Navbar = () => {
           </button>
           {user ? (
             <Link to="/dashboard">
-              <Button className="px-5 py-2 text-sm">Go to Dashboard</Button>
+              <Button variant="masterclass" className="px-5 py-2 text-sm">Dashboard</Button>
             </Link>
           ) : (
             <>

@@ -17,7 +17,7 @@ const plans = [
       "Secure SSL Transfer",
     ],
     className:
-      "border-blue-500 dark:border-blue-500 shadow-xl scale-105 z-10 h-full",
+      "border-brand-500 dark:border-brand-500 shadow-xl scale-105 z-10 h-full",
     variant: "default",
   },
   {
@@ -32,7 +32,7 @@ const plans = [
       "Vault Security",
     ],
     popular: true,
-    variant: "blue", // Highlighted variant
+    variant: "brand", // Highlighted variant
   },
   {
     name: "Business",
@@ -45,7 +45,7 @@ const plans = [
       "Unlimited Version History",
       "24/7 Dedicated Support",
     ],
-    variant: "purple",
+    variant: "dark",
   },
 ];
 
@@ -53,34 +53,34 @@ const Pricing = () => {
   const [isYearly, setIsYearly] = useState(false);
 
   return (
-    <section id="pricing" className="py-24 bg-white dark:bg-slate-950">
+    <section id="pricing" className="py-24 bg-[#022c22] dark:bg-[#011c16]">
       <div className="container mx-auto px-6">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white mb-6">
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
             Simple, transparent pricing
           </h2>
-          <p className="text-xl text-slate-600 dark:text-slate-400 mb-8">
+          <p className="text-xl text-slate-400 mb-8">
             Start with 15GB free. Upgrade as you grow.
           </p>
 
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center gap-4 mb-2">
             <span
-              className={`text-sm font-medium ${!isYearly ? "text-slate-900 dark:text-white" : "text-slate-500"}`}
+              className={`text-sm font-medium ${!isYearly ? "text-white" : "text-slate-500"}`}
             >
               Monthly
             </span>
             <button
               onClick={() => setIsYearly(!isYearly)}
-              className="relative w-14 h-8 bg-slate-200 dark:bg-slate-800 rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="relative w-14 h-8 bg-slate-800 rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#14b8a6]"
             >
               <motion.div
-                className="w-6 h-6 bg-white rounded-full shadow-sm"
+                className="w-6 h-6 bg-[#2dd4bf] rounded-full shadow-[0_0_10px_rgba(45,212,191,0.5)]"
                 animate={{ x: isYearly ? 24 : 0 }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
             </button>
             <span
-              className={`text-sm font-medium ${isYearly ? "text-slate-900 dark:text-white" : "text-slate-500"}`}
+              className={`text-sm font-medium ${isYearly ? "text-white" : "text-slate-500"}`}
             >
               Yearly{" "}
               <span className="text-green-500 font-bold text-xs ml-1">
@@ -102,25 +102,25 @@ const Pricing = () => {
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-0 right-0 flex justify-center z-10">
-                  <span className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide shadow-lg">
+                  <span className="bg-gradient-to-r from-brand-600 to-brand-400 text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-[0_0_15px_rgba(16,185,129,0.5)]">
                     Most Popular
                   </span>
                 </div>
               )}
 
               <Card
-                variant={plan.variant}
-                className={`h-full flex flex-col relative ${plan.popular ? "border-blue-500 dark:border-blue-500 shadow-xl scale-105 z-9" : ""}`}
+                variant={plan.popular ? "brand" : "dark"}
+                className={`h-full flex flex-col relative ${plan.popular ? "border-brand-500 dark:border-brand-500 shadow-[0_0_30px_rgba(16,185,129,0.15)] scale-105 z-9" : "border-white/10"}`}
               >
                 <div className="mb-8">
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                  <h3 className="text-2xl font-bold text-white mb-2">
                     {plan.name}
                   </h3>
-                  <p className="text-slate-600 dark:text-slate-400 mb-6">
+                  <p className="text-slate-400 mb-6">
                     {plan.desc}
                   </p>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-slate-900 dark:text-white">
+                    <span className="text-4xl font-black text-white">
                       $
                       {isYearly
                         ? (parseFloat(plan.price) * 0.8).toFixed(2)
@@ -137,11 +137,11 @@ const Pricing = () => {
                     <div key={i} className="flex items-start gap-3">
                       <div
                         className={`mt-1 w-5 h-5 rounded-full flex items-center justify-center shrink-0 
-                        ${plan.popular ? "bg-blue-500 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400"}`}
+                        ${plan.popular ? "bg-[#14b8a6] text-white shadow-[0_0_10px_rgba(20,184,166,0.5)]" : "bg-slate-800 text-[#2dd4bf]"}`}
                       >
                         <Check size={12} strokeWidth={3} />
                       </div>
-                      <span className="text-slate-700 dark:text-slate-300 text-sm">
+                      <span className="text-slate-300 text-sm">
                         {feature}
                       </span>
                     </div>
@@ -150,7 +150,7 @@ const Pricing = () => {
 
                 <Link to="/register" className="w-full">
                   <Button
-                    variant={plan.popular ? "primary" : "outline"}
+                    variant={plan.popular ? "masterclass" : "outline"}
                     className="w-full justify-center"
                   >
                     {plan.price === "0" ? "Start Free" : "Get Started"}
