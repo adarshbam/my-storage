@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { SERVER_URL } from "../../lib/api";
-import { Loader2, Trash2, RotateCcw, Ban } from "lucide-react";
+import { Loader2, Trash2, RotateCcw, Ban, Search, SlidersHorizontal, LayoutGrid, List } from "lucide-react";
 import FileCard from "./FileCard";
 import Button from "../ui/Button";
 
@@ -9,6 +9,11 @@ export default function TrashView() {
   const [loading, setLoading] = useState(true);
   const [selectedItems, setSelectedItems] = useState([]);
   const [lastSelectedId, setLastSelectedId] = useState(null);
+  
+  // Header state
+  const [inputSearchQuery, setInputSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem("viewMode") || "grid");
 
   // --- DRAG SELECTION STATE ---
   const [isDragging, setIsDragging] = useState(false);
@@ -37,6 +42,15 @@ export default function TrashView() {
     setSelectedItems([]);
     setLastSelectedId(null);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("viewMode", viewMode);
+  }, [viewMode]);
+
+  // Filter items by search
+  const filteredItems = items.filter(item => 
+    item.name?.toLowerCase().includes(inputSearchQuery.toLowerCase())
+  );
 
   // --- DRAG SELECTION HANDLERS ---
   const handleMouseDown = (e) => {
@@ -222,17 +236,75 @@ export default function TrashView() {
 
   return (
     <div className="flex-1 flex flex-col relative h-full">
-      <div className="flex items-center justify-between mb-6 text-slate-800 dark:text-white">
-        <div className="flex items-center gap-2">
-          <Trash2 size={24} />
-          <h2 className="text-2xl font-bold">Trash</h2>
+      <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-2 pb-5 mb-5 -mx-4 px-4 md:-mx-8 md:px-8 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 order-1">
+          <h2 className="text-2xl capitalize font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            Trash
+          </h2>
         </div>
 
-        {items.length > 0 && (
-          <Button variant="danger" onClick={handleEmptyTrash}>
-            Empty Trash
-          </Button>
-        )}
+        <div className="relative w-full md:flex-1 md:max-w-md xl:max-w-lg flex items-center gap-2 mx-0 md:mx-4 group order-3 md:order-2">
+          <div className="relative flex-1 opacity-90 hover:opacity-100 transition-opacity">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer z-10"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Search trash..."
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-100/50 dark:bg-[#12141D] border border-slate-200/50 dark:border-slate-800/40 text-slate-900 dark:text-white rounded-xl focus:bg-white dark:focus:bg-[#151822] focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500/30 outline-none transition-all shadow-sm text-sm font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              value={inputSearchQuery}
+              onChange={(e) => setInputSearchQuery(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`p-2.5 rounded-xl border transition-all ${
+              showFilters 
+                ? "bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white" 
+                : "bg-slate-100/50 dark:bg-[#12141D] border-slate-200/50 dark:border-slate-800/40 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 shadow-sm"
+            }`}
+          >
+            <SlidersHorizontal size={18} />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0 order-2 md:order-3">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1 mr-2 hidden md:flex">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === "grid"
+                  ? "bg-white dark:bg-slate-900 shadow-sm text-blue-600 dark:text-blue-400"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              }`}
+              title="Grid view"
+            >
+              <LayoutGrid size={18} />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === "list"
+                  ? "bg-white dark:bg-slate-900 shadow-sm text-blue-600 dark:text-blue-400"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              }`}
+              title="List view"
+            >
+              <List size={18} />
+            </button>
+          </div>
+          
+          {items.length > 0 && (
+            <button
+              onClick={handleEmptyTrash}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600/10 text-red-600 dark:bg-red-500/10 dark:text-red-400 rounded-lg hover:bg-red-600/20 dark:hover:bg-red-500/20 transition-colors font-medium shadow-sm"
+            >
+              <Trash2 size={18} />
+              <span className="hidden sm:inline">Empty Trash</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -241,9 +313,22 @@ export default function TrashView() {
         </div>
       ) : (
         <div
-          className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pb-20 relative select-none flex-1 content-start"
+          className={`pb-20 relative select-none flex-1 content-start ${
+            viewMode === "list"
+              ? "flex flex-col gap-1"
+              : "grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-4"
+          }`}
           onMouseDown={handleMouseDown}
         >
+          {viewMode === "list" && (
+            <div className="grid grid-cols-[1fr,100px,150px,40px] gap-4 px-4 py-3 text-sm font-semibold text-slate-500 border-b border-slate-200/50 dark:border-slate-800/50 mb-2 items-center sticky top-0 bg-transparent z-10">
+              <div>Name</div>
+              <div className="text-right">Size</div>
+              <div className="text-right pr-4">Modified</div>
+              <div></div>
+            </div>
+          )}
+
           {/* Selection Box Overlay */}
           {isDragging && selectionBox && (
             <div
@@ -257,13 +342,14 @@ export default function TrashView() {
             />
           )}
 
-          {items.map((item) => (
+          {filteredItems.map((item) => (
             <FileCard
               id={`file-card-${item.id}`}
               key={item.id}
               item={item}
               type={item.type || (item.extension ? "file" : "directory")}
               isTrash={true}
+              viewMode={viewMode}
               selected={selectedItems.some((i) => i.id === item.id)}
               onSelect={(item, e) => handleSelect(item, e)}
               onNavigate={() => {}}
@@ -272,9 +358,9 @@ export default function TrashView() {
               onDelete={() => handleDeleteForever([item])} // Delete Forever
             />
           ))}
-          {items.length === 0 && (
+          {filteredItems.length === 0 && (
             <div className="col-span-full text-center py-20 text-slate-400">
-              <p>Trash is empty</p>
+              <p>Trash is empty or no files match search</p>
             </div>
           )}
         </div>

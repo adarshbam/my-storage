@@ -631,20 +631,24 @@ export default function FileBrowser({ specialView }) {
               <List size={18} />
             </button>
           </div>
-          <button
-            onClick={handleCreateClick}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-medium"
-          >
-            <FolderPlus size={18} />
-            <span className="hidden sm:inline">New Folder</span>
-          </button>
-          <button
-            onClick={openUploadModal}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg shadow-blue-500/20"
-          >
-            <Upload size={18} />
-            <span className="hidden sm:inline">Upload</span>
-          </button>
+          {!specialView ? (
+            <>
+              <button
+                onClick={handleCreateClick}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-medium"
+              >
+                <FolderPlus size={18} />
+                <span className="hidden sm:inline">New Folder</span>
+              </button>
+              <button
+                onClick={openUploadModal}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg shadow-blue-500/20"
+              >
+                <Upload size={18} />
+                <span className="hidden sm:inline">Upload</span>
+              </button>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -724,20 +728,28 @@ export default function FileBrowser({ specialView }) {
 
           {data.directories.length === 0 && data.files.length === 0 && (
             <div className="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
-              <div
-                className="bg-slate-100 dark:bg-slate-800/50 p-6 rounded-full mb-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
-                onClick={openUploadModal}
-              >
-                <Upload size={40} />
-              </div>
-              <p className="text-lg font-medium mb-2">
-                {isSearch ? "No search results found" : "This folder is empty"}
-              </p>
-              <p className="text-sm">
-                {isSearch
-                  ? "Try adjusting your search query"
-                  : "Drag and drop files here or use the upload button"}
-              </p>
+              {specialView ? (
+                <p className="text-lg font-medium mb-2">
+                  {isSearch ? "No search results found" : "No files yet"}
+                </p>
+              ) : (
+                <>
+                  <div
+                    className="bg-slate-100 dark:bg-slate-800/50 p-6 rounded-full mb-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                    onClick={openUploadModal}
+                  >
+                    <Upload size={40} />
+                  </div>
+                  <p className="text-lg font-medium mb-2">
+                    {isSearch ? "No search results found" : "This folder is empty"}
+                  </p>
+                  <p className="text-sm">
+                    {isSearch
+                      ? "Try adjusting your search query"
+                      : "Drag and drop files here or use the upload button"}
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>
