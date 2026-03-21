@@ -3,10 +3,12 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Sun, Moon, Cloud } from "lucide-react";
 import { useTheme } from "../ui/ThemeProvider";
+import { useAuth } from "../../context/AuthContext";
 import Button from "../ui/Button";
 
 const Navbar = () => {
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -62,14 +64,22 @@ const Navbar = () => {
             <Moon className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Toggle theme</span>
           </button>
-          <Link to="/login">
-            <Button variant="ghost" className="px-4">
-              Log in
-            </Button>
-          </Link>
-          <Link to="/register">
-            <Button className="px-5 py-2 text-sm">Get Started</Button>
-          </Link>
+          {user ? (
+            <Link to="/dashboard">
+              <Button className="px-5 py-2 text-sm">Go to Dashboard</Button>
+            </Link>
+          ) : (
+            <>
+              <Link to="/login">
+                <Button variant="ghost" className="px-4">
+                  Log in
+                </Button>
+              </Link>
+              <Link to="/register">
+                <Button className="px-5 py-2 text-sm">Get Started</Button>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Toggle */}
@@ -110,14 +120,22 @@ const Navbar = () => {
                 </a>
               ))}
               <div className="h-px bg-slate-200 dark:bg-slate-800 my-2" />
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start">
-                  Log in
-                </Button>
-              </Link>
-              <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
-                <Button className="w-full">Get Started</Button>
-              </Link>
+              {user ? (
+                <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                  <Button className="w-full">Go to Dashboard</Button>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start">
+                      Log in
+                    </Button>
+                  </Link>
+                  <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
+                    <Button className="w-full">Get Started</Button>
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
         )}

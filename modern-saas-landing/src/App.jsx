@@ -55,8 +55,8 @@ function App() {
         <BrowserRouter>
           <Suspense fallback={<PageLoader />}>
             <Routes>
+              <Route path="/" element={<LandingPage />} />
               <Route element={<PublicRoute />}>
-                <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
               </Route>
