@@ -12,10 +12,10 @@ const FinalCTA = () => {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tight drop-shadow-lg">
+          <h2 className="text-5xl md:text-7xl font-black text-slate-900 dark:text-white mb-6 tracking-tight drop-shadow-lg">
             Ready to <span className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-transparent bg-clip-text">organize your life?</span>
           </h2>
-          <p className="text-white/70 text-lg md:text-xl max-w-2xl mx-auto mb-12 font-medium">
+          <p className="text-slate-600 dark:text-white/70 text-lg md:text-xl max-w-2xl mx-auto mb-12 font-medium">
             Join millions of users who trust Storifyy to keep their files safe,
             secure, and accessible from anywhere.
           </p>
@@ -27,7 +27,7 @@ const FinalCTA = () => {
             </Link>
             <Button
               variant="glass"
-              className="w-full sm:w-auto px-8 py-4 rounded-xl text-lg border-white/20 hover:bg-white/10 text-white"
+              className="w-full sm:w-auto px-8 py-4 rounded-xl text-lg border-slate-300 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white"
             >
               Download App
             </Button>

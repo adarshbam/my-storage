@@ -30,7 +30,7 @@ const HowItWorks = () => {
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-black text-white tracking-tight">
+          <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
             Simple as 1, 2, 3
           </h2>
         </div>
@@ -50,24 +50,24 @@ const HowItWorks = () => {
               onMouseEnter={() => setHoveredCard(index)}
               onMouseLeave={() => setHoveredCard(null)}
             >
-              <div className={`glass-panel bg-[#0f463e]/40 p-8 rounded-[2rem] transition-all duration-300 text-center group h-full relative overflow-hidden z-10 ${
-                hoveredCard === index ? 'bg-[#0f463e]/80 -translate-y-2 border-[#14b8a6]/50 shadow-[0_0_40px_rgba(20,184,166,0.3)]' : 'border-[#14b8a6]/20'
+              <div className={`glass-panel bg-white/40 dark:bg-[#0f463e]/40 p-8 rounded-[2rem] transition-all duration-300 text-center group h-full relative overflow-hidden z-10 ${
+                hoveredCard === index ? 'dark:bg-[#0f463e]/80 bg-white/80 -translate-y-2 border-[#14b8a6]/50 shadow-[0_0_40px_rgba(20,184,166,0.3)]' : 'border-[#14b8a6]/20'
               }`}>
                 {/* Animated Gradient Background Highlight */}
-                <div className={`absolute inset-0 bg-gradient-to-br from-[#14b8a6]/30 via-[#14b8a6]/5 to-transparent transition-opacity duration-500 pointer-events-none ${
+                <div className={`absolute inset-0 bg-gradient-to-br from-[#14b8a6]/20 via-[#14b8a6]/5 to-transparent transition-opacity duration-500 pointer-events-none ${
                   hoveredCard === index ? 'opacity-100 animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]' : 'opacity-0'
                 }`} />
 
                 <div className="relative z-20">
                   <div className={`inline-block px-5 py-1.5 rounded-[1rem] font-bold text-sm mb-6 border transition-colors duration-500 ${
-                    hoveredCard === index ? 'bg-[#14b8a6]/20 text-[#14b8a6] border-[#14b8a6]/50 shadow-[0_0_15px_rgba(20,184,166,0.3)]' : 'bg-white/10 text-white border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
+                    hoveredCard === index ? 'bg-[#14b8a6]/20 text-[#14b8a6] border-[#14b8a6]/50 shadow-[0_0_15px_rgba(20,184,166,0.3)]' : 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-white border-slate-200 dark:border-white/20'
                   }`}>
                     Step {item.step}
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-3 tracking-tight relative">
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3 tracking-tight relative">
                     {item.title}
                   </h3>
-                  <p className="text-white/70 font-medium relative">
+                  <p className="text-slate-600 dark:text-white/70 font-medium relative">
                     {item.desc}
                   </p>
                 </div>

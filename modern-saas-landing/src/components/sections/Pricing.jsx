@@ -56,22 +56,22 @@ const Pricing = () => {
     <section id="pricing" className="py-32 relative bg-transparent">
       <div className="container mx-auto px-6">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
+          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white mb-6">
             Simple, transparent pricing
           </h2>
-          <p className="text-xl text-slate-400 mb-8">
+          <p className="text-xl text-slate-500 dark:text-slate-400 mb-8">
             Start with 15GB free. Upgrade as you grow.
           </p>
 
           <div className="flex items-center justify-center gap-4 mb-2">
             <span
-              className={`text-sm font-medium ${!isYearly ? "text-white" : "text-slate-500"}`}
+              className={`text-sm font-medium ${!isYearly ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500"}`}
             >
               Monthly
             </span>
             <button
               onClick={() => setIsYearly(!isYearly)}
-              className="relative w-14 h-8 bg-slate-800 rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#14b8a6]"
+              className="relative w-14 h-8 bg-slate-200 dark:bg-slate-800 rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#14b8a6]"
             >
               <motion.div
                 className="w-6 h-6 bg-[#2dd4bf] rounded-full shadow-[0_0_10px_rgba(45,212,191,0.5)]"
@@ -80,7 +80,7 @@ const Pricing = () => {
               />
             </button>
             <span
-              className={`text-sm font-medium ${isYearly ? "text-white" : "text-slate-500"}`}
+              className={`text-sm font-medium ${isYearly ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500"}`}
             >
               Yearly{" "}
               <span className="text-green-500 font-bold text-xs ml-1">
@@ -113,20 +113,20 @@ const Pricing = () => {
                 className={`h-full flex flex-col relative transition-all duration-300 ${plan.popular ? "border-[#14b8a6]/80 shadow-[0_0_50px_rgba(20,184,166,0.3)] scale-105 bg-white/[0.06] backdrop-blur-3xl" : "border-white/10 scale-100"}`}
               >
                 <div className="mb-8">
-                  <h3 className="text-2xl font-bold text-white mb-2">
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
                     {plan.name}
                   </h3>
-                  <p className="text-slate-400 mb-6">
+                  <p className="text-slate-500 dark:text-slate-400 mb-6">
                     {plan.desc}
                   </p>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-white">
+                    <span className="text-4xl font-black text-slate-900 dark:text-white">
                       $
                       {isYearly
                         ? (parseFloat(plan.price) * 0.8).toFixed(2)
                         : plan.price}
                     </span>
-                    <span className="text-slate-500">
+                    <span className="text-slate-400 dark:text-slate-500">
                       /{isYearly ? "mo (billed yearly)" : "mo"}
                     </span>
                   </div>
@@ -137,11 +137,11 @@ const Pricing = () => {
                     <div key={i} className="flex items-start gap-3">
                       <div
                         className={`mt-1 w-5 h-5 rounded-full flex items-center justify-center shrink-0 
-                        ${plan.popular ? "bg-[#14b8a6] text-white shadow-[0_0_10px_rgba(20,184,166,0.5)]" : "bg-slate-800 text-[#2dd4bf]"}`}
+                        ${plan.popular ? "bg-[#14b8a6] text-white shadow-[0_0_10px_rgba(20,184,166,0.5)]" : "bg-slate-100 dark:bg-slate-800 text-[#2dd4bf]"}`}
                       >
                         <Check size={12} strokeWidth={3} />
                       </div>
-                      <span className="text-slate-300 text-sm">
+                      <span className="text-slate-600 dark:text-slate-300 text-sm">
                         {feature}
                       </span>
                     </div>

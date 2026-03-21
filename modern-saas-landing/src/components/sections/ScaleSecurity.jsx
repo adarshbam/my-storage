@@ -72,7 +72,7 @@ const ScaleSecurity = () => {
           <motion.h2
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
-            className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight"
+            className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white mb-6 tracking-tight"
           >
             Engineered for <br/>
             <span className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-transparent bg-clip-text drop-shadow-[0_0_20px_rgba(20,184,166,0.3)]">Privacy & Security</span>
@@ -80,7 +80,7 @@ const ScaleSecurity = () => {
           <motion.p
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
-            className="text-xl text-white/70 font-medium max-w-2xl mx-auto"
+            className="text-xl text-slate-600 dark:text-white/70 font-medium max-w-2xl mx-auto"
           >
             Your data is yours alone. We provide the vault, you hold the keys.
           </motion.p>
@@ -115,10 +115,10 @@ const ScaleSecurity = () => {
                   >
                     <item.icon size={28} strokeWidth={1.5} />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3 tracking-tight">
                     {item.title}
                   </h3>
-                  <p className="text-white/70 font-medium leading-relaxed">
+                  <p className="text-slate-600 dark:text-white/70 font-medium leading-relaxed">
                     {item.desc}
                   </p>
                 </div>
@@ -161,19 +161,19 @@ const ScaleSecurity = () => {
         >
           <Card
             variant="brand"
-            className="text-white relative overflow-hidden shadow-[0_0_40px_rgba(20,184,166,0.2)]"
+            className="text-slate-900 dark:text-white relative overflow-hidden shadow-[0_0_40px_rgba(20,184,166,0.2)]"
           >
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#14b8a6]/20 rounded-full blur-[80px] -mr-48 -mt-48 pointer-events-none" />
             
             <div className="flex flex-col md:flex-row items-center justify-between relative z-10">
               <div className="max-w-xl">
-                <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center mb-6 text-white backdrop-blur-md border border-white/30 shadow-inner">
+                <div className="w-14 h-14 rounded-2xl bg-[#14b8a6]/20 dark:bg-white/20 flex items-center justify-center mb-6 text-[#0f463e] dark:text-white backdrop-blur-md border border-[#14b8a6]/30 dark:border-white/30 shadow-inner">
                   <Smartphone size={28} strokeWidth={1.5} />
                 </div>
                 <h3 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">
                   Files at your fingertips
                 </h3>
-                <p className="text-white/90 text-lg opacity-90 font-medium">
+                <p className="text-slate-600 dark:text-white/90 text-lg opacity-90 font-medium">
                   Backup photos, access docs, and play videos offline with the
                   Storifyy mobile app. Designed for speed.
                 </p>

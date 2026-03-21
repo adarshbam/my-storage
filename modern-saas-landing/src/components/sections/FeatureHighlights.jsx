@@ -60,10 +60,10 @@ const FeatureHighlights = () => {
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight">
+          <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6 tracking-tight">
             Beyond standard storage
           </h2>
-          <p className="text-lg text-white/70 font-medium">
+          <p className="text-lg text-slate-600 dark:text-white/70 font-medium">
             Engineered for speed, built for privacy. Everything you need to manage your digital universe securely.
           </p>
         </div>
@@ -80,10 +80,10 @@ const FeatureHighlights = () => {
                 >
                   <feature.icon size={26} strokeWidth={1.5} />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-3 tracking-tight">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 tracking-tight">
                   {feature.title}
                 </h3>
-                <p className="text-white/70 leading-relaxed font-medium">
+                <p className="text-slate-600 dark:text-white/70 leading-relaxed font-medium">
                   {feature.desc}
                 </p>
               </Card>
