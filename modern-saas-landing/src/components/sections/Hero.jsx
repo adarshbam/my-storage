@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import Button from "../ui/Button";
@@ -5,6 +6,8 @@ import Card from "../ui/Card";
 import { ArrowRight, Cloud, Lock, Smartphone } from "lucide-react";
 
 const Hero = () => {
+  const [isPro, setIsPro] = useState(true);
+
   return (
     <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
       {/* Animated Background Elements */}
@@ -34,22 +37,36 @@ const Hero = () => {
         >
           {/* Beginner / Pro Toggle */}
           <div className="inline-flex items-center justify-center p-1.5 mb-10 rounded-[2rem] bg-[#022c22]/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
-            <button className="px-6 py-2 rounded-[1.5rem] text-[15px] font-bold tracking-wide transition-all duration-300 bg-transparent text-[#E76F51] hover:bg-[#E76F51]/10 hover:shadow-[0_0_20px_rgba(231,111,81,0.15)]">
+            <button
+              onClick={() => setIsPro(false)}
+              className={`px-6 py-2 rounded-[1.5rem] text-[15px] font-bold tracking-wide transition-all duration-300 border ${
+                !isPro
+                  ? "bg-[#E76F51]/20 text-[#E76F51] border-[#E76F51]/40 shadow-[0_0_25px_rgba(231,111,81,0.4)]"
+                  : "bg-transparent text-[#E76F51] border-transparent hover:bg-[#E76F51]/10 hover:shadow-[0_0_20px_rgba(231,111,81,0.15)]"
+              }`}
+            >
               Beginner
             </button>
-            <button className="px-6 py-2 rounded-[1.5rem] text-[15px] font-bold tracking-wide transition-all duration-300 bg-[#0d9488]/30 text-[#2dd4bf] border border-[#14b8a6]/40 shadow-[0_0_25px_rgba(20,184,166,0.4)]">
+            <button
+              onClick={() => setIsPro(true)}
+              className={`px-6 py-2 rounded-[1.5rem] text-[15px] font-bold tracking-wide transition-all duration-300 border ${
+                isPro
+                  ? "bg-[#0d9488]/30 text-[#2dd4bf] border-[#14b8a6]/40 shadow-[0_0_25px_rgba(20,184,166,0.4)]"
+                  : "bg-transparent text-[#2dd4bf] border-transparent hover:bg-[#14b8a6]/10 hover:shadow-[0_0_20px_rgba(20,184,166,0.15)]"
+              }`}
+            >
               PRO
             </button>
           </div>
 
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-slate-900 dark:text-white mb-6 leading-tight">
             Next-Gen <br />
-            <span className="bg-gradient-to-r from-brand-600 via-brand-400 to-accent-500 bg-clip-text text-transparent animate-gradient-x drop-shadow-sm">
+            <span className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] bg-clip-text text-transparent animate-gradient-x drop-shadow-[0_0_30px_rgba(20,184,166,0.3)]">
               Storage Vault.
             </span>
           </h1>
 
-          <p className="text-xl text-slate-600 dark:text-brand-100/70 max-w-xl mx-auto mb-12 font-medium">
+          <p className="text-xl text-slate-600 dark:text-white/70 max-w-xl mx-auto mb-12 font-medium">
             High-performance cloud. Zero-knowledge encryption. Global access.
           </p>
 
@@ -98,7 +115,7 @@ const Hero = () => {
             >
               <Card
                 variant={item.variant}
-                className="h-full text-left relative overflow-hidden group p-8 rounded-[2rem] border-white/10 dark:border-white/5 bg-white/50 dark:bg-[#0b111a]/80 backdrop-blur-2xl"
+                className="h-full text-left relative overflow-hidden group p-8 rounded-[2rem] backdrop-blur-2xl"
               >
                 <div className="relative z-10">
                   <div className="w-14 h-14 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-brand-500/20 group-hover:text-brand-500 transition-all duration-500 border border-brand-500/20">
@@ -107,7 +124,7 @@ const Hero = () => {
                   <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3 tracking-tight">
                     {item.title}
                   </h3>
-                  <p className="text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
+                  <p className="text-slate-600 dark:text-white/70 font-medium leading-relaxed">
                     {item.desc}
                   </p>
                   

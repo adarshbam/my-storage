@@ -25,18 +25,27 @@ const TrashView = lazy(() => import("./components/drive/TrashView"));
 
 function LandingPage() {
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-sans transition-colors duration-300">
-      <Navbar />
-      <main>
+    <div className="min-h-screen text-slate-900 dark:text-white font-sans transition-colors duration-300 relative">
+      {/* Global Layered Gradients */}
+      <div className="fixed inset-0 z-[0] bg-[#faf5f7] dark:bg-[#020b08] pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-[#14b8a6]/10 rounded-full blur-[120px] mix-blend-screen" />
+        <div className="absolute top-[30%] right-[-10%] w-[35vw] h-[35vw] bg-[#3b82f6]/10 rounded-full blur-[120px] mix-blend-screen" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[50vw] h-[50vw] bg-[#a855f7]/10 rounded-full blur-[120px] mix-blend-screen" />
+      </div>
+
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <Navbar />
+        <main className="flex-grow">
         <Hero />
         <FeatureHighlights />
         <ScaleSecurity />
         <HowItWorks />
         <Integrations />
         <Pricing />
-        <FinalCTA />
-      </main>
-      <Footer />
+          <FinalCTA />
+        </main>
+        <Footer />
+      </div>
     </div>
   );
 }

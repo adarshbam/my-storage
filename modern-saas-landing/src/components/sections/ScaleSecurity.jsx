@@ -52,35 +52,35 @@ const ScaleSecurity = () => {
   return (
     <section
       id="security"
-      className="py-24 relative overflow-hidden bg-[#01140f] dark:bg-[#01140f] transition-colors duration-300"
+      className="py-32 relative overflow-hidden bg-transparent transition-colors duration-300"
     >
-      {/* Darker Grid Background */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(20,184,166,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(20,184,166,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+      {/* Subtle Grid Background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
 
-      {/* Darker Glassform Gradient Bg */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-gradient-to-b from-[#0f463e]/20 via-[#01140f]/50 to-transparent blur-[120px] pointer-events-none" />
+      {/* Dark Glassform Gradient Bg (Local enhancement) */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-gradient-to-b from-[#0f463e]/10 to-transparent blur-[120px] pointer-events-none" />
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="text-center mb-20">
           <motion.span
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
-            className="text-brand-400 font-bold tracking-widest text-xs uppercase mb-4 block"
+            className="text-[#14b8a6] font-bold tracking-widest text-xs uppercase mb-4 block"
           >
             Why Storifyy?
           </motion.span>
           <motion.h2
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
-            className="text-4xl md:text-6xl font-black text-white mb-6"
+            className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight"
           >
-            Engineered for <span className="text-[#2dd4bf]">Privacy</span> &{" "}
-            <span className="text-[#E76F51]">Security</span>
+            Engineered for <br/>
+            <span className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-transparent bg-clip-text drop-shadow-[0_0_20px_rgba(20,184,166,0.3)]">Privacy & Security</span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
-            className="text-xl text-brand-100/70 max-w-2xl mx-auto"
+            className="text-xl text-white/70 font-medium max-w-2xl mx-auto"
           >
             Your data is yours alone. We provide the vault, you hold the keys.
           </motion.p>
@@ -115,10 +115,10 @@ const ScaleSecurity = () => {
                   >
                     <item.icon size={28} strokeWidth={1.5} />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-3">
+                  <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">
                     {item.title}
                   </h3>
-                  <p className="text-slate-400 font-medium leading-relaxed">
+                  <p className="text-white/70 font-medium leading-relaxed">
                     {item.desc}
                   </p>
                 </div>
@@ -161,9 +161,9 @@ const ScaleSecurity = () => {
         >
           <Card
             variant="brand"
-            className="bg-gradient-to-r from-brand-600 to-brand-800 border border-brand-500/30 text-white relative overflow-hidden shadow-[0_10px_40px_rgba(16,185,129,0.2)]"
+            className="text-white relative overflow-hidden shadow-[0_0_40px_rgba(20,184,166,0.2)]"
           >
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-400/20 rounded-full blur-[80px] -mr-48 -mt-48 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#14b8a6]/20 rounded-full blur-[80px] -mr-48 -mt-48 pointer-events-none" />
             
             <div className="flex flex-col md:flex-row items-center justify-between relative z-10">
               <div className="max-w-xl">
@@ -173,7 +173,7 @@ const ScaleSecurity = () => {
                 <h3 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">
                   Files at your fingertips
                 </h3>
-                <p className="text-brand-50 text-lg opacity-90 font-medium">
+                <p className="text-white/90 text-lg opacity-90 font-medium">
                   Backup photos, access docs, and play videos offline with the
                   Storifyy mobile app. Designed for speed.
                 </p>

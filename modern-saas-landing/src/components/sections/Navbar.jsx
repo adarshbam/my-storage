@@ -24,19 +24,19 @@ const Navbar = () => {
 
   return (
     <nav
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+      className={`fixed top-0 w-full z-50 transition-all duration-300 ease-out border-b ${
         scrolled
-          ? "bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg shadow-sm"
-          : "bg-transparent"
+          ? "bg-black/5 dark:bg-white/[0.04] border-black/10 dark:border-white/10 backdrop-blur-2xl shadow-lg"
+          : "bg-transparent border-transparent"
       }`}
     >
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2 group cursor-pointer">
-          <div className="bg-gradient-to-br from-brand-500 to-brand-700 p-2 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.3)] group-hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] transition-all">
+          <div className="bg-gradient-to-br from-[#14b8a6] to-[#0f463e] p-2 rounded-xl shadow-[0_0_15px_rgba(20,184,166,0.3)] group-hover:shadow-[0_0_20px_rgba(20,184,166,0.5)] transition-all">
             <Cloud className="text-white fill-white/20" size={20} />
           </div>
-          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-brand-400 dark:from-brand-400 dark:to-brand-200">
+          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#14b8a6] to-[#3b82f6]">
             Storifyy
           </span>
         </div>

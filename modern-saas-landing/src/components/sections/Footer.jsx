@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 
 const Footer = () => {
   return (
-    <footer className="bg-[#011c16] border-t border-brand-500/10 pt-16 pb-8">
+    <footer className="bg-transparent border-t border-white/10 pt-24 pb-12 relative z-10">
       <div className="container mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           <div className="md:col-span-1">
@@ -15,7 +15,7 @@ const Footer = () => {
                 Storifyy
               </span>
             </div>
-            <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-6">
+            <p className="text-white/70 text-sm leading-relaxed mb-6 font-medium">
               Secure, intelligent cloud storage built for the modern web. Store,
               share, and collaborate with ease.
             </p>
@@ -34,7 +34,7 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-bold text-slate-900 dark:text-white mb-6">
+            <h4 className="font-bold text-white mb-6">
               Product
             </h4>
             <ul className="space-y-3">
@@ -48,7 +48,7 @@ const Footer = () => {
                 <li key={item}>
                   <a
                     href="#"
-                    className="text-slate-600 dark:text-slate-400 text-sm hover:text-brand-500 transition-colors"
+                    className="text-white/50 text-sm hover:text-white transition-colors"
                   >
                     {item}
                   </a>
@@ -58,7 +58,7 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-bold text-slate-900 dark:text-white mb-6">
+            <h4 className="font-bold text-white mb-6">
               Resources
             </h4>
             <ul className="space-y-3">
@@ -72,7 +72,7 @@ const Footer = () => {
                 <li key={item}>
                   <a
                     href="#"
-                    className="text-slate-600 dark:text-slate-400 text-sm hover:text-brand-500 transition-colors"
+                    className="text-white/50 text-sm hover:text-white transition-colors"
                   >
                     {item}
                   </a>
@@ -82,7 +82,7 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-bold text-slate-900 dark:text-white mb-6">
+            <h4 className="font-bold text-white mb-6">
               Legal
             </h4>
             <ul className="space-y-3">
@@ -95,7 +95,7 @@ const Footer = () => {
                 <li key={item}>
                   <a
                     href="#"
-                    className="text-slate-600 dark:text-slate-400 text-sm hover:text-brand-500 transition-colors"
+                    className="text-white/50 text-sm hover:text-white transition-colors"
                   >
                     {item}
                   </a>
@@ -105,8 +105,8 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-slate-500 text-sm">
+        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-white/50 text-sm">
             © 2024 Storifyy Inc. All rights reserved.
           </p>
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 text-green-600 text-xs font-medium border border-green-500/20">
