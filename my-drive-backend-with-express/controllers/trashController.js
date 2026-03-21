@@ -36,17 +36,21 @@ export const getTrashItems = async (req, res, next) => {
 export const emptyTrash = async (req, res) => {
   try {
     const trashItems = await Trash.find().select("_id type extension").lean();
-    for (const trashFile of trashItems) {
-      if (trashFile.type === "directory") continue;
-      const filePath = `./storage/${trashFile._id.toString()}${trashFile.extension}`;
-      try {
-        await rm(filePath, { recursive: true, force: true });
+    for (const trashItem of trashItems) {
+      if (trashItem.type === "directory") {
+        // Clean up all child files/directories still in File/Directory collections
+        await deleteByParentChain(trashItem._id.toString());
+      } else {
+        const filePath = `./storage/${trashItem._id.toString()}${trashItem.extension}`;
+        try {
+          await rm(filePath, { recursive: true, force: true });
 
-        // Also try to delete thumbnail if exists
-        const thumbPath = `./storage/thumbnails/${trashFile._id.toString()}.jpg`;
-        await rm(thumbPath, { force: true }).catch(() => {});
-      } catch (err) {
-        console.error(`Failed to delete file ${filePath}:`, err);
+          // Also try to delete thumbnail if exists
+          const thumbPath = `./storage/thumbnails/${trashItem._id.toString()}.jpg`;
+          await rm(thumbPath, { force: true }).catch(() => {});
+        } catch (err) {
+          console.error(`Failed to delete file ${filePath}:`, err);
+        }
       }
     }
 

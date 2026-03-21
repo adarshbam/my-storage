@@ -5,7 +5,7 @@ import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import mongoose from "mongoose";
-import bcrypt from "bcrypt";
+import argon2 from "argon2";
 
 export const getUser = (req, res) => {
   const user = req.user;
@@ -19,12 +19,11 @@ export const getUser = (req, res) => {
 
 export const registerUser = async (req, res) => {
   const { email, password } = req.body;
-  console.log(email, password);
 
   const rootDirId = new mongoose.Types.ObjectId();
   const userId = new mongoose.Types.ObjectId();
 
-  const hashedPassword = await bcrypt.hash(password, 12);
+  const hashedPassword = await argon2.hash(password);
 
   const newUser = {
     _id: userId,
@@ -55,8 +54,6 @@ export const registerUser = async (req, res) => {
     console.error(err);
     await session.abortTransaction();
     if (err.code === 121) {
-      console.log(JSON.stringify(err.errInfo.details, null, 2));
-
       return res.status(400).json({ error: "Invalid Fields" });
     } else if (err.code === 11000 && err.keyValue.email) {
       return res.status(409).json({ error: "Email already exists" });
@@ -80,10 +77,9 @@ export const loginUser = async (req, res) => {
       return res.status(404).json({ error: "Email not registered" });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log(isPasswordValid);
+    const isMatch = await argon2.verify(user.password, password);
 
-    if (!isPasswordValid) {
+    if (!isMatch) {
       return res.status(404).json({ error: "Invalid password" });
     }
 
