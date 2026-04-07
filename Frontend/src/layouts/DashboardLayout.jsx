@@ -301,6 +301,7 @@ export default function DashboardLayout() {
             profilePicUrl={profilePicUrl}
             onLogout={handleLogout}
             onLogoutAll={handleLogoutAll}
+            onProfilePicUpload={handleProfilePicUpload}
           />
         </div>
       </header>

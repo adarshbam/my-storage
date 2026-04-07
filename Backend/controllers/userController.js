@@ -163,7 +163,7 @@ export const logoutUser = async (req, res) => {
 
 export const logoutAllDevices = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     await Session.deleteMany({ userId });
     res.clearCookie("rootDirId", {
       httpOnly: true,
