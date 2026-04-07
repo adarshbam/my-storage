@@ -6,4 +6,6 @@ build/
 coverage/
 *.log
 .vscode/
-my-drive-backend-with-express/storage/
+Backend/storage/
+Frontend/node_modules
+Backend/node_modules

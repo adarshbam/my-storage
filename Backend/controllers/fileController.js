@@ -1,6 +1,18 @@
 import { createReadStream, createWriteStream } from "fs";
 import path from "path";
-import { stat, unlink } from "fs/promises";
+import { stat, unlink, mkdir } from "fs/promises";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Absolute path to the storage directory (Backend/storage/)
+const STORAGE_DIR = path.join(__dirname, "../storage");
+const THUMBNAILS_DIR = path.join(STORAGE_DIR, "thumbnails");
+
+// Ensure storage directories exist
+await mkdir(STORAGE_DIR, { recursive: true });
+await mkdir(THUMBNAILS_DIR, { recursive: true });
 import sharp from "sharp";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
@@ -121,7 +133,7 @@ export const getThumbnail = async (req, res) => {
       return res.status(403).send("Unauthorized");
     }
 
-    const thumbnailPath = path.resolve(`./storage/thumbnails/${fileId}.jpg`);
+    const thumbnailPath = path.join(THUMBNAILS_DIR, `${fileId}.jpg`);
 
     // Check if thumbnail exists
     try {
@@ -151,7 +163,7 @@ export const getFileById = async (req, res) => {
       return res.status(403).send("You are not authorized to access this file");
     }
 
-    const filePath = path.join("storage", `${fileId}${file.extension}`);
+    const filePath = path.join(STORAGE_DIR, `${fileId}${file.extension}`);
 
     // If action is NOT download, just send the file simple way (fixes Open File)
     if (action !== "download") {
@@ -236,7 +248,7 @@ export const uploadFile = async (req, res) => {
     const startByte = parseInt(req.headers["x-start-byte"] || "0", 10);
     const ext = path.extname(fileName);
     const fullFileName = `${id}${ext}`;
-    const filePath = `./storage/${fullFileName}`;
+    const filePath = path.join(STORAGE_DIR, fullFileName);
 
     // Decide flags: 'a' for append (resume), 'w' for write (new)
     const flags = startByte > 0 ? "a" : "w";
@@ -251,7 +263,7 @@ export const uploadFile = async (req, res) => {
         await unlink(filePath).catch(() => {});
 
         // Delete the thumbnail if it exists
-        const thumbnailPath = `./storage/thumbnails/${id}.jpg`;
+        const thumbnailPath = path.join(THUMBNAILS_DIR, `${id}.jpg`);
         await unlink(thumbnailPath).catch(() => {});
 
         // Remove the file entry from the database
@@ -289,7 +301,7 @@ export const uploadFile = async (req, res) => {
       const videoExtensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"];
 
       try {
-        const thumbnailPath = `./storage/thumbnails/${id}.jpg`;
+        const thumbnailPath = path.join(THUMBNAILS_DIR, `${id}.jpg`);
         const fileExt = ext.toLowerCase();
 
         if (imageExtensions.includes(fileExt)) {
@@ -312,7 +324,7 @@ export const uploadFile = async (req, res) => {
               .screenshots({
                 timestamps: ["1"], // capture at 1 second
                 filename: `${id}.jpg`,
-                folder: "./storage/thumbnails",
+                folder: THUMBNAILS_DIR,
                 size: "256x128",
               });
           });

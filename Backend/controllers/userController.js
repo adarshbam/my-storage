@@ -6,6 +6,8 @@ import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import mongoose from "mongoose";
 import argon2 from "argon2";
+import Session from "../models/sessionModel.js";
+import { randomBytes } from "node:crypto";
 
 export const getUser = (req, res) => {
   const user = req.user;
@@ -83,6 +85,10 @@ export const loginUser = async (req, res) => {
       return res.status(404).json({ error: "Invalid password" });
     }
 
+    console.log(user._id);
+    const sessionId = randomBytes(12).toString("hex");
+    const session = await Session.create({ _id: sessionId, userId: user._id });
+
     const rootDir = await Directory.findOne({ _id: user.rootDirId })
       .select("_id")
       .lean();
@@ -90,9 +96,12 @@ export const loginUser = async (req, res) => {
       return res.status(500).json({ message: "Internal Server Error" });
     }
 
-    const cookiePayload = JSON.stringify({
-      expiry: Math.round(Date.now() / 1000 + 7 * 24 * 60 * 60),
-      id: user._id.toString(),
+    res.cookie("sessionId", sessionId, {
+      httpOnly: true,
+      secure: true,
+      signed: true,
+      sameSite: "none",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.cookie("rootDirId", encodeURIComponent(rootDir._id.toString()), {
@@ -102,18 +111,6 @@ export const loginUser = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.cookie(
-      "my_storage_token",
-      Buffer.from(cookiePayload).toString("base64url"),
-      {
-        httpOnly: true,
-        secure: true,
-        signed: true,
-        sameSite: "none",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      },
-    );
-
     return res.status(200).json({ message: `Login successful ${user.name}` });
   } catch (err) {
     console.error(err);
@@ -121,17 +118,20 @@ export const loginUser = async (req, res) => {
   }
 };
 
-export const logoutUser = (req, res) => {
+export const logoutUser = async (req, res) => {
+  const { sessionId } = req.signedCookies;
+
+  await Session.deleteOne({ _id: sessionId });
   res.clearCookie("rootDirId", {
     httpOnly: true,
     secure: true,
     sameSite: "none",
   });
-  res.clearCookie("my_storage_token", {
+  res.clearCookie("sessionId", {
     httpOnly: true,
     secure: true,
-    signed: true,
     sameSite: "none",
+    signed: true,
   });
 
   return res.status(200).json({ message: "Logout successful" });
