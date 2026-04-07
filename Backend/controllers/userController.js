@@ -5,8 +5,8 @@ import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import mongoose from "mongoose";
-import argon2 from "argon2";
 import Session from "../models/sessionModel.js";
+import argon2 from "argon2";
 import { randomBytes } from "node:crypto";
 
 export const getUser = (req, res) => {
@@ -25,15 +25,13 @@ export const registerUser = async (req, res) => {
   const rootDirId = new mongoose.Types.ObjectId();
   const userId = new mongoose.Types.ObjectId();
 
-  const hashedPassword = await argon2.hash(password);
-
   const newUser = {
     _id: userId,
     name: "user",
     email,
     profilepic: null,
     rootDirId: rootDirId,
-    password: hashedPassword,
+    password: password,
   };
 
   const rootDir = {
@@ -71,23 +69,49 @@ export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email })
-      .select("password rootDirId name")
-      .lean();
+    const user = await User.findOne({ email }).select(
+      "password rootDirId name",
+    );
 
     if (!user) {
       return res.status(404).json({ error: "Email not registered" });
     }
 
-    const isMatch = await argon2.verify(user.password, password);
+    const isMatch = await user.comparePassword(password);
 
     if (!isMatch) {
       return res.status(404).json({ error: "Invalid password" });
     }
 
+    const deviceFingerprint = req.headers["user-agent"];
+    const deviceId = await argon2.hash(deviceFingerprint);
+
+    const session = await Session.findOneAndUpdate(
+      { userId: user._id },
+      {
+        $setOnInsert: { userId: user._id },
+        $addToSet: { devices: { deviceId } },
+      },
+      {
+        returnDocument: "after",
+        new: true,
+        upsert: true,
+      },
+    );
     console.log(user._id);
-    const sessionId = randomBytes(12).toString("hex");
-    const session = await Session.create({ _id: sessionId, userId: user._id });
+
+    let sessionId;
+    sessionId = session._id;
+
+    const existingDevice = session.devices.find((d) => d.deviceId === deviceId);
+    const MAX_DEVICES_LIMIT = 3;
+    console.log(session.devices.length);
+
+    if (!existingDevice && session.devices.length >= MAX_DEVICES_LIMIT) {
+      await Session.findByIdAndDelete({
+        _id: sessionId,
+      });
+    }
 
     const rootDir = await Directory.findOne({ _id: user.rootDirId })
       .select("_id")
@@ -135,6 +159,28 @@ export const logoutUser = async (req, res) => {
   });
 
   return res.status(200).json({ message: "Logout successful" });
+};
+
+export const logoutAllDevices = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    await Session.deleteMany({ userId });
+    res.clearCookie("rootDirId", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
+    res.clearCookie("sessionId", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      signed: true,
+    });
+    return res.status(200).json({ message: "Logged out of all devices" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
 };
 
 export const uploadProfilePic = async (req, res) => {

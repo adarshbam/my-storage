@@ -6,6 +6,7 @@ import {
   getUser,
   loginUser,
   logoutUser,
+  logoutAllDevices,
   registerUser,
   storeSearchedItem,
   uploadProfilePic,
@@ -17,6 +18,7 @@ router.get("/", checkAuth, getUser);
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/logout", logoutUser);
+router.post("/logout-all", checkAuth, logoutAllDevices);
 router.post("/profilepic", checkAuth, uploadProfilePic);
 router.get("/profilepic", checkAuth, getProfilePic);
 router.get("/searchedItems", checkAuth, getSearchedItems);

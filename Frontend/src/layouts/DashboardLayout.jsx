@@ -4,6 +4,7 @@ import { SERVER_URL } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { Cloud, Folder, Trash2, LogOut, Search, Settings, Menu, X, SlidersHorizontal, PanelLeft, Sun, Moon, Users, Clock, Star, HardDrive, ChevronRight } from "lucide-react";
 import Button from "../components/ui/Button";
+import ProfileMenu from "../components/ui/ProfileMenu";
 import TransferManager from "../components/drive/TransferManager";
 import FileUploadModal from "../components/drive/FileUploadModal";
 
@@ -136,6 +137,19 @@ export default function DashboardLayout() {
       navigate("/");
     } catch (err) {
       console.error("Logout failed", err);
+    }
+  };
+
+  const handleLogoutAll = async () => {
+    try {
+      await fetch(`${SERVER_URL}/user/logout-all`, {
+        method: "POST",
+        credentials: "include",
+      });
+      setUser(null);
+      navigate("/");
+    } catch (err) {
+      console.error("Logout all devices failed", err);
     }
   };
 
@@ -282,20 +296,12 @@ export default function DashboardLayout() {
             className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors hidden sm:block">
             {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 font-bold overflow-hidden cursor-pointer"
-               onClick={() => fileInputRef.current?.click()}
-               title="Current User (Click to update avatar)">
-             {profilePicUrl ? (
-                <img
-                  src={profilePicUrl}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                  crossOrigin="use-credentials"
-                />
-             ) : (
-                <span className="text-sm">{user?.email?.[0]?.toUpperCase() || 'A'}</span>
-             )}
-          </div>
+          <ProfileMenu
+            user={user}
+            profilePicUrl={profilePicUrl}
+            onLogout={handleLogout}
+            onLogoutAll={handleLogoutAll}
+          />
         </div>
       </header>
 

@@ -18,7 +18,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "http://localhost:5173",
-
+      "http://192.168.31.12:5173",
       "http://192.168.31.10:5173",
       "http://[2409:40e3:176:1a68:eb0f:b7fd:bb7a:937e]:5173",
     ],

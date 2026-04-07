@@ -1,4 +1,5 @@
 import { Schema, model } from "mongoose";
+import argon2 from "argon2";
 
 const userSchema = new Schema(
   {
@@ -11,6 +12,16 @@ const userSchema = new Schema(
   },
   { strict: "throw" },
 );
+
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
+  this.password = await argon2.hash(this.password);
+});
+
+userSchema.methods.comparePassword = async function (enteredPassowrd) {
+  const isValid = await argon2.verify(this.password, enteredPassowrd);
+  return isValid;
+};
 
 const User = model("User", userSchema);
 export default User;

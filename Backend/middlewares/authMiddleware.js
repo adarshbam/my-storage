@@ -18,7 +18,7 @@ async function checkAuth(req, res, next) {
         httpOnly: true,
         secure: true,
         sameSite: "none",
-        signed: true,
+        signed: true, 
       });
 
       return res.status(404).json({ message: "Sesssion not Found" });
