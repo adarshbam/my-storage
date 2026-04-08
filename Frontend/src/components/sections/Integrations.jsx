@@ -49,65 +49,41 @@ const Integrations = () => {
           </motion.div>
 
           <div className="lg:w-1/2 relative">
-            {/* Floating App Icons Grid - Simplified animations for performance */}
+            {/* Static App Icons Grid - matching exact design requested, no hover effects */}
             <div className="grid grid-cols-2 gap-6 relative">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <div className="bg-white/60 dark:bg-[#0f463e]/40 border border-slate-200 dark:border-[#14b8a6]/30 rounded-2xl p-6 shadow-xl hover:-translate-y-2 dark:hover:bg-[#0f463e]/80 hover:bg-white/90 hover:border-[#14b8a6]/60 hover:shadow-[0_0_40px_rgba(20,184,166,0.2)] hover:scale-[1.02] transition-all duration-300 h-full">
-                  <div className="w-12 h-12 bg-[#3b82f6]/10 border border-[#3b82f6]/20 shadow-inner rounded-xl flex items-center justify-center text-[#3b82f6] mb-5">
-                    <FileText size={22} strokeWidth={1.5} />
-                  </div>
-                  <h4 className="font-bold text-slate-900 dark:text-white text-lg mb-1 tracking-wide">Documents</h4>
-                  <p className="text-xs text-slate-500 dark:text-white/50 font-medium tracking-wide">Edit Word & Docs</p>
+              
+              <div className="bg-slate-50 dark:bg-[#071915] border border-slate-200 dark:border-[#0f3d35] rounded-[16px] p-6 shadow-sm h-full flex flex-col justify-center">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500 mb-6">
+                  <FileText size={20} strokeWidth={1.5} />
                 </div>
-              </motion.div>
+                <h4 className="font-bold text-slate-900 dark:text-white text-[17px] mb-1.5 tracking-wide">Documents</h4>
+                <p className="text-[13px] text-slate-500 dark:text-[#7d9b93] font-medium tracking-wide">Edit Word & Docs</p>
+              </div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="mt-12"
-              >
-                <div className="bg-white/60 dark:bg-[#0f463e]/40 border border-slate-200 dark:border-[#14b8a6]/30 rounded-2xl p-6 shadow-xl hover:-translate-y-2 dark:hover:bg-[#0f463e]/80 hover:bg-white/90 hover:border-[#14b8a6]/60 hover:shadow-[0_0_40px_rgba(20,184,166,0.2)] hover:scale-[1.02] transition-all duration-300 h-full">
-                  <div className="w-12 h-12 bg-[#d946ef]/10 border border-[#d946ef]/20 shadow-inner rounded-xl flex items-center justify-center text-[#d946ef] mb-5">
-                    <Image size={22} strokeWidth={1.5} />
-                  </div>
-                  <h4 className="font-bold text-slate-900 dark:text-white text-lg mb-1 tracking-wide">Creative</h4>
-                  <p className="text-xs text-slate-500 dark:text-white/50 font-medium tracking-wide">Preview PSD & AI</p>
+              <div className="mt-8 bg-slate-50 dark:bg-[#071915] border border-slate-200 dark:border-[#0f3d35] rounded-[16px] p-6 shadow-sm h-full flex flex-col justify-center">
+                <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center text-purple-400 mb-6">
+                  <Image size={20} strokeWidth={1.5} />
                 </div>
-              </motion.div>
+                <h4 className="font-bold text-slate-900 dark:text-white text-[17px] mb-1.5 tracking-wide">Creative</h4>
+                <p className="text-[13px] text-slate-500 dark:text-[#7d9b93] font-medium tracking-wide">Preview PSD & AI</p>
+              </div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                <div className="bg-white/60 dark:bg-[#0f463e]/40 border border-slate-200 dark:border-[#14b8a6]/30 rounded-2xl p-6 shadow-xl hover:-translate-y-2 dark:hover:bg-[#0f463e]/80 hover:bg-white/90 hover:border-[#14b8a6]/60 hover:shadow-[0_0_40px_rgba(20,184,166,0.2)] hover:scale-[1.02] transition-all duration-300 h-full">
-                  <div className="w-12 h-12 bg-[#f43f5e]/10 border border-[#f43f5e]/20 shadow-inner rounded-xl flex items-center justify-center text-[#f43f5e] mb-5">
-                    <Video size={22} strokeWidth={1.5} />
-                  </div>
-                  <h4 className="font-bold text-slate-900 dark:text-white text-lg mb-1 tracking-wide">Media</h4>
-                  <p className="text-xs text-slate-500 dark:text-white/50 font-medium tracking-wide">Stream 4K Video</p>
+              <div className="bg-slate-50 dark:bg-[#071915] border border-slate-200 dark:border-[#0f3d35] rounded-[16px] p-6 shadow-sm h-full flex flex-col justify-center">
+                <div className="w-12 h-12 bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-500 mb-6">
+                  <Video size={20} strokeWidth={1.5} />
                 </div>
-              </motion.div>
+                <h4 className="font-bold text-slate-900 dark:text-white text-[17px] mb-1.5 tracking-wide">Media</h4>
+                <p className="text-[13px] text-slate-500 dark:text-[#7d9b93] font-medium tracking-wide">Stream 4K Video</p>
+              </div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="mt-8"
-              >
-                <div className="bg-white/60 dark:bg-[#0f463e]/40 border border-slate-200 dark:border-[#14b8a6]/30 rounded-2xl p-6 shadow-xl hover:-translate-y-2 dark:hover:bg-[#0f463e]/80 hover:bg-white/90 hover:border-[#14b8a6]/60 hover:shadow-[0_0_40px_rgba(20,184,166,0.2)] hover:scale-[1.02] transition-all duration-300 h-full">
-                  <div className="w-12 h-12 bg-[#14b8a6]/10 border border-[#14b8a6]/20 shadow-inner rounded-xl flex items-center justify-center text-[#14b8a6] mb-5">
-                    <Mail size={22} strokeWidth={1.5} />
-                  </div>
-                  <h4 className="font-bold text-slate-900 dark:text-white text-lg mb-1 tracking-wide">Connect</h4>
-                  <p className="text-xs text-slate-500 dark:text-white/50 font-medium tracking-wide">Share via Email</p>
+              <div className="mt-8 bg-slate-50 dark:bg-[#071915] border border-slate-200 dark:border-[#0f3d35] rounded-[16px] p-6 shadow-sm h-full flex flex-col justify-center">
+                <div className="w-12 h-12 bg-[#14b8a6]/10 rounded-xl flex items-center justify-center text-[#14b8a6] mb-6">
+                  <Mail size={20} strokeWidth={1.5} />
                 </div>
-              </motion.div>
+                <h4 className="font-bold text-slate-900 dark:text-white text-[17px] mb-1.5 tracking-wide">Connect</h4>
+                <p className="text-[13px] text-slate-500 dark:text-[#7d9b93] font-medium tracking-wide">Share via Email</p>
+              </div>
+
             </div>
           </div>
         </div>

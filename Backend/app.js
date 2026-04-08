@@ -4,6 +4,7 @@ import directoryRouter from "./routes/directoryRoutes.js";
 import fileRouter from "./routes/fileRoutes.js";
 import trashRouter from "./routes/trashRoutes.js";
 import userRouter from "./routes/userRoutes.js";
+import otpRouter from "./routes/otpRoutes.js";
 import cors from "cors";
 import checkAuth from "./middlewares/authMiddleware.js";
 import https from "https";
@@ -32,6 +33,7 @@ app.use("/directory", checkAuth, directoryRouter);
 app.use("/file", checkAuth, fileRouter);
 app.use("/trash", checkAuth, trashRouter);
 app.use("/user", userRouter);
+app.use("/otp", otpRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);

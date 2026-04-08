@@ -2,28 +2,45 @@ import { motion } from "framer-motion";
 import { cn } from "../../lib/utils";
 
 const Card = ({ children, className, variant = "default", ...props }) => {
-  const variants = {
-    default: "glass-card bg-white/40 dark:bg-[#0f463e]/40 border-slate-200 dark:border-[#14b8a6]/20 hover:bg-white/80 dark:hover:bg-[#0f463e]/80 hover:border-[#14b8a6]/40 dark:hover:border-[#14b8a6]/60 hover:shadow-[0_0_40px_rgba(20,184,166,0.15)] dark:hover:shadow-[0_0_40px_rgba(20,184,166,0.3)]",
-    brand: "glass-card bg-[#14b8a6]/5 dark:bg-[#0f463e]/70 border-[#14b8a6]/20 dark:border-[#14b8a6]/30 shadow-[0_0_20px_rgba(20,184,166,0.05)] dark:shadow-[0_0_20px_rgba(20,184,166,0.15)] hover:bg-[#14b8a6]/10 dark:hover:bg-[#0f463e] hover:border-[#14b8a6]/40 dark:hover:border-[#14b8a6]/70 hover:shadow-[0_0_50px_rgba(20,184,166,0.2)] dark:hover:shadow-[0_0_50px_rgba(20,184,166,0.4)]",
-    accent: "glass-card bg-[#db2777]/5 dark:bg-[#0f463e]/40 border-[#db2777]/20 dark:border-[#db2777]/30 shadow-[0_0_20px_rgba(219,39,119,0.05)] dark:shadow-[0_0_20px_rgba(219,39,119,0.1)] hover:bg-[#db2777]/10 dark:hover:bg-[#0f463e]/80 hover:shadow-[0_0_40px_rgba(219,39,119,0.15)] dark:hover:shadow-[0_0_40px_rgba(219,39,119,0.3)] hover:border-[#db2777]/40 dark:hover:border-[#db2777]/60",
-    dark: "glass-panel bg-white/40 dark:bg-[#0f463e]/40 border-slate-200 dark:border-[#14b8a6]/20 hover:bg-white/80 dark:hover:bg-[#0f463e]/80 hover:border-[#14b8a6]/40 dark:hover:border-[#14b8a6]/60 hover:shadow-[0_0_40px_rgba(20,184,166,0.15)] dark:hover:shadow-[0_0_40px_rgba(20,184,166,0.3)] transition-all",
+  const innerVariants = {
+    default: "bg-white/80 dark:bg-[#020b08]/90 backdrop-blur-3xl",
+    brand: "bg-white/80 dark:bg-[#020b08]/90 backdrop-blur-3xl",
+    accent: "bg-white/80 dark:bg-[#020b08]/90 backdrop-blur-3xl",
+    dark: "bg-white/80 dark:bg-[#020b08]/90 backdrop-blur-3xl",
   };
 
+  // We make sure the outer wrapper takes the height constraints and handles hover effects
   return (
     <motion.div
-      whileHover={{ y: -12, scale: 1.01, transition: { duration: 0.4, ease: "easeOut" } }}
+      whileHover={{ y: -6, scale: 1.01, transition: { duration: 0.4, ease: "easeOut" } }}
       className={cn(
-        "relative rounded-[20px] p-8 transition-all duration-300 ease-out overflow-hidden group",
-        variants[variant] || variants.default,
-        className,
+        "relative rounded-[22px] p-[1.5px] transition-all duration-300 ease-out overflow-hidden group shadow-2xl",
+        props.className && props.className.includes("h-full") ? "h-full" : "",
       )}
-      {...props}
+      {...(() => {
+        const { className: _, ...rest } = props;
+        return rest;
+      })()}
     >
-      {/* Internal Decorative Elements */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/20 to-transparent rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-current/5 to-transparent rounded-full blur-xl -ml-12 -mb-12 pointer-events-none" />
+      {/* Animating Border - Glowing Rotating background element */}
+      <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] z-0 animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_0_180deg,rgba(20,184,166,0.6)_360deg)] opacity-70 group-hover:opacity-100 transition-opacity duration-500" />
+      {/* Alternate rotating glow for extra effect */}
+      <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] z-0 animate-[spin_6s_linear_infinite_reverse] bg-[conic-gradient(from_0deg,transparent_0_180deg,rgba(59,130,246,0.4)_360deg)] opacity-40 group-hover:opacity-80 transition-opacity duration-500" />
 
-      <div className="relative z-10 h-full flex flex-col">{children}</div>
+      {/* Inner Card content container */}
+      <div className={cn(
+        "relative z-10 w-full h-full rounded-[20px] p-8 flex flex-col overflow-hidden transition-colors duration-300",
+        innerVariants[variant] || innerVariants.default,
+        className
+      )}>
+        {/* Subtle top glare/gradient inside the card */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none rounded-[20px]" />
+        
+        {/* Decorative Internal Glows */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        
+        {children}
+      </div>
     </motion.div>
   );
 };

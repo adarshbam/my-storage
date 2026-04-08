@@ -53,8 +53,12 @@ const Pricing = () => {
   const [isYearly, setIsYearly] = useState(false);
 
   return (
-    <section id="pricing" className="py-32 relative bg-transparent">
-      <div className="container mx-auto px-6">
+    <section id="pricing" className="py-32 relative overflow-hidden bg-slate-50/50 dark:bg-[#05110e]/80 border-y border-slate-200 dark:border-white/[0.05] backdrop-blur-sm">
+      {/* Subtle pulsing background animation */}
+      <div className="absolute top-1/4 left-[10%] w-96 h-96 bg-brand-500/10 dark:bg-brand-500/5 rounded-full blur-[100px] pointer-events-none animate-[pulse_7s_ease-in-out_infinite]" />
+      <div className="absolute bottom-1/4 right-[10%] w-[30rem] h-[30rem] bg-accent-500/10 dark:bg-accent-500/5 rounded-full blur-[120px] pointer-events-none animate-[pulse_5s_ease-in-out_infinite]" />
+
+      <div className="container mx-auto px-6 relative z-10">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white mb-6">
             Simple, transparent pricing

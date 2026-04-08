@@ -10,7 +10,6 @@ import Register from "./pages/Register";
 // Landing Page Components
 import Navbar from "./components/sections/Navbar";
 import Hero from "./components/sections/Hero";
-import FeatureHighlights from "./components/sections/FeatureHighlights";
 import ScaleSecurity from "./components/sections/ScaleSecurity";
 import HowItWorks from "./components/sections/HowItWorks";
 import Integrations from "./components/sections/Integrations";
@@ -37,7 +36,6 @@ function LandingPage() {
         <Navbar />
         <main className="flex-grow">
         <Hero />
-        <FeatureHighlights />
         <ScaleSecurity />
         <HowItWorks />
         <Integrations />

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
 
 const steps = [
   {
@@ -23,10 +22,13 @@ const steps = [
 const HowItWorks = () => {
   const [hoveredCard, setHoveredCard] = useState(null);
 
+  const defaultBtnStyle = "bg-[#062922] dark:bg-[#062922] text-[#2dd4bf] border-[#0f463e] shadow-[0_2px_10px_rgba(0,0,0,0.2)]";
+
   return (
-    <section className="py-32 bg-transparent relative">
-      {/* Decorative Blur (Subtle local highlight) */}
-      <div className="absolute top-1/2 right-0 w-64 h-64 bg-accent-500/10 rounded-full blur-[100px] pointer-events-none" />
+    <section className="py-32 relative overflow-hidden bg-slate-50/50 dark:bg-[#05110e]/80 border-y border-slate-200 dark:border-white/[0.05] backdrop-blur-sm">
+      {/* Decorative Blur (Subtle local highlight with slow pulse) */}
+      <div className="absolute top-1/2 right-0 w-64 h-64 bg-[#14b8a6]/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-[#14b8a6]/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="text-center mb-16">
@@ -36,10 +38,10 @@ const HowItWorks = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-          {/* Connector Line (Desktop) */}
-          <div className="hidden md:block absolute top-[40px] left-[16%] right-[16%] h-px bg-gradient-to-r from-transparent via-brand-200 to-transparent dark:via-brand-800 -z-0" />
-
-          {steps.map((item, index) => (
+          {steps.map((item, index) => {
+            const isHovered = hoveredCard === index;
+            
+            return (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 20 }}
@@ -50,17 +52,17 @@ const HowItWorks = () => {
               onMouseEnter={() => setHoveredCard(index)}
               onMouseLeave={() => setHoveredCard(null)}
             >
-              <div className={`glass-panel bg-white/40 dark:bg-[#0f463e]/40 p-8 rounded-[2rem] transition-all duration-300 text-center group h-full relative overflow-hidden z-10 ${
-                hoveredCard === index ? 'dark:bg-[#0f463e]/80 bg-white/80 -translate-y-2 border-[#14b8a6]/50 shadow-[0_0_40px_rgba(20,184,166,0.3)]' : 'border-[#14b8a6]/20'
+              <div className={`glass-panel bg-white/40 dark:bg-[#020b08]/80 p-8 rounded-[2rem] transition-all duration-300 text-center group h-full relative overflow-hidden z-10 border ${
+                isHovered ? 'dark:bg-[#020b08]/90 bg-white/80 -translate-y-2 border-[#14b8a6]/30 shadow-[0_8px_30px_rgba(20,184,166,0.12)]' : 'border-black/5 dark:border-white/[0.05]'
               }`}>
-                {/* Animated Gradient Background Highlight */}
-                <div className={`absolute inset-0 bg-gradient-to-br from-[#14b8a6]/20 via-[#14b8a6]/5 to-transparent transition-opacity duration-500 pointer-events-none ${
-                  hoveredCard === index ? 'opacity-100 animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]' : 'opacity-0'
+                {/* Soft Gradient Background Highlight */}
+                <div className={`absolute inset-0 bg-gradient-to-br transition-opacity duration-500 pointer-events-none to-transparent ${
+                  isHovered ? 'opacity-100 from-[#14b8a6]/10 via-transparent' : 'opacity-0 from-[#14b8a6]/0 via-transparent'
                 }`} />
 
                 <div className="relative z-20">
-                  <div className={`inline-block px-5 py-1.5 rounded-[1rem] font-bold text-sm mb-6 border transition-colors duration-500 ${
-                    hoveredCard === index ? 'bg-[#14b8a6]/20 text-[#14b8a6] border-[#14b8a6]/50 shadow-[0_0_15px_rgba(20,184,166,0.3)]' : 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-white border-slate-200 dark:border-white/20'
+                  <div className={`inline-block px-6 py-1.5 rounded-[1.5rem] font-bold text-sm mb-6 border transition-all duration-500 ${
+                    isHovered ? 'bg-[#14b8a6]/10 text-[#2dd4bf] border-[#14b8a6]/30 shadow-[0_0_15px_rgba(20,184,166,0.2)]' : defaultBtnStyle
                   }`}>
                     Step {item.step}
                   </div>
@@ -73,23 +75,25 @@ const HowItWorks = () => {
                 </div>
                 {index < steps.length - 1 && (
                   <div className="md:hidden mt-8 flex justify-center text-[#14b8a6]/50">
-                    <div className="w-1 h-8 rounded-full bg-gradient-to-b from-[#14b8a6]/50 to-transparent" />
+                    <div className={`w-1 h-8 rounded-full transition-all duration-500 bg-gradient-to-b from-[#14b8a6]/50 to-transparent ${
+                        hoveredCard !== null && hoveredCard >= index + 1 ? 'opacity-100 shadow-[0_0_8px_rgba(20,184,166,0.5)]' : 'opacity-30'
+                    }`} />
                   </div>
                 )}
               </div>
 
               {/* Desktop Animated Line Connector */}
               {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-1/2 -right-8 w-8 h-[3px] -translate-y-1/2 z-0 rounded-full bg-white/5 overflow-hidden">
-                  <div className={`w-full h-full bg-gradient-to-r from-[#14b8a6]/20 via-[#14b8a6] to-[#3b82f6] transition-all duration-500 origin-left ${
-                    hoveredCard !== null && hoveredCard > index
-                      ? 'scale-x-100 opacity-100 drop-shadow-[0_0_12px_rgba(20,184,166,0.9)] animate-pulse'
+                <div className="hidden md:block absolute top-1/2 -right-8 w-8 h-[3px] -translate-y-1/2 z-0 rounded-full bg-slate-200/50 dark:bg-white/5 overflow-hidden">
+                  <div className={`w-full h-full transition-all duration-500 origin-left bg-[#14b8a6] ${
+                    hoveredCard !== null && hoveredCard >= index + 1
+                      ? 'scale-x-100 opacity-100 drop-shadow-[0_0_8px_rgba(20,184,166,0.6)]'
                       : 'scale-x-0 opacity-0'
                   }`} />
                 </div>
               )}
             </motion.div>
-          ))}
+          )})}
         </div>
       </div>
     </section>

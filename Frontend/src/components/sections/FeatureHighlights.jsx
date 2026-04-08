@@ -52,11 +52,14 @@ const FeatureHighlights = () => {
   return (
     <section
       id="features"
-      className="py-32 bg-transparent relative overflow-hidden"
+      className="py-32 relative overflow-hidden bg-slate-50/50 dark:bg-[#05110e]/80 border-y border-slate-200 dark:border-white/[0.05] backdrop-blur-sm"
     >
-      {/* Background Decoration */}
-      <div className="absolute top-1/2 left-0 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent-500/10 rounded-full blur-[100px] pointer-events-none" />
+      {/* Background Decoration with simple pulsing animation */}
+      <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-brand-500/10 to-transparent hidden md:block" />
+      <div className="absolute top-0 right-1/4 w-px h-full bg-gradient-to-b from-transparent via-brand-500/10 to-transparent hidden md:block" />
+      
+      <div className="absolute top-1/2 left-0 w-96 h-96 bg-brand-500/10 dark:bg-brand-500/5 rounded-full blur-3xl pointer-events-none animate-[pulse_5s_ease-in-out_infinite]" />
+      <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-accent-500/10 dark:bg-accent-500/5 rounded-full blur-[100px] pointer-events-none animate-[pulse_7s_ease-in-out_infinite]" />
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="text-center max-w-2xl mx-auto mb-16">

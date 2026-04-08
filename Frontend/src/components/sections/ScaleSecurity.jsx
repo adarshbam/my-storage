@@ -1,51 +1,89 @@
 import { motion } from "framer-motion";
 import {
   ShieldCheck,
-  Lock,
-  Globe2,
-  FileCheck,
+  HardDrive,
+  Search,
+  RefreshCw,
   Share2,
+  Image as ImageIcon,
   Smartphone,
 } from "lucide-react";
 import Card from "../ui/Card";
 
 const ScaleSecurity = () => {
+  // Features merged from both sections, omitting those already in Hero (Global Access, Sync Anywhere, Privacy Vault)
   const items = [
     {
       icon: ShieldCheck,
       title: "Enterprise Encryption",
       desc: "AES-256 bit encryption for all your files at rest and in transit.",
-      variant: "green",
+      theme: {
+        glow: "rgba(16, 185, 129, 0.4)", // emerald
+        gradient: "from-emerald-500/20 to-emerald-400/5",
+        iconText: "text-emerald-400",
+        iconBg: "bg-emerald-500/10",
+        border: "border-emerald-500/30",
+      },
     },
     {
-      icon: FileCheck,
-      title: "Intelligent Organization",
-      desc: "Auto-tagging and smart folders keep your files sorted.",
-      variant: "blue",
+      icon: Search,
+      title: "Intelligent AI Search",
+      desc: "Find files fast with AI that recognizes text and objects in images.",
+      theme: {
+        glow: "rgba(6, 182, 212, 0.4)", // cyan
+        gradient: "from-cyan-500/20 to-cyan-400/5",
+        iconText: "text-cyan-400",
+        iconBg: "bg-cyan-500/10",
+        border: "border-cyan-500/30",
+      },
+    },
+    {
+      icon: HardDrive,
+      title: "Automated Backups",
+      desc: "Set and forget. Automatically back up changes, photos, and videos instantly.",
+      theme: {
+        glow: "rgba(20, 184, 166, 0.4)", // teal
+        gradient: "from-teal-500/20 to-teal-400/5",
+        iconText: "text-teal-400",
+        iconBg: "bg-teal-500/10",
+        border: "border-teal-500/30",
+      },
     },
     {
       icon: Share2,
       title: "Secure Sharing",
-      desc: "Password protected links and expiring access controls.",
-      variant: "purple",
+      desc: "Share files seamlessly with expiring links and strict password controls.",
+      theme: {
+        glow: "rgba(56, 189, 248, 0.4)", // sky
+        gradient: "from-sky-500/20 to-sky-400/5",
+        iconText: "text-sky-400",
+        iconBg: "bg-sky-500/10",
+        border: "border-sky-500/30",
+      },
     },
     {
-      icon: Globe2,
-      title: "Global Access",
-      desc: "Low-latency access to your files from any region.",
-      variant: "blue",
+      icon: RefreshCw,
+      title: "Ransomware Rescue",
+      desc: "Turn back time. Recover perfectly clean files up to 30 days post-attack.",
+      theme: {
+        glow: "rgba(132, 204, 22, 0.4)", // lime
+        gradient: "from-lime-500/20 to-lime-400/5",
+        iconText: "text-lime-400",
+        iconBg: "bg-lime-500/10",
+        border: "border-lime-500/30",
+      },
     },
     {
-      icon: Lock,
-      title: "Privacy Vault",
-      desc: "A special folder for your most sensitive documents.",
-      variant: "orange",
-    },
-    {
-      icon: Smartphone,
-      title: "Cross-Platform",
-      desc: "Native apps for iOS, Android, and desktop.",
-      variant: "purple",
+      icon: ImageIcon,
+      title: "Instant Previews",
+      desc: "View heavy 4K videos or RAW photos globally without fully downloading.",
+      theme: {
+        glow: "rgba(45, 212, 191, 0.4)", // teal secondary
+        gradient: "from-[#2dd4bf]/20 to-[#2dd4bf]/5",
+        iconText: "text-[#2dd4bf]",
+        iconBg: "bg-[#2dd4bf]/10",
+        border: "border-[#2dd4bf]/30",
+      },
     },
   ];
 
@@ -61,7 +99,7 @@ const ScaleSecurity = () => {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-gradient-to-b from-[#0f463e]/10 to-transparent blur-[120px] pointer-events-none" />
 
       <div className="container mx-auto px-6 relative z-10">
-        <div className="text-center mb-20">
+        <div className="text-center mb-24">
           <motion.span
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -72,10 +110,12 @@ const ScaleSecurity = () => {
           <motion.h2
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
-            className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white mb-6 tracking-tight"
+            className="text-5xl md:text-7xl font-black text-slate-900 dark:text-white mb-6 tracking-tight leading-tight"
           >
-            Engineered for <br/>
-            <span className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-transparent bg-clip-text drop-shadow-[0_0_20px_rgba(20,184,166,0.3)]">Privacy & Security</span>
+            Engineered for <br />
+            <span className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-transparent bg-clip-text drop-shadow-[0_0_20px_rgba(20,184,166,0.3)]">
+              Privacy & Security
+            </span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
@@ -86,6 +126,7 @@ const ScaleSecurity = () => {
           </motion.p>
         </div>
 
+        {/* Unique Custom Cards for this section */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {items.map((item, index) => (
             <motion.div
@@ -94,60 +135,35 @@ const ScaleSecurity = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1, duration: 0.5 }}
-              className={
-                index === 3 || index === 4 || index === 5 ? "md:col-span-1" : ""
-              }
+              className="relative group h-full"
             >
-              <Card
-                variant="dark"
-                className="h-full flex flex-col justify-between overflow-hidden relative"
-              >
-                {/* Rotating Rings Animation for global access card Removed for Performance/Speed */}
-                
+              <div
+                className={`absolute inset-0 rounded-[2rem] bg-gradient-to-br ${item.theme.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl pointer-events-none`}
+                style={{ boxShadow: `0 0 40px ${item.theme.glow}` }}
+              />
+
+              <div className="relative h-full bg-[#020b08]/90 dark:bg-[#020b08]/90 backdrop-blur-3xl border border-white/[0.05] group-hover:border-transparent rounded-[2rem] p-8 overflow-hidden transition-all duration-300">
+                {/* Glow ring on hover */}
+                <div
+                  className={`absolute -inset-px rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br ${item.theme.gradient} -z-10`}
+                />
+
                 <div>
                   <div
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-inner border border-brand-500/20
-                      ${item.variant === "green" ? "bg-brand-500/10 text-brand-400" : ""}
-                      ${item.variant === "blue" ? "bg-accent-500/10 text-accent-400" : ""}
-                      ${item.variant === "purple" ? "bg-fuchsia-500/10 text-fuchsia-400" : ""}
-                      ${item.variant === "orange" ? "bg-brand-900/50 text-[#E76F51] border-brand-500/30" : ""} 
+                    className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-8 shadow-inner transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3
+                      ${item.theme.iconBg} ${item.theme.iconText} ${item.theme.border} border
                     `}
                   >
-                    <item.icon size={28} strokeWidth={1.5} />
+                    <item.icon size={26} strokeWidth={1.5} />
                   </div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3 tracking-tight">
+                  <h3 className="text-2xl font-bold text-white mb-4 tracking-tight">
                     {item.title}
                   </h3>
-                  <p className="text-slate-600 dark:text-white/70 font-medium leading-relaxed">
+                  <p className="text-white/70 font-medium leading-relaxed">
                     {item.desc}
                   </p>
                 </div>
-
-                {/* Custom dark card style for "Privacy Vault" */}
-                {item.title === "Privacy Vault" && (
-                  <div className="mt-8 bg-slate-950 dark:bg-black/80 rounded-xl p-4 font-mono text-xs text-brand-400/80 relative overflow-hidden border border-brand-500/20 shadow-inner">
-                    <div className="flex gap-1.5 mb-3">
-                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-brand-500/80" />
-                    </div>
-                    <p>unlock_vault(password)</p>
-                    <p className="text-brand-400 animate-pulse mt-1 glow-text">Verified. Decrypting...</p>
-                    <div className="h-1 bg-brand-900/50 mt-2 rounded-full overflow-hidden">
-                      <motion.div
-                        className="h-full bg-brand-500 rounded-full"
-                        initial={{ width: "0%" }}
-                        whileInView={{ width: "100%" }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          repeatDelay: 1,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </Card>
+              </div>
             </motion.div>
           ))}
         </div>
@@ -157,37 +173,42 @@ const ScaleSecurity = () => {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mt-8"
+          className="mt-20 relative px-4 sm:px-0"
         >
           <Card
             variant="brand"
-            className="text-slate-900 dark:text-white relative overflow-hidden shadow-[0_0_40px_rgba(20,184,166,0.2)]"
+            className="text-slate-900 dark:text-white relative overflow-hidden shadow-[0_0_50px_rgba(20,184,166,0.3)] bg-gradient-to-r from-[#020b08] to-[#051a17] p-8 sm:p-12 border border-[#14b8a6]/40"
           >
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#14b8a6]/20 rounded-full blur-[80px] -mr-48 -mt-48 pointer-events-none" />
-            
+
             <div className="flex flex-col md:flex-row items-center justify-between relative z-10">
               <div className="max-w-xl">
-                <div className="w-14 h-14 rounded-2xl bg-[#14b8a6]/20 dark:bg-white/20 flex items-center justify-center mb-6 text-[#0f463e] dark:text-white backdrop-blur-md border border-[#14b8a6]/30 dark:border-white/30 shadow-inner">
-                  <Smartphone size={28} strokeWidth={1.5} />
+                <div className="w-16 h-16 rounded-[1.5rem] bg-[#14b8a6]/20 flex items-center justify-center mb-8 text-[#2dd4bf] backdrop-blur-md border border-[#14b8a6]/40 shadow-[inset_0_0_20px_rgba(20,184,166,0.4)]">
+                  <Smartphone size={32} strokeWidth={1.5} />
                 </div>
-                <h3 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+                <h3 className="text-3xl md:text-5xl font-black mb-6 tracking-tight text-white leading-tight">
                   Files at your fingertips
                 </h3>
-                <p className="text-slate-600 dark:text-white/90 text-lg opacity-90 font-medium">
-                  Backup photos, access docs, and play videos offline with the
-                  Storifyy mobile app. Designed for speed.
+                <p className="text-white/80 text-lg sm:text-xl font-medium leading-relaxed">
+                  Backup photos automatically, access secure documents, and
+                  stream high-quality videos offline with the native Storifyy
+                  mobile app. Designed for pure speed.
                 </p>
               </div>
-              <div className="mt-12 md:mt-0 relative">
-                {/* Abstract Phone/App Illustration */}
-                <div className="w-64 h-40 bg-white/10 backdrop-blur-xl rounded-tl-[2rem] rounded-tr-[2rem] border-t border-l border-r border-white/20 p-5 shadow-2xl">
-                  <div className="flex justify-between items-center mb-6">
-                    <div className="h-2 w-20 bg-white/30 rounded-full" />
-                    <div className="h-6 w-6 rounded-full bg-brand-400/40 border border-white/20" />
+
+              <div className="mt-16 md:mt-0 relative flex-shrink-0 w-full sm:w-auto flex justify-center">
+                {/* Abstract Phone/App Illustration highlighting the scale */}
+                <div className="w-72 sm:w-80 h-48 sm:h-56 bg-[#031411]/80 backdrop-blur-3xl rounded-tl-[2.5rem] rounded-tr-[2.5rem] border border-b-0 border-[#14b8a6]/30 p-6 sm:p-8 shadow-[0_-10px_60px_rgba(20,184,166,0.2)] relative overflow-hidden">
+                  {/* Fake screen content elements */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-[#14b8a6]/10 to-transparent pointer-events-none" />
+
+                  <div className="flex justify-between items-center mb-8 relative z-10">
+                    <div className="h-2 w-24 bg-white/20 rounded-full" />
+                    <div className="h-8 w-8 rounded-full bg-[#14b8a6]/40 border border-[#14b8a6]/60 shadow-[0_0_15px_rgba(20,184,166,0.5)] animate-pulse" />
                   </div>
-                  <div className="space-y-3">
-                    <div className="h-10 w-full bg-white/10 rounded-xl" />
-                    <div className="h-10 w-full bg-white/10 rounded-xl" />
+                  <div className="space-y-4 relative z-10">
+                    <div className="h-12 w-full bg-white/10 rounded-2xl border border-white/5" />
+                    <div className="h-12 w-full bg-white/10 rounded-2xl border border-white/5" />
                   </div>
                 </div>
               </div>
