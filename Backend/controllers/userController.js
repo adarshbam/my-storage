@@ -32,6 +32,7 @@ export const registerUser = async (req, res) => {
     profilepic: null,
     rootDirId: rootDirId,
     password: password,
+    isVerified: true,
   };
 
   const rootDir = {
@@ -70,11 +71,15 @@ export const loginUser = async (req, res) => {
 
   try {
     const user = await User.findOne({ email }).select(
-      "password rootDirId name",
+      "password rootDirId name isVerified",
     );
 
     if (!user) {
       return res.status(404).json({ error: "Email not registered" });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({ error: "Please verify your account before logging in." });
     }
 
     const isMatch = await user.comparePassword(password);

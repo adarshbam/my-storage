@@ -307,9 +307,18 @@ export default function Register() {
             />
           </div>
 
-          <Button type="submit" className="w-full py-3.5 text-[15px]">
-            Create Account
-          </Button>
+          <div className="w-full relative group">
+            <Button 
+              type="submit" 
+              disabled={!otpVerified}
+              className={`w-full py-3.5 text-[15px] ${!otpVerified ? "opacity-50 pointer-events-none hover:!scale-100 active:!scale-100" : ""}`}
+            >
+              Create Account
+            </Button>
+            {!otpVerified && (
+              <div className="absolute inset-0 z-10 cursor-not-allowed" title="Verify email first" />
+            )}
+          </div>
         </form>
 
         <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">

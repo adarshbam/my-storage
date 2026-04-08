@@ -9,6 +9,7 @@ const userSchema = new Schema(
     profilepic: { type: Schema.Types.ObjectId, default: null },
     rootDirId: { type: Schema.Types.ObjectId, required: true },
     recentlySearchedItems: { type: Array, default: [] },
+    isVerified: { type: Boolean, default: false },
   },
   { strict: "throw" },
 );
