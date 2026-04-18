@@ -6,6 +6,7 @@ import {
   getUser,
   loginUser,
   logoutUser,
+  authGoogle,
   logoutAllDevices,
   registerUser,
   storeSearchedItem,
@@ -17,6 +18,8 @@ const router = express.Router();
 router.get("/", checkAuth, getUser);
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+router.post("/auth/google", authGoogle);
+
 router.post("/logout", logoutUser);
 router.post("/logout-all", checkAuth, logoutAllDevices);
 router.post("/profilepic", checkAuth, uploadProfilePic);

@@ -113,7 +113,6 @@ export default function ProfileMenu({
             src={profilePicUrl}
             alt="Profile"
             className="w-full h-full object-cover"
-            crossOrigin="use-credentials"
           />
         ) : (
           <span className="text-sm select-none">
@@ -148,7 +147,6 @@ export default function ProfileMenu({
                     src={profilePicUrl}
                     alt="Profile"
                     className="w-full h-full object-cover"
-                    crossOrigin="use-credentials"
                   />
                 ) : (
                   <span className="text-[#14b8a6] font-semibold text-lg select-none">

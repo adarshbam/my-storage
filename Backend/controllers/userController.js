@@ -4,10 +4,17 @@ import path from "node:path";
 import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
-import mongoose from "mongoose";
 import Session from "../models/sessionModel.js";
-import argon2 from "argon2";
-import { randomBytes } from "node:crypto";
+import mongoose from "mongoose";
+import { OAuth2Client } from "google-auth-library";
+import crypto from "crypto";
+import { GOOGLE_CLIENT_ID } from "../config.js";
+import {
+  createSessionAndSetCookies,
+  createUserWithRootDir,
+} from "../utils/authHelpers.js";
+
+// ─── User Info ──────────────────────────────────────────────────────────────────
 
 export const getUser = (req, res) => {
   const user = req.user;
@@ -19,52 +26,33 @@ export const getUser = (req, res) => {
   });
 };
 
+// ─── Email/Password Registration ────────────────────────────────────────────────
+
 export const registerUser = async (req, res) => {
   const { email, password } = req.body;
 
-  const rootDirId = new mongoose.Types.ObjectId();
-  const userId = new mongoose.Types.ObjectId();
-
-  const newUser = {
-    _id: userId,
-    name: "user",
-    email,
-    profilepic: null,
-    rootDirId: rootDirId,
-    password: password,
-    isVerified: true,
-  };
-
-  const rootDir = {
-    _id: rootDirId,
-    name: "root",
-    userId: userId,
-    type: "directory",
-    parentDir: null,
-  };
-
-  const session = await mongoose.startSession();
-
   try {
-    session.startTransaction();
-    await User.create([newUser], { session });
-    await Directory.create([rootDir], { session });
-    await session.commitTransaction();
+    await createUserWithRootDir({
+      name: "user",
+      email,
+      password,
+      profilepicId: null,
+      isVerified: true,
+    });
     return res.status(201).json({ message: "Registered" });
   } catch (err) {
     console.error(err);
-    await session.abortTransaction();
     if (err.code === 121) {
       return res.status(400).json({ error: "Invalid Fields" });
-    } else if (err.code === 11000 && err.keyValue.email) {
+    } else if (err.code === 11000 && err.keyValue?.email) {
       return res.status(409).json({ error: "Email already exists" });
     } else {
       return res.status(500).json({ error: "Internal Server Error" });
     }
-  } finally {
-    session.endSession();
   }
 };
+
+// ─── Email/Password Login ───────────────────────────────────────────────────────
 
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
@@ -79,43 +67,15 @@ export const loginUser = async (req, res) => {
     }
 
     if (!user.isVerified) {
-      return res.status(403).json({ error: "Please verify your account before logging in." });
+      return res
+        .status(403)
+        .json({ error: "Please verify your account before logging in." });
     }
 
     const isMatch = await user.comparePassword(password);
 
     if (!isMatch) {
       return res.status(404).json({ error: "Invalid password" });
-    }
-
-    const deviceFingerprint = req.headers["user-agent"];
-    const deviceId = await argon2.hash(deviceFingerprint);
-
-    const session = await Session.findOneAndUpdate(
-      { userId: user._id },
-      {
-        $setOnInsert: { userId: user._id },
-        $addToSet: { devices: { deviceId } },
-      },
-      {
-        returnDocument: "after",
-        new: true,
-        upsert: true,
-      },
-    );
-    console.log(user._id);
-
-    let sessionId;
-    sessionId = session._id;
-
-    const existingDevice = session.devices.find((d) => d.deviceId === deviceId);
-    const MAX_DEVICES_LIMIT = 3;
-    console.log(session.devices.length);
-
-    if (!existingDevice && session.devices.length >= MAX_DEVICES_LIMIT) {
-      await Session.findByIdAndDelete({
-        _id: sessionId,
-      });
     }
 
     const rootDir = await Directory.findOne({ _id: user.rootDirId })
@@ -125,20 +85,7 @@ export const loginUser = async (req, res) => {
       return res.status(500).json({ message: "Internal Server Error" });
     }
 
-    res.cookie("sessionId", sessionId, {
-      httpOnly: true,
-      secure: true,
-      signed: true,
-      sameSite: "none",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.cookie("rootDirId", encodeURIComponent(rootDir._id.toString()), {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    await createSessionAndSetCookies(user._id, rootDir._id, req, res);
 
     return res.status(200).json({ message: `Login successful ${user.name}` });
   } catch (err) {
@@ -146,6 +93,96 @@ export const loginUser = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+// ─── Google OAuth ───────────────────────────────────────────────────────────────
+
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+export const authGoogle = async (req, res) => {
+  const { credential } = req.body;
+
+  if (!credential) {
+    return res.status(400).json({ error: "Missing credential" });
+  }
+
+  try {
+    // Verify the Google ID token
+    const loginTicket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: GOOGLE_CLIENT_ID,
+    });
+
+    const { name, email, picture } = loginTicket.getPayload();
+
+    // ── Existing user → log them in ──────────────────────────────────────────
+    const existingUser = await User.findOne({ email })
+      .select("rootDirId name")
+      .lean();
+
+    if (existingUser) {
+      const rootDir = await Directory.findOne({ _id: existingUser.rootDirId })
+        .select("_id")
+        .lean();
+      if (!rootDir) {
+        return res.status(500).json({ error: "Internal Server Error" });
+      }
+
+      await createSessionAndSetCookies(
+        existingUser._id,
+        rootDir._id,
+        req,
+        res,
+      );
+
+      return res
+        .status(200)
+        .json({ message: `Login successful ${existingUser.name}` });
+    }
+
+    // ── New user → register + log them in ────────────────────────────────────
+
+    // Create a File document for the Google profile pic (external URL)
+    let profilepicId = null;
+    if (picture) {
+      const profilePicFile = await File.create({
+        name: "google-profile-pic",
+        userId: null, // will be updated after user creation
+        parentDir: null,
+        type: "file",
+        extension: "",
+        externalUrl: picture,
+      });
+      profilepicId = profilePicFile._id;
+    }
+
+    const randomPassword = crypto.randomBytes(16).toString("hex");
+
+    const { userId, rootDirId } = await createUserWithRootDir({
+      name: name || "User",
+      email,
+      password: randomPassword,
+      profilepicId,
+      isVerified: true, // Google already verified their email
+    });
+
+    // Link the profile pic File document to the newly created user
+    if (profilepicId) {
+      await File.updateOne({ _id: profilepicId }, { $set: { userId } });
+    }
+
+    await createSessionAndSetCookies(userId, rootDirId, req, res);
+
+    return res.status(201).json({ message: `Welcome ${name || "User"}` });
+  } catch (err) {
+    console.error("Google auth error:", err);
+    if (err.code === 11000 && err.keyValue?.email) {
+      return res.status(409).json({ error: "Email already exists" });
+    }
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// ─── Logout ─────────────────────────────────────────────────────────────────────
 
 export const logoutUser = async (req, res) => {
   const { sessionId } = req.signedCookies;
@@ -188,6 +225,8 @@ export const logoutAllDevices = async (req, res) => {
   }
 };
 
+// ─── Profile Pic ────────────────────────────────────────────────────────────────
+
 export const uploadProfilePic = async (req, res) => {
   const user = await User.findOne({ _id: req.user.id })
     .select("rootDirId profilepic")
@@ -215,17 +254,21 @@ export const uploadProfilePic = async (req, res) => {
 
   const filePath = `./storage/${profilePicId.toString()}${ext}`;
 
+  // Clean up old profile pic (local file or external URL doc)
   if (user.profilepic) {
     const oldProfilePic = await File.findOne({
       _id: user.profilepic,
     })
-      .select("extension")
+      .select("extension externalUrl")
       .lean();
     if (oldProfilePic) {
       await File.deleteOne({ _id: oldProfilePic._id });
-      await rm(
-        `./storage/${oldProfilePic._id.toString()}${oldProfilePic.extension}`,
-      ).catch(() => {});
+      // Only remove local file if it's not an external URL
+      if (!oldProfilePic.externalUrl) {
+        await rm(
+          `./storage/${oldProfilePic._id.toString()}${oldProfilePic.extension}`,
+        ).catch(() => {});
+      }
     }
   }
 
@@ -234,7 +277,7 @@ export const uploadProfilePic = async (req, res) => {
   try {
     await User.updateOne(
       { _id: user._id },
-      { $set: { profilepic: profilePicId.toString() } },
+      { $set: { profilepic: profilePicId } },
     );
 
     writeStream.on("finish", () => {
@@ -252,11 +295,16 @@ export const getProfilePic = async (req, res) => {
     return res.status(404).send("No profile pic set");
   }
   const profilePic = await File.findOne({ _id: req.user.profilepic })
-    .select("extension")
+    .select("extension externalUrl")
     .lean();
 
   if (!profilePic) {
     return res.status(404).send("Profile pic not found");
+  }
+
+  // If it's an external URL (e.g. Google avatar), redirect to it
+  if (profilePic.externalUrl) {
+    return res.redirect(profilePic.externalUrl);
   }
 
   const filePath = path.resolve(
@@ -264,6 +312,8 @@ export const getProfilePic = async (req, res) => {
   );
   return res.status(200).sendFile(filePath);
 };
+
+// ─── Search History ─────────────────────────────────────────────────────────────
 
 export const getSearchedItems = (req, res) => {
   return res.status(200).json(req.user.recentlySearchedItems || []);

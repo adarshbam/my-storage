@@ -9,6 +9,7 @@ const fileSchema = new Schema(
     extension: { type: String, default: "" },
     size: { type: Number, default: 0 },
     hasThumbnail: { type: Boolean, default: false },
+    externalUrl: { type: String, default: null },
   },
   { strict: "throw" },
 );

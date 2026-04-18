@@ -2,7 +2,9 @@ import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { SERVER_URL } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { handleGoogleAuth } from "../lib/googleAuth";
 import Button from "../components/ui/Button";
+import GoogleSignInButton from "../components/ui/GoogleSignInButton";
 import AuthLayout from "../layouts/AuthLayout";
 import { Cloud, Send, Loader2, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -320,6 +322,30 @@ export default function Register() {
             )}
           </div>
         </form>
+
+        {/* Divider */}
+        <div className="flex items-center gap-4 my-6">
+          <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
+          <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            or
+          </span>
+          <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
+        </div>
+
+        {/* Google Sign Up */}
+        <GoogleSignInButton
+          label="Sign up with Google"
+          onSuccess={(response) => {
+            if (response.credential) {
+              handleGoogleAuth(response.credential, {
+                setUser,
+                navigate,
+                setError,
+              });
+            }
+          }}
+          onError={() => setError("Google sign-up failed")}
+        />
 
         <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
           Already have an account?{" "}

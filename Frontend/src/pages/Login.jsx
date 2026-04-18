@@ -2,7 +2,9 @@ import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { SERVER_URL } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { handleGoogleAuth } from "../lib/googleAuth";
 import Button from "../components/ui/Button";
+import GoogleSignInButton from "../components/ui/GoogleSignInButton";
 import AuthLayout from "../layouts/AuthLayout";
 import { Cloud, Send, Loader2, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -206,9 +208,10 @@ export default function Login() {
                     whileTap={{ scale: 0.95 }}
                     className={`
                       flex items-center gap-1.5 px-4 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition-all duration-300 overflow-hidden flex-shrink-0
-                      ${otpSent
-                        ? "bg-emerald-500/15 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25"
-                        : "bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white shadow-[0_0_15px_rgba(20,184,166,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] border border-white/20"
+                      ${
+                        otpSent
+                          ? "bg-emerald-500/15 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25"
+                          : "bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white shadow-[0_0_15px_rgba(20,184,166,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] border border-white/20"
                       }
                       disabled:opacity-40 disabled:cursor-not-allowed
                     `}
@@ -251,7 +254,10 @@ export default function Login() {
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   Verification Code
                 </label>
-                <div className="flex gap-2.5 justify-center mb-3" onPaste={handleOtpPaste}>
+                <div
+                  className="flex gap-2.5 justify-center mb-3"
+                  onPaste={handleOtpPaste}
+                >
                   {otp.map((digit, idx) => (
                     <input
                       key={idx}
@@ -260,7 +266,9 @@ export default function Login() {
                       inputMode="numeric"
                       maxLength={1}
                       value={digit}
-                      onChange={(e) => handleOtpChange(idx, e.target.value.replace(/\D/, ""))}
+                      onChange={(e) =>
+                        handleOtpChange(idx, e.target.value.replace(/\D/, ""))
+                      }
                       onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                       className="w-11 h-12 text-center text-lg font-bold rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#14b8a6]/50 focus:border-[#14b8a6]/50 dark:focus:shadow-[0_0_15px_rgba(20,184,166,0.15)] outline-none transition-all duration-300 caret-[#14b8a6]"
                     />
@@ -305,18 +313,45 @@ export default function Login() {
           </div>
 
           <div className="w-full relative group">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={!otpVerified}
               className={`w-full py-3.5 text-[15px] ${!otpVerified ? "opacity-50 pointer-events-none hover:!scale-100 active:!scale-100" : ""}`}
             >
               Sign In
             </Button>
             {!otpVerified && (
-              <div className="absolute inset-0 z-10 cursor-not-allowed" title="Verify email first" />
+              <div
+                className="absolute inset-0 z-10 cursor-not-allowed"
+                title="Verify email first"
+              />
             )}
           </div>
         </form>
+
+        {/* Divider */}
+        <div className="flex items-center gap-4 my-6">
+          <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
+          <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            or
+          </span>
+          <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
+        </div>
+
+        {/* Google Sign In */}
+        <GoogleSignInButton
+          label="Sign in with Google"
+          onSuccess={(response) => {
+            if (response.credential) {
+              handleGoogleAuth(response.credential, {
+                setUser,
+                navigate,
+                setError,
+              });
+            }
+          }}
+          onError={() => setError("Google sign-in failed")}
+        />
 
         <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
           Don't have an account?{" "}
