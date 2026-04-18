@@ -133,12 +133,7 @@ export const authGoogle = async (req, res) => {
         return res.status(500).json({ error: "Internal Server Error" });
       }
 
-      await createSessionAndSetCookies(
-        existingUser._id,
-        rootDir._id,
-        req,
-        res,
-      );
+      await createSessionAndSetCookies(existingUser._id, rootDir._id, req, res);
 
       return res
         .status(200)
@@ -183,6 +178,117 @@ export const authGoogle = async (req, res) => {
       return res.status(409).json({ error: "Email already exists" });
     }
     return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// ─── GitHub OAuth ───────────────────────────────────────────────────────────────
+
+export const authGithub = async (req, res) => {
+  try {
+    const { code } = req.query;
+    if (!code) {
+      return res.redirect("http://localhost:5173/login?error=NoCodeProvided");
+    }
+
+    const CLIENT_ID = `Ov23lizS9BOqZ4r4jQPZ`;
+    const CLIENT_SECRET = `e0bb8b004b802d048a1f8f66eaa102fd18eb7dac`;
+
+    // 2. Exchange the 'code' for an access token via POST https://github.com/login/oauth/access_token
+    const response = await fetch("https://github.com/login/oauth/access_token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        code: code,
+      }),
+    });
+
+    const { access_token } = await response.json();
+    
+    if (!access_token) {
+      return res.redirect("http://localhost:5173/login?error=InvalidToken");
+    }
+
+    // 3. Fetch user data using the access token from GET https://api.github.com/user
+    const responseUserData = await fetch("https://api.github.com/user", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        Accept: "application/json",
+      },
+    });
+
+    const userData = await responseUserData.json();
+
+    // 4. Fetch user email using the access token from GET https://api.github.com/user/emails
+    let email = userData.email;
+
+    if (!email) {
+      const emailRes = await fetch("https://api.github.com/user/emails", {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          Accept: "application/json",
+        },
+      });
+
+      const emails = await emailRes.json();
+      email = emails.find((e) => e.primary && e.verified)?.email || emails.find((e) => e.primary)?.email;
+    }
+
+    if (!email) {
+      return res.redirect("http://localhost:5173/login?error=NoEmailFound");
+    }
+
+    // 5. Check if user exists in the database
+    const existingUser = await User.findOne({ email }).select("rootDirId name").lean();
+
+    if (existingUser) {
+      const rootDir = await Directory.findOne({ _id: existingUser.rootDirId }).select("_id").lean();
+      if (!rootDir) {
+        return res.status(500).json({ error: "Internal Server Error" });
+      }
+
+      await createSessionAndSetCookies(existingUser._id, rootDir._id, req, res);
+      return res.redirect("http://localhost:5173/dashboard");
+    }
+
+    // ── New user → register + log them in ────────────────────────────────────
+
+    let profilepicId = null;
+    if (userData.avatar_url) {
+      const profilePicFile = await File.create({
+        name: "github-profile-pic",
+        userId: null,
+        parentDir: null,
+        type: "file",
+        extension: "",
+        externalUrl: userData.avatar_url,
+      });
+      profilepicId = profilePicFile._id;
+    }
+
+    const { userId, rootDirId } = await createUserWithRootDir({
+      name: userData.name || userData.login || "User",
+      email,
+      password: null,
+      profilepicId,
+      isVerified: true, 
+    });
+
+    if (profilepicId) {
+      await File.updateOne({ _id: profilepicId }, { $set: { userId } });
+    }
+
+    await createSessionAndSetCookies(userId, rootDirId, req, res);
+    return res.redirect("http://localhost:5173/dashboard");
+
+  } catch (err) {
+    console.error("GitHub auth error:", err);
+    return res.redirect("http://localhost:5173/login?error=AuthFailed");
   }
 };
 

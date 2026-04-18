@@ -11,6 +11,7 @@ import {
   registerUser,
   storeSearchedItem,
   uploadProfilePic,
+  authGithub,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -19,6 +20,7 @@ router.get("/", checkAuth, getUser);
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/auth/google", authGoogle);
+router.get("/auth/github", authGithub);
 
 router.post("/logout", logoutUser);
 router.post("/logout-all", checkAuth, logoutAllDevices);

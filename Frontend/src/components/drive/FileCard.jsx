@@ -56,7 +56,9 @@ export default function FileCard({
 
   return (
     <div
-      className={`relative group bg-white/60 dark:bg-white/[0.04] backdrop-blur-xl border rounded-xl overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-[0_0_20px_rgba(20,184,166,0.08)] dark:hover:shadow-[0_0_25px_rgba(20,184,166,0.12)] ${
+      className={`relative group bg-white/60 dark:bg-white/[0.04] backdrop-blur-xl border rounded-xl transition-all duration-300 cursor-pointer hover:shadow-[0_0_20px_rgba(20,184,166,0.08)] dark:hover:shadow-[0_0_25px_rgba(20,184,166,0.12)] ${
+        showMenu ? "z-[100]" : "z-0"
+      } ${
         viewMode === "list"
           ? "grid grid-cols-[1fr,100px,150px,40px] items-center p-2 pr-2 gap-4 hover:bg-white/80 dark:hover:bg-white/[0.06] border-transparent hover:border-black/10 dark:hover:border-white/10"
           : "flex flex-col px-5 py-3 gap-1.5 border-black/5 dark:border-white/[0.06] hover:border-[#14b8a6]/30 dark:hover:border-[#14b8a6]/30 hover:scale-[1.02]"
@@ -89,17 +91,29 @@ export default function FileCard({
         {type === "directory" ? (
           <>
             {item.provider === "google_drive" ? (
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 87.3 78"
                 className={`${viewMode === "list" ? "w-8 h-8 mr-4 ml-1 shrink-0" : "w-14 h-14"} drop-shadow-sm group-hover:scale-105 transition-transform duration-300`}
               >
-                <path fill="#0066DA" d="M6.6 66.85 3.1 72.9c-.6 1.1-.2 2.5.9 3.1.3.2.7.3 1.1.3h76.4c1.3 0 2.3-1 2.3-2.3 0-.4-.1-.8-.3-1.1l-3.5-6.1H6.6z"/>
-                <path fill="#00AC47" d="M43.65 10.7 22.3 47.7l21.35 12.3 21.35-12.3z"/>
-                <path fill="#EA4335" d="M22.3 47.7 43.65 10.7 6.6 66.85H22.3z"/>
-                <path fill="#00832D" d="M65 47.7 43.65 10.7l22.3 36.3-.6.7z"/>
-                <path fill="#2684FC" d="M80.7 66.85H65L43.65 10.7l21.35 36.3z"/>
-                <path fill="#FFBA00" d="M6.6 66.85h58.4L43.65 10.7z"/>
+                <path
+                  fill="#0066DA"
+                  d="M6.6 66.85 3.1 72.9c-.6 1.1-.2 2.5.9 3.1.3.2.7.3 1.1.3h76.4c1.3 0 2.3-1 2.3-2.3 0-.4-.1-.8-.3-1.1l-3.5-6.1H6.6z"
+                />
+                <path
+                  fill="#00AC47"
+                  d="M43.65 10.7 22.3 47.7l21.35 12.3 21.35-12.3z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M22.3 47.7 43.65 10.7 6.6 66.85H22.3z"
+                />
+                <path fill="#00832D" d="M65 47.7 43.65 10.7l22.3 36.3-.6.7z" />
+                <path
+                  fill="#2684FC"
+                  d="M80.7 66.85H65L43.65 10.7l21.35 36.3z"
+                />
+                <path fill="#FFBA00" d="M6.6 66.85h58.4L43.65 10.7z" />
               </svg>
             ) : (
               <img
@@ -166,22 +180,26 @@ export default function FileCard({
           >
             {item.name}
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 w-full truncate text-center">
-            {formatSize(item.size)}
-            {` `}
-            {type === "directory" &&
-              `${item.itemCount !== undefined ? item.itemCount : (item.files?.length || 0) + (item.directories?.length || 0)} items`}
+          <p className="text-xs text-slate-500 dark:text-slate-400 w-full truncate text-center min-h-[16px]">
+            {type === "directory" && item.provider === "google_drive" ? null : (
+              <>
+                {formatSize(item.size)}
+                {` `}
+                {type === "directory" &&
+                  `${item.itemCount !== undefined ? item.itemCount : (item.files?.length || 0) + (item.directories?.length || 0)} items`}
+              </>
+            )}
           </p>
         </div>
       ) : (
         <>
           <div className="text-xs text-slate-400 text-right truncate">
-            {type === "directory"
+            {type === "directory" && item.provider === "google_drive" ? null : type === "directory"
               ? `${item.itemCount !== undefined ? item.itemCount : (item.files?.length || 0) + (item.directories?.length || 0)} items`
               : formatSize(item.size)}
           </div>
           <div className="text-xs text-slate-400 text-right pr-4 truncate">
-            few minutes ago
+            {type === "directory" && item.provider === "google_drive" ? null : "few minutes ago"}
           </div>
         </>
       )}
@@ -211,7 +229,9 @@ export default function FileCard({
         {showMenu && (
           <div
             ref={menuRef}
-            className={`absolute right-0 ${viewMode === "list" ? "top-8" : "top-full mt-1"} w-48 bg-white/90 dark:bg-white/[0.06] backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] rounded-xl shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-[60] py-1`}
+            className={`absolute right-0 ${
+              viewMode === "list" ? "top-8" : "top-full mt-1"
+            } w-[140px] bg-white dark:bg-[#1a1a1c] border border-black/10 dark:border-white/10 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.6)] z-[60] py-1`}
             onClick={(e) => e.stopPropagation()}
           >
             {!isTrash && (
@@ -221,7 +241,7 @@ export default function FileCard({
                     setShowMenu(false);
                     handleDoubleClick(e);
                   }}
-                  className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-[13px] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
                 >
                   <ExternalLink size={14} /> Open
                 </button>
@@ -230,7 +250,7 @@ export default function FileCard({
                     setShowMenu(false);
                     onRename(item);
                   }}
-                  className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-[13px] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
                 >
                   <Edit2 size={14} /> Rename
                 </button>
@@ -242,7 +262,7 @@ export default function FileCard({
                 setShowMenu(false);
                 onDownload(item);
               }}
-              className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-[13px] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
             >
               {isTrash ? (
                 <Download className="rotate-180" size={14} />
@@ -257,7 +277,7 @@ export default function FileCard({
                 setShowMenu(false);
                 onDelete(item);
               }}
-              className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-[13px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2"
             >
               <Trash2 size={14} /> {isTrash ? "Delete Forever" : "Delete"}
             </button>
