@@ -2,11 +2,30 @@ import { useRef, useState, useEffect } from "react";
 import { Outlet, Link, useNavigate } from "react-router-dom";
 import { SERVER_URL } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
-import { Cloud, Folder, Trash2, LogOut, Search, Settings, Menu, X, SlidersHorizontal, PanelLeft, Sun, Moon, Users, Clock, Star, HardDrive, ChevronRight } from "lucide-react";
+import {
+  Cloud,
+  Folder,
+  Trash2,
+  LogOut,
+  Search,
+  Settings,
+  Menu,
+  X,
+  SlidersHorizontal,
+  PanelLeft,
+  Sun,
+  Moon,
+  Users,
+  Clock,
+  Star,
+  HardDrive,
+  ChevronRight,
+} from "lucide-react";
 import Button from "../components/ui/Button";
 import ProfileMenu from "../components/ui/ProfileMenu";
 import TransferManager from "../components/drive/TransferManager";
 import FileUploadModal from "../components/drive/FileUploadModal";
+import { useGoogleLogin } from "@react-oauth/google";
 
 export default function DashboardLayout() {
   // Layout for the dashboard
@@ -25,7 +44,38 @@ export default function DashboardLayout() {
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
   const [showGlobalFilters, setShowGlobalFilters] = useState(false);
-  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("theme") || "dark",
+  );
+
+  const connectDrive = useGoogleLogin({
+    flow: "auth-code",
+    prompt: "consent",
+    access_type: "offline",
+    scope: "https://www.googleapis.com/auth/drive.readonly",
+    onSuccess: async (codeResponse) => {
+      try {
+        console.log(codeResponse);
+        const res = await fetch(`${SERVER_URL}/drive/connect`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: codeResponse.code }),
+          credentials: "include",
+        });
+
+        if (res.ok) {
+          console.log("Drive connected successfully!");
+          // Optional: You could update UI state here to reflect connected status
+        } else {
+          console.error("Failed to connect Drive");
+        }
+      } catch (error) {
+        console.error("Drive connection error:", error);
+      }
+    },
+    onError: (errorResponse) =>
+      console.log("Google Login Failed:", errorResponse),
+  });
 
   useEffect(() => {
     if (theme === "dark") {
@@ -228,7 +278,10 @@ export default function DashboardLayout() {
           >
             <PanelLeft size={20} />
           </button>
-          <Link to="/" className="flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-blue-500 transition-colors hidden sm:flex">
+          <Link
+            to="/"
+            className="flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-blue-500 transition-colors hidden sm:flex"
+          >
             <span>Home</span>
             <ChevronRight size={16} className="text-slate-400 mt-0.5" />
           </Link>
@@ -236,7 +289,10 @@ export default function DashboardLayout() {
 
         <div className="flex-1 max-w-2xl mx-4">
           <div className="relative hidden sm:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search files globally..."
@@ -244,7 +300,9 @@ export default function DashboardLayout() {
               onChange={(e) => setGlobalSearchQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && globalSearchQuery.trim()) {
-                  navigate(`/dashboard/search?q=${encodeURIComponent(globalSearchQuery.trim())}`);
+                  navigate(
+                    `/dashboard/search?q=${encodeURIComponent(globalSearchQuery.trim())}`,
+                  );
                 }
               }}
               className="w-full pl-10 pr-10 py-2 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-[#14b8a6]/50 focus:border-[#14b8a6]/30 dark:focus:shadow-[0_0_12px_rgba(20,184,166,0.15)] outline-none transition-all duration-300"
@@ -259,16 +317,28 @@ export default function DashboardLayout() {
             {showGlobalFilters && (
               <div className="absolute top-full left-0 md:left-auto md:right-0 mt-2 w-72 bg-white/80 dark:bg-white/[0.05] backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] rounded-xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-20 overflow-hidden">
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-                  <h3 className="font-semibold text-slate-900 dark:text-white">Filters</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Refine your search results.</p>
+                  <h3 className="font-semibold text-slate-900 dark:text-white">
+                    Filters
+                  </h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    Refine your search results.
+                  </p>
                 </div>
                 <div className="p-4 space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">Extensions</label>
-                    <input type="text" placeholder="e.g. pdf, png, docx" className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200" />
+                    <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">
+                      Extensions
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. pdf, png, docx"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">Size</label>
+                    <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">
+                      Size
+                    </label>
                     <select className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200">
                       <option>Any Size</option>
                       <option>&lt; 1MB</option>
@@ -278,7 +348,9 @@ export default function DashboardLayout() {
                     </select>
                   </div>
                   <div className="flex items-center justify-between pt-2">
-                    <span className="text-sm font-medium text-slate-900 dark:text-white">Starred Only</span>
+                    <span className="text-sm font-medium text-slate-900 dark:text-white">
+                      Starred Only
+                    </span>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" />
                       <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-400 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-500 peer-checked:bg-blue-600"></div>
@@ -291,9 +363,38 @@ export default function DashboardLayout() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-          <button 
+          <button
+            onClick={() => connectDrive()}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-white/[0.06] hover:bg-white/80 dark:hover:bg-white/[0.1] hover:border-[#14b8a6]/40 hover:shadow-[0_0_12px_rgba(20,184,166,0.15)] border border-black/10 dark:border-white/10 rounded-lg transition-all duration-300"
+            title="Connect Google Drive"
+          >
+            {/* Google Drive icon — official colors */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 87.3 78"
+            >
+              <path
+                fill="#0066DA"
+                d="M6.6 66.85 3.1 72.9c-.6 1.1-.2 2.5.9 3.1.3.2.7.3 1.1.3h76.4c1.3 0 2.3-1 2.3-2.3 0-.4-.1-.8-.3-1.1l-3.5-6.1H6.6z"
+              />
+              <path
+                fill="#00AC47"
+                d="M43.65 10.7 22.3 47.7l21.35 12.3 21.35-12.3z"
+              />
+              <path fill="#EA4335" d="M22.3 47.7 43.65 10.7 6.6 66.85H22.3z" />
+              <path fill="#00832D" d="M65 47.7 43.65 10.7l22.3 36.3-.6.7z" />
+              <path fill="#2684FC" d="M80.7 66.85H65L43.65 10.7l21.35 36.3z" />
+              <path fill="#FFBA00" d="M6.6 66.85h58.4L43.65 10.7z" />
+            </svg>
+            <span className="hidden sm:block">Drive</span>
+          </button>
+
+          <button
             onClick={toggleTheme}
-            className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors hidden sm:block">
+            className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors hidden sm:block"
+          >
             {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
           </button>
           <ProfileMenu
@@ -308,160 +409,164 @@ export default function DashboardLayout() {
 
       <div className="flex-1 flex overflow-hidden relative">
         {/* Mobile Sidebar Overlay */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`w-64 shrink-0 bg-white/70 dark:bg-white/[0.03] backdrop-blur-2xl border-r border-black/5 dark:border-white/[0.06] flex flex-col absolute md:relative inset-y-0 left-0 z-40 transition-all duration-300 ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 ${isDesktopSidebarOpen ? "md:ml-0" : "md:-ml-64"}`}
-      >
-        <div className="p-6 pb-4 flex items-center justify-between gap-2">
-          <Link to="/" className="flex items-center gap-2" onClick={() => setIsSidebarOpen(false)}>
-            <div className="bg-gradient-to-br from-[#14b8a6] to-[#0f463e] p-1.5 rounded-xl shadow-[0_0_15px_rgba(20,184,166,0.3)]">
-              <Cloud className="text-white fill-white/20" size={20} />
-            </div>
-            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#14b8a6] to-[#3b82f6]">
-              Storifyy
-            </span>
-          </Link>
-          <button
-            className="md:hidden text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white transition-colors"
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
             onClick={() => setIsSidebarOpen(false)}
-          >
-            <X size={20} />
-          </button>
-        </div>
+          />
+        )}
 
-        <div className="px-6 pb-6 border-b border-black/5 dark:border-white/[0.06]">
-          <Button
-            onClick={() => {
-              openUploadModal();
-              setIsSidebarOpen(false);
-            }}
-            className="w-full shadow-lg shadow-[#14b8a6]/20"
-          >
-            + New Upload
-          </Button>
-        </div>
+        {/* Sidebar */}
+        <aside
+          className={`w-64 shrink-0 bg-white/70 dark:bg-white/[0.03] backdrop-blur-2xl border-r border-black/5 dark:border-white/[0.06] flex flex-col absolute md:relative inset-y-0 left-0 z-40 transition-all duration-300 ${
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } md:translate-x-0 ${isDesktopSidebarOpen ? "md:ml-0" : "md:-ml-64"}`}
+        >
+          <div className="p-6 pb-4 flex items-center justify-between gap-2">
+            <Link
+              to="/"
+              className="flex items-center gap-2"
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <div className="bg-gradient-to-br from-[#14b8a6] to-[#0f463e] p-1.5 rounded-xl shadow-[0_0_15px_rgba(20,184,166,0.3)]">
+                <Cloud className="text-white fill-white/20" size={20} />
+              </div>
+              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#14b8a6] to-[#3b82f6]">
+                Storifyy
+              </span>
+            </Link>
+            <button
+              className="md:hidden text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white transition-colors"
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <X size={20} />
+            </button>
+          </div>
 
-        <div className="p-4 flex-1">
-          <nav className="space-y-1">
-            <Link
-              to="/dashboard"
-              onClick={() => setIsSidebarOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
+          <div className="px-6 pb-6 border-b border-black/5 dark:border-white/[0.06]">
+            <Button
+              onClick={() => {
+                openUploadModal();
+                setIsSidebarOpen(false);
+              }}
+              className="w-full shadow-lg shadow-[#14b8a6]/20"
             >
-              <HardDrive size={18} />
-              <span>My Drive</span>
-            </Link>
-            <Link
-              to="/dashboard/shared"
-              onClick={() => setIsSidebarOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
-            >
-              <Users size={18} />
-              <span>Shared with me</span>
-            </Link>
-            <Link
-              to="/dashboard/recent"
-              onClick={() => setIsSidebarOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
-            >
-              <Clock size={18} />
-              <span>Recent</span>
-            </Link>
-            <Link
-              to="/dashboard/starred"
-              onClick={() => setIsSidebarOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
-            >
-              <Star size={18} />
-              <span>Starred</span>
-            </Link>
-            <Link
-              to="/dashboard/trash"
-              onClick={() => setIsSidebarOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
-            >
-              <Trash2 size={18} />
-              <span>Trash</span>
-            </Link>
-          </nav>
-        </div>
+              + New Upload
+            </Button>
+          </div>
 
-        <div className="p-4 border-t border-black/5 dark:border-white/[0.06]">
-          <div className="flex items-center gap-3 px-4 py-3 mb-2">
-            <div
-              className="w-9 h-9 rounded-full bg-[#14b8a6]/10 flex items-center justify-center text-[#14b8a6] font-bold overflow-hidden cursor-pointer relative group border-2 border-white/50 dark:border-white/10 shadow-[0_0_10px_rgba(20,184,166,0.3)]"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <img
-                src={profilePicUrl || "/profile.png"}
-                alt="Profile"
-                className="w-full h-full object-cover"
+          <div className="p-4 flex-1">
+            <nav className="space-y-1">
+              <Link
+                to="/dashboard"
+                onClick={() => setIsSidebarOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
+              >
+                <HardDrive size={18} />
+                <span>My Drive</span>
+              </Link>
+              <Link
+                to="/dashboard/shared"
+                onClick={() => setIsSidebarOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
+              >
+                <Users size={18} />
+                <span>Shared with me</span>
+              </Link>
+              <Link
+                to="/dashboard/recent"
+                onClick={() => setIsSidebarOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
+              >
+                <Clock size={18} />
+                <span>Recent</span>
+              </Link>
+              <Link
+                to="/dashboard/starred"
+                onClick={() => setIsSidebarOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
+              >
+                <Star size={18} />
+                <span>Starred</span>
+              </Link>
+              <Link
+                to="/dashboard/trash"
+                onClick={() => setIsSidebarOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
+              >
+                <Trash2 size={18} />
+                <span>Trash</span>
+              </Link>
+            </nav>
+          </div>
+
+          <div className="p-4 border-t border-black/5 dark:border-white/[0.06]">
+            <div className="flex items-center gap-3 px-4 py-3 mb-2">
+              <div
+                className="w-9 h-9 rounded-full bg-[#14b8a6]/10 flex items-center justify-center text-[#14b8a6] font-bold overflow-hidden cursor-pointer relative group border-2 border-white/50 dark:border-white/10 shadow-[0_0_10px_rgba(20,184,166,0.3)]"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <img
+                  src={profilePicUrl || "/profile.png"}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200">
+                  <Settings className="text-white w-4 h-4" />
+                </div>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleProfilePicUpload}
               />
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200">
-                <Settings className="text-white w-4 h-4" />
+              <div className="flex-1 overflow-hidden">
+                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                  {user?.email}
+                </p>
               </div>
             </div>
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/*"
-              onChange={handleProfilePicUpload}
-            />
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                {user?.email}
-              </p>
-            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors text-sm"
+            >
+              <LogOut size={16} />
+              <span>Sign Out</span>
+            </button>
           </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors text-sm"
-          >
-            <LogOut size={16} />
-            <span>Sign Out</span>
-          </button>
-        </div>
-      </aside>
+        </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col relative bg-transparent">
-        <Outlet
-          context={{
-            openUploadModal,
-            uploadFile: handleUpload,
-            downloadFile: handleDownload,
-            setCurrentFolderId,
-            refreshTrigger,
-            searchQuery,
-            setSearchQuery,
-            handleSearch,
-            recentSearches,
-            showRecentSearches,
-            setShowRecentSearches,
-            showFilters,
-            setShowFilters
-          }}
-        />
-        <TransferManager
-          ref={transferRef}
-          onUploadComplete={() => setRefreshTrigger((prev) => prev + 1)}
-        />
-        <FileUploadModal
-          isOpen={showUploadModal}
-          onClose={() => setShowUploadModal(false)}
-          onUpload={handleUpload}
-        />
-      </main>
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col relative bg-transparent">
+          <Outlet
+            context={{
+              openUploadModal,
+              uploadFile: handleUpload,
+              downloadFile: handleDownload,
+              setCurrentFolderId,
+              refreshTrigger,
+              searchQuery,
+              setSearchQuery,
+              handleSearch,
+              recentSearches,
+              showRecentSearches,
+              setShowRecentSearches,
+              showFilters,
+              setShowFilters,
+            }}
+          />
+          <TransferManager
+            ref={transferRef}
+            onUploadComplete={() => setRefreshTrigger((prev) => prev + 1)}
+          />
+          <FileUploadModal
+            isOpen={showUploadModal}
+            onClose={() => setShowUploadModal(false)}
+            onUpload={handleUpload}
+          />
+        </main>
       </div>
     </div>
   );

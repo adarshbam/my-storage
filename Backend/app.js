@@ -5,6 +5,7 @@ import fileRouter from "./routes/fileRoutes.js";
 import trashRouter from "./routes/trashRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 import otpRouter from "./routes/otpRoutes.js";
+import driveRouter from "./routes/driveRoutes.js";
 import cors from "cors";
 import checkAuth from "./middlewares/authMiddleware.js";
 import https from "https";
@@ -34,6 +35,7 @@ app.use("/file", checkAuth, fileRouter);
 app.use("/trash", checkAuth, trashRouter);
 app.use("/user", userRouter);
 app.use("/otp", otpRouter);
+app.use("/drive", driveRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);

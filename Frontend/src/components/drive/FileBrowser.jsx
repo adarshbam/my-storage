@@ -82,6 +82,8 @@ export default function FileBrowser({ specialView }) {
         url = `${SERVER_URL}/file/recent`;
       } else if (specialView === "starred") {
         url = `${SERVER_URL}/file/starred`;
+      } else if (specialView === "google-drive") {
+        url = `${SERVER_URL}/drive/files`;
       }
 
       if (isSearch) {
@@ -109,6 +111,7 @@ export default function FileBrowser({ specialView }) {
            specialView === "shared" ? "Shared with me" : 
            specialView === "recent" ? "Recent" : 
            specialView === "starred" ? "Starred" : 
+           specialView === "google-drive" ? "Google Drive" :
            "Home"),
         );
       } else {
@@ -119,6 +122,7 @@ export default function FileBrowser({ specialView }) {
            specialView === "shared" ? "Shared with me" : 
            specialView === "recent" ? "Recent" : 
            specialView === "starred" ? "Starred" : 
+           specialView === "google-drive" ? "Google Drive" : // Fallback Title
            "Home"
         );
         setData({ directories: [], files: [] });
@@ -313,7 +317,11 @@ export default function FileBrowser({ specialView }) {
   // --- HANDLERS ---
 
   const handleNavigate = (dir) => {
-    navigate(`/dashboard/folder/${dir.id}`);
+    if (dir.provider === "google_drive") {
+      navigate(`/dashboard/google-drive`);
+    } else {
+      navigate(`/dashboard/folder/${dir.id}`);
+    }
   };
 
   const handleDownload = (item) => {

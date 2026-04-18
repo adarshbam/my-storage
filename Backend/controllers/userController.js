@@ -7,7 +7,6 @@ import File from "../models/fileModel.js";
 import Session from "../models/sessionModel.js";
 import mongoose from "mongoose";
 import { OAuth2Client } from "google-auth-library";
-import crypto from "crypto";
 import { GOOGLE_CLIENT_ID } from "../config.js";
 import {
   createSessionAndSetCookies,
@@ -70,6 +69,13 @@ export const loginUser = async (req, res) => {
       return res
         .status(403)
         .json({ error: "Please verify your account before logging in." });
+    }
+
+    if (!user.password) {
+      return res.status(403).json({
+        error:
+          "This account was created with Google. Please sign in with Google or set a password in your profile settings.",
+      });
     }
 
     const isMatch = await user.comparePassword(password);
@@ -155,12 +161,10 @@ export const authGoogle = async (req, res) => {
       profilepicId = profilePicFile._id;
     }
 
-    const randomPassword = crypto.randomBytes(16).toString("hex");
-
     const { userId, rootDirId } = await createUserWithRootDir({
       name: name || "User",
       email,
-      password: randomPassword,
+      password: null,
       profilepicId,
       isVerified: true, // Google already verified their email
     });

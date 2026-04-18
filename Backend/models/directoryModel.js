@@ -22,6 +22,10 @@ const directorySchema = new Schema(
       type: Number,
       default: 0,
     },
+    provider: {
+      type: String,
+      default: "local", // can be "local" or "google_drive"
+    },
   },
   {
     strict: "throw",

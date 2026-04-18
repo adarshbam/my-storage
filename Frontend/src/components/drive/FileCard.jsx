@@ -88,11 +88,26 @@ export default function FileCard({
       >
         {type === "directory" ? (
           <>
-            <img
-              src="/folder.png"
-              alt="folder"
-              className={`${viewMode === "list" ? "w-10 h-10 mr-3 shrink-0" : "w-14 h-14"} object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300`}
-            />
+            {item.provider === "google_drive" ? (
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 87.3 78"
+                className={`${viewMode === "list" ? "w-8 h-8 mr-4 ml-1 shrink-0" : "w-14 h-14"} drop-shadow-sm group-hover:scale-105 transition-transform duration-300`}
+              >
+                <path fill="#0066DA" d="M6.6 66.85 3.1 72.9c-.6 1.1-.2 2.5.9 3.1.3.2.7.3 1.1.3h76.4c1.3 0 2.3-1 2.3-2.3 0-.4-.1-.8-.3-1.1l-3.5-6.1H6.6z"/>
+                <path fill="#00AC47" d="M43.65 10.7 22.3 47.7l21.35 12.3 21.35-12.3z"/>
+                <path fill="#EA4335" d="M22.3 47.7 43.65 10.7 6.6 66.85H22.3z"/>
+                <path fill="#00832D" d="M65 47.7 43.65 10.7l22.3 36.3-.6.7z"/>
+                <path fill="#2684FC" d="M80.7 66.85H65L43.65 10.7l21.35 36.3z"/>
+                <path fill="#FFBA00" d="M6.6 66.85h58.4L43.65 10.7z"/>
+              </svg>
+            ) : (
+              <img
+                src="/folder.png"
+                alt="folder"
+                className={`${viewMode === "list" ? "w-10 h-10 mr-3 shrink-0" : "w-14 h-14"} object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300`}
+              />
+            )}
             {viewMode === "list" && (
               <h3
                 className="text-sm font-medium text-slate-900 dark:text-slate-200 truncate w-full"
