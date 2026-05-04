@@ -6,6 +6,7 @@ import trashRouter from "./routes/trashRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 import otpRouter from "./routes/otpRoutes.js";
 import driveRouter from "./routes/driveRoutes.js";
+import githubRouter from "./routes/githubRoutes.js";
 import cors from "cors";
 import checkAuth from "./middlewares/authMiddleware.js";
 import https from "https";
@@ -36,6 +37,7 @@ app.use("/trash", checkAuth, trashRouter);
 app.use("/user", userRouter);
 app.use("/otp", otpRouter);
 app.use("/drive", driveRouter);
+app.use("/github", githubRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);

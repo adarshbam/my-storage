@@ -77,6 +77,7 @@ function App() {
                   <Route path="recent" element={<FileBrowser specialView="recent" />} />
                   <Route path="starred" element={<FileBrowser specialView="starred" />} />
                   <Route path="google-drive" element={<FileBrowser specialView="google-drive" />} />
+                  <Route path="github" element={<FileBrowser specialView="github" />} />
                   <Route path="trash" element={<TrashView />} />
                 </Route>
               </Route>

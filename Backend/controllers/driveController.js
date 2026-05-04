@@ -12,7 +12,6 @@
 
 import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
-import mongoose from "mongoose";
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "../config.js";
 import { OAuth2Client } from "google-auth-library";
 
@@ -49,13 +48,11 @@ export const connectGoogleDrive = async (req, res) => {
       { _id: req.user.id },
       {
         $set: {
-          integrations: {
-            googleDrive: {
-              connected: true,
-              refreshToken: tokens.refresh_token,
-              scope: tokens.scope,
-              connectedAt: new Date(),
-            },
+          "integrations.googleDrive": {
+            connected: true,
+            refreshToken: tokens.refresh_token,
+            scope: tokens.scope,
+            connectedAt: new Date(),
           },
         },
       },
@@ -109,8 +106,8 @@ export const listDriveFiles = async (req, res) => {
       GOOGLE_CLIENT_SECRET,
       "postmessage",
     );
-    oauth2Client.setCredentials({ 
-      refresh_token: user.integrations.googleDrive.refreshToken 
+    oauth2Client.setCredentials({
+      refresh_token: user.integrations.googleDrive.refreshToken,
     });
 
     const drive = google.drive({ version: "v3", auth: oauth2Client });
@@ -121,22 +118,28 @@ export const listDriveFiles = async (req, res) => {
 
     const gFiles = response.data.files || [];
 
-    const mappedItems = gFiles.map(file => ({
+    const mappedItems = gFiles.map((file) => ({
       id: file.id,
       name: file.name,
       mimeType: file.mimeType,
       size: parseInt(file.size) || 0,
-      extension: file.mimeType === "application/vnd.google-apps.folder" ? null : `.${file.name.split('.').pop() || 'tmp'}`,
-      type: file.mimeType === "application/vnd.google-apps.folder" ? "directory" : "file",
+      extension:
+        file.mimeType === "application/vnd.google-apps.folder"
+          ? null
+          : `.${file.name.split(".").pop() || "tmp"}`,
+      type:
+        file.mimeType === "application/vnd.google-apps.folder"
+          ? "directory"
+          : "file",
       hasThumbnail: !!file.thumbnailLink,
       thumbnailLink: file.thumbnailLink,
-      provider: "google_drive"
+      provider: "google_drive",
     }));
 
     return res.status(200).json({
-      directories: mappedItems.filter(item => item.type === "directory"),
-      files: mappedItems.filter(item => item.type === "file"),
-      name: "Google Drive"
+      directories: mappedItems.filter((item) => item.type === "directory"),
+      files: mappedItems.filter((item) => item.type === "file"),
+      name: "Google Drive",
     });
   } catch (err) {
     console.error("List files error:", err);

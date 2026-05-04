@@ -11,6 +11,15 @@ const googleDriveSchema = new Schema(
   { _id: false },
 );
 
+const githubSchema = new Schema(
+  {
+    connected: { type: Boolean, default: false },
+    accessToken: { type: String, default: null },
+    connectedAt: { type: Date, default: null },
+  },
+  { _id: false },
+);
+
 const userSchema = new Schema(
   {
     name: { type: String, required: true },
@@ -22,6 +31,10 @@ const userSchema = new Schema(
     integrations: {
       googleDrive: {
         type: googleDriveSchema,
+        default: () => ({}),
+      },
+      github: {
+        type: githubSchema,
         default: () => ({}),
       },
     },

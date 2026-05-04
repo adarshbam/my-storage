@@ -84,6 +84,8 @@ export default function FileBrowser({ specialView }) {
         url = `${SERVER_URL}/file/starred`;
       } else if (specialView === "google-drive") {
         url = `${SERVER_URL}/drive/files`;
+      } else if (specialView === "github") {
+        url = `${SERVER_URL}/github/repositories`;
       }
 
       if (isSearch) {
@@ -112,6 +114,7 @@ export default function FileBrowser({ specialView }) {
            specialView === "recent" ? "Recent" : 
            specialView === "starred" ? "Starred" : 
            specialView === "google-drive" ? "Google Drive" :
+           specialView === "github" ? "GitHub" :
            "Home"),
         );
       } else {
@@ -123,6 +126,7 @@ export default function FileBrowser({ specialView }) {
            specialView === "recent" ? "Recent" : 
            specialView === "starred" ? "Starred" : 
            specialView === "google-drive" ? "Google Drive" : // Fallback Title
+           specialView === "github" ? "GitHub" :
            "Home"
         );
         setData({ directories: [], files: [] });
@@ -319,6 +323,8 @@ export default function FileBrowser({ specialView }) {
   const handleNavigate = (dir) => {
     if (dir.provider === "google_drive") {
       navigate(`/dashboard/google-drive`);
+    } else if (dir.provider === "github") {
+      navigate(`/dashboard/github`);
     } else {
       navigate(`/dashboard/folder/${dir.id}`);
     }

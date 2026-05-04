@@ -185,7 +185,7 @@ export const authGoogle = async (req, res) => {
 
 export const authGithub = async (req, res) => {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
     if (!code) {
       return res.redirect("http://localhost:5173/login?error=NoCodeProvided");
     }
@@ -194,21 +194,24 @@ export const authGithub = async (req, res) => {
     const CLIENT_SECRET = `e0bb8b004b802d048a1f8f66eaa102fd18eb7dac`;
 
     // 2. Exchange the 'code' for an access token via POST https://github.com/login/oauth/access_token
-    const response = await fetch("https://github.com/login/oauth/access_token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
+    const response = await fetch(
+      "https://github.com/login/oauth/access_token",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+          code: code,
+        }),
       },
-      body: JSON.stringify({
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        code: code,
-      }),
-    });
+    );
 
     const { access_token } = await response.json();
-    
+
     if (!access_token) {
       return res.redirect("http://localhost:5173/login?error=InvalidToken");
     }
@@ -224,6 +227,8 @@ export const authGithub = async (req, res) => {
 
     const userData = await responseUserData.json();
 
+    console.log(userData);
+
     // 4. Fetch user email using the access token from GET https://api.github.com/user/emails
     let email = userData.email;
 
@@ -236,18 +241,65 @@ export const authGithub = async (req, res) => {
       });
 
       const emails = await emailRes.json();
-      email = emails.find((e) => e.primary && e.verified)?.email || emails.find((e) => e.primary)?.email;
+      email =
+        emails.find((e) => e.primary && e.verified)?.email ||
+        emails.find((e) => e.primary)?.email;
     }
 
     if (!email) {
       return res.redirect("http://localhost:5173/login?error=NoEmailFound");
     }
 
-    // 5. Check if user exists in the database
-    const existingUser = await User.findOne({ email }).select("rootDirId name").lean();
+    // 5. To Connect Github
+    if (state === "connect") {
+      console.log("connecting...");
+      console.log(access_token);
+
+      const user = await User.findOneAndUpdate(
+        { email },
+        {
+          $set: {
+            "integrations.github": {
+              connected: true,
+              accessToken: access_token,
+              connectedAt: new Date(),
+            },
+          },
+        },
+      );
+
+      // Create a Special Directory to act as the Google Drive mount point
+      // Using provider: "github" will teach the frontend to intercept it
+
+      // Check if the directory already exists so we don't duplicate it
+      const existingDir = await Directory.findOne({
+        userId: user._id,
+        provider: "github",
+      });
+      if (!existingDir) {
+        await Directory.create({
+          name: "Github",
+          userId: user._id,
+          type: "directory",
+          parentDir: user.rootDirId,
+          provider: "github", // This links it to the frontend specialView
+        });
+      }
+      user.save();
+
+      console.log(user);
+      return res.redirect("http://localhost:5173/dashboard");
+    }
+
+    // 6. Check if user exists in the database
+    const existingUser = await User.findOne({ email })
+      .select("rootDirId name")
+      .lean();
 
     if (existingUser) {
-      const rootDir = await Directory.findOne({ _id: existingUser.rootDirId }).select("_id").lean();
+      const rootDir = await Directory.findOne({ _id: existingUser.rootDirId })
+        .select("_id")
+        .lean();
       if (!rootDir) {
         return res.status(500).json({ error: "Internal Server Error" });
       }
@@ -276,7 +328,7 @@ export const authGithub = async (req, res) => {
       email,
       password: null,
       profilepicId,
-      isVerified: true, 
+      isVerified: true,
     });
 
     if (profilepicId) {
@@ -285,7 +337,6 @@ export const authGithub = async (req, res) => {
 
     await createSessionAndSetCookies(userId, rootDirId, req, res);
     return res.redirect("http://localhost:5173/dashboard");
-
   } catch (err) {
     console.error("GitHub auth error:", err);
     return res.redirect("http://localhost:5173/login?error=AuthFailed");

@@ -77,6 +77,13 @@ export default function DashboardLayout() {
       console.log("Google Login Failed:", errorResponse),
   });
 
+  const connectGithub = async () => {
+    // TODO: Replace with your actual GitHub Client ID
+    const clientId = `Ov23lizS9BOqZ4r4jQPZ`;
+    const redirectUri = `${SERVER_URL}/user/auth/github`;
+    window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user:email,repo&state=connect`;
+  };
+
   useEffect(() => {
     if (theme === "dark") {
       document.documentElement.classList.add("dark");
@@ -369,26 +376,29 @@ export default function DashboardLayout() {
             title="Connect Google Drive"
           >
             {/* Google Drive icon — official colors */}
+            <img 
+              src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" 
+              alt="Google Drive" 
+              className="w-5 h-5" 
+            />
+            <span className="hidden sm:block">Drive</span>
+          </button>
+          <button
+            onClick={() => connectGithub()}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-white/[0.06] hover:bg-white/80 dark:hover:bg-white/[0.1] hover:border-[#14b8a6]/40 hover:shadow-[0_0_12px_rgba(20,184,166,0.15)] border border-black/10 dark:border-white/10 rounded-lg transition-all duration-300"
+            title="Connect with Github"
+          >
+            {/* Github icon — official colors */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="18"
               height="18"
-              viewBox="0 0 87.3 78"
+              viewBox="0 0 98 96"
+              className="text-slate-800 dark:text-white"
             >
-              <path
-                fill="#0066DA"
-                d="M6.6 66.85 3.1 72.9c-.6 1.1-.2 2.5.9 3.1.3.2.7.3 1.1.3h76.4c1.3 0 2.3-1 2.3-2.3 0-.4-.1-.8-.3-1.1l-3.5-6.1H6.6z"
-              />
-              <path
-                fill="#00AC47"
-                d="M43.65 10.7 22.3 47.7l21.35 12.3 21.35-12.3z"
-              />
-              <path fill="#EA4335" d="M22.3 47.7 43.65 10.7 6.6 66.85H22.3z" />
-              <path fill="#00832D" d="M65 47.7 43.65 10.7l22.3 36.3-.6.7z" />
-              <path fill="#2684FC" d="M80.7 66.85H65L43.65 10.7l21.35 36.3z" />
-              <path fill="#FFBA00" d="M6.6 66.85h58.4L43.65 10.7z" />
+              <path fillRule="evenodd" clipRule="evenodd" d="M48.854 0C21.839 0 0 22 0 49.217c0 21.756 13.993 40.172 33.405 46.69 2.427.49 3.316-1.059 3.316-2.362 0-1.141-.08-5.052-.08-9.127-13.59 2.934-16.42-5.867-16.42-5.867-2.184-5.704-5.42-7.17-5.42-7.17-4.448-3.015.324-3.015.324-3.015 4.934.326 7.523 5.052 7.523 5.052 4.367 7.496 11.404 5.378 14.235 4.074.404-3.178 1.699-5.378 3.074-6.6-10.839-1.141-22.243-5.378-22.243-24.283 0-5.378 1.94-9.778 5.014-13.2-.485-1.222-2.184-6.275.486-13.038 0 0 4.125-1.304 13.426 5.052a46.97 46.97 0 0 1 12.214-1.63c4.125 0 8.33.571 12.213 1.63 9.302-6.356 13.427-5.052 13.427-5.052 2.67 6.763.97 11.816.485 13.038 3.155 3.422 5.015 7.822 5.015 13.2 0 18.905-11.404 23.06-22.324 24.283 1.78 1.548 3.316 4.481 3.316 9.126 0 6.6-.08 11.897-.08 13.526 0 1.304.89 2.853 3.316 2.364 19.412-6.52 33.405-24.935 33.405-46.691C97.707 22 75.868 0 48.854 0z" fill="currentColor" />
             </svg>
-            <span className="hidden sm:block">Drive</span>
+            <span className="hidden sm:block">Github</span>
           </button>
 
           <button
