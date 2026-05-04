@@ -17,6 +17,7 @@ function getFileImage(extension = "png") {
       "cpp",
       "h",
       "hpp",
+      "jsx",
     ],
   };
 

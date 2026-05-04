@@ -29,7 +29,9 @@ import {
 const FilePreviewModal = lazy(() => import("./FilePreviewModal"));
 
 export default function FileBrowser({ specialView }) {
-  const { folderId } = useParams();
+  const params = useParams();
+  const folderId = params.folderId;
+  const githubPath = params["*"];
   const navigate = useNavigate();
   const { user } = useAuth();
   const {
@@ -86,6 +88,8 @@ export default function FileBrowser({ specialView }) {
         url = `${SERVER_URL}/drive/files`;
       } else if (specialView === "github") {
         url = `${SERVER_URL}/github/repositories`;
+      } else if (specialView === "github-repo") {
+        url = `${SERVER_URL}/github/repositories/${encodeURIComponent(githubPath)}/contents`;
       }
 
       if (isSearch) {
@@ -115,6 +119,7 @@ export default function FileBrowser({ specialView }) {
            specialView === "starred" ? "Starred" : 
            specialView === "google-drive" ? "Google Drive" :
            specialView === "github" ? "GitHub" :
+           specialView === "github-repo" ? "Repository" :
            "Home"),
         );
       } else {
@@ -127,6 +132,7 @@ export default function FileBrowser({ specialView }) {
            specialView === "starred" ? "Starred" : 
            specialView === "google-drive" ? "Google Drive" : // Fallback Title
            specialView === "github" ? "GitHub" :
+           specialView === "github-repo" ? "Repository" :
            "Home"
         );
         setData({ directories: [], files: [] });
@@ -324,7 +330,11 @@ export default function FileBrowser({ specialView }) {
     if (dir.provider === "google_drive") {
       navigate(`/dashboard/google-drive`);
     } else if (dir.provider === "github") {
-      navigate(`/dashboard/github`);
+      if (dir.githubPath) {
+        navigate(`/dashboard/github/${dir.githubPath}`);
+      } else {
+        navigate(`/dashboard/github`);
+      }
     } else {
       navigate(`/dashboard/folder/${dir.id}`);
     }
