@@ -11,7 +11,7 @@ const fileSchema = new Schema(
     hasThumbnail: { type: Boolean, default: false },
     externalUrl: { type: String, default: null },
   },
-  { strict: "throw" },
+  { strict: "throw", timestamps: "true" },
 );
 
 const File = model("File", fileSchema);

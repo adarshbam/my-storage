@@ -19,9 +19,19 @@ export const listRepositories = async (req, res) => {
   });
 
   const repos = await response.json();
-  console.log(repos);
 
-  if (!repos)
+  const githubRepositories = repos.map((repo) => ({
+    _id: repo.id,
+    name: repo.name,
+    type: "directory",
+    provider: "github",
+    githubPath: repo.full_name,
+    updatedAt: repo.updated_at,
+  }));
+
+  console.log(githubRepositories);
+
+  if (!githubRepositories)
     return res.status(200).json({
       directories: [],
       files: [],
@@ -29,6 +39,6 @@ export const listRepositories = async (req, res) => {
     });
 
   return res.status(200).json({
-    repositories: repos,
+    repositories: githubRepositories,
   });
 };
