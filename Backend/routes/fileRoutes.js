@@ -10,6 +10,7 @@ import {
   renameFile,
   search,
   uploadFile,
+  saveFile,
 } from "../controllers/fileController.js";
 
 const router = express.Router();
@@ -29,7 +30,7 @@ router.get("/:fileId", checkAuth, getFileById);
 router.post(["/", "/:parentDirId"], checkAuth, uploadFile);
 
 router.patch("/:fileId", checkAuth, renameFile);
-
+router.put("/:fileId/save", checkAuth, saveFile);
 router.delete("/:fileId", checkAuth, deleteFile);
 
 export default router;

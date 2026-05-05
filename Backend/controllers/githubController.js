@@ -170,7 +170,7 @@ export const getFiles = async (req, res) => {
   const buffer = Buffer.from(file.content, "base64");
 
   // 3. Figure out the mime type so the browser knows how to render it
-  const ext = file.name.includes(".") ? "." + file.name.split(".").pop() : "";
+  const ext = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
   const mimeTypes = {
     png: "image/png",
     jpg: "image/jpeg",

@@ -196,6 +196,8 @@ export const getFileById = async (req, res) => {
         textExtensions.includes(file.extension.toLowerCase())
       ) {
         res.setHeader("Content-Type", "text/plain");
+      } else if (file.extension && file.extension.toLowerCase() === ".svg") {
+        res.setHeader("Content-Type", "image/svg+xml");
       }
       return res.sendFile(path.resolve(filePath));
     }
@@ -297,6 +299,7 @@ export const uploadFile = async (req, res) => {
         ".gif",
         ".webp",
         ".tiff",
+        ".svg",
       ];
       const videoExtensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"];
 
@@ -413,5 +416,37 @@ export const deleteFile = async (req, res) => {
   } catch (error) {
     console.error("Delete Error:", error);
     return res.status(500).send("Internal Server Error");
+  }
+};
+
+export const saveFile = async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const { content } = req.body;
+    const file = await File.findOne({ _id: fileId }).select("userId extension").lean();
+
+    if (!file) return res.status(404).send("File not found");
+    if (file.userId.toString() !== req.user.id) {
+      return res.status(403).send("Unauthorized");
+    }
+
+    const filePath = path.join(STORAGE_DIR, `${fileId}${file.extension}`);
+    const writeStream = createWriteStream(filePath);
+    writeStream.write(content);
+    writeStream.end();
+
+    writeStream.on("finish", async () => {
+      const stats = await stat(filePath);
+      await File.updateOne({ _id: fileId }, { size: stats.size });
+      return res.status(200).send("File saved");
+    });
+
+    writeStream.on("error", (err) => {
+      console.error(err);
+      return res.status(500).send("Error saving file");
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send("Server error");
   }
 };
