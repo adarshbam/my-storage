@@ -1,99 +1,173 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
+import { Upload, FolderOpen, Share2 } from "lucide-react";
 
 const steps = [
   {
     step: "01",
-    title: "Upload",
-    desc: "Drag and drop your files or enable auto-camera backup.",
+    icon: Upload,
+    title: "Secure Upload",
+    desc: "Drop files into the vault. They are encrypted instantly on your device before ever hitting our servers.",
+    accent: "from-emerald-400 to-teal-500",
+    shadow: "shadow-teal-500/20",
+    visual: () => (
+      <div className="relative w-full h-48 bg-black/20 rounded-2xl border border-white/5 overflow-hidden flex flex-col items-center justify-center group-hover:border-teal-500/30 transition-colors">
+         {/* Upload zone mockup */}
+         <div className="w-24 h-24 rounded-full border-2 border-dashed border-teal-500/30 flex items-center justify-center relative">
+            <div className="absolute inset-0 bg-teal-500/10 rounded-full animate-ping" />
+            <Upload className="text-teal-400" size={32} />
+         </div>
+         {/* Fake file dropping */}
+         <motion.div 
+            animate={{ y: [-50, 0], opacity: [0, 1, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="absolute top-4 w-12 h-16 bg-white/10 rounded border border-white/20 flex items-center justify-center"
+         >
+            <div className="w-6 h-6 rounded-sm bg-teal-400/50" />
+         </motion.div>
+      </div>
+    )
   },
   {
     step: "02",
-    title: "Organize",
-    desc: "Sort into folders, add tags, or let AI organize for you.",
+    icon: FolderOpen,
+    title: "Neural Sort",
+    desc: "Our local AI automatically categorizes, tags, and organizes your files into secure smart folders.",
+    accent: "from-blue-400 to-indigo-500",
+    shadow: "shadow-blue-500/20",
+    visual: () => (
+      <div className="relative w-full h-48 bg-black/20 rounded-2xl border border-white/5 overflow-hidden p-6 group-hover:border-blue-500/30 transition-colors">
+         {/* Sorting mockup */}
+         <div className="flex flex-col gap-3">
+             {[1,2,3].map((i) => (
+                 <motion.div 
+                    key={i}
+                    animate={{ x: [0, 10, 0] }}
+                    transition={{ duration: 3, delay: i * 0.2, repeat: Infinity }}
+                    className="w-full h-10 bg-white/5 rounded-xl border border-white/10 flex items-center px-3 gap-3"
+                 >
+                    <FolderOpen className="text-blue-400 w-5 h-5" />
+                    <div className="w-1/2 h-2 bg-white/20 rounded-full" />
+                 </motion.div>
+             ))}
+         </div>
+      </div>
+    )
   },
   {
     step: "03",
-    title: "Share",
-    desc: "Send a link to friends or collaborate with your team.",
+    icon: Share2,
+    title: "Zero-Trust Share",
+    desc: "Generate self-destructing links with password protection. You control who sees what, and for how long.",
+    accent: "from-purple-400 to-pink-500",
+    shadow: "shadow-purple-500/20",
+    visual: () => (
+      <div className="relative w-full h-48 bg-black/20 rounded-2xl border border-white/5 overflow-hidden flex items-center justify-center group-hover:border-purple-500/30 transition-colors">
+         {/* Link generation mockup */}
+         <div className="w-3/4 bg-black/40 rounded-xl border border-white/10 p-4 relative">
+             <div className="flex items-center gap-2 mb-4 pb-4 border-b border-white/10">
+                <Share2 className="text-purple-400 w-5 h-5" />
+                <div className="w-2/3 h-2 bg-white/20 rounded-full" />
+             </div>
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-rose-500 animate-pulse" />
+                    <span className="text-xs text-white/40 font-mono">Expires in 24h</span>
+                </div>
+                <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                    <div className="w-3 h-3 bg-purple-400 rounded-sm" />
+                </div>
+             </div>
+             {/* Scanning laser line over link */}
+             <motion.div 
+                animate={{ y: [0, 80, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                className="absolute top-0 left-0 w-full h-px bg-purple-400 shadow-[0_0_10px_#c084fc]" 
+             />
+         </div>
+      </div>
+    )
   },
 ];
 
 const HowItWorks = () => {
-  const [hoveredCard, setHoveredCard] = useState(null);
-
-  const defaultBtnStyle = "bg-[#062922] dark:bg-[#062922] text-[#2dd4bf] border-[#0f463e] shadow-[0_2px_10px_rgba(0,0,0,0.2)]";
-
   return (
-    <section className="py-32 relative overflow-hidden bg-slate-50/50 dark:bg-[#05110e]/80 border-y border-slate-200 dark:border-white/[0.05] backdrop-blur-sm">
-      {/* Decorative Blur (Subtle local highlight with slow pulse) */}
-      <div className="absolute top-1/2 right-0 w-64 h-64 bg-[#14b8a6]/5 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-[#14b8a6]/10 rounded-full blur-[120px] pointer-events-none" />
+    <section className="py-32 relative overflow-hidden bg-[#010504]">
+      {/* Background Pipeline Glow */}
+      <div className="absolute top-1/2 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#14b8a6]/20 to-transparent hidden lg:block" />
 
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-            Simple as 1, 2, 3
+      <div className="container mx-auto px-4 sm:px-6 relative z-10 max-w-[1400px]">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          className="text-center mb-24"
+        >
+          <span className="inline-block py-1 px-3 rounded-full bg-white/5 border border-white/10 text-white/50 font-bold tracking-widest text-xs uppercase mb-6">
+            The Pipeline
+          </span>
+          <h2 className="text-5xl md:text-7xl font-black text-white tracking-tight">
+            Flawless Execution.
           </h2>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-          {steps.map((item, index) => {
-            const isHovered = hoveredCard === index;
-            
-            return (
+        {/* The Pipeline Interface */}
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 relative">
+          
+          {steps.map((item, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1, duration: 0.5 }}
-              className="relative z-10"
-              onMouseEnter={() => setHoveredCard(index)}
-              onMouseLeave={() => setHoveredCard(null)}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ delay: index * 0.2, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              className="flex-1 relative group"
             >
-              <div className={`glass-panel bg-white/40 dark:bg-[#020b08]/80 p-8 rounded-[2rem] transition-all duration-300 text-center group h-full relative overflow-hidden z-10 border ${
-                isHovered ? 'dark:bg-[#020b08]/90 bg-white/80 -translate-y-2 border-[#14b8a6]/30 shadow-[0_8px_30px_rgba(20,184,166,0.12)]' : 'border-black/5 dark:border-white/[0.05]'
-              }`}>
-                {/* Soft Gradient Background Highlight */}
-                <div className={`absolute inset-0 bg-gradient-to-br transition-opacity duration-500 pointer-events-none to-transparent ${
-                  isHovered ? 'opacity-100 from-[#14b8a6]/10 via-transparent' : 'opacity-0 from-[#14b8a6]/0 via-transparent'
-                }`} />
-
-                <div className="relative z-20">
-                  <div className={`inline-block px-6 py-1.5 rounded-[1.5rem] font-bold text-sm mb-6 border transition-all duration-500 ${
-                    isHovered ? 'bg-[#14b8a6]/10 text-[#2dd4bf] border-[#14b8a6]/30 shadow-[0_0_15px_rgba(20,184,166,0.2)]' : defaultBtnStyle
-                  }`}>
-                    Step {item.step}
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3 tracking-tight relative">
-                    {item.title}
-                  </h3>
-                  <p className="text-slate-600 dark:text-white/70 font-medium relative">
-                    {item.desc}
-                  </p>
-                </div>
-                {index < steps.length - 1 && (
-                  <div className="md:hidden mt-8 flex justify-center text-[#14b8a6]/50">
-                    <div className={`w-1 h-8 rounded-full transition-all duration-500 bg-gradient-to-b from-[#14b8a6]/50 to-transparent ${
-                        hoveredCard !== null && hoveredCard >= index + 1 ? 'opacity-100 shadow-[0_0_8px_rgba(20,184,166,0.5)]' : 'opacity-30'
-                    }`} />
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop Animated Line Connector */}
+              {/* Connecting Laser Line (Desktop) */}
               {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-1/2 -right-8 w-8 h-[3px] -translate-y-1/2 z-0 rounded-full bg-slate-200/50 dark:bg-white/5 overflow-hidden">
-                  <div className={`w-full h-full transition-all duration-500 origin-left bg-[#14b8a6] ${
-                    hoveredCard !== null && hoveredCard >= index + 1
-                      ? 'scale-x-100 opacity-100 drop-shadow-[0_0_8px_rgba(20,184,166,0.6)]'
-                      : 'scale-x-0 opacity-0'
-                  }`} />
+                <div className="hidden lg:block absolute top-[24px] left-[calc(50%+40px)] w-[calc(100%-80px)] h-[2px] z-0 overflow-hidden">
+                    <div className="w-full h-full bg-white/5" />
+                    {/* Animated energy packet traveling down the line */}
+                    <motion.div 
+                        animate={{ x: ["-100%", "200%"] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear", delay: index }}
+                        className={`absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/40 to-transparent`} 
+                    />
                 </div>
               )}
+
+              {/* The Step Node Container */}
+              <div className="relative z-10 rounded-[2.5rem] bg-[#030a08] border border-white/5 p-8 h-full flex flex-col hover:border-white/15 transition-all duration-500 hover:-translate-y-2 shadow-2xl">
+                
+                {/* Header Row */}
+                <div className="flex items-center justify-between mb-8">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br ${item.accent} text-white shadow-lg`}>
+                        <item.icon size={24} />
+                    </div>
+                    <div className="text-6xl font-black text-white/5 tracking-tighter">
+                        {item.step}
+                    </div>
+                </div>
+
+                {/* The Custom Visual Mockup */}
+                <div className="mb-8 flex-1">
+                    <item.visual />
+                </div>
+
+                {/* Text Content */}
+                <div>
+                    <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">
+                        {item.title}
+                    </h3>
+                    <p className="text-white/50 font-medium leading-relaxed">
+                        {item.desc}
+                    </p>
+                </div>
+
+              </div>
             </motion.div>
-          )})}
+          ))}
         </div>
       </div>
     </section>

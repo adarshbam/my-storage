@@ -25,11 +25,10 @@ const TrashView = lazy(() => import("./components/drive/TrashView"));
 function LandingPage() {
   return (
     <div className="min-h-screen text-slate-900 dark:text-white font-sans transition-colors duration-300 relative">
-      {/* Global Layered Gradients */}
-      <div className="fixed inset-0 z-[0] bg-[#faf5f7] dark:bg-[#020b08] pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-[#14b8a6]/10 rounded-full blur-[120px] mix-blend-screen" />
-        <div className="absolute top-[30%] right-[-10%] w-[35vw] h-[35vw] bg-[#3b82f6]/10 rounded-full blur-[120px] mix-blend-screen" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[50vw] h-[50vw] bg-[#a855f7]/10 rounded-full blur-[120px] mix-blend-screen" />
+      {/* Global Static Background */}
+      <div className="fixed inset-0 z-[0] bg-[#f0f9f7] dark:bg-[#020b08] pointer-events-none">
+        {/* Subtle top radial tint – light: mint, dark: deep teal */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80vw] h-[50vh] bg-[radial-gradient(ellipse,rgba(20,184,166,0.10)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse,rgba(20,184,166,0.06)_0%,transparent_70%)]" />
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">

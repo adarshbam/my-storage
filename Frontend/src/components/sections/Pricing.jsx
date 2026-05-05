@@ -1,43 +1,43 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
-import Button from "../ui/Button";
-import Card from "../ui/Card";
+import { Check, Zap, ArrowRight } from "lucide-react";
 
 const plans = [
   {
-    name: "Free",
+    name: "Hobby",
     price: "0",
-    desc: "Perfect for personal use.",
+    desc: "Perfect for testing the vault.",
     features: [
-      "15 GB Storage",
-      "Basic Photo Editor",
+      "15 GB Encrypted Storage",
+      "Basic Neural Sorting",
       "Mobile App Access",
-      "Secure SSL Transfer",
+      "Standard Speed Network",
     ],
-    className:
-      "border-brand-500 dark:border-brand-500 shadow-xl scale-105 z-10 h-full",
-    variant: "default",
+    color: "from-blue-400 to-cyan-400",
+    shadow: "shadow-blue-500/20",
+    borderHover: "hover:border-blue-500/30",
   },
   {
-    name: "Pro",
+    name: "Professional",
     price: "9.99",
     desc: "For power users and creators.",
     features: [
-      "2 TB Storage",
+      "2 TB Encrypted Storage",
       "Advanced AI Search",
-      "Priority Support",
+      "Priority Access Network",
       "Version History (30 days)",
-      "Vault Security",
+      "Zero-Knowledge Vault",
     ],
     popular: true,
-    variant: "brand", // Highlighted variant
+    color: "from-[#14b8a6] to-[#0ea5e9]",
+    shadow: "shadow-teal-500/30",
+    borderHover: "hover:border-[#14b8a6]/40",
   },
   {
-    name: "Business",
+    name: "Enterprise",
     price: "24.99",
-    desc: "For teams and collaboration.",
+    desc: "For teams and secure collaboration.",
     features: [
       "Unlimited Storage",
       "Team Management",
@@ -45,7 +45,9 @@ const plans = [
       "Unlimited Version History",
       "24/7 Dedicated Support",
     ],
-    variant: "dark",
+    color: "from-purple-400 to-pink-500",
+    shadow: "shadow-purple-500/20",
+    borderHover: "hover:border-purple-500/30",
   },
 ];
 
@@ -53,114 +55,106 @@ const Pricing = () => {
   const [isYearly, setIsYearly] = useState(false);
 
   return (
-    <section id="pricing" className="py-32 relative overflow-hidden bg-slate-50/50 dark:bg-[#05110e]/80 border-y border-slate-200 dark:border-white/[0.05] backdrop-blur-sm">
-      {/* Subtle pulsing background animation */}
-      <div className="absolute top-1/4 left-[10%] w-96 h-96 bg-brand-500/10 dark:bg-brand-500/5 rounded-full blur-[100px] pointer-events-none animate-[pulse_7s_ease-in-out_infinite]" />
-      <div className="absolute bottom-1/4 right-[10%] w-[30rem] h-[30rem] bg-accent-500/10 dark:bg-accent-500/5 rounded-full blur-[120px] pointer-events-none animate-[pulse_5s_ease-in-out_infinite]" />
+    <section id="pricing" className="py-32 relative overflow-hidden bg-[#010504]">
+      {/* Ambient background grids */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(20,184,166,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,0.03)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)] pointer-events-none" />
 
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white mb-6">
-            Simple, transparent pricing
+      <div className="container mx-auto px-4 sm:px-6 relative z-10 max-w-[1200px]">
+        {/* Header */}
+        <div className="text-center max-w-2xl mx-auto mb-20">
+          <span className="inline-flex items-center gap-2 py-1 px-3 rounded-full bg-white/5 border border-white/10 text-[#14b8a6] font-bold tracking-widest text-xs uppercase mb-6 shadow-[0_0_20px_rgba(20,184,166,0.1)]">
+            <Zap size={14} fill="currentColor" /> Simple Plans
+          </span>
+          <h2 className="text-5xl md:text-6xl font-black text-white mb-6 tracking-tight">
+            Transparent Pricing. <br/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white/40 to-white/80">
+                Zero hidden fees.
+            </span>
           </h2>
-          <p className="text-xl text-slate-500 dark:text-slate-400 mb-8">
-            Start with 15GB free. Upgrade as you grow.
-          </p>
-
-          <div className="flex items-center justify-center gap-4 mb-2">
-            <span
-              className={`text-sm font-medium ${!isYearly ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500"}`}
-            >
+          
+          {/* Custom Sleek Toggle */}
+          <div className="flex items-center justify-center gap-6 mt-12">
+            <span className={`text-sm font-bold tracking-widest uppercase transition-colors ${!isYearly ? "text-white" : "text-white/30"}`}>
               Monthly
             </span>
             <button
               onClick={() => setIsYearly(!isYearly)}
-              className="relative w-14 h-8 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#14b8a6] border border-black/5 dark:border-white/[0.08]"
+              className="relative w-16 h-8 bg-white/5 rounded-full p-1 border border-white/10 flex items-center shadow-inner focus:outline-none"
             >
               <motion.div
-                className="w-6 h-6 bg-[#2dd4bf] rounded-full shadow-[0_0_10px_rgba(45,212,191,0.5)]"
-                animate={{ x: isYearly ? 24 : 0 }}
+                className="w-6 h-6 rounded-full bg-gradient-to-r from-[#14b8a6] to-[#0ea5e9] shadow-[0_0_15px_rgba(20,184,166,0.6)]"
+                animate={{ x: isYearly ? 32 : 0 }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
             </button>
-            <span
-              className={`text-sm font-medium ${isYearly ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500"}`}
-            >
-              Yearly{" "}
-              <span className="text-green-500 font-bold text-xs ml-1">
-                (Save 20%)
-              </span>
+            <span className={`text-sm font-bold tracking-widest uppercase transition-colors flex items-center gap-2 ${isYearly ? "text-white" : "text-white/30"}`}>
+              Yearly
+              <span className="bg-[#14b8a6]/20 text-[#14b8a6] px-2 py-0.5 rounded text-[10px] border border-[#14b8a6]/30">Save 20%</span>
             </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        {/* Pricing Tiers */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-center relative">
+            {/* Background ambient glow behind middle card */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[500px] bg-[#14b8a6]/10 blur-[120px] rounded-full pointer-events-none" />
+
           {plans.map((plan, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1, duration: 0.5 }}
-              className={`relative h-full ${plan.popular ? "z-20 md:-mt-4" : "z-10"}`}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ delay: index * 0.15, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className={`relative group rounded-[2.5rem] bg-[#020705] border border-white/5 transition-all duration-500 overflow-hidden flex flex-col ${plan.borderHover} ${plan.popular ? "md:scale-105 shadow-[0_20px_80px_rgba(20,184,166,0.15)] z-20 py-12" : "shadow-xl z-10 py-10 opacity-90 hover:opacity-100"}`}
             >
+              {/* Top border highlight */}
+              <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${plan.color} opacity-50 group-hover:opacity-100 transition-opacity`} />
+              
               {plan.popular && (
-                <div className="absolute -top-5 left-0 right-0 flex justify-center z-30">
-                  <span className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white text-[11px] font-black px-5 py-2 rounded-[20px] tracking-widest shadow-[0_0_20px_rgba(20,184,166,0.6)]">
-                    Most Popular
-                  </span>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-gradient-to-r from-[#14b8a6]/20 to-[#0ea5e9]/20 border-b border-x border-[#14b8a6]/30 rounded-b-xl backdrop-blur-md">
+                    <span className="text-[#14b8a6] text-[10px] font-black uppercase tracking-widest drop-shadow-[0_0_10px_rgba(20,184,166,0.8)]">Most Popular</span>
                 </div>
               )}
 
-              <Card
-                variant={plan.popular ? "brand" : "dark"}
-                className={`h-full flex flex-col relative transition-all duration-300 ${plan.popular ? "border-[#14b8a6]/80 shadow-[0_0_50px_rgba(20,184,166,0.3)] scale-105 bg-white/[0.06] backdrop-blur-3xl" : "border-white/10 scale-100"}`}
-              >
-                <div className="mb-8">
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                    {plan.name}
-                  </h3>
-                  <p className="text-slate-500 dark:text-slate-400 mb-6">
-                    {plan.desc}
-                  </p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-slate-900 dark:text-white">
-                      $
-                      {isYearly
-                        ? (parseFloat(plan.price) * 0.8).toFixed(2)
-                        : plan.price}
-                    </span>
-                    <span className="text-slate-400 dark:text-slate-500">
-                      /{isYearly ? "mo (billed yearly)" : "mo"}
-                    </span>
-                  </div>
+              <div className="px-8 flex-1">
+                <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">{plan.name}</h3>
+                <p className="text-white/40 text-sm mb-8">{plan.desc}</p>
+                
+                <div className="flex items-baseline gap-1 mb-10 border-b border-white/5 pb-10">
+                  <span className="text-5xl font-black text-white tracking-tighter">
+                    ${isYearly ? (parseFloat(plan.price) * 0.8).toFixed(2) : plan.price}
+                  </span>
+                  <span className="text-white/30 font-medium">/{isYearly ? "mo" : "mo"}</span>
                 </div>
 
-                <div className="flex-1 space-y-4 mb-8">
+                <div className="space-y-4 mb-10">
                   {plan.features.map((feature, i) => (
                     <div key={i} className="flex items-start gap-3">
-                      <div
-                        className={`mt-1 w-5 h-5 rounded-full flex items-center justify-center shrink-0 
-                        ${plan.popular ? "bg-[#14b8a6] text-white shadow-[0_0_10px_rgba(20,184,166,0.5)]" : "bg-slate-100 dark:bg-slate-800 text-[#2dd4bf]"}`}
-                      >
+                      <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 border border-white/10 ${plan.popular ? "bg-[#14b8a6]/20 text-[#14b8a6] border-[#14b8a6]/30" : "bg-white/5 text-white/50"}`}>
                         <Check size={12} strokeWidth={3} />
                       </div>
-                      <span className="text-slate-600 dark:text-slate-300 text-sm">
+                      <span className={`text-sm ${plan.popular ? "text-white/80 font-medium" : "text-white/60"}`}>
                         {feature}
                       </span>
                     </div>
                   ))}
                 </div>
+              </div>
 
-                <Link to="/register" className="w-full">
-                  <Button
-                    variant={plan.popular ? "masterclass" : "secondary"}
-                    className="w-full justify-center"
-                  >
-                    {plan.price === "0" ? "Start Free" : "Get Started"}
-                  </Button>
+              <div className="px-8 mt-auto">
+                <Link to="/register" className="block w-full">
+                  <button className={`w-full py-4 rounded-2xl font-bold tracking-wide transition-all duration-300 flex items-center justify-center gap-2 group/btn relative overflow-hidden ${
+                      plan.popular 
+                        ? "bg-[#14b8a6] text-[#010504] shadow-[0_0_30px_rgba(20,184,166,0.3)] hover:shadow-[0_0_40px_rgba(20,184,166,0.5)]" 
+                        : "bg-white/5 text-white border border-white/10 hover:bg-white/10"
+                  }`}>
+                    {plan.popular && <div className="absolute inset-0 bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />}
+                    <span className="relative z-10">{plan.price === "0" ? "Start Free" : "Get Started"}</span>
+                    <ArrowRight size={18} className="relative z-10 group-hover/btn:translate-x-1 transition-transform" />
+                  </button>
                 </Link>
-              </Card>
+              </div>
             </motion.div>
           ))}
         </div>

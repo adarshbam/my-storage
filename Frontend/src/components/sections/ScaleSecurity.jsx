@@ -1,223 +1,368 @@
-import { motion } from "framer-motion";
-import {
-  ShieldCheck,
-  HardDrive,
-  Search,
-  RefreshCw,
-  Share2,
-  Image as ImageIcon,
-  Smartphone,
-} from "lucide-react";
-import Card from "../ui/Card";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShieldCheck, Search, HardDrive, Share2, RefreshCw } from "lucide-react";
+
+const FEATURES = [
+  {
+    id: "encryption",
+    icon: ShieldCheck,
+    title: "Military-Grade Encryption",
+    desc: "AES-256 bit encryption for all your files at rest and in transit. Your keys, your rules. Zero-knowledge architecture means even we can't see your data.",
+    color: "from-emerald-400 to-teal-500",
+    glowColor: "rgba(16,185,129,0.2)",
+    activeBg: "bg-emerald-500/10",
+    activeBorder: "border-emerald-500/30",
+    textColor: "text-emerald-400",
+  },
+  {
+    id: "search",
+    icon: Search,
+    title: "Neural AI Search",
+    desc: "Find files instantly without remembering names. Our on-device AI recognizes objects, text, and faces in your images to pull up exactly what you need.",
+    color: "from-cyan-400 to-blue-500",
+    glowColor: "rgba(6,182,212,0.2)",
+    activeBg: "bg-cyan-500/10",
+    activeBorder: "border-cyan-500/30",
+    textColor: "text-cyan-400",
+  },
+  {
+    id: "backups",
+    icon: HardDrive,
+    title: "Continuous Backups",
+    desc: "Set it and forget it. Every change is instantly replicated across three geographic regions. Your digital life is completely immune to hardware failure.",
+    color: "from-teal-400 to-emerald-500",
+    glowColor: "rgba(20,184,166,0.2)",
+    activeBg: "bg-teal-500/10",
+    activeBorder: "border-teal-500/30",
+    textColor: "text-teal-400",
+  },
+  {
+    id: "sharing",
+    icon: Share2,
+    title: "Expiring Secure Links",
+    desc: "Share massive files or folders with a single link. Set passwords, view-once permissions, and auto-expiring timers for total control over your shared data.",
+    color: "from-indigo-400 to-purple-500",
+    glowColor: "rgba(99,102,241,0.2)",
+    activeBg: "bg-indigo-500/10",
+    activeBorder: "border-indigo-500/30",
+    textColor: "text-indigo-400",
+  },
+  {
+    id: "ransomware",
+    icon: RefreshCw,
+    title: "Ransomware Rescue",
+    desc: "Turn back time. Our immutable version history lets you instantly roll back your entire drive to any second in the last 30 days. Untouchable by malware.",
+    color: "from-lime-400 to-green-500",
+    glowColor: "rgba(132,204,22,0.2)",
+    activeBg: "bg-lime-500/10",
+    activeBorder: "border-lime-500/30",
+    textColor: "text-lime-400",
+  }
+];
+
+// --- VISUALIZERS ---
+
+const EncryptionVisualizer = () => {
+  const [matrix, setMatrix] = useState([]);
+  useEffect(() => {
+    const chars = '0123456789ABCDEF!@#$%^&*';
+    const generate = () => Array(150).fill(0).map(() => chars[Math.floor(Math.random() * chars.length)]);
+    setMatrix(generate());
+    const interval = setInterval(() => setMatrix(generate()), 100);
+    return () => clearInterval(interval);
+  }, []);
+  
+  return (
+    <div className="relative w-full h-full flex items-center justify-center bg-emerald-950/20">
+      <div className="absolute inset-0 grid grid-cols-[repeat(auto-fit,minmax(20px,1fr))] gap-2 p-8 opacity-20 overflow-hidden mix-blend-screen">
+        {matrix.map((char, i) => (
+          <div key={i} className="text-emerald-500 font-mono text-xl font-bold text-center leading-none">{char}</div>
+        ))}
+      </div>
+      <motion.div 
+        initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }}
+        className="relative z-10 w-48 h-48 rounded-[2.5rem] bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shadow-[0_0_100px_rgba(16,185,129,0.3)] backdrop-blur-xl"
+      >
+        <ShieldCheck size={96} className="text-emerald-400 drop-shadow-[0_0_20px_rgba(16,185,129,0.8)]" />
+      </motion.div>
+    </div>
+  )
+}
+
+const SearchVisualizer = () => {
+  return (
+    <div className="relative w-full h-full flex items-center justify-center bg-cyan-950/20">
+      <div className="relative w-80 h-96 bg-cyan-900/10 rounded-[2.5rem] border border-cyan-500/20 p-6 shadow-[0_0_60px_rgba(6,182,212,0.15)] backdrop-blur-md overflow-hidden">
+        {/* Floating image wireframes */}
+        <div className="grid grid-cols-2 gap-4 h-full relative z-0">
+            <div className="space-y-4">
+                <div className="h-32 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 relative overflow-hidden">
+                    <motion.div animate={{ opacity: [0, 1, 0] }} transition={{ duration: 2, repeat: Infinity }} className="absolute inset-4 border border-cyan-400/50 rounded flex items-center justify-center bg-cyan-400/10">
+                        <span className="text-cyan-400 text-[10px] font-bold">98% Match</span>
+                    </motion.div>
+                </div>
+                <div className="h-40 bg-cyan-500/5 rounded-2xl border border-cyan-500/10" />
+            </div>
+            <div className="space-y-4 pt-12">
+                <div className="h-24 bg-cyan-500/5 rounded-2xl border border-cyan-500/10" />
+                <div className="h-36 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 relative overflow-hidden">
+                    <motion.div animate={{ opacity: [0, 1, 0] }} transition={{ duration: 2, delay: 1, repeat: Infinity }} className="absolute inset-x-4 top-4 bottom-12 border border-cyan-400/50 rounded flex items-center justify-center bg-cyan-400/10">
+                        <span className="text-cyan-400 text-[10px] font-bold">Text Found</span>
+                    </motion.div>
+                </div>
+            </div>
+        </div>
+        
+        {/* Giant Scanner Line sweeping down and up */}
+        <motion.div 
+          animate={{ y: [-20, 400, -20] }}
+          transition={{ duration: 4, ease: "easeInOut", repeat: Infinity }}
+          className="absolute left-0 right-0 top-0 h-[2px] bg-cyan-300 shadow-[0_0_40px_10px_rgba(6,182,212,0.6)] z-10"
+        />
+        <motion.div 
+          animate={{ y: [-20, 400, -20] }}
+          transition={{ duration: 4, ease: "easeInOut", repeat: Infinity }}
+          className="absolute left-0 right-0 top-0 h-32 bg-gradient-to-b from-transparent to-cyan-400/20 z-0 pointer-events-none"
+        />
+      </div>
+    </div>
+  )
+}
+
+const BackupVisualizer = () => {
+  return (
+    <div className="relative w-full h-full flex items-center justify-center bg-teal-950/20" style={{ perspective: '1200px' }}>
+      <div className="relative w-64 h-64 flex flex-col items-center justify-center" style={{ transformStyle: 'preserve-3d', transform: 'rotateX(60deg) rotateZ(-45deg)' }}>
+        {[0, 1, 2].map((i) => (
+          <motion.div
+            key={i}
+            animate={{ z: [0, 20, 0] }}
+            transition={{ duration: 4, delay: i * 0.5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute w-72 h-72 border border-teal-500/40 rounded-[2.5rem] bg-teal-500/5 backdrop-blur-md"
+            style={{ 
+              transform: `translateZ(${i * -80}px)`,
+              boxShadow: i === 0 ? 'inset 0 0 50px rgba(20,184,166,0.2)' : '0 20px 60px rgba(20,184,166,0.1)'
+            }}
+          >
+            {/* Grid pattern on the plate */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(20,184,166,0.15)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,0.15)_1px,transparent_1px)] bg-[size:24px_24px] rounded-[2.5rem] pointer-events-none" />
+            
+            {/* Pulsing data nodes */}
+            <div className="absolute top-1/4 left-1/4 w-3 h-3 rounded-full bg-teal-400 shadow-[0_0_20px_#2dd4bf] animate-pulse" />
+            <div className="absolute bottom-1/4 right-1/4 w-3 h-3 rounded-full bg-teal-400 shadow-[0_0_20px_#2dd4bf] animate-pulse" style={{ animationDelay: '1s' }} />
+          </motion.div>
+        ))}
+        {/* Vertical beam connecting them */}
+        <div className="absolute w-1.5 h-[240px] bg-gradient-to-b from-teal-400/80 to-transparent shadow-[0_0_30px_#2dd4bf]" style={{ transform: 'translateZ(-160px) rotateX(90deg)' }} />
+      </div>
+    </div>
+  )
+}
+
+const SharingVisualizer = () => {
+  return (
+    <div className="relative w-full h-full flex items-center justify-center bg-indigo-950/20" style={{ perspective: '1000px' }}>
+      <div className="relative w-96 h-96 flex items-center justify-center" style={{ transformStyle: 'preserve-3d', transform: 'rotateX(55deg)' }}>
+         {/* Central Node */}
+         <div className="absolute w-24 h-24 rounded-[2rem] bg-indigo-500/20 border border-indigo-400/50 flex items-center justify-center z-20 shadow-[0_0_60px_rgba(99,102,241,0.5)] backdrop-blur-md" style={{ transform: 'rotateX(-55deg)' }}>
+           <Share2 size={48} className="text-indigo-400 drop-shadow-[0_0_15px_rgba(99,102,241,0.8)]" />
+         </div>
+         
+         {/* Orbiting rings */}
+         <div className="absolute w-64 h-64 rounded-full border-[3px] border-indigo-500/30 shadow-[inset_0_0_30px_rgba(99,102,241,0.3)]" />
+         <div className="absolute w-96 h-96 rounded-full border-2 border-indigo-500/15" />
+         
+         {/* Moving Data Packets (SVG) */}
+         <svg className="absolute w-full h-full overflow-visible z-10" viewBox="0 0 384 384">
+             {/* Inner orbit packet */}
+             <motion.circle 
+                cx="192" cy="64" r="8" fill="#818cf8"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                style={{ originX: '192px', originY: '192px' }}
+                className="drop-shadow-[0_0_15px_#818cf8]"
+             />
+             {/* Outer orbit packet */}
+             <motion.circle 
+                cx="192" cy="0" r="6" fill="#818cf8"
+                animate={{ rotate: -360 }}
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                style={{ originX: '192px', originY: '192px' }}
+                className="drop-shadow-[0_0_12px_#818cf8]"
+             />
+         </svg>
+      </div>
+    </div>
+  )
+}
+
+const RansomwareVisualizer = () => {
+  return (
+    <div className="relative w-full h-full flex items-center justify-center bg-lime-950/20" style={{ perspective: '1000px' }}>
+      <motion.div
+        animate={{ rotateY: [0, 8, -8, 0] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        className="relative w-72 h-96 rounded-[2.5rem] border border-lime-500/40 bg-lime-500/10 p-8 shadow-[0_0_80px_rgba(132,204,22,0.2)] backdrop-blur-md overflow-hidden"
+      >
+        <div className="flex justify-between items-start mb-10">
+            <RefreshCw size={48} className="text-lime-400 drop-shadow-[0_0_10px_rgba(132,204,22,0.8)]" />
+            <div className="px-4 py-1.5 rounded-full bg-lime-500/20 text-lime-400 text-xs font-bold font-mono tracking-widest border border-lime-500/30">RESTORED</div>
+        </div>
+
+        {/* Glitch lines overlay */}
+        <motion.div 
+            animate={{ opacity: [0, 0.4, 0, 0.8, 0] }}
+            transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.5, 0.6, 1] }}
+            className="absolute inset-0 bg-[repeating-linear-gradient(transparent,transparent_2px,rgba(132,204,22,0.3)_2px,rgba(132,204,22,0.3)_4px)] mix-blend-overlay pointer-events-none"
+        />
+
+        {/* Scanning restore effect */}
+        <motion.div 
+          animate={{ y: [-100, 400] }} 
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }} 
+          className="absolute left-0 right-0 h-32 bg-gradient-to-b from-transparent to-lime-400/30 border-b-2 border-lime-400 z-10" 
+        />
+
+        <div className="space-y-5 relative z-0">
+            <div className="w-full h-6 bg-lime-500/20 rounded-lg" />
+            <div className="w-5/6 h-6 bg-lime-500/20 rounded-lg" />
+            <div className="w-4/6 h-6 bg-lime-500/20 rounded-lg" />
+            <div className="w-full h-6 bg-lime-500/20 rounded-lg mt-10" />
+            <div className="w-3/4 h-6 bg-lime-500/20 rounded-lg" />
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// --- MAIN COMPONENT ---
 
 const ScaleSecurity = () => {
-  // Features merged from both sections, omitting those already in Hero (Global Access, Sync Anywhere, Privacy Vault)
-  const items = [
-    {
-      icon: ShieldCheck,
-      title: "Enterprise Encryption",
-      desc: "AES-256 bit encryption for all your files at rest and in transit.",
-      theme: {
-        glow: "rgba(16, 185, 129, 0.4)", // emerald
-        gradient: "from-emerald-500/20 to-emerald-400/5",
-        iconText: "text-emerald-400",
-        iconBg: "bg-emerald-500/10",
-        border: "border-emerald-500/30",
-      },
-    },
-    {
-      icon: Search,
-      title: "Intelligent AI Search",
-      desc: "Find files fast with AI that recognizes text and objects in images.",
-      theme: {
-        glow: "rgba(6, 182, 212, 0.4)", // cyan
-        gradient: "from-cyan-500/20 to-cyan-400/5",
-        iconText: "text-cyan-400",
-        iconBg: "bg-cyan-500/10",
-        border: "border-cyan-500/30",
-      },
-    },
-    {
-      icon: HardDrive,
-      title: "Automated Backups",
-      desc: "Set and forget. Automatically back up changes, photos, and videos instantly.",
-      theme: {
-        glow: "rgba(20, 184, 166, 0.4)", // teal
-        gradient: "from-teal-500/20 to-teal-400/5",
-        iconText: "text-teal-400",
-        iconBg: "bg-teal-500/10",
-        border: "border-teal-500/30",
-      },
-    },
-    {
-      icon: Share2,
-      title: "Secure Sharing",
-      desc: "Share files seamlessly with expiring links and strict password controls.",
-      theme: {
-        glow: "rgba(56, 189, 248, 0.4)", // sky
-        gradient: "from-sky-500/20 to-sky-400/5",
-        iconText: "text-sky-400",
-        iconBg: "bg-sky-500/10",
-        border: "border-sky-500/30",
-      },
-    },
-    {
-      icon: RefreshCw,
-      title: "Ransomware Rescue",
-      desc: "Turn back time. Recover perfectly clean files up to 30 days post-attack.",
-      theme: {
-        glow: "rgba(132, 204, 22, 0.4)", // lime
-        gradient: "from-lime-500/20 to-lime-400/5",
-        iconText: "text-lime-400",
-        iconBg: "bg-lime-500/10",
-        border: "border-lime-500/30",
-      },
-    },
-    {
-      icon: ImageIcon,
-      title: "Instant Previews",
-      desc: "View heavy 4K videos or RAW photos globally without fully downloading.",
-      theme: {
-        glow: "rgba(45, 212, 191, 0.4)", // teal secondary
-        gradient: "from-[#2dd4bf]/20 to-[#2dd4bf]/5",
-        iconText: "text-[#2dd4bf]",
-        iconBg: "bg-[#2dd4bf]/10",
-        border: "border-[#2dd4bf]/30",
-      },
-    },
-  ];
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // Auto cycle features
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % FEATURES.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
-    <section
-      id="security"
-      className="py-32 relative overflow-hidden bg-transparent transition-colors duration-300"
-    >
-      {/* Subtle Grid Background */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
-
-      {/* Dark Glassform Gradient Bg (Local enhancement) */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-gradient-to-b from-[#0f463e]/10 to-transparent blur-[120px] pointer-events-none" />
-
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="text-center mb-24">
-          <motion.span
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            className="text-[#14b8a6] font-bold tracking-widest text-xs uppercase mb-4 block"
-          >
-            Why Storifyy?
-          </motion.span>
-          <motion.h2
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            className="text-5xl md:text-7xl font-black text-slate-900 dark:text-white mb-6 tracking-tight leading-tight"
-          >
-            Engineered for <br />
-            <span className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-transparent bg-clip-text drop-shadow-[0_0_20px_rgba(20,184,166,0.3)]">
-              Privacy & Security
-            </span>
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            className="text-xl text-slate-600 dark:text-white/70 font-medium max-w-2xl mx-auto"
-          >
-            Your data is yours alone. We provide the vault, you hold the keys.
-          </motion.p>
-        </div>
-
-        {/* Unique Custom Cards for this section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {items.map((item, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1, duration: 0.5 }}
-              className="relative group h-full"
-            >
-              <div
-                className={`absolute inset-0 rounded-[2rem] bg-gradient-to-br ${item.theme.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl pointer-events-none`}
-                style={{ boxShadow: `0 0 40px ${item.theme.glow}` }}
-              />
-
-              <div className="relative h-full bg-[#020b08]/90 dark:bg-[#020b08]/90 backdrop-blur-3xl border border-white/[0.05] group-hover:border-transparent rounded-[2rem] p-8 overflow-hidden transition-all duration-300">
-                {/* Glow ring on hover */}
-                <div
-                  className={`absolute -inset-px rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br ${item.theme.gradient} -z-10`}
-                />
-
-                <div>
-                  <div
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-8 shadow-inner transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3
-                      ${item.theme.iconBg} ${item.theme.iconText} ${item.theme.border} border
-                    `}
-                  >
-                    <item.icon size={26} strokeWidth={1.5} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-4 tracking-tight">
-                    {item.title}
-                  </h3>
-                  <p className="text-white/70 font-medium leading-relaxed">
-                    {item.desc}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Large Card for Mobile Apps */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mt-20 relative px-4 sm:px-0"
+    <div className="w-full bg-transparent py-20 px-4 sm:px-6 lg:px-8 relative z-10">
+        <section 
+            id="security" 
+            className="max-w-[1400px] mx-auto relative bg-[#050c0a] overflow-hidden rounded-[3rem] border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.6)]"
         >
-          <Card
-            variant="brand"
-            className="text-slate-900 dark:text-white relative overflow-hidden shadow-[0_0_50px_rgba(20,184,166,0.3)] bg-gradient-to-r from-[#020b08] to-[#051a17] p-8 sm:p-12 border border-[#14b8a6]/40"
-          >
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#14b8a6]/20 rounded-full blur-[80px] -mr-48 -mt-48 pointer-events-none" />
+            {/* Big subtle ambient glow behind the section content */}
+            <div 
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] blur-[150px] opacity-[0.15] rounded-full transition-colors duration-1000 pointer-events-none"
+              style={{ backgroundColor: FEATURES[activeIndex].glowColor }}
+            />
 
-            <div className="flex flex-col md:flex-row items-center justify-between relative z-10">
-              <div className="max-w-xl">
-                <div className="w-16 h-16 rounded-[1.5rem] bg-[#14b8a6]/20 flex items-center justify-center mb-8 text-[#2dd4bf] backdrop-blur-md border border-[#14b8a6]/40 shadow-[inset_0_0_20px_rgba(20,184,166,0.4)]">
-                  <Smartphone size={32} strokeWidth={1.5} />
+            <div className="relative z-10 px-8 py-20 md:p-20">
+                <div className="mb-20">
+                    <span className="inline-flex items-center gap-2 text-white/50 font-bold tracking-widest text-xs uppercase mb-6">
+                        <span className="w-8 h-px bg-white/30" />
+                        Zero-Knowledge Architecture
+                    </span>
+                    <h2 className="text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tight leading-[1.05]">
+                        Beyond Standard <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">Security.</span>
+                    </h2>
                 </div>
-                <h3 className="text-3xl md:text-5xl font-black mb-6 tracking-tight text-white leading-tight">
-                  Files at your fingertips
-                </h3>
-                <p className="text-white/80 text-lg sm:text-xl font-medium leading-relaxed">
-                  Backup photos automatically, access secure documents, and
-                  stream high-quality videos offline with the native Storifyy
-                  mobile app. Designed for pure speed.
-                </p>
-              </div>
 
-              <div className="mt-16 md:mt-0 relative flex-shrink-0 w-full sm:w-auto flex justify-center">
-                {/* Abstract Phone/App Illustration highlighting the scale */}
-                <div className="w-72 sm:w-80 h-48 sm:h-56 bg-[#031411]/80 backdrop-blur-3xl rounded-tl-[2.5rem] rounded-tr-[2.5rem] border border-b-0 border-[#14b8a6]/30 p-6 sm:p-8 shadow-[0_-10px_60px_rgba(20,184,166,0.2)] relative overflow-hidden">
-                  {/* Fake screen content elements */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-[#14b8a6]/10 to-transparent pointer-events-none" />
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+                    
+                    {/* Left: The Feature List */}
+                    <div className="lg:col-span-5 flex flex-col gap-3">
+                        {FEATURES.map((feat, idx) => {
+                            const isActive = idx === activeIndex;
+                            return (
+                                <div 
+                                    key={feat.id}
+                                    onClick={() => setActiveIndex(idx)}
+                                    className={`cursor-pointer group relative p-6 rounded-[2rem] transition-all duration-500 ${
+                                        isActive 
+                                        ? `${feat.activeBg} ${feat.activeBorder} border shadow-2xl backdrop-blur-md` 
+                                        : 'hover:bg-white/[0.03] border border-transparent'
+                                    }`}
+                                >
+                                    <div className="flex items-start gap-6">
+                                        <div className={`mt-1 flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+                                            isActive 
+                                            ? `bg-gradient-to-br ${feat.color} shadow-lg text-slate-900 scale-110` 
+                                            : 'bg-white/5 text-white/40 group-hover:text-white/80'
+                                        }`}>
+                                            <feat.icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+                                        </div>
+                                        <div>
+                                            <h3 className={`text-2xl md:text-3xl font-bold tracking-tight transition-all duration-500 ${
+                                                isActive ? 'text-white' : 'text-white/40 group-hover:text-white/60'
+                                            }`}>
+                                                {feat.title}
+                                            </h3>
+                                            
+                                            <AnimatePresence>
+                                                {isActive && (
+                                                    <motion.div
+                                                        initial={{ height: 0, opacity: 0 }}
+                                                        animate={{ height: "auto", opacity: 1 }}
+                                                        exit={{ height: 0, opacity: 0 }}
+                                                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                                                        className="overflow-hidden"
+                                                    >
+                                                        <p className="pt-4 text-lg text-white/60 leading-relaxed max-w-md">
+                                                            {feat.desc}
+                                                        </p>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
 
-                  <div className="flex justify-between items-center mb-8 relative z-10">
-                    <div className="h-2 w-24 bg-white/20 rounded-full" />
-                    <div className="h-8 w-8 rounded-full bg-[#14b8a6]/40 border border-[#14b8a6]/60 shadow-[0_0_15px_rgba(20,184,166,0.5)] animate-pulse" />
-                  </div>
-                  <div className="space-y-4 relative z-10">
-                    <div className="h-12 w-full bg-white/10 rounded-2xl border border-white/5" />
-                    <div className="h-12 w-full bg-white/10 rounded-2xl border border-white/5" />
-                  </div>
+                    {/* Right: The Monolith Showcase */}
+                    <div className="lg:col-span-7 relative w-full aspect-square lg:aspect-[4/3] max-h-[800px] rounded-[3rem] overflow-hidden bg-[#020504] border border-white/10 shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]">
+                        {/* Glass glare overlay */}
+                        <div className="absolute inset-0 z-30 pointer-events-none rounded-[3rem] border border-white/5" />
+                        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent z-30" />
+                        <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/5 to-transparent z-30 pointer-events-none" />
+
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeIndex}
+                                initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+                                animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                                exit={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
+                                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                className="absolute inset-0 w-full h-full"
+                            >
+                                {activeIndex === 0 && <EncryptionVisualizer />}
+                                {activeIndex === 1 && <SearchVisualizer />}
+                                {activeIndex === 2 && <BackupVisualizer />}
+                                {activeIndex === 3 && <SharingVisualizer />}
+                                {activeIndex === 4 && <RansomwareVisualizer />}
+                            </motion.div>
+                        </AnimatePresence>
+
+                        {/* Visualizer Footer Bar */}
+                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 px-6 py-3 rounded-full bg-[#0a1411]/80 backdrop-blur-xl border border-white/10 flex items-center gap-4 shadow-2xl">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-white/70 text-xs font-bold tracking-widest uppercase font-mono">
+                                System Active // Node {activeIndex + 1}
+                            </span>
+                        </div>
+                    </div>
+
                 </div>
-              </div>
             </div>
-          </Card>
-        </motion.div>
-      </div>
-    </section>
-  );
-};
+        </section>
+    </div>
+  )
+}
 
 export default ScaleSecurity;

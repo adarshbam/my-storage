@@ -342,10 +342,21 @@ export default function FileBrowser({ specialView }) {
 
   const handleDownload = (item) => {
     if (!item.id) return;
-    const url =
-      item.type === "directory"
+    
+    let url;
+    if (item.provider === "github") {
+      if (item.type === "directory") {
+        // For github repositories/folders, we can trigger the backend to download a zip.
+        // We will pass an action=download flag to the directory endpoint
+        url = `${SERVER_URL}/github/repositories/${encodeURIComponent(item.githubPath)}/download`;
+      } else {
+        url = `${SERVER_URL}/github/file/${encodeURIComponent(item.githubPath)}?action=download`;
+      }
+    } else {
+      url = item.type === "directory"
         ? `${SERVER_URL}/directory/${item.id}?action=download`
         : `${SERVER_URL}/file/${item.id}?action=download`;
+    }
 
     const name = item.type === "directory" ? `${item.name}.zip` : item.name;
     downloadFile(url, name);

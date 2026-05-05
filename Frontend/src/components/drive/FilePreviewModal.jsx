@@ -28,12 +28,11 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
         setError(null);
         try {
           // Add timestamp to prevent caching
-          const res = await fetch(
-            `${SERVER_URL}/file/${file.id}?t=${Date.now()}`,
-            {
-              credentials: "include",
-            },
-          );
+          const url =
+            file.provider === "github"
+              ? `${SERVER_URL}/github/file/${encodeURIComponent(file.githubPath)}?t=${Date.now()}`
+              : `${SERVER_URL}/file/${file.id}?t=${Date.now()}`;
+          const res = await fetch(url, { credentials: "include" });
           if (!res.ok) throw new Error("Failed to load content");
           const text = await res.text();
           setContent(text);
@@ -59,10 +58,16 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
 
   if (!isOpen || !file) return null;
 
-  const fileUrl = `${SERVER_URL}/file/${file.id}`;
+  const fileUrl =
+    file.provider === "github"
+      ? `${SERVER_URL}/github/file/${encodeURIComponent(file.githubPath)}`
+      : `${SERVER_URL}/file/${file.id}`;
 
   const handleDownload = () => {
-    const downloadUrl = `${SERVER_URL}/file/${file.id}?action=download`;
+    const downloadUrl =
+      file.provider === "github"
+        ? `${SERVER_URL}/github/file/${encodeURIComponent(file.githubPath)}?action=download`
+        : `${SERVER_URL}/file/${file.id}?action=download`;
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.download = file.name;

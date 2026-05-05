@@ -19,7 +19,6 @@ export default function AuthLayout({ children }) {
 
       {/* Unified Frame */}
       <div className="w-full max-w-[1100px] min-h-[600px] bg-white/60 dark:bg-white/[0.04] backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)] rounded-[28px] lg:rounded-[32px] flex overflow-hidden relative z-10 transition-all duration-300">
-        
         {/* ── Left Promo Panel ── */}
         <div className="hidden lg:flex lg:w-[45%] xl:w-[48%] relative bg-gradient-to-br from-[#0f463e]/95 to-[#022c22]/95 border-r border-black/10 dark:border-white/[0.08] overflow-hidden">
           {/* Decorative glow */}
