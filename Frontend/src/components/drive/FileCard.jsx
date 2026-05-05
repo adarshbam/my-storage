@@ -235,15 +235,17 @@ export default function FileCard({
                 >
                   <ExternalLink size={14} /> Open
                 </button>
-                <button
-                  onClick={() => {
-                    setShowMenu(false);
-                    onRename(item);
-                  }}
-                  className="w-full text-left px-3 py-2 text-[13px] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
-                >
-                  <Edit2 size={14} /> Rename
-                </button>
+                {item.provider !== "github" && (
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onRename(item);
+                    }}
+                    className="w-full text-left px-3 py-2 text-[13px] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                  >
+                    <Edit2 size={14} /> Rename
+                  </button>
+                )}
               </>
             )}
 

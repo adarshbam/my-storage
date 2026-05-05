@@ -46,7 +46,51 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
   const [error, setError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentSha, setCurrentSha] = useState(file?.sha || null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [tempName, setTempName] = useState(file?.name || "");
   const modalRef = useRef(null);
+
+  useEffect(() => {
+    if (file?.sha) setCurrentSha(file.sha);
+    if (file?.name) setTempName(file.name);
+  }, [file]);
+
+  const handleRenameSubmit = async () => {
+    if (!tempName.trim() || tempName === file.name) {
+      setIsRenaming(false);
+      setTempName(file.name);
+      return;
+    }
+
+    try {
+      const isGithub = file.provider === "github";
+      if (isGithub) {
+        alert("GitHub inline renaming is limited. Use the dashboard menu for full control.");
+        setTempName(file.name);
+        setIsRenaming(false);
+        return;
+      }
+
+      const res = await fetch(`${SERVER_URL}/file/${file.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newFileName: tempName.trim() }),
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Rename failed");
+      
+      // Update the file object in place for the current view
+      file.name = tempName.trim();
+      setIsRenaming(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to rename file");
+      setTempName(file.name);
+      setIsRenaming(false);
+    }
+  };
   
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -116,23 +160,41 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
       : `${SERVER_URL}/file/${file.id}`;
 
   const handleSave = async () => {
-    if (file.provider === "github") return; // Saving to GitHub not implemented yet
     setSaving(true);
     try {
-      const res = await fetch(`${SERVER_URL}/file/${file.id}/save`, {
+      const isGithub = file.provider === "github";
+      const url = isGithub
+        ? `${SERVER_URL}/github/file/${encodeURIComponent(file.githubPath)}`
+        : `${SERVER_URL}/file/${file.id}/save`;
+
+      const body = isGithub
+        ? JSON.stringify({
+            content: btoa(unescape(encodeURIComponent(editedContent))),
+            sha: currentSha,
+          })
+        : JSON.stringify({ content: editedContent });
+
+      const res = await fetch(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: editedContent }),
+        body: body,
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to save file");
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save file");
+
+      if (isGithub && data.content?.sha) {
+        setCurrentSha(data.content.sha);
+      }
+
       setContent(editedContent);
       setIsEditing(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (err) {
       console.error(err);
-      alert("Failed to save changes");
+      alert(err.message || "Failed to save changes");
     } finally {
       setSaving(false);
     }
@@ -391,15 +453,40 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
                 <FileText size={20} />
               )}
             </div>
-            <h3
-              className="text-lg font-semibold text-slate-900 dark:text-white truncate"
-              title={file.name}
-            >
-              {file.name}
-            </h3>
+            <div className="flex flex-col min-w-0">
+              {isRenaming ? (
+                <input
+                  type="text"
+                  value={tempName}
+                  onChange={(e) => setTempName(e.target.value)}
+                  onBlur={handleRenameSubmit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleRenameSubmit();
+                    if (e.key === "Escape") {
+                      setIsRenaming(false);
+                      setTempName(file.name);
+                    }
+                  }}
+                  autoFocus
+                  className="bg-white/10 dark:bg-black/20 border border-[#14b8a6]/50 rounded px-2 py-0.5 text-sm font-medium text-slate-900 dark:text-white outline-none w-full max-w-[200px]"
+                />
+              ) : (
+                <h3
+                  className="text-lg font-semibold text-slate-900 dark:text-white truncate cursor-pointer hover:text-[#14b8a6] transition-colors"
+                  title="Double click to rename"
+                  onDoubleClick={() => setIsRenaming(true)}
+                >
+                  {file.name}
+                </h3>
+              )}
+              <span className="text-[10px] text-slate-500 font-mono flex items-center gap-2">
+                {file.provider === "github" ? "GitHub Managed" : "Local Storage"}
+                {isEditing && <span className="text-[#14b8a6] font-bold">• EDITING</span>}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            {isTextOrCode(file.extension) && file.provider !== "github" && (
+            {isTextOrCode(file.extension) && (
               <>
                 {isEditing ? (
                   <div className="flex items-center gap-2">

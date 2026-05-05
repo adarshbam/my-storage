@@ -109,6 +109,7 @@ export const getRepositoryContents = async (req, res) => {
       provider: "github",
       githubPath: `${owner}/${repo}/${file.path}`,
       size: file.size,
+      sha: file.sha,
       extension: file.name.includes(".")
         ? "." + file.name.split(".").pop()
         : "",
@@ -170,7 +171,9 @@ export const getFiles = async (req, res) => {
   const buffer = Buffer.from(file.content, "base64");
 
   // 3. Figure out the mime type so the browser knows how to render it
-  const ext = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
+  const ext = file.name.includes(".")
+    ? file.name.split(".").pop().toLowerCase()
+    : "";
   const mimeTypes = {
     png: "image/png",
     jpg: "image/jpeg",
@@ -198,6 +201,160 @@ export const getFiles = async (req, res) => {
   return res.status(200).send(buffer);
 };
 
+export const updateFiles = async (req, res) => {
+  const { githubPath } = req.params;
+  const { content, sha } = req.body;
+
+  const user = await User.findOne({ _id: req.user.id });
+  const githubAccessToken = user?.integrations?.github?.accessToken;
+
+  if (!githubAccessToken) {
+    return res.status(403).json({ error: "Github not connected" });
+  }
+
+  const parts = githubPath.split("/");
+  const owner = parts[0];
+  const repo = parts[1];
+  const path = parts.slice(2).join("/");
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+      body: JSON.stringify({
+        message: "update file",
+        content,
+        sha,
+      }),
+    },
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    return res.status(response.status).json({ error: data.message || "Failed to update file" });
+  }
+
+  return res.status(200).json({ msg: "Edited!", content: data.content });
+};
+
+export const deleteFile = async (req, res) => {
+  const { githubPath } = req.params;
+  const { sha } = req.body;
+
+  const user = await User.findOne({ _id: req.user.id });
+  const githubAccessToken = user?.integrations?.github?.accessToken;
+
+  if (!githubAccessToken) {
+    return res.status(403).json({ error: "Github not connected" });
+  }
+
+  const parts = githubPath.split("/");
+  const owner = parts[0];
+  const repo = parts[1];
+  const path = parts.slice(2).join("/");
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+      body: JSON.stringify({
+        message: `Delete ${path}`,
+        sha,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const data = await response.json();
+    return res.status(response.status).json({ error: data.message || "Failed to delete file" });
+  }
+
+  return res.status(200).json({ msg: "Deleted!" });
+};
+
+export const createFile = async (req, res) => {
+  const { githubPath } = req.params;
+  const fileName = req.headers.filename; // Present if uploading from TransferManager
+
+  const user = await User.findOne({ _id: req.user.id });
+  const githubAccessToken = user?.integrations?.github?.accessToken;
+
+  if (!githubAccessToken) {
+    return res.status(403).json({ error: "Github not connected" });
+  }
+
+  // Helper to handle the actual GitHub API call
+  const pushToGithub = async (content, finalPath, msg) => {
+    const parts = finalPath.split("/");
+    const owner = parts[0];
+    const repo = parts[1];
+    const path = parts.slice(2).join("/");
+
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${githubAccessToken}`,
+          Accept: "application/vnd.github+json",
+        },
+        body: JSON.stringify({
+          message: msg,
+          content,
+        }),
+      },
+    );
+    return response;
+  };
+
+  if (fileName) {
+    // CASE 1: Binary upload from TransferManager
+    const chunks = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", async () => {
+      try {
+        const buffer = Buffer.concat(chunks);
+        const content = buffer.toString("base64");
+        const fullPath = githubPath ? `${githubPath}/${fileName}` : fileName;
+
+        const response = await pushToGithub(content, fullPath, `Upload ${fileName}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          return res.status(response.status).json({ error: data.message || "Failed to upload file" });
+        }
+        return res.status(201).json({ msg: "Uploaded!", content: data.content });
+      } catch (err) {
+        console.error("Upload error:", err);
+        return res.status(500).json({ error: "Internal server error during upload" });
+      }
+    });
+  } else {
+    // CASE 2: JSON request from "New File" button
+    const { content } = req.body;
+    try {
+      const response = await pushToGithub(content || "", githubPath, `Create ${githubPath}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(response.status).json({ error: data.message || "Failed to create file" });
+      }
+      return res.status(201).json({ msg: "Created!", content: data.content });
+    } catch (err) {
+      console.error("Create error:", err);
+      return res.status(500).json({ error: "Internal server error during creation" });
+    }
+  }
+};
+
 export const downloadRepository = async (req, res) => {
   const { githubPath } = req.params;
   const parts = githubPath.split("/");
@@ -219,21 +376,26 @@ export const downloadRepository = async (req, res) => {
       headers: {
         Authorization: `Bearer ${githubAccessToken}`,
       },
-      redirect: 'manual' // We want to catch the 302 redirect
+      redirect: "manual", // We want to catch the 302 redirect
     });
 
     if (response.status === 302 || response.status === 301) {
       const location = response.headers.get("location");
       return res.redirect(location);
     } else if (response.ok) {
-       // Just in case fetch follows redirect automatically
-       const arrayBuffer = await response.arrayBuffer();
-       const buffer = Buffer.from(arrayBuffer);
-       res.setHeader("Content-Disposition", `attachment; filename="${repo}.zip"`);
-       res.setHeader("Content-Type", "application/zip");
-       return res.send(buffer);
+      // Just in case fetch follows redirect automatically
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${repo}.zip"`,
+      );
+      res.setHeader("Content-Type", "application/zip");
+      return res.send(buffer);
     } else {
-       return res.status(response.status).json({ error: "Failed to download repository" });
+      return res
+        .status(response.status)
+        .json({ error: "Failed to download repository" });
     }
   } catch (error) {
     console.error("Error downloading repo:", error);

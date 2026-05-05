@@ -352,7 +352,14 @@ export const uploadFile = async (req, res) => {
       if (!res.writableEnded) return res.status(201).send("File uploaded");
     });
 
-    req.pipe(writeStream);
+    // If we have content in req.body (from New File modal), write it and end
+    if (req.body && req.body.content !== undefined) {
+      writeStream.write(req.body.content);
+      writeStream.end();
+    } else {
+      // Otherwise pipe the binary stream (from TransferManager)
+      req.pipe(writeStream);
+    }
   } catch (err) {
     console.error(err);
     return res.status(500).send("Internal Server Error");

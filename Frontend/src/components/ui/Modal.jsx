@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/utils";
 
-export default function Modal({ isOpen, onClose, title, children, className }) {
+export default function Modal({ isOpen, onClose, title, children, className, headerActions }) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -29,12 +29,15 @@ export default function Modal({ isOpen, onClose, title, children, className }) {
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
             {title}
           </h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {headerActions}
+            <button
+              onClick={onClose}
+              className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
         <div className="p-6">{children}</div>
       </div>

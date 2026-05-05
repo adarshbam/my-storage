@@ -80,12 +80,15 @@ const TransferManager = forwardRef((props, ref) => {
     const xhr = new XMLHttpRequest();
     abortControllers.current[id] = xhr;
 
-    // Use a robust URL construction (handles mostly edge cases)
-    // If dirId is not provided, it goes to root (handled by backend or default)
-    // We use empty string to hit the root route "/" of the router
-    const uploadUrl = dirId
-      ? `${SERVER_URL}/file/${dirId}`
-      : `${SERVER_URL}/file/`;
+    // Detect GitHub destination via prefix or slash
+    const isGithub = dirId && typeof dirId === "string" && (dirId.startsWith("github:") || dirId.includes("/"));
+    const cleanDirId = isGithub && dirId.startsWith("github:") ? dirId.replace("github:", "") : dirId;
+    
+    const uploadUrl = isGithub
+      ? `${SERVER_URL}/github/file/${encodeURIComponent(cleanDirId)}`
+      : cleanDirId
+        ? `${SERVER_URL}/file/${cleanDirId}`
+        : `${SERVER_URL}/file/`;
 
     xhr.open("POST", uploadUrl, true);
     xhr.withCredentials = true;

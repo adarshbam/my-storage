@@ -8,8 +8,21 @@ import {
 } from "react-router-dom";
 import { SERVER_URL } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
-import { joinUrl } from "../../lib/utils";
+import { joinUrl, cn } from "../../lib/utils";
 import Button from "../ui/Button";
+import Editor from "react-simple-code-editor";
+import * as Prism from "prismjs";
+import "prismjs/components/prism-clike";
+import "prismjs/components/prism-javascript";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-jsx";
+import "prismjs/components/prism-tsx";
+import "prismjs/components/prism-css";
+import "prismjs/components/prism-markup";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-markdown";
+import "prismjs/themes/prism-tomorrow.css";
 import Modal from "../ui/Modal";
 import FileCard from "./FileCard";
 import {
@@ -23,6 +36,10 @@ import {
   Search,
   Settings,
   SlidersHorizontal,
+  FilePlus,
+  AlertTriangle,
+  Maximize,
+  Minimize,
 } from "lucide-react";
 
 // Lazy load the preview modal since it contains heavy syntax highlighter dependencies
@@ -148,7 +165,7 @@ export default function FileBrowser({ specialView }) {
     fetchFiles();
     setSelectedItems([]);
     setLastSelectedId(null);
-    setCurrentFolderId(folderId || null);
+    setCurrentFolderId(folderId || (githubPath ? `github:${githubPath}` : null));
   }, [folderId, refreshTrigger, location.pathname, searchQuery, specialView]);
 
   // --- HANDLERS ---
@@ -264,9 +281,50 @@ export default function FileBrowser({ specialView }) {
   }, [isDragging, startPoint, data]);
 
   // --- MODAL STATE ---
-  const [modalType, setModalType] = useState(null); // 'create' | 'rename' | null
+  const [modalType, setModalType] = useState(null); // 'create' | 'create-file' | 'rename' | 'delete-github' | null
   const [modalItem, setModalItem] = useState(null);
   const [modalInput, setModalInput] = useState("");
+  const [selectedExt, setSelectedExt] = useState(".txt");
+  const [newFileContent, setNewFileContent] = useState("");
+  const [isCreateFullscreen, setIsCreateFullscreen] = useState(false);
+  const createModalRef = useRef(null);
+
+  const toggleCreateFullscreen = () => {
+    if (!document.fullscreenElement) {
+      createModalRef.current?.requestFullscreen().catch((err) => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsCreateFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  const supportedExtensions = [
+    ".txt", ".js", ".jsx", ".ts", ".tsx", ".css", ".html", ".json", ".md", ".py"
+  ];
+
+  const getLanguage = (ext) => {
+    const map = {
+      ".js": "javascript",
+      ".jsx": "jsx",
+      ".ts": "typescript",
+      ".tsx": "tsx",
+      ".json": "json",
+      ".css": "css",
+      ".html": "html",
+      ".py": "python",
+      ".md": "markdown",
+    };
+    return map[ext] || "text";
+  };
 
   const handleRenameClick = (item) => {
     setModalItem(item);
@@ -283,45 +341,73 @@ export default function FileBrowser({ specialView }) {
     e.preventDefault();
     if (!modalInput.trim()) return;
 
-    if (modalType === "create") {
-      try {
-        await fetch(`${SERVER_URL}/directory/${folderId || ""}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ foldername: modalInput }),
-          credentials: "include",
-        });
-        fetchFiles();
-      } catch (err) {
-        console.error("Create folder failed", err);
-      }
-    } else if (modalType === "rename" && modalItem) {
-      if (modalInput === modalItem.name) {
-        setModalType(null);
-        return;
-      }
+    try {
+      let url;
+      let method = "POST";
+      let body;
+      let headers = { "Content-Type": "application/json" };
 
-      const typeEndpoint =
-        modalItem.type === "directory" ||
-        data.directories.find((d) => d.id === modalItem.id)
+      if (modalType === "create") {
+        if (specialView === "github-repo") {
+          // Git doesn't support empty folders, so we create a .gitkeep file inside
+          const newPath = githubPath ? `${githubPath}/${modalInput}/.gitkeep` : `${modalInput}/.gitkeep`;
+          url = `${SERVER_URL}/github/file/${encodeURIComponent(newPath)}`;
+          body = JSON.stringify({ 
+            content: btoa(".gitkeep"), // Base64 for empty or small text
+            message: `Create folder ${modalInput}`
+          });
+        } else {
+          url = `${SERVER_URL}/directory/${folderId || ""}`;
+          body = JSON.stringify({ foldername: modalInput });
+        }
+      } else if (modalType === "create-file") {
+        const fullName = modalInput.trim() + selectedExt;
+        if (specialView === "github-repo") {
+          url = `${SERVER_URL}/github/file/${encodeURIComponent(githubPath + "/" + fullName)}`;
+          body = JSON.stringify({ 
+            content: btoa(unescape(encodeURIComponent(newFileContent))),
+            message: `Create ${fullName}`
+          });
+        } else {
+          url = folderId ? `${SERVER_URL}/file/${folderId}` : `${SERVER_URL}/file/`;
+          headers["filename"] = fullName;
+          body = JSON.stringify({ content: newFileContent });
+        }
+      } else if (modalType === "rename" && modalItem) {
+        if (modalInput === modalItem.name) {
+          setModalType(null);
+          return;
+        }
+        const typeEndpoint = modalItem.type === "directory" || data.directories.find((d) => d.id === modalItem.id)
           ? "directory"
           : "file";
-      const bodyKey =
-        typeEndpoint === "directory" ? "newDirName" : "newFileName";
-
-      try {
-        await fetch(`${SERVER_URL}/${typeEndpoint}/${modalItem.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ [bodyKey]: modalInput }),
-          credentials: "include",
-        });
-        fetchFiles();
-      } catch (err) {
-        console.error("Rename failed", err);
+        const bodyKey = typeEndpoint === "directory" ? "newDirName" : "newFileName";
+        url = `${SERVER_URL}/${typeEndpoint}/${modalItem.id}`;
+        method = "PATCH";
+        body = JSON.stringify({ [bodyKey]: modalInput });
       }
+
+      const res = await fetch(url, {
+        method,
+        headers,
+        body,
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const result = await res.json();
+        throw new Error(result.error || "Operation failed");
+      }
+
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+      setModalType(null);
+      fetchFiles();
+    } catch (err) {
+      console.error("Operation failed", err);
+      alert(err.message || "Operation failed");
     }
-    setModalType(null);
   };
 
   // --- HANDLERS ---
@@ -363,21 +449,66 @@ export default function FileBrowser({ specialView }) {
   };
 
   const handleDelete = async (item) => {
+    if (item.provider === "github") {
+      setModalItem(item);
+      setModalType("delete-github");
+      return;
+    }
+
     if (!confirm(`Are you sure you want to delete ${item.name}?`)) return;
 
-    const endpoint = item.extension ? "file" : "directory";
-    const typeEndpoint = data.directories.find((d) => d.id === item.id)
-      ? "directory"
-      : "file";
-
     try {
-      await fetch(`${SERVER_URL}/${typeEndpoint}/${item.id}`, {
+      let url;
+      let body = null;
+      
+      const typeEndpoint = data.directories.find((d) => d.id === item.id)
+        ? "directory"
+        : "file";
+      url = `${SERVER_URL}/${typeEndpoint}/${item.id}`;
+
+      const res = await fetch(url, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: body,
         credentials: "include",
       });
+
+      if (!res.ok) {
+        const result = await res.json();
+        throw new Error(result.error || "Delete failed");
+      }
+
       fetchFiles();
     } catch (err) {
       console.error("Delete failed", err);
+      alert(err.message || "Failed to delete item");
+    }
+  };
+
+  const confirmDeleteGithub = async () => {
+    if (!modalItem) return;
+    
+    try {
+      const url = `${SERVER_URL}/github/file/${encodeURIComponent(modalItem.githubPath)}`;
+      const body = JSON.stringify({ sha: modalItem.sha });
+
+      const res = await fetch(url, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: body,
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const result = await res.json();
+        throw new Error(result.error || "Delete failed");
+      }
+
+      setModalType(null);
+      fetchFiles();
+    } catch (err) {
+      console.error("Delete failed", err);
+      alert(err.message || "Failed to delete item");
     }
   };
 
@@ -666,7 +797,7 @@ export default function FileBrowser({ specialView }) {
               <List size={18} />
             </button>
           </div>
-          {!specialView ? (
+          {(!specialView || specialView === "github-repo") && (
             <>
               <button
                 onClick={handleCreateClick}
@@ -676,6 +807,18 @@ export default function FileBrowser({ specialView }) {
                 <span className="hidden sm:inline">New Folder</span>
               </button>
               <button
+                onClick={() => {
+                  setModalInput("");
+                  setModalType("create-file");
+                  // Default extension
+                  setSelectedExt(".txt");
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm text-slate-700 dark:text-slate-200 rounded-xl hover:bg-white/80 dark:hover:bg-white/[0.08] transition-all duration-300 font-medium border border-black/5 dark:border-white/[0.06]"
+              >
+                <FilePlus size={18} />
+                <span className="hidden sm:inline">New File</span>
+              </button>
+              <button
                 onClick={openUploadModal}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white rounded-xl hover:shadow-[0_0_20px_rgba(20,184,166,0.4)] hover:scale-[1.03] transition-all duration-300 font-medium shadow-lg shadow-[#14b8a6]/20"
               >
@@ -683,7 +826,7 @@ export default function FileBrowser({ specialView }) {
                 <span className="hidden sm:inline">Upload</span>
               </button>
             </>
-          ) : null}
+          )}
         </div>
       </div>
 
@@ -825,36 +968,189 @@ export default function FileBrowser({ specialView }) {
 
       <Modal
         isOpen={!!modalType}
-        onClose={() => setModalType(null)}
-        title={modalType === "create" ? "Create New Folder" : "Rename Item"}
+        onClose={() => {
+          if (document.fullscreenElement) document.exitFullscreen();
+          setModalType(null);
+          setModalInput("");
+          setNewFileContent("");
+        }}
+        className={cn(
+          modalType === "create-file" ? "max-w-4xl" : "max-w-md",
+          isCreateFullscreen && "max-w-none w-full h-full rounded-none border-none"
+        )}
+        headerActions={modalType === "create-file" && (
+          <button
+            onClick={toggleCreateFullscreen}
+            className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
+            title={isCreateFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+          >
+            {isCreateFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+          </button>
+        )}
+        title={
+          modalType === "create" 
+            ? "Create New Folder"
+            : modalType === "create-file"
+            ? "Create New File"
+            : modalType === "rename" 
+            ? "Rename Item"
+            : "Danger: Permanent Deletion"
+        }
       >
-        <form onSubmit={handleModalSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Name
-            </label>
-            <input
-              type="text"
-              value={modalInput}
-              onChange={(e) => setModalInput(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              placeholder="Enter name..."
-              autoFocus
-            />
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setModalType(null)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit">
-              {modalType === "create" ? "Create Folder" : "Rename"}
-            </Button>
-          </div>
-        </form>
+        <div ref={createModalRef} className={cn("bg-white dark:bg-slate-900", isCreateFullscreen && "h-full flex flex-col p-4")}>
+          {modalType === "delete-github" ? (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/30">
+                <div className="p-3 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-full shrink-0">
+                  <AlertTriangle size={24} />
+                </div>
+                <div>
+                  <h3 className="text-red-800 dark:text-red-200 font-semibold text-lg leading-tight">Wait! This is permanent.</h3>
+                  <p className="text-red-600 dark:text-red-400 text-sm mt-1">
+                    You are about to delete <strong className="text-red-700 dark:text-red-100">{modalItem?.name}</strong> from GitHub. This action will create a direct commit and cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-white/[0.02] p-4 rounded-xl border border-slate-200 dark:border-white/10 space-y-3">
+                <div className="flex justify-between items-center text-[13px]">
+                  <span className="text-slate-500">Repository</span>
+                  <span className="font-mono text-slate-700 dark:text-slate-300">
+                    {modalItem?.githubPath?.split('/').slice(0, 2).join('/')}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-[13px]">
+                  <span className="text-slate-500">Action Type</span>
+                  <span className="text-red-500 font-semibold">COMMIT_DELETE</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setModalType(null)}
+                  className="hover:bg-slate-100 dark:hover:bg-slate-800 px-6"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={confirmDeleteGithub}
+                  className="bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20 px-6 border-none"
+                >
+                  Confirm Delete
+                </Button>
+              </div>
+            </div>
+          ) : modalType === "create-file" ? (
+            <form onSubmit={handleModalSubmit} className={cn("space-y-4", isCreateFullscreen && "flex-1 flex flex-col")}>
+              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="flex-1">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Filename</label>
+                  <input
+                    type="text"
+                    value={modalInput}
+                    onChange={(e) => setModalInput(e.target.value)}
+                    className="w-full bg-transparent text-slate-900 dark:text-white font-medium focus:outline-none text-lg"
+                    placeholder="untitled"
+                    autoFocus
+                  />
+                </div>
+                <div className="w-px h-10 bg-slate-200 dark:bg-slate-800 mx-2"></div>
+                <div className="w-32">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Extension</label>
+                  <select
+                    value={selectedExt}
+                    onChange={(e) => setSelectedExt(e.target.value)}
+                    className="w-full bg-transparent text-[#14b8a6] font-bold focus:outline-none appearance-none cursor-pointer text-lg"
+                  >
+                    {supportedExtensions.map(ext => (
+                      <option key={ext} value={ext} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{ext}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className={cn("relative group bg-[#1e1e1e] rounded-xl border border-black/10 dark:border-white/5 overflow-hidden flex flex-col", isCreateFullscreen ? "flex-1" : "h-64")}>
+                <div className="flex-1 overflow-auto custom-scrollbar">
+                  <Editor
+                    value={newFileContent}
+                    onValueChange={(code) => setNewFileContent(code)}
+                    highlight={(code) => {
+                      const lang = getLanguage(selectedExt);
+                      try {
+                        const grammar = Prism.languages[lang] || Prism.languages.javascript || Prism.languages.clike;
+                        return Prism.highlight(code, grammar, lang);
+                      } catch (e) {
+                        return code;
+                      }
+                    }}
+                    padding={16}
+                    style={{
+                      fontFamily: '"Cascadia Code", "Fira Code", monospace',
+                      fontSize: 13,
+                      minHeight: "100%",
+                      color: "#d4d4d4",
+                    }}
+                    className="w-full focus:outline-none"
+                  />
+                </div>
+                <div className="px-3 py-1 bg-[#007acc] flex justify-between items-center text-[10px] text-white font-medium uppercase tracking-wider">
+                  <span>{getLanguage(selectedExt)} Mode</span>
+                  <span>Ready to Create</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-slate-500 italic">
+                  Final: <span className="text-slate-700 dark:text-slate-300 font-mono font-medium">{modalInput || "untitled"}{selectedExt}</span>
+                </p>
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      if (document.fullscreenElement) document.exitFullscreen();
+                      setModalType(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white border-none shadow-lg shadow-[#14b8a6]/20 px-8">
+                    Create & Save
+                  </Button>
+                </div>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleModalSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={modalInput}
+                  onChange={(e) => setModalInput(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  placeholder="Enter name..."
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setModalType(null)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {modalType === "create" ? "Create Folder" : "Rename"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
       </Modal>
 
       <Suspense fallback={null}>

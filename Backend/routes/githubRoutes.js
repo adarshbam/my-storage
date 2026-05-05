@@ -4,7 +4,10 @@ import {
   listRepositories,
   getRepositoryContents,
   getFiles,
-  downloadRepository
+  downloadRepository,
+  updateFiles,
+  deleteFile,
+  createFile,
 } from "../controllers/githubController.js";
 
 const router = express.Router();
@@ -21,6 +24,15 @@ router.get(
 
 // get files
 router.get("/file/:githubPath", checkAuth, getFiles);
+
+// create file
+router.post("/file/:githubPath", checkAuth, createFile);
+
+// edit file
+router.put("/file/:githubPath", checkAuth, updateFiles);
+
+// delete file
+router.delete("/file/:githubPath", checkAuth, deleteFile);
 
 // download repo
 router.get("/repositories/:githubPath/download", checkAuth, downloadRepository);
