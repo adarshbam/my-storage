@@ -8,6 +8,9 @@ import {
   updateFiles,
   deleteFile,
   createFile,
+  deleteFolder,
+  downloadFolder,
+  listBranches,
 } from "../controllers/githubController.js";
 
 const router = express.Router();
@@ -34,7 +37,20 @@ router.put("/file/:githubPath", checkAuth, updateFiles);
 // delete file
 router.delete("/file/:githubPath", checkAuth, deleteFile);
 
+// delete folder
+router.delete("/repositories/:githubPath", checkAuth, deleteFolder);
+
 // download repo
 router.get("/repositories/:githubPath/download", checkAuth, downloadRepository);
+
+// download folder
+router.get(
+  "/repositories/:githubPath/folder-download",
+  checkAuth,
+  downloadFolder,
+);
+
+// list branches
+router.get("/repositories/:githubPath/branches", checkAuth, listBranches);
 
 export default router;

@@ -40,6 +40,7 @@ import {
   AlertTriangle,
   Maximize,
   Minimize,
+  GitBranch,
 } from "lucide-react";
 
 // Lazy load the preview modal since it contains heavy syntax highlighter dependencies
@@ -74,6 +75,8 @@ export default function FileBrowser({ specialView }) {
   const [previewFile, setPreviewFile] = useState(null);
   const [lastSelectedId, setLastSelectedId] = useState(null);
   const [viewMode, setViewMode] = useState("grid");
+  const [branches, setBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState("");
 
   // --- DRAG SELECTION STATE ---
   const [isDragging, setIsDragging] = useState(false);
@@ -106,7 +109,7 @@ export default function FileBrowser({ specialView }) {
       } else if (specialView === "github") {
         url = `${SERVER_URL}/github/repositories`;
       } else if (specialView === "github-repo") {
-        url = `${SERVER_URL}/github/repositories/${encodeURIComponent(githubPath)}/contents`;
+        url = `${SERVER_URL}/github/repositories/${encodeURIComponent(githubPath)}/contents${selectedBranch ? `?ref=${selectedBranch}` : ""}`;
       }
 
       if (isSearch) {
@@ -129,28 +132,42 @@ export default function FileBrowser({ specialView }) {
           parentDir: result.parentDir,
         });
         setDirName(
-          result.name || 
-          (isSearch ? `Search: ${searchQuery}` : 
-           specialView === "shared" ? "Shared with me" : 
-           specialView === "recent" ? "Recent" : 
-           specialView === "starred" ? "Starred" : 
-           specialView === "google-drive" ? "Google Drive" :
-           specialView === "github" ? "GitHub" :
-           specialView === "github-repo" ? "Repository" :
-           "Home"),
+          result.name ||
+            (isSearch
+              ? `Search: ${searchQuery}`
+              : specialView === "shared"
+                ? "Shared with me"
+                : specialView === "recent"
+                  ? "Recent"
+                  : specialView === "starred"
+                    ? "Starred"
+                    : specialView === "google-drive"
+                      ? "Google Drive"
+                      : specialView === "github"
+                        ? "GitHub"
+                        : specialView === "github-repo"
+                          ? "Repository"
+                          : "Home"),
         );
       } else {
         console.error("Failed to fetch files");
         // Fallback title on failure
         setDirName(
-           isSearch ? `Search: ${searchQuery}` : 
-           specialView === "shared" ? "Shared with me" : 
-           specialView === "recent" ? "Recent" : 
-           specialView === "starred" ? "Starred" : 
-           specialView === "google-drive" ? "Google Drive" : // Fallback Title
-           specialView === "github" ? "GitHub" :
-           specialView === "github-repo" ? "Repository" :
-           "Home"
+          isSearch
+            ? `Search: ${searchQuery}`
+            : specialView === "shared"
+              ? "Shared with me"
+              : specialView === "recent"
+                ? "Recent"
+                : specialView === "starred"
+                  ? "Starred"
+                  : specialView === "google-drive"
+                    ? "Google Drive" // Fallback Title
+                    : specialView === "github"
+                      ? "GitHub"
+                      : specialView === "github-repo"
+                        ? "Repository"
+                        : "Home",
         );
         setData({ directories: [], files: [] });
       }
@@ -161,12 +178,63 @@ export default function FileBrowser({ specialView }) {
     }
   };
 
+  const fetchBranches = async () => {
+    if (specialView !== "github-repo") return;
+    try {
+      const parts = githubPath.split("/");
+      const repoPath = `${parts[0]}/${parts[1]}`;
+      const response = await fetch(
+        `${SERVER_URL}/github/repositories/${encodeURIComponent(repoPath)}/branches`,
+        { credentials: "include" },
+      );
+      if (response.ok) {
+        const branchList = await response.json();
+        setBranches(branchList);
+        if (!selectedBranch && branchList.length > 0) {
+          // You might want to default to the default branch, but for now we pick the first or leave empty
+          // setSelectedBranch(branchList[0]);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching branches:", error);
+    }
+  };
+
+  const lastRepoRef = useRef("");
+
+  useEffect(() => {
+    if (specialView === "github-repo") {
+      const parts = githubPath?.split("/") || [];
+      if (parts.length >= 2) {
+        const currentRepo = `${parts[0]}/${parts[1]}`;
+        if (currentRepo !== lastRepoRef.current) {
+          setSelectedBranch("");
+          lastRepoRef.current = currentRepo;
+        }
+      }
+      fetchBranches();
+    } else {
+      setSelectedBranch("");
+      setBranches([]);
+      lastRepoRef.current = "";
+    }
+  }, [githubPath, specialView]);
+
   useEffect(() => {
     fetchFiles();
     setSelectedItems([]);
     setLastSelectedId(null);
-    setCurrentFolderId(folderId || (githubPath ? `github:${githubPath}` : null));
-  }, [folderId, refreshTrigger, location.pathname, searchQuery, specialView]);
+    setCurrentFolderId(
+      folderId || (githubPath ? `github:${githubPath}` : null),
+    );
+  }, [
+    folderId,
+    refreshTrigger,
+    location.pathname,
+    searchQuery,
+    specialView,
+    selectedBranch,
+  ]);
 
   // --- HANDLERS ---
 
@@ -304,11 +372,21 @@ export default function FileBrowser({ specialView }) {
       setIsCreateFullscreen(!!document.fullscreenElement);
     };
     document.addEventListener("fullscreenchange", handleFsChange);
-    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFsChange);
   }, []);
 
   const supportedExtensions = [
-    ".txt", ".js", ".jsx", ".ts", ".tsx", ".css", ".html", ".json", ".md", ".py"
+    ".txt",
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".css",
+    ".html",
+    ".json",
+    ".md",
+    ".py",
   ];
 
   const getLanguage = (ext) => {
@@ -350,11 +428,13 @@ export default function FileBrowser({ specialView }) {
       if (modalType === "create") {
         if (specialView === "github-repo") {
           // Git doesn't support empty folders, so we create a .gitkeep file inside
-          const newPath = githubPath ? `${githubPath}/${modalInput}/.gitkeep` : `${modalInput}/.gitkeep`;
+          const newPath = githubPath
+            ? `${githubPath}/${modalInput}/.gitkeep`
+            : `${modalInput}/.gitkeep`;
           url = `${SERVER_URL}/github/file/${encodeURIComponent(newPath)}`;
-          body = JSON.stringify({ 
+          body = JSON.stringify({
             content: btoa(".gitkeep"), // Base64 for empty or small text
-            message: `Create folder ${modalInput}`
+            message: `Create folder ${modalInput}`,
           });
         } else {
           url = `${SERVER_URL}/directory/${folderId || ""}`;
@@ -364,12 +444,14 @@ export default function FileBrowser({ specialView }) {
         const fullName = modalInput.trim() + selectedExt;
         if (specialView === "github-repo") {
           url = `${SERVER_URL}/github/file/${encodeURIComponent(githubPath + "/" + fullName)}`;
-          body = JSON.stringify({ 
+          body = JSON.stringify({
             content: btoa(unescape(encodeURIComponent(newFileContent))),
-            message: `Create ${fullName}`
+            message: `Create ${fullName}`,
           });
         } else {
-          url = folderId ? `${SERVER_URL}/file/${folderId}` : `${SERVER_URL}/file/`;
+          url = folderId
+            ? `${SERVER_URL}/file/${folderId}`
+            : `${SERVER_URL}/file/`;
           headers["filename"] = fullName;
           body = JSON.stringify({ content: newFileContent });
         }
@@ -378,10 +460,13 @@ export default function FileBrowser({ specialView }) {
           setModalType(null);
           return;
         }
-        const typeEndpoint = modalItem.type === "directory" || data.directories.find((d) => d.id === modalItem.id)
-          ? "directory"
-          : "file";
-        const bodyKey = typeEndpoint === "directory" ? "newDirName" : "newFileName";
+        const typeEndpoint =
+          modalItem.type === "directory" ||
+          data.directories.find((d) => d.id === modalItem.id)
+            ? "directory"
+            : "file";
+        const bodyKey =
+          typeEndpoint === "directory" ? "newDirName" : "newFileName";
         url = `${SERVER_URL}/${typeEndpoint}/${modalItem.id}`;
         method = "PATCH";
         body = JSON.stringify({ [bodyKey]: modalInput });
@@ -428,20 +513,23 @@ export default function FileBrowser({ specialView }) {
 
   const handleDownload = (item) => {
     if (!item.id) return;
-    
+
     let url;
     if (item.provider === "github") {
       if (item.type === "directory") {
-        // For github repositories/folders, we can trigger the backend to download a zip.
-        // We will pass an action=download flag to the directory endpoint
-        url = `${SERVER_URL}/github/repositories/${encodeURIComponent(item.githubPath)}/download`;
+        const isRepo = item.githubPath.split("/").length === 2;
+        const endpoint = isRepo ? "download" : "folder-download";
+        const queryParams = selectedBranch ? `?ref=${selectedBranch}` : "";
+        url = `${SERVER_URL}/github/repositories/${encodeURIComponent(item.githubPath)}/${endpoint}${queryParams}`;
       } else {
-        url = `${SERVER_URL}/github/file/${encodeURIComponent(item.githubPath)}?action=download`;
+        const queryParams = selectedBranch ? `&ref=${selectedBranch}` : "";
+        url = `${SERVER_URL}/github/file/${encodeURIComponent(item.githubPath)}?action=download${queryParams}`;
       }
     } else {
-      url = item.type === "directory"
-        ? `${SERVER_URL}/directory/${item.id}?action=download`
-        : `${SERVER_URL}/file/${item.id}?action=download`;
+      url =
+        item.type === "directory"
+          ? `${SERVER_URL}/directory/${item.id}?action=download`
+          : `${SERVER_URL}/file/${item.id}?action=download`;
     }
 
     const name = item.type === "directory" ? `${item.name}.zip` : item.name;
@@ -460,7 +548,7 @@ export default function FileBrowser({ specialView }) {
     try {
       let url;
       let body = null;
-      
+
       const typeEndpoint = data.directories.find((d) => d.id === item.id)
         ? "directory"
         : "file";
@@ -487,7 +575,7 @@ export default function FileBrowser({ specialView }) {
 
   const confirmDeleteGithub = async () => {
     if (!modalItem) return;
-    
+
     try {
       const url = `${SERVER_URL}/github/file/${encodeURIComponent(modalItem.githubPath)}`;
       const body = JSON.stringify({ sha: modalItem.sha });
@@ -682,6 +770,30 @@ export default function FileBrowser({ specialView }) {
               </button>
             )}
           </h2>
+
+          {specialView === "github-repo" && branches.length > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm border border-black/10 dark:border-white/10 rounded-xl shadow-sm">
+              <GitBranch size={16} className="text-[#14b8a6]" />
+              <select
+                value={selectedBranch}
+                onChange={(e) => setSelectedBranch(e.target.value)}
+                className="bg-transparent text-sm font-medium text-slate-700 dark:text-slate-200 outline-none cursor-pointer pr-2"
+              >
+                <option value="" className="dark:bg-[#1a1a1c]">
+                  Default Branch
+                </option>
+                {branches.map((branch) => (
+                  <option
+                    key={branch}
+                    value={branch}
+                    className="dark:bg-[#1a1a1c]"
+                  >
+                    {branch}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* MIDDLE SECTION: Search Bar from Context */}
@@ -714,44 +826,58 @@ export default function FileBrowser({ specialView }) {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`p-2.5 rounded-xl border transition-all ${
-              showFilters 
-                ? "bg-white/80 dark:bg-white/[0.08] border-black/10 dark:border-white/10 text-slate-900 dark:text-white" 
+              showFilters
+                ? "bg-white/80 dark:bg-white/[0.08] border-black/10 dark:border-white/10 text-slate-900 dark:text-white"
                 : "bg-white/40 dark:bg-white/[0.04] border-black/5 dark:border-white/[0.06] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 shadow-sm"
             }`}
           >
             <SlidersHorizontal size={18} />
           </button>
-          
-          {showRecentSearches && recentSearches && recentSearches.length > 0 && (
-            <div className="absolute top-full left-0 right-20 mt-2 bg-white/90 dark:bg-white/[0.06] backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] rounded-xl shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-20 overflow-hidden">
-              <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 dark:bg-slate-800/50">
-                Recent Searches
-              </div>
-              {recentSearches.map((term, index) => (
-                <div
-                  key={index}
-                  className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"
-                  onClick={() => handleSearch(term)}
-                >
-                  <Search size={14} className="text-slate-400" />
-                  {term}
+
+          {showRecentSearches &&
+            recentSearches &&
+            recentSearches.length > 0 && (
+              <div className="absolute top-full left-0 right-20 mt-2 bg-white/90 dark:bg-white/[0.06] backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] rounded-xl shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-20 overflow-hidden">
+                <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 dark:bg-slate-800/50">
+                  Recent Searches
                 </div>
-              ))}
-            </div>
-          )}
+                {recentSearches.map((term, index) => (
+                  <div
+                    key={index}
+                    className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"
+                    onClick={() => handleSearch(term)}
+                  >
+                    <Search size={14} className="text-slate-400" />
+                    {term}
+                  </div>
+                ))}
+              </div>
+            )}
           {showFilters && (
             <div className="absolute top-full left-0 md:left-auto md:right-20 mt-2 w-72 bg-white/90 dark:bg-white/[0.05] backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] rounded-xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-20 overflow-hidden">
               <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-                <h3 className="font-semibold text-slate-900 dark:text-white">Filters</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Refine your search results.</p>
+                <h3 className="font-semibold text-slate-900 dark:text-white">
+                  Filters
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Refine your search results.
+                </p>
               </div>
               <div className="p-4 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">Extensions</label>
-                  <input type="text" placeholder="e.g. pdf, png, docx" className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200" />
+                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">
+                    Extensions
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. pdf, png, docx"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">Size</label>
+                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">
+                    Size
+                  </label>
                   <select className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200">
                     <option>Any Size</option>
                     <option>&lt; 1MB</option>
@@ -761,7 +887,9 @@ export default function FileBrowser({ specialView }) {
                   </select>
                 </div>
                 <div className="flex items-center justify-between pt-2">
-                  <span className="text-sm font-medium text-slate-900 dark:text-white">Starred Only</span>
+                  <span className="text-sm font-medium text-slate-900 dark:text-white">
+                    Starred Only
+                  </span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" />
                     <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-400 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-500 peer-checked:bg-blue-600"></div>
@@ -882,6 +1010,10 @@ export default function FileBrowser({ specialView }) {
               onDragOver={handleDragOver}
               onDrop={handleDrop}
               viewMode={viewMode}
+              isIntegrationRoot={
+                !specialView &&
+                (dir.provider === "google_drive" || dir.provider === "github")
+              }
             />
           ))}
           {data.files.map((file) => (
@@ -919,7 +1051,9 @@ export default function FileBrowser({ specialView }) {
                     <Upload size={40} />
                   </div>
                   <p className="text-lg font-medium mb-2">
-                    {isSearch ? "No search results found" : "This folder is empty"}
+                    {isSearch
+                      ? "No search results found"
+                      : "This folder is empty"}
                   </p>
                   <p className="text-sm">
                     {isSearch
@@ -976,28 +1110,41 @@ export default function FileBrowser({ specialView }) {
         }}
         className={cn(
           modalType === "create-file" ? "max-w-4xl" : "max-w-md",
-          isCreateFullscreen && "max-w-none w-full h-full rounded-none border-none"
+          isCreateFullscreen &&
+            "max-w-none w-full h-full rounded-none border-none",
         )}
-        headerActions={modalType === "create-file" && (
-          <button
-            onClick={toggleCreateFullscreen}
-            className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
-            title={isCreateFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-          >
-            {isCreateFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
-          </button>
-        )}
+        headerActions={
+          modalType === "create-file" && (
+            <button
+              onClick={toggleCreateFullscreen}
+              className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
+              title={isCreateFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            >
+              {isCreateFullscreen ? (
+                <Minimize size={20} />
+              ) : (
+                <Maximize size={20} />
+              )}
+            </button>
+          )
+        }
         title={
-          modalType === "create" 
+          modalType === "create"
             ? "Create New Folder"
             : modalType === "create-file"
-            ? "Create New File"
-            : modalType === "rename" 
-            ? "Rename Item"
-            : "Danger: Permanent Deletion"
+              ? "Create New File"
+              : modalType === "rename"
+                ? "Rename Item"
+                : "Danger: Permanent Deletion"
         }
       >
-        <div ref={createModalRef} className={cn("bg-white dark:bg-slate-900", isCreateFullscreen && "h-full flex flex-col p-4")}>
+        <div
+          ref={createModalRef}
+          className={cn(
+            "bg-white dark:bg-slate-900",
+            isCreateFullscreen && "h-full flex flex-col p-4",
+          )}
+        >
           {modalType === "delete-github" ? (
             <div className="space-y-6">
               <div className="flex items-center gap-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/30">
@@ -1005,9 +1152,16 @@ export default function FileBrowser({ specialView }) {
                   <AlertTriangle size={24} />
                 </div>
                 <div>
-                  <h3 className="text-red-800 dark:text-red-200 font-semibold text-lg leading-tight">Wait! This is permanent.</h3>
+                  <h3 className="text-red-800 dark:text-red-200 font-semibold text-lg leading-tight">
+                    Wait! This is permanent.
+                  </h3>
                   <p className="text-red-600 dark:text-red-400 text-sm mt-1">
-                    You are about to delete <strong className="text-red-700 dark:text-red-100">{modalItem?.name}</strong> from GitHub. This action will create a direct commit and cannot be undone.
+                    You are about to delete{" "}
+                    <strong className="text-red-700 dark:text-red-100">
+                      {modalItem?.name}
+                    </strong>{" "}
+                    from GitHub. This action will create a direct commit and
+                    cannot be undone.
                   </p>
                 </div>
               </div>
@@ -1016,12 +1170,14 @@ export default function FileBrowser({ specialView }) {
                 <div className="flex justify-between items-center text-[13px]">
                   <span className="text-slate-500">Repository</span>
                   <span className="font-mono text-slate-700 dark:text-slate-300">
-                    {modalItem?.githubPath?.split('/').slice(0, 2).join('/')}
+                    {modalItem?.githubPath?.split("/").slice(0, 2).join("/")}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-[13px]">
                   <span className="text-slate-500">Action Type</span>
-                  <span className="text-red-500 font-semibold">COMMIT_DELETE</span>
+                  <span className="text-red-500 font-semibold">
+                    COMMIT_DELETE
+                  </span>
                 </div>
               </div>
 
@@ -1033,7 +1189,7 @@ export default function FileBrowser({ specialView }) {
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   onClick={confirmDeleteGithub}
                   className="bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20 px-6 border-none"
                 >
@@ -1042,10 +1198,18 @@ export default function FileBrowser({ specialView }) {
               </div>
             </div>
           ) : modalType === "create-file" ? (
-            <form onSubmit={handleModalSubmit} className={cn("space-y-4", isCreateFullscreen && "flex-1 flex flex-col")}>
+            <form
+              onSubmit={handleModalSubmit}
+              className={cn(
+                "space-y-4",
+                isCreateFullscreen && "flex-1 flex flex-col",
+              )}
+            >
               <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
                 <div className="flex-1">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Filename</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                    Filename
+                  </label>
                   <input
                     type="text"
                     value={modalInput}
@@ -1057,20 +1221,33 @@ export default function FileBrowser({ specialView }) {
                 </div>
                 <div className="w-px h-10 bg-slate-200 dark:bg-slate-800 mx-2"></div>
                 <div className="w-32">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Extension</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                    Extension
+                  </label>
                   <select
                     value={selectedExt}
                     onChange={(e) => setSelectedExt(e.target.value)}
                     className="w-full bg-transparent text-[#14b8a6] font-bold focus:outline-none appearance-none cursor-pointer text-lg"
                   >
-                    {supportedExtensions.map(ext => (
-                      <option key={ext} value={ext} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{ext}</option>
+                    {supportedExtensions.map((ext) => (
+                      <option
+                        key={ext}
+                        value={ext}
+                        className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                      >
+                        {ext}
+                      </option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              <div className={cn("relative group bg-[#1e1e1e] rounded-xl border border-black/10 dark:border-white/5 overflow-hidden flex flex-col", isCreateFullscreen ? "flex-1" : "h-64")}>
+              <div
+                className={cn(
+                  "relative group bg-[#1e1e1e] rounded-xl border border-black/10 dark:border-white/5 overflow-hidden flex flex-col",
+                  isCreateFullscreen ? "flex-1" : "h-64",
+                )}
+              >
                 <div className="flex-1 overflow-auto custom-scrollbar">
                   <Editor
                     value={newFileContent}
@@ -1078,7 +1255,10 @@ export default function FileBrowser({ specialView }) {
                     highlight={(code) => {
                       const lang = getLanguage(selectedExt);
                       try {
-                        const grammar = Prism.languages[lang] || Prism.languages.javascript || Prism.languages.clike;
+                        const grammar =
+                          Prism.languages[lang] ||
+                          Prism.languages.javascript ||
+                          Prism.languages.clike;
                         return Prism.highlight(code, grammar, lang);
                       } catch (e) {
                         return code;
@@ -1099,10 +1279,14 @@ export default function FileBrowser({ specialView }) {
                   <span>Ready to Create</span>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <p className="text-xs text-slate-500 italic">
-                  Final: <span className="text-slate-700 dark:text-slate-300 font-mono font-medium">{modalInput || "untitled"}{selectedExt}</span>
+                  Final:{" "}
+                  <span className="text-slate-700 dark:text-slate-300 font-mono font-medium">
+                    {modalInput || "untitled"}
+                    {selectedExt}
+                  </span>
                 </p>
                 <div className="flex gap-3">
                   <Button
@@ -1115,7 +1299,10 @@ export default function FileBrowser({ specialView }) {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white border-none shadow-lg shadow-[#14b8a6]/20 px-8">
+                  <Button
+                    type="submit"
+                    className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white border-none shadow-lg shadow-[#14b8a6]/20 px-8"
+                  >
                     Create & Save
                   </Button>
                 </div>

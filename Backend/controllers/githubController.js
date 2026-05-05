@@ -70,8 +70,11 @@ export const getRepositoryContents = async (req, res) => {
     return res.status(403).json({ error: "Github not connected" });
   }
 
+  const { ref } = req.query;
   const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${path || ""}`,
+    `https://api.github.com/repos/${owner}/${repo}/contents/${path || ""}${
+      ref ? `?ref=${ref}` : ""
+    }`,
     {
       headers: {
         Authorization: `Bearer ${githubAccessToken}`,
@@ -235,7 +238,9 @@ export const updateFiles = async (req, res) => {
 
   const data = await response.json();
   if (!response.ok) {
-    return res.status(response.status).json({ error: data.message || "Failed to update file" });
+    return res
+      .status(response.status)
+      .json({ error: data.message || "Failed to update file" });
   }
 
   return res.status(200).json({ msg: "Edited!", content: data.content });
@@ -274,7 +279,9 @@ export const deleteFile = async (req, res) => {
 
   if (!response.ok) {
     const data = await response.json();
-    return res.status(response.status).json({ error: data.message || "Failed to delete file" });
+    return res
+      .status(response.status)
+      .json({ error: data.message || "Failed to delete file" });
   }
 
   return res.status(200).json({ msg: "Deleted!" });
@@ -325,33 +332,105 @@ export const createFile = async (req, res) => {
         const content = buffer.toString("base64");
         const fullPath = githubPath ? `${githubPath}/${fileName}` : fileName;
 
-        const response = await pushToGithub(content, fullPath, `Upload ${fileName}`);
+        const response = await pushToGithub(
+          content,
+          fullPath,
+          `Upload ${fileName}`,
+        );
         const data = await response.json();
 
         if (!response.ok) {
-          return res.status(response.status).json({ error: data.message || "Failed to upload file" });
+          return res
+            .status(response.status)
+            .json({ error: data.message || "Failed to upload file" });
         }
-        return res.status(201).json({ msg: "Uploaded!", content: data.content });
+        return res
+          .status(201)
+          .json({ msg: "Uploaded!", content: data.content });
       } catch (err) {
         console.error("Upload error:", err);
-        return res.status(500).json({ error: "Internal server error during upload" });
+        return res
+          .status(500)
+          .json({ error: "Internal server error during upload" });
       }
     });
   } else {
     // CASE 2: JSON request from "New File" button
     const { content } = req.body;
     try {
-      const response = await pushToGithub(content || "", githubPath, `Create ${githubPath}`);
+      const response = await pushToGithub(
+        content || "",
+        githubPath,
+        `Create ${githubPath}`,
+      );
       const data = await response.json();
 
       if (!response.ok) {
-        return res.status(response.status).json({ error: data.message || "Failed to create file" });
+        return res
+          .status(response.status)
+          .json({ error: data.message || "Failed to create file" });
       }
       return res.status(201).json({ msg: "Created!", content: data.content });
     } catch (err) {
       console.error("Create error:", err);
-      return res.status(500).json({ error: "Internal server error during creation" });
+      return res
+        .status(500)
+        .json({ error: "Internal server error during creation" });
     }
+  }
+};
+
+export const deleteFolder = async (req, res) => {
+  const { githubPath } = req.params;
+  const user = await User.findOne({ _id: req.user.id });
+  const githubAccessToken = user?.integrations?.github?.accessToken;
+
+  if (!githubAccessToken) return res.status(403).json({ error: "Github not connected" });
+
+  const parts = githubPath.split("/");
+  const owner = parts[0];
+  const repo = parts[1];
+  const pathPrefix = parts.slice(2).join("/");
+
+  try {
+    // 1. Get all files in the repo recursively
+    const treeResponse = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`,
+      {
+        headers: { Authorization: `Bearer ${githubAccessToken}` },
+      }
+    );
+    
+    if (!treeResponse.ok) throw new Error("Failed to fetch repository tree");
+    const treeData = await treeResponse.json();
+
+    // 2. Filter for files that are inside the target folder
+    const filesToDelete = treeData.tree.filter(item => 
+      item.type === "blob" && item.path.startsWith(pathPrefix + "/")
+    );
+
+    // 3. Delete each file
+    for (const file of filesToDelete) {
+      await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${githubAccessToken}`,
+            Accept: "application/vnd.github+json",
+          },
+          body: JSON.stringify({
+            message: `Delete ${file.path} (Recursive Folder Delete)`,
+            sha: file.sha,
+          }),
+        }
+      );
+    }
+
+    return res.status(200).json({ msg: "Folder deleted recursively" });
+  } catch (err) {
+    console.error("Recursive delete error:", err);
+    return res.status(500).json({ error: "Failed to delete folder recursively" });
   }
 };
 
@@ -368,22 +447,17 @@ export const downloadRepository = async (req, res) => {
     return res.status(403).json({ error: "Github not connected" });
   }
 
-  // GitHub provides a zipball URL to download the repository archive
-  const zipballUrl = `https://api.github.com/repos/${owner}/${repo}/zipball`;
+  const { ref } = req.query;
+  const zipballUrl = `https://api.github.com/repos/${owner}/${repo}/zipball${ref ? `/${ref}` : ""}`;
 
   try {
     const response = await fetch(zipballUrl, {
       headers: {
         Authorization: `Bearer ${githubAccessToken}`,
       },
-      redirect: "manual", // We want to catch the 302 redirect
     });
 
-    if (response.status === 302 || response.status === 301) {
-      const location = response.headers.get("location");
-      return res.redirect(location);
-    } else if (response.ok) {
-      // Just in case fetch follows redirect automatically
+    if (response.ok) {
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       res.setHeader(
@@ -391,14 +465,107 @@ export const downloadRepository = async (req, res) => {
         `attachment; filename="${repo}.zip"`,
       );
       res.setHeader("Content-Type", "application/zip");
+      res.setHeader("X-Total-Size", buffer.length);
       return res.send(buffer);
     } else {
+      const data = await response.json().catch(() => ({}));
       return res
         .status(response.status)
-        .json({ error: "Failed to download repository" });
+        .json({ error: data.message || "Failed to download repository" });
     }
   } catch (error) {
-    console.error("Error downloading repo:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Download Error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+export const downloadFolder = async (req, res) => {
+  const { githubPath } = req.params;
+  const user = await User.findOne({ _id: req.user.id });
+  const githubAccessToken = user?.integrations?.github?.accessToken;
+
+  if (!githubAccessToken) return res.status(403).json({ error: "Github not connected" });
+
+  const parts = githubPath.split("/");
+  const owner = parts[0];
+  const repo = parts[1];
+  const pathPrefix = parts.slice(2).join("/");
+
+  try {
+    // 1. Get repo info to find default branch
+    const repoInfoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers: { Authorization: `Bearer ${githubAccessToken}` }
+    });
+    if (!repoInfoRes.ok) throw new Error("Failed to fetch repository info");
+    const repoInfo = await repoInfoRes.json();
+    const defaultBranch = repoInfo.default_branch || "main";
+
+    // 2. Get repo tree recursively
+    const treeResponse = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/git/trees/${defaultBranch}?recursive=1`,
+      { headers: { Authorization: `Bearer ${githubAccessToken}` } }
+    );
+    if (!treeResponse.ok) throw new Error(`Failed to fetch tree for branch ${defaultBranch}`);
+    const treeData = await treeResponse.json();
+
+    // 3. Filter for files in target path
+    const files = treeData.tree.filter(item => 
+      item.type === "blob" && item.path.startsWith(pathPrefix + "/")
+    );
+
+    if (files.length === 0) {
+      return res.status(404).json({ error: "No files found in this folder" });
+    }
+
+    const archive = archiver("zip", { zlib: { level: 5 } });
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${pathPrefix.split("/").pop() || repo}.zip"`,
+    );
+    res.setHeader("Content-Type", "application/zip");
+    archive.pipe(res);
+
+    // 4. Append files to archive
+    for (const file of files) {
+      const fileRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}?ref=${defaultBranch}`,
+        { headers: { Authorization: `Bearer ${githubAccessToken}` } }
+      );
+      if (fileRes.ok) {
+        const fileData = await fileRes.json();
+        const buffer = Buffer.from(fileData.content, "base64");
+        archive.append(buffer, { name: file.path.replace(pathPrefix + "/", "") });
+      }
+    }
+
+    await archive.finalize();
+  } catch (err) {
+    console.error("Folder download error:", err);
+    if (!res.headersSent)
+      res.status(500).json({ error: err.message || "Folder download failed" });
+  }
+};
+
+export const listBranches = async (req, res) => {
+  const { githubPath } = req.params;
+  const parts = githubPath.split("/");
+  const owner = parts[0];
+  const repo = parts[1];
+
+  const user = await User.findOne({ _id: req.user.id });
+  const githubAccessToken = user?.integrations?.github?.accessToken;
+
+  if (!githubAccessToken) return res.status(403).json({ error: "Github not connected" });
+
+  try {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches`, {
+      headers: { Authorization: `Bearer ${githubAccessToken}` }
+    });
+    if (!response.ok) throw new Error("Failed to fetch branches");
+    const data = await response.json();
+    return res.status(200).json(data.map(b => b.name));
+  } catch (err) {
+    console.error("Fetch branches error:", err);
+    return res.status(500).json({ error: "Failed to fetch branches" });
   }
 };

@@ -26,6 +26,7 @@ export default function FileCard({
   onDrop,
   isTrash = false,
   viewMode = "grid",
+  isIntegrationRoot = false,
   ...props
 }) {
   const [showMenu, setShowMenu] = useState(false);
@@ -249,7 +250,7 @@ export default function FileCard({
               </>
             )}
 
-            {type === "directory" && (item.provider === "google_drive" || item.provider === "github") ? (
+            {!isTrash && isIntegrationRoot && (
               <button
                 onClick={() => {
                   setShowMenu(false);
@@ -259,8 +260,12 @@ export default function FileCard({
               >
                 <Unlink size={14} /> Unlink
               </button>
-            ) : (
-              <>
+            )}
+
+            {!isTrash &&
+              type === "directory" &&
+              item.provider === "github" &&
+              item.githubPath?.split("/").length === 2 && (
                 <button
                   onClick={() => {
                     setShowMenu(false);
@@ -268,25 +273,44 @@ export default function FileCard({
                   }}
                   className="w-full text-left px-3 py-2 text-[13px] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
                 >
-                  {isTrash ? (
-                    <Download className="rotate-180" size={14} />
-                  ) : (
-                    <Download size={14} />
-                  )}
-                  {isTrash ? "Restore" : "Download"}
+                  <Download size={14} /> Download Repo
                 </button>
+              )}
 
-                <button
-                  onClick={() => {
-                    setShowMenu(false);
-                    onDelete(item);
-                  }}
-                  className="w-full text-left px-3 py-2 text-[13px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2"
-                >
-                  <Trash2 size={14} /> {isTrash ? "Delete Forever" : "Delete"}
-                </button>
-              </>
-            )}
+            {/* Standard actions for everything else (not integration root, not repo root) */}
+            {!isIntegrationRoot &&
+              !(
+                type === "directory" &&
+                item.provider === "github" &&
+                item.githubPath?.split("/").length === 2
+              ) && (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onDownload(item);
+                    }}
+                    className="w-full text-left px-3 py-2 text-[13px] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                  >
+                    {isTrash ? (
+                      <Download className="rotate-180" size={14} />
+                    ) : (
+                      <Download size={14} />
+                    )}
+                    {isTrash ? "Restore" : "Download"}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onDelete(item);
+                    }}
+                    className="w-full text-left px-3 py-2 text-[13px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2"
+                  >
+                    <Trash2 size={14} /> {isTrash ? "Delete Forever" : "Delete"}
+                  </button>
+                </>
+              )}
           </div>
         )}
       </div>
