@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { Outlet, Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { SERVER_URL } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -20,12 +21,14 @@ import {
   Star,
   HardDrive,
   ChevronRight,
+  Box,
 } from "lucide-react";
 import Button from "../components/ui/Button";
 import ProfileMenu from "../components/ui/ProfileMenu";
 import TransferManager from "../components/drive/TransferManager";
 import FileUploadModal from "../components/drive/FileUploadModal";
 import { useGoogleLogin } from "@react-oauth/google";
+import { useTheme } from "../components/ui/ThemeProvider";
 
 export default function DashboardLayout() {
   // Layout for the dashboard
@@ -44,9 +47,13 @@ export default function DashboardLayout() {
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
   const [showGlobalFilters, setShowGlobalFilters] = useState(false);
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem("theme") || "dark",
-  );
+  const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    if (user?.theme && user.theme !== theme) {
+      setTheme(user.theme);
+    }
+  }, [user?.theme]);
 
   const connectDrive = useGoogleLogin({
     flow: "auth-code",
@@ -84,17 +91,23 @@ export default function DashboardLayout() {
     window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user:email,repo&state=connect`;
   };
 
-  useEffect(() => {
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
+  const toggleTheme = async () => {
+    const newTheme = theme === "dark" ? "light" : "dark";
+    setTheme(newTheme);
+    
+    try {
+      await fetch(`${SERVER_URL}/user/theme`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme: newTheme }),
+        credentials: "include",
+      });
+      if (user) {
+        setUser({ ...user, theme: newTheme });
+      }
+    } catch (err) {
+      console.error("Failed to save theme to backend", err);
     }
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
   useEffect(() => {
@@ -443,11 +456,11 @@ export default function DashboardLayout() {
               className="flex items-center gap-2"
               onClick={() => setIsSidebarOpen(false)}
             >
-              <div className="bg-gradient-to-br from-[#14b8a6] to-[#0f463e] p-1.5 rounded-xl shadow-[0_0_15px_rgba(20,184,166,0.3)]">
-                <Cloud className="text-white fill-white/20" size={20} />
+              <div className="bg-[#01140f] border border-teal-500/30 p-2 rounded-xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),inset_0_-2px_4px_rgba(0,0,0,0.8),0_0_15px_rgba(20,184,166,0.3)] transition-all duration-300 relative group-hover:border-teal-400 group-hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.8),0_0_25px_rgba(20,184,166,0.6)]">
+                <Box className="text-[#14b8a6] relative z-10" size={20} />
               </div>
               <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#14b8a6] to-[#3b82f6]">
-                Storifyy
+                Vault
               </span>
             </Link>
             <button

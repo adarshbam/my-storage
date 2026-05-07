@@ -39,6 +39,7 @@ const userSchema = new Schema(
       },
     },
     isVerified: { type: Boolean, default: false },
+    theme: { type: String, enum: ["light", "dark"], default: "dark" },
   },
   { strict: "throw" },
 );

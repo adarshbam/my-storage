@@ -48,7 +48,8 @@ export const listRepositories = async (req, res) => {
 };
 
 export const getRepositoryContents = async (req, res) => {
-  const { owner, repo, path } = req.params;
+  const { owner, repo } = req.params;
+  const path = Array.isArray(req.params.path) ? req.params.path.join("/") : (req.params.path || "");
   const currentPath = path || "";
 
   const user = await User.findOne({ _id: req.user.id });
@@ -117,7 +118,8 @@ export const getRepositoryContents = async (req, res) => {
 };
 
 export const getFiles = async (req, res) => {
-  const { owner, repo, path } = req.params;
+  const { owner, repo } = req.params;
+  const path = Array.isArray(req.params.path) ? req.params.path.join("/") : (req.params.path || "");
   const currentPath = path || "";
   const { action } = req.query;
 
@@ -183,7 +185,8 @@ export const getFiles = async (req, res) => {
 };
 
 export const updateFiles = async (req, res) => {
-  const { owner, repo, path } = req.params;
+  const { owner, repo } = req.params;
+  const path = Array.isArray(req.params.path) ? req.params.path.join("/") : (req.params.path || "");
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
@@ -220,7 +223,8 @@ export const updateFiles = async (req, res) => {
 };
 
 export const deleteFile = async (req, res) => {
-  const { owner, repo, path } = req.params;
+  const { owner, repo } = req.params;
+  const path = Array.isArray(req.params.path) ? req.params.path.join("/") : (req.params.path || "");
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
@@ -256,7 +260,8 @@ export const deleteFile = async (req, res) => {
 };
 
 export const createFile = async (req, res) => {
-  const { owner, repo, path } = req.params;
+  const { owner, repo } = req.params;
+  const path = Array.isArray(req.params.path) ? req.params.path.join("/") : (req.params.path || "");
   const githubPath = `${owner}/${repo}${path ? `/${path}` : ""}`;
   const fileName = req.headers.filename; // Present if uploading from TransferManager
 
@@ -348,7 +353,8 @@ export const createFile = async (req, res) => {
 };
 
 export const deleteFolder = async (req, res) => {
-  const { owner, repo, path } = req.params;
+  const { owner, repo } = req.params;
+  const path = Array.isArray(req.params.path) ? req.params.path.join("/") : (req.params.path || "");
   const pathPrefix = path || "";
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
@@ -439,7 +445,8 @@ export const downloadRepository = async (req, res) => {
 };
 
 export const downloadFolder = async (req, res) => {
-  const { owner, repo, path } = req.params;
+  const { owner, repo } = req.params;
+  const path = Array.isArray(req.params.path) ? req.params.path.join("/") : (req.params.path || "");
   const pathPrefix = path || "";
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;

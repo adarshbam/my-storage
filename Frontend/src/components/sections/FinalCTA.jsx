@@ -36,7 +36,7 @@ const FinalCTA = () => {
             </h2>
 
             <p className="text-white/60 text-lg md:text-2xl max-w-2xl mx-auto mb-16 font-medium leading-relaxed">
-              Join millions of users who trust Storifyy to keep their files
+              Join millions of users who trust Vault to keep their files
               safe, secure, and instantly accessible from absolutely anywhere.
             </p>
 

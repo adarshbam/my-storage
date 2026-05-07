@@ -6,7 +6,7 @@ import { handleGoogleAuth } from "../lib/googleAuth";
 import Button from "../components/ui/Button";
 import GoogleSignInButton from "../components/ui/GoogleSignInButton";
 import AuthLayout from "../layouts/AuthLayout";
-import { Cloud, Send, Loader2, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Cloud, Send, Loader2, ShieldCheck, CheckCircle2, Box } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Register() {
@@ -160,8 +160,8 @@ export default function Register() {
       <div className="w-full">
         {/* Header */}
         <div className="flex flex-col items-center mb-8 lg:hidden">
-          <div className="bg-gradient-to-br from-[#14b8a6] to-[#0f463e] p-3 rounded-2xl shadow-[0_0_25px_rgba(20,184,166,0.4)] mb-5">
-            <Cloud className="text-white fill-white/20" size={28} />
+          <div className="bg-[#01140f] border border-teal-500/30 p-3 rounded-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),inset_0_-2px_4px_rgba(0,0,0,0.8),0_0_15px_rgba(20,184,166,0.3)] mb-5 transition-all duration-300 relative">
+            <Box className="text-[#14b8a6] relative z-10" size={28} />
           </div>
         </div>
         <div className="flex flex-col mb-8 text-center lg:text-left">

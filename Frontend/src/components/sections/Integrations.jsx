@@ -19,7 +19,7 @@ const PANELS = [
     bg: "bg-blue-500/10",
     border: "border-blue-500/30",
     textColor: "text-blue-400",
-    desc: "Edit your Word documents, Excel spreadsheets, and Google Docs directly inside the Storifyy vault. All changes are encrypted instantly.",
+    desc: "Edit your Word documents, Excel spreadsheets, and Google Docs directly inside the Vault vault. All changes are encrypted instantly.",
     visual: () => (
       <div className="absolute right-0 bottom-0 w-48 h-48 md:w-64 md:h-64 bg-blue-950/40 rounded-tl-[2rem] border-t border-l border-blue-500/30 p-6 flex flex-col shadow-[-20px_-20px_50px_rgba(59,130,246,0.15)] backdrop-blur-md">
         <div className="w-full h-8 flex items-center gap-2 mb-6 border-b border-blue-500/20 pb-4">
@@ -48,7 +48,7 @@ const PANELS = [
     bg: "bg-fuchsia-500/10",
     border: "border-fuchsia-500/30",
     textColor: "text-fuchsia-400",
-    desc: "Never download massive design files just to check them. Storifyy generates pixel-perfect previews for Adobe and Figma files in milliseconds.",
+    desc: "Never download massive design files just to check them. Vault generates pixel-perfect previews for Adobe and Figma files in milliseconds.",
     visual: () => (
       <div className="absolute right-0 bottom-0 w-48 h-48 md:w-64 md:h-64 bg-fuchsia-950/40 rounded-tl-[2rem] border-t border-l border-fuchsia-500/30 p-4 md:p-6 grid grid-cols-2 gap-3 shadow-[-20px_-20px_50px_rgba(217,70,239,0.15)] backdrop-blur-md">
         {[1, 2, 3, 4].map((i) => (
@@ -144,7 +144,7 @@ const Integrations = () => {
             </span>
           </h2>
           <p className="text-slate-600 dark:text-white/60 text-lg md:text-xl font-medium">
-            Storifyy doesn't just store files; it connects them. Work seamlessly
+            Vault doesn't just store files; it connects them. Work seamlessly
             with the tools you already love directly in the browser.
           </p>
         </div>

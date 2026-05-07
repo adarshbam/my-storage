@@ -12,6 +12,7 @@ import {
   storeSearchedItem,
   uploadProfilePic,
   authGithub,
+  updateTheme,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -28,5 +29,6 @@ router.post("/profilepic", checkAuth, uploadProfilePic);
 router.get("/profilepic", checkAuth, getProfilePic);
 router.get("/searchedItems", checkAuth, getSearchedItems);
 router.post("/searchedItems", checkAuth, storeSearchedItem);
+router.put("/theme", checkAuth, updateTheme);
 
 export default router;

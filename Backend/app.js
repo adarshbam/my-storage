@@ -63,6 +63,40 @@ const sslOptions = {
 
 const httpsServer = https.createServer(sslOptions, app);
 
+// const UPLOAD_DIR = "./storage";
+// const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+// function cleanOldFiles() {
+//   fs.readdir(UPLOAD_DIR, (err, files) => {
+//     if (err) return console.error(err);
+
+//     files.forEach((file) => {
+//       const filePath = path.join(UPLOAD_DIR, file);
+
+//       fs.stat(filePath, (err, stats) => {
+//         if (err) return console.error(err);
+
+//         const now = Date.now();
+//         const fileAge = now - stats.mtimeMs;
+
+//         if (fileAge > THIRTY_DAYS) {
+//           fs.unlink(filePath, (err) => {
+//             if (err) {
+//               console.error("Delete failed:", file);
+//             } else {
+//               console.log("Deleted:", file);
+//             }
+//           });
+//         }
+//       });
+//     });
+//   });
+// }
+
+// cleanOldFiles();
+
+// setInterval(cleanOldFiles, 24 * 60 * 60 * 1000);
+
 httpsServer.listen(4000, () => {
   console.log(`HTTPS Server running on port 4000`);
 });

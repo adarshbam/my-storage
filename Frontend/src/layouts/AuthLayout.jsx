@@ -1,4 +1,4 @@
-import { Cloud, Shield, Zap, Lock } from "lucide-react";
+import { Cloud, Shield, Zap, Lock, Box } from "lucide-react";
 import { motion } from "framer-motion";
 
 const features = [
@@ -9,7 +9,7 @@ const features = [
 
 export default function AuthLayout({ children }) {
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#faf5f7] dark:bg-[#020b08] p-4 sm:p-6 lg:p-8 transition-colors duration-300">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#f0f9f7] dark:bg-[#020b08] p-4 sm:p-6 lg:p-8 transition-colors duration-300">
       {/* Global gradient blurs */}
       <div className="fixed inset-0 z-[0] pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-15%] w-[50vw] h-[50vw] bg-[#14b8a6]/15 dark:bg-[#14b8a6]/10 rounded-full blur-[120px]" />
@@ -26,14 +26,14 @@ export default function AuthLayout({ children }) {
           <div className="absolute bottom-[-20%] left-[-10%] w-[40%] h-[40%] bg-[#3b82f6]/10 rounded-full blur-[80px] pointer-events-none" />
 
           <div className="w-full p-10 xl:p-14 flex flex-col justify-between relative z-10 h-full">
-            {/* Top — Logo */}
+            {/* Top — Logo and 3D Cube */}
             <div>
-              <div className="flex items-center gap-3 mb-16">
-                <div className="bg-gradient-to-br from-[#14b8a6] to-[#0f766e] p-2.5 rounded-xl shadow-[0_0_20px_rgba(20,184,166,0.4)]">
-                  <Cloud className="text-white fill-white/20" size={22} />
+              <div className="flex items-center gap-4 mb-16">
+                <div className="bg-[#01140f] border border-teal-500/30 p-2.5 rounded-xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),inset_0_-2px_4px_rgba(0,0,0,0.8),0_0_15px_rgba(20,184,166,0.3)] transition-all duration-300 relative hover:border-teal-400 hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.8),0_0_25px_rgba(20,184,166,0.6)]">
+                  <Box className="text-[#14b8a6] relative z-10" size={24} />
                 </div>
                 <span className="text-xl font-bold text-white tracking-tight">
-                  Storifyy
+                  Vault
                 </span>
               </div>
 
@@ -59,7 +59,7 @@ export default function AuthLayout({ children }) {
                 transition={{ duration: 0.6, delay: 0.25 }}
                 className="text-white/60 text-base leading-relaxed max-w-[320px]"
               >
-                Join thousands of users who trust Storifyy for their most
+                Join thousands of users who trust Vault for their most
                 important data.
               </motion.p>
             </div>

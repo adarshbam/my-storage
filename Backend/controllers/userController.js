@@ -22,6 +22,7 @@ export const getUser = (req, res) => {
     email: user.email,
     profilepic: user.profilepic,
     rootDirectoryId: user.rootDirId,
+    theme: user.theme || "dark",
   });
 };
 
@@ -520,5 +521,22 @@ export const storeSearchedItem = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send("Internal Server Error");
+  }
+};
+
+// ─── Theme Preference ──────────────────────────────────────────────────────────
+
+export const updateTheme = async (req, res) => {
+  const { theme } = req.body;
+  if (!["light", "dark"].includes(theme)) {
+    return res.status(400).json({ error: "Invalid theme" });
+  }
+
+  try {
+    await User.updateOne({ _id: req.user.id }, { $set: { theme } });
+    return res.status(200).json({ message: "Theme updated successfully" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };

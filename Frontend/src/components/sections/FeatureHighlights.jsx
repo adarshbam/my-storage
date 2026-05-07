@@ -110,7 +110,7 @@ const FeatureHighlights = () => {
               </span>
             </h2>
             <p className="text-xl text-white/50 font-medium leading-relaxed max-w-2xl">
-              We threw out the old playbook. Storifyy uses a decentralized
+              We threw out the old playbook. Vault uses a decentralized
               object storage graph to deliver speeds and capabilities legacy
               clouds can't touch.
             </p>
