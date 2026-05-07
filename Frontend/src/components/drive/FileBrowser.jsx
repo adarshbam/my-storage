@@ -109,7 +109,11 @@ export default function FileBrowser({ specialView }) {
       } else if (specialView === "github") {
         url = `${SERVER_URL}/github/repositories`;
       } else if (specialView === "github-repo") {
-        url = `${SERVER_URL}/github/repositories/${encodeURIComponent(githubPath)}/contents${selectedBranch ? `?ref=${selectedBranch}` : ""}`;
+        const parts = githubPath.split("/");
+        const owner = parts[0];
+        const repo = parts[1];
+        const path = parts.slice(2).join("/");
+        url = `${SERVER_URL}/github/repositories/${owner}/${repo}/contents/${path}${selectedBranch ? `?ref=${selectedBranch}` : ""}`;
       }
 
       if (isSearch) {
@@ -119,8 +123,14 @@ export default function FileBrowser({ specialView }) {
           setDirName("Search");
           return;
         }
-        const parentId = folderId;
-        url = `${SERVER_URL}/file/search?q=${encodeURIComponent(searchQuery)}${parentId ? `&parentId=${parentId}` : ""}`;
+        if (specialView === "github-repo") {
+          const parts = githubPath.split("/");
+          const repoPath = `${parts[0]}/${parts[1]}`;
+          url = `${SERVER_URL}/github/repositories/${repoPath}/search?q=${encodeURIComponent(searchQuery)}${selectedBranch ? `&ref=${selectedBranch}` : ""}`;
+        } else {
+          const parentId = folderId;
+          url = `${SERVER_URL}/file/search?q=${encodeURIComponent(searchQuery)}${parentId ? `&parentId=${parentId}` : ""}`;
+        }
       }
 
       const response = await fetch(url, { credentials: "include" });
@@ -183,17 +193,26 @@ export default function FileBrowser({ specialView }) {
     try {
       const parts = githubPath.split("/");
       const repoPath = `${parts[0]}/${parts[1]}`;
+      // Fetch repo info for default branch
+      const repoRes = await fetch(
+        `${SERVER_URL}/github/repositories/${repoPath}`,
+        { credentials: "include" },
+      );
+      if (repoRes.ok) {
+        const repoData = await repoRes.json();
+        const defaultBranchName = repoData.default_branch || "main";
+        if (!selectedBranch) {
+          setSelectedBranch(defaultBranchName);
+        }
+      }
+
       const response = await fetch(
-        `${SERVER_URL}/github/repositories/${encodeURIComponent(repoPath)}/branches`,
+        `${SERVER_URL}/github/repositories/${repoPath}/branches`,
         { credentials: "include" },
       );
       if (response.ok) {
         const branchList = await response.json();
         setBranches(branchList);
-        if (!selectedBranch && branchList.length > 0) {
-          // You might want to default to the default branch, but for now we pick the first or leave empty
-          // setSelectedBranch(branchList[0]);
-        }
       }
     } catch (error) {
       console.error("Error fetching branches:", error);
@@ -431,7 +450,11 @@ export default function FileBrowser({ specialView }) {
           const newPath = githubPath
             ? `${githubPath}/${modalInput}/.gitkeep`
             : `${modalInput}/.gitkeep`;
-          url = `${SERVER_URL}/github/file/${encodeURIComponent(newPath)}`;
+          const p = newPath.split("/");
+          const owner = p[0];
+          const repo = p[1];
+          const path = p.slice(2).join("/");
+          url = `${SERVER_URL}/github/file/${owner}/${repo}/${path}`;
           body = JSON.stringify({
             content: btoa(".gitkeep"), // Base64 for empty or small text
             message: `Create folder ${modalInput}`,
@@ -443,7 +466,11 @@ export default function FileBrowser({ specialView }) {
       } else if (modalType === "create-file") {
         const fullName = modalInput.trim() + selectedExt;
         if (specialView === "github-repo") {
-          url = `${SERVER_URL}/github/file/${encodeURIComponent(githubPath + "/" + fullName)}`;
+          const p = (githubPath + "/" + fullName).split("/");
+          const owner = p[0];
+          const repo = p[1];
+          const path = p.slice(2).join("/");
+          url = `${SERVER_URL}/github/file/${owner}/${repo}/${path}`;
           body = JSON.stringify({
             content: btoa(unescape(encodeURIComponent(newFileContent))),
             message: `Create ${fullName}`,
@@ -772,15 +799,15 @@ export default function FileBrowser({ specialView }) {
           </h2>
 
           {specialView === "github-repo" && branches.length > 0 && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm border border-black/10 dark:border-white/10 rounded-xl shadow-sm">
-              <GitBranch size={16} className="text-[#14b8a6]" />
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm border border-black/10 dark:border-white/10 rounded-lg shadow-sm">
+              <GitBranch size={14} className="text-[#14b8a6] shrink-0" />
               <select
                 value={selectedBranch}
                 onChange={(e) => setSelectedBranch(e.target.value)}
-                className="bg-transparent text-sm font-medium text-slate-700 dark:text-slate-200 outline-none cursor-pointer pr-2"
+                className="bg-transparent text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
               >
                 <option value="" className="dark:bg-[#1a1a1c]">
-                  Default Branch
+                  Default
                 </option>
                 {branches.map((branch) => (
                   <option

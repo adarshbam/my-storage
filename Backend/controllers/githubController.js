@@ -48,19 +48,8 @@ export const listRepositories = async (req, res) => {
 };
 
 export const getRepositoryContents = async (req, res) => {
-  // TODO: Implement fetching directory and files inside a GitHub repository
-  const { githubPath } = req.params;
-
-  console.log("Fetching contents for:", githubPath);
-
-  console.log(githubPath);
-
-  // githubPath will be something like "adarshbam/my-storage"
-  // or "adarshbam/my-storage/Backend/models"
-  const parts = githubPath.split("/");
-  const owner = parts[0];
-  const repo = parts[1];
-  const path = parts.slice(2).join("/"); // rest is folder path
+  const { owner, repo, path } = req.params;
+  const currentPath = path || "";
 
   const user = await User.findOne({ _id: req.user.id });
 
@@ -128,20 +117,9 @@ export const getRepositoryContents = async (req, res) => {
 };
 
 export const getFiles = async (req, res) => {
-  // TODO: Implement fetching directory and files inside a GitHub repository
-  const { githubPath } = req.params;
+  const { owner, repo, path } = req.params;
+  const currentPath = path || "";
   const { action } = req.query;
-
-  console.log("Fetching contents for:", githubPath);
-
-  console.log(githubPath);
-
-  // githubPath will be something like "adarshbam/my-storage"
-  // or "adarshbam/my-storage/Backend/models"
-  const parts = githubPath.split("/");
-  const owner = parts[0];
-  const repo = parts[1];
-  const path = parts.slice(2).join("/"); // rest is folder path
 
   const user = await User.findOne({ _id: req.user.id });
 
@@ -205,9 +183,7 @@ export const getFiles = async (req, res) => {
 };
 
 export const updateFiles = async (req, res) => {
-  const { githubPath } = req.params;
-  const { content, sha } = req.body;
-
+  const { owner, repo, path } = req.params;
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
@@ -215,10 +191,7 @@ export const updateFiles = async (req, res) => {
     return res.status(403).json({ error: "Github not connected" });
   }
 
-  const parts = githubPath.split("/");
-  const owner = parts[0];
-  const repo = parts[1];
-  const path = parts.slice(2).join("/");
+  const { content, sha } = req.body;
 
   const response = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
@@ -247,9 +220,7 @@ export const updateFiles = async (req, res) => {
 };
 
 export const deleteFile = async (req, res) => {
-  const { githubPath } = req.params;
-  const { sha } = req.body;
-
+  const { owner, repo, path } = req.params;
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
@@ -257,10 +228,7 @@ export const deleteFile = async (req, res) => {
     return res.status(403).json({ error: "Github not connected" });
   }
 
-  const parts = githubPath.split("/");
-  const owner = parts[0];
-  const repo = parts[1];
-  const path = parts.slice(2).join("/");
+  const { sha } = req.body;
 
   const response = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
@@ -288,7 +256,8 @@ export const deleteFile = async (req, res) => {
 };
 
 export const createFile = async (req, res) => {
-  const { githubPath } = req.params;
+  const { owner, repo, path } = req.params;
+  const githubPath = `${owner}/${repo}${path ? `/${path}` : ""}`;
   const fileName = req.headers.filename; // Present if uploading from TransferManager
 
   const user = await User.findOne({ _id: req.user.id });
@@ -300,13 +269,11 @@ export const createFile = async (req, res) => {
 
   // Helper to handle the actual GitHub API call
   const pushToGithub = async (content, finalPath, msg) => {
-    const parts = finalPath.split("/");
-    const owner = parts[0];
-    const repo = parts[1];
-    const path = parts.slice(2).join("/");
+    const [pushOwner, pushRepo, ...pathParts] = finalPath.split("/");
+    const pushPath = pathParts.join("/");
 
     const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+      `https://api.github.com/repos/${pushOwner}/${pushRepo}/contents/${pushPath}`,
       {
         method: "PUT",
         headers: {
@@ -381,16 +348,12 @@ export const createFile = async (req, res) => {
 };
 
 export const deleteFolder = async (req, res) => {
-  const { githubPath } = req.params;
+  const { owner, repo, path } = req.params;
+  const pathPrefix = path || "";
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
   if (!githubAccessToken) return res.status(403).json({ error: "Github not connected" });
-
-  const parts = githubPath.split("/");
-  const owner = parts[0];
-  const repo = parts[1];
-  const pathPrefix = parts.slice(2).join("/");
 
   try {
     // 1. Get all files in the repo recursively
@@ -435,11 +398,7 @@ export const deleteFolder = async (req, res) => {
 };
 
 export const downloadRepository = async (req, res) => {
-  const { githubPath } = req.params;
-  const parts = githubPath.split("/");
-  const owner = parts[0];
-  const repo = parts[1];
-
+  const { owner, repo } = req.params;
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
@@ -480,16 +439,12 @@ export const downloadRepository = async (req, res) => {
 };
 
 export const downloadFolder = async (req, res) => {
-  const { githubPath } = req.params;
+  const { owner, repo, path } = req.params;
+  const pathPrefix = path || "";
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
   if (!githubAccessToken) return res.status(403).json({ error: "Github not connected" });
-
-  const parts = githubPath.split("/");
-  const owner = parts[0];
-  const repo = parts[1];
-  const pathPrefix = parts.slice(2).join("/");
 
   try {
     // 1. Get repo info to find default branch
@@ -547,11 +502,7 @@ export const downloadFolder = async (req, res) => {
 };
 
 export const listBranches = async (req, res) => {
-  const { githubPath } = req.params;
-  const parts = githubPath.split("/");
-  const owner = parts[0];
-  const repo = parts[1];
-
+  const { owner, repo } = req.params;
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
@@ -567,5 +518,85 @@ export const listBranches = async (req, res) => {
   } catch (err) {
     console.error("Fetch branches error:", err);
     return res.status(500).json({ error: "Failed to fetch branches" });
+  }
+};
+
+export const searchRepository = async (req, res) => {
+  const { owner, repo } = req.params;
+  const { q, ref } = req.query;
+  const user = await User.findOne({ _id: req.user.id });
+  const githubAccessToken = user?.integrations?.github?.accessToken;
+
+  if (!githubAccessToken)
+    return res.status(403).json({ error: "Github not connected" });
+
+  try {
+    let branch = ref;
+    if (!branch) {
+      const repoRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}`,
+        {
+          headers: { Authorization: `Bearer ${githubAccessToken}` },
+        },
+      );
+      const repoData = await repoRes.json();
+      branch = repoData.default_branch || "main";
+    }
+
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
+      {
+        headers: {
+          Authorization: `Bearer ${githubAccessToken}`,
+          Accept: "application/vnd.github+json",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch repository tree");
+    }
+
+    const data = await response.json();
+    const query = q.toLowerCase();
+
+    const results = data.tree.filter((item) =>
+      item.path.toLowerCase().includes(query),
+    );
+
+    const directories = results
+      .filter((item) => item.type === "tree")
+      .map((item) => ({
+        id: item.sha,
+        name: item.path.split("/").pop(),
+        type: "directory",
+        provider: "github",
+        githubPath: `${owner}/${repo}/${item.path}`,
+        fullPath: item.path,
+      }));
+
+    const files = results
+      .filter((item) => item.type === "blob")
+      .map((item) => ({
+        id: item.sha,
+        name: item.path.split("/").pop(),
+        type: "file",
+        provider: "github",
+        githubPath: `${owner}/${repo}/${item.path}`,
+        fullPath: item.path,
+        size: item.size,
+        extension: item.path.includes(".")
+          ? "." + item.path.split(".").pop()
+          : "",
+      }));
+
+    return res.status(200).json({
+      directories,
+      files,
+      name: `Search: ${q}`,
+    });
+  } catch (error) {
+    console.error("Search Repository Error:", error);
+    return res.status(500).json({ error: "Search failed" });
   }
 };
