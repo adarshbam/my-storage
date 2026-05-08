@@ -100,6 +100,33 @@ export const connectGoogleDrive = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POST /drive/disconnect
+// Remove the Drive integration from the user and delete the mount directory.
+// ─────────────────────────────────────────────────────────────────────────────
+export const disconnectGoogleDrive = async (req, res) => {
+  try {
+    await User.updateOne(
+      { _id: req.user.id },
+      {
+        $unset: {
+          "integrations.googleDrive": "",
+        },
+      }
+    );
+
+    await Directory.deleteOne({
+      userId: req.user.id,
+      provider: "google_drive",
+    });
+
+    return res.status(200).json({ success: true, message: "Drive disconnected" });
+  } catch (error) {
+    console.error("Drive disconnect error:", error);
+    return res.status(500).json({ error: "Failed to disconnect Google Drive" });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GET /drive/files
 // List root-level items in "My Drive" (items whose parent is "root").
 // ─────────────────────────────────────────────────────────────────────────────
@@ -495,6 +522,89 @@ export const searchDriveFiles = async (req, res) => {
   } catch (err) {
     console.error("Drive search error:", err);
     return res.status(500).json({ error: "Drive search failed" });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /drive/file/:fileId
+// Rename a file or move it to a different folder.
+// ─────────────────────────────────────────────────────────────────────────────
+export const updateDriveItem = async (req, res) => {
+  const { fileId } = req.params;
+  const { name, parentId } = req.body;
+
+  const client = await getDriveClient(req.user.id);
+  if (!client) {
+    return res.status(403).json({ error: "Google Drive not connected" });
+  }
+
+  const { drive } = client;
+
+  try {
+    const updateParams = {
+      fileId,
+      fields: "id, name, parents",
+    };
+
+    if (name) {
+      updateParams.requestBody = { name };
+    }
+
+    if (parentId) {
+      // To move a file, we need to know its current parents to remove them
+      const file = await drive.files.get({ fileId, fields: "parents" });
+      const previousParents = (file.data.parents || []).join(",");
+
+      updateParams.addParents = parentId;
+      updateParams.removeParents = previousParents;
+    }
+
+    const response = await drive.files.update(updateParams);
+
+    return res.status(200).json({
+      msg: "Item updated!",
+      id: response.data.id,
+      name: response.data.name,
+    });
+  } catch (err) {
+    console.error("Drive update error:", err);
+    return res.status(500).json({ error: "Failed to update item on Drive" });
+  }
+};
+
+export const moveDriveItems = async (req, res) => {
+  const { items, targetId } = req.body;
+
+  const client = await getDriveClient(req.user.id);
+  if (!client) {
+    return res.status(403).json({ error: "Google Drive not connected" });
+  }
+
+  const { drive } = client;
+
+  try {
+    const results = [];
+    for (const item of items) {
+      // To move a file, we need to know its current parents to remove them
+      const file = await drive.files.get({ fileId: item.id, fields: "parents" });
+      const previousParents = (file.data.parents || []).join(",");
+
+      const response = await drive.files.update({
+        fileId: item.id,
+        addParents: targetId,
+        removeParents: previousParents,
+        fields: "id, name, parents",
+      });
+      results.push(response.data);
+    }
+
+    return res.status(200).json({
+      msg: "Items moved successfully",
+      results,
+    });
+  } catch (err) {
+    console.error("Drive bulk move error:", err);
+    return res.status(500).json({ error: "Failed to move items on Drive" });
   }
 };
 

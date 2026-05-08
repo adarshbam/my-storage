@@ -9,6 +9,9 @@ import {
   deleteFromDrive,
   downloadDriveFolder,
   searchDriveFiles,
+  disconnectGoogleDrive,
+  updateDriveItem,
+  moveDriveItems,
 } from "../controllers/driveController.js";
 import checkAuth from "../middlewares/authMiddleware.js";
 
@@ -17,6 +20,9 @@ const router = express.Router();
 // ── Auth ─────────────────────────────────────────────────────────────────────
 // Exchange the Google OAuth code for tokens and save to user
 router.post("/connect", checkAuth, connectGoogleDrive);
+
+// Disconnect Google Drive
+router.post("/disconnect", checkAuth, disconnectGoogleDrive);
 
 // ── Listing ───────────────────────────────────────────────────────────────────
 // Root of My Drive (items whose parent is "root")
@@ -31,6 +37,10 @@ router.get("/file/:fileId", checkAuth, getFileFromDrive);
 router.delete("/file/:fileId", checkAuth, deleteFromDrive);
 // Upload a file into a Drive folder (or "root" for Drive root)
 router.post("/file/:parentFolderId/upload", checkAuth, uploadFileToDrive);
+// Update or Move a file/folder
+router.patch("/file/:fileId", checkAuth, updateDriveItem);
+// Bulk move items
+router.post("/move", checkAuth, moveDriveItems);
 
 // ── Folder operations ─────────────────────────────────────────────────────────
 // Create a new folder inside a Drive folder

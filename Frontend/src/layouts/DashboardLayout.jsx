@@ -59,7 +59,7 @@ export default function DashboardLayout() {
     flow: "auth-code",
     prompt: "consent",
     access_type: "offline",
-    scope: "https://www.googleapis.com/auth/drive.readonly",
+    scope: "https://www.googleapis.com/auth/drive",
     onSuccess: async (codeResponse) => {
       try {
         console.log(codeResponse);
@@ -72,7 +72,13 @@ export default function DashboardLayout() {
 
         if (res.ok) {
           console.log("Drive connected successfully!");
-          // Optional: You could update UI state here to reflect connected status
+          // Update UI state to reflect connected status
+          if (user) {
+            const newUser = { ...user };
+            if (!newUser.integrations) newUser.integrations = {};
+            newUser.integrations.googleDrive = { connected: true };
+            setUser(newUser);
+          }
         } else {
           console.error("Failed to connect Drive");
         }
@@ -83,6 +89,52 @@ export default function DashboardLayout() {
     onError: (errorResponse) =>
       console.log("Google Login Failed:", errorResponse),
   });
+
+  const disconnectDrive = async () => {
+    try {
+      const res = await fetch(`${SERVER_URL}/drive/disconnect`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        console.log("Drive disconnected successfully!");
+        if (user) {
+          const newUser = { ...user };
+          if (newUser.integrations?.googleDrive) {
+            newUser.integrations.googleDrive.connected = false;
+            setUser(newUser);
+          }
+        }
+      } else {
+        console.error("Failed to disconnect Drive");
+      }
+    } catch (error) {
+      console.error("Drive disconnect error:", error);
+    }
+  };
+
+  const disconnectGithub = async () => {
+    try {
+      const res = await fetch(`${SERVER_URL}/github/disconnect`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        console.log("Github disconnected successfully!");
+        if (user) {
+          const newUser = { ...user };
+          if (newUser.integrations?.github) {
+            newUser.integrations.github.connected = false;
+            setUser(newUser);
+          }
+        }
+      } else {
+        console.error("Failed to disconnect Github");
+      }
+    } catch (error) {
+      console.error("Github disconnect error:", error);
+    }
+  };
 
   const connectGithub = async () => {
     // TODO: Replace with your actual GitHub Client ID
@@ -396,22 +448,32 @@ export default function DashboardLayout() {
 
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <button
-            onClick={() => connectDrive()}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-white/[0.06] hover:bg-white/80 dark:hover:bg-white/[0.1] hover:border-[#14b8a6]/40 hover:shadow-[0_0_12px_rgba(20,184,166,0.15)] border border-black/10 dark:border-white/10 rounded-lg transition-all duration-300"
-            title="Connect Google Drive"
+            onClick={() => user?.integrations?.googleDrive?.connected ? disconnectDrive() : connectDrive()}
+            className={`flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all duration-300 rounded-lg border ${
+              user?.integrations?.googleDrive?.connected
+                ? "text-red-500 bg-red-50/50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border-red-200 dark:border-red-500/30"
+                : "text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-white/[0.06] hover:bg-white/80 dark:hover:bg-white/[0.1] hover:border-[#14b8a6]/40 hover:shadow-[0_0_12px_rgba(20,184,166,0.15)] border-black/10 dark:border-white/10"
+            }`}
+            title={user?.integrations?.googleDrive?.connected ? "Unlink Google Drive" : "Connect Google Drive"}
           >
             {/* Google Drive icon — official colors */}
             <img
               src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg"
               alt="Google Drive"
-              className="w-5 h-5"
+              className={`w-5 h-5 ${user?.integrations?.googleDrive?.connected ? "grayscale" : ""}`}
             />
-            <span className="hidden sm:block">Drive</span>
+            <span className="hidden sm:block">
+              {user?.integrations?.googleDrive?.connected ? "Unlink Drive" : "Drive"}
+            </span>
           </button>
           <button
-            onClick={() => connectGithub()}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-white/[0.06] hover:bg-white/80 dark:hover:bg-white/[0.1] hover:border-[#14b8a6]/40 hover:shadow-[0_0_12px_rgba(20,184,166,0.15)] border border-black/10 dark:border-white/10 rounded-lg transition-all duration-300"
-            title="Connect with Github"
+            onClick={() => user?.integrations?.github?.connected ? disconnectGithub() : connectGithub()}
+            className={`flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all duration-300 rounded-lg border ${
+              user?.integrations?.github?.connected
+                ? "text-red-500 bg-red-50/50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border-red-200 dark:border-red-500/30"
+                : "text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-white/[0.06] hover:bg-white/80 dark:hover:bg-white/[0.1] hover:border-[#14b8a6]/40 hover:shadow-[0_0_12px_rgba(20,184,166,0.15)] border-black/10 dark:border-white/10"
+            }`}
+            title={user?.integrations?.github?.connected ? "Unlink Github" : "Connect with Github"}
           >
             {/* Github icon — official colors */}
             <svg
@@ -419,7 +481,7 @@ export default function DashboardLayout() {
               width="18"
               height="18"
               viewBox="0 0 98 96"
-              className="text-slate-800 dark:text-white"
+              className={`text-slate-800 dark:text-white ${user?.integrations?.github?.connected ? "grayscale" : ""}`}
             >
               <path
                 fillRule="evenodd"
@@ -428,7 +490,9 @@ export default function DashboardLayout() {
                 fill="currentColor"
               />
             </svg>
-            <span className="hidden sm:block">Github</span>
+            <span className="hidden sm:block">
+              {user?.integrations?.github?.connected ? "Unlink Github" : "Github"}
+            </span>
           </button>
 
           <button

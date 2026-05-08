@@ -23,6 +23,10 @@ export const getUser = (req, res) => {
     profilepic: user.profilepic,
     rootDirectoryId: user.rootDirId,
     theme: user.theme || "dark",
+    integrations: {
+      googleDrive: { connected: !!user.integrations?.googleDrive?.connected },
+      github: { connected: !!user.integrations?.github?.connected },
+    },
   });
 };
 

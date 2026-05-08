@@ -112,11 +112,12 @@ export default function FileBrowser({ specialView }) {
       } else if (specialView === "github") {
         url = `${SERVER_URL}/github/repositories`;
       } else if (specialView === "github-repo") {
-        const parts = githubPath.split("/");
+        const parts = (githubPath || "").split("/");
         const owner = parts[0];
         const repo = parts[1];
         const path = parts.slice(2).join("/");
-        url = `${SERVER_URL}/github/repositories/${owner}/${repo}/contents/${path}${selectedBranch ? `?ref=${selectedBranch}` : ""}`;
+        const contentPath = path ? `/${path}` : "";
+        url = `${SERVER_URL}/github/repositories/${owner}/${repo}/contents${contentPath}${selectedBranch ? `?ref=${selectedBranch}` : ""}`;
       }
 
       if (isSearch) {
@@ -490,6 +491,15 @@ export default function FileBrowser({ specialView }) {
             content: btoa(unescape(encodeURIComponent(newFileContent))),
             message: `Create ${fullName}`,
           });
+        } else if (
+          specialView === "google-drive" ||
+          specialView === "google-drive-folder"
+        ) {
+          const parentId = driveFolderId || "root";
+          url = `${SERVER_URL}/drive/file/${parentId}/upload`;
+          headers["filename"] = fullName;
+          headers["Content-Type"] = "text/plain";
+          body = newFileContent; // Send raw text for Drive upload endpoint
         } else {
           url = folderId
             ? `${SERVER_URL}/file/${folderId}`
@@ -578,10 +588,19 @@ export default function FileBrowser({ specialView }) {
         const isRepo = item.githubPath.split("/").length === 2;
         const endpoint = isRepo ? "download" : "folder-download";
         const queryParams = selectedBranch ? `?ref=${selectedBranch}` : "";
-        url = `${SERVER_URL}/github/repositories/${encodeURIComponent(item.githubPath)}/${endpoint}${queryParams}`;
+        // Extract owner and repo, and conditionally the path for folders
+        const parts = item.githubPath.split("/");
+        const owner = parts[0];
+        const repo = parts[1];
+        if (isRepo) {
+          url = `${SERVER_URL}/github/repositories/${owner}/${repo}/download${queryParams}`;
+        } else {
+          const path = parts.slice(2).join("/");
+          url = `${SERVER_URL}/github/repositories/${owner}/${repo}/folder-download/${path}${queryParams}`;
+        }
       } else {
-        const queryParams = selectedBranch ? `&ref=${selectedBranch}` : "";
-        url = `${SERVER_URL}/github/file/${encodeURIComponent(item.githubPath)}?action=download${queryParams}`;
+        const queryParams = selectedBranch ? `?ref=${selectedBranch}` : ""; // Fixed to ?ref= instead of &ref= since there is no other query param
+        url = `${SERVER_URL}/github/file/${item.githubPath}?action=download${queryParams.replace("?", "&")}`; // Add action=download and ref
       }
     } else {
       url =
@@ -638,13 +657,16 @@ export default function FileBrowser({ specialView }) {
     if (!modalItem) return;
 
     try {
-      const url = `${SERVER_URL}/github/file/${encodeURIComponent(modalItem.githubPath)}`;
-      const body = JSON.stringify({ sha: modalItem.sha });
+      const isDirectory = modalItem.type === "directory";
+      const url = isDirectory
+        ? `${SERVER_URL}/github/repositories/${modalItem.githubPath}${selectedBranch ? `?ref=${selectedBranch}` : ""}`
+        : `${SERVER_URL}/github/file/${modalItem.githubPath}`;
+      const body = isDirectory ? undefined : JSON.stringify({ sha: modalItem.sha });
 
       const res = await fetch(url, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: body,
+        ...(body && { body }),
         credentials: "include",
       });
 
@@ -705,21 +727,7 @@ export default function FileBrowser({ specialView }) {
     e.preventDefault();
     e.stopPropagation();
 
-    // Check if files are being dropped (Desktop Upload)
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const files = Array.from(e.dataTransfer.files);
-      const targetDirId =
-        targetItem &&
-        targetItem.id &&
-        data.directories.find((d) => d.id === targetItem.id)
-          ? targetItem.id
-          : folderId;
-
-      uploadFile(files, targetDirId);
-      return;
-    }
-
-    // Handle internal DnD
+    // Handle internal DnD FIRST
     const draggedItemsStr = e.dataTransfer.getData("draggedItems");
     const singleDraggedItemStr = e.dataTransfer.getData("draggedItem");
 
@@ -730,31 +738,93 @@ export default function FileBrowser({ specialView }) {
       itemsToMove = [JSON.parse(singleDraggedItemStr)];
     }
 
-    if (itemsToMove.length === 0) return;
+    if (itemsToMove.length > 0) {
+      // Filter out if target is one of the moved items (can't move folder into itself)
+      if (itemsToMove.some((i) => i.id === targetItem.id)) return;
 
-    // Filter out if target is one of the moved items (can't move folder into itself)
-    if (itemsToMove.some((i) => i.id === targetItem.id)) return;
+      // Check for external items
+      const hasExternalItem = itemsToMove.some(
+        (i) => i.provider === "google_drive" || i.provider === "github",
+      );
 
-    // Only vault items support server-side drag-to-move
-    const hasExternalItem = itemsToMove.some(
-      (i) => i.provider === "google_drive" || i.provider === "github",
-    );
-    if (hasExternalItem) {
-      // Drive/GitHub items can't be moved between folders via this app
+      if (hasExternalItem) {
+        const isAllGithub = itemsToMove.every((i) => i.provider === "github");
+        if (
+          isAllGithub &&
+          targetItem.provider === "github" &&
+          targetItem.githubPath
+        ) {
+          try {
+            await fetch(`${SERVER_URL}/github/move`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                items: itemsToMove,
+                targetPath: targetItem.githubPath,
+              }),
+              credentials: "include",
+            });
+            fetchFiles();
+            setSelectedItems([]);
+          } catch (err) {
+            console.error("GitHub Move failed", err);
+          }
+        }
+
+        const isAllDrive = itemsToMove.every(
+          (i) => i.provider === "google_drive",
+        );
+        if (isAllDrive && targetItem.provider === "google_drive") {
+          try {
+            await fetch(`${SERVER_URL}/drive/move`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                items: itemsToMove,
+                targetId: targetItem.id, // targetItem.id is the Drive folder ID
+              }),
+              credentials: "include",
+            });
+            fetchFiles();
+            setSelectedItems([]);
+          } catch (err) {
+            console.error("Drive Move failed", err);
+          }
+        }
+        return;
+      }
+
+      try {
+        await fetch(`${SERVER_URL}/directory/${targetItem.id}/move`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(itemsToMove),
+          credentials: "include",
+        });
+        fetchFiles();
+        setSelectedItems([]);
+      } catch (err) {
+        console.error("Move failed", err);
+      }
       return;
     }
 
-    try {
-      await fetch(`${SERVER_URL}/directory/${targetItem.id}/move`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(itemsToMove),
-        credentials: "include",
-      });
-      fetchFiles();
-      setSelectedItems([]);
-    } catch (err) {
-      console.error("Move failed", err);
+    // Handle Desktop Upload SECOND
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      let targetDirId = folderId; // default to current vault folder
+
+      if (targetItem && targetItem.id) {
+        if (targetItem.provider === "github" && targetItem.githubPath) {
+          targetDirId = `github:${targetItem.githubPath}`;
+        } else {
+          // For Vault
+          targetDirId = targetItem.id;
+        }
+      }
+
+      uploadFile(files, targetDirId);
+      return;
     }
   };
 
@@ -818,7 +888,16 @@ export default function FileBrowser({ specialView }) {
               onDrop={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (data.parentDir) {
+                if (specialView === "google-drive-folder") {
+                  const parentId = data.parentId || "root";
+                  handleDrop(e, { id: parentId, provider: "google_drive" });
+                } else if (specialView === "github-repo") {
+                  const parts = (githubPath || "").split("/").filter(Boolean);
+                  if (parts.length > 2) {
+                    const parentPath = parts.slice(0, -1).join("/");
+                    handleDrop(e, { githubPath: parentPath, provider: "github" });
+                  }
+                } else if (data.parentDir) {
                   handleDrop(e, { id: data.parentDir });
                 }
               }}
@@ -1020,7 +1099,10 @@ export default function FileBrowser({ specialView }) {
                 <span className="hidden sm:inline">New Folder</span>
               </button>
               {/* New File and Upload only for Vault and GitHub (Drive upload uses a different flow) */}
-              {(!specialView || specialView === "github-repo") && (
+              {(!specialView ||
+                specialView === "github-repo" ||
+                specialView === "google-drive" ||
+                specialView === "google-drive-folder") && (
                 <>
                   <button
                     onClick={() => {
@@ -1033,13 +1115,15 @@ export default function FileBrowser({ specialView }) {
                     <FilePlus size={18} />
                     <span className="hidden sm:inline">New File</span>
                   </button>
-                  <button
-                    onClick={openUploadModal}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white rounded-xl hover:shadow-[0_0_20px_rgba(20,184,166,0.4)] hover:scale-[1.03] transition-all duration-300 font-medium shadow-lg shadow-[#14b8a6]/20"
-                  >
-                    <Upload size={18} />
-                    <span className="hidden sm:inline">Upload</span>
-                  </button>
+                  {(!specialView || specialView === "github-repo") && (
+                    <button
+                      onClick={openUploadModal}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white rounded-xl hover:shadow-[0_0_20px_rgba(20,184,166,0.4)] hover:scale-[1.03] transition-all duration-300 font-medium shadow-lg shadow-[#14b8a6]/20"
+                    >
+                      <Upload size={18} />
+                      <span className="hidden sm:inline">Upload</span>
+                    </button>
+                  )}
                 </>
               )}
             </>
@@ -1174,7 +1258,7 @@ export default function FileBrowser({ specialView }) {
                   });
                 } else if (item.provider === "github") {
                   return fetch(
-                    `${SERVER_URL}/github/file/${encodeURIComponent(item.githubPath)}`,
+                    `${SERVER_URL}/github/file/${item.githubPath}`,
                     {
                       method: "DELETE",
                       headers: { "Content-Type": "application/json" },

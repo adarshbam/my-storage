@@ -85,7 +85,7 @@ const TransferManager = forwardRef((props, ref) => {
     const cleanDirId = isGithub && dirId.startsWith("github:") ? dirId.replace("github:", "") : dirId;
     
     const uploadUrl = isGithub
-      ? `${SERVER_URL}/github/file/${encodeURIComponent(cleanDirId)}`
+      ? `${SERVER_URL}/github/file/${cleanDirId}`
       : cleanDirId
         ? `${SERVER_URL}/file/${cleanDirId}`
         : `${SERVER_URL}/file/`;
