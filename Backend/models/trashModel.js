@@ -9,6 +9,7 @@ const trashSchema = new Schema(
     extension: { type: String, default: "" },
     size: { type: Number, default: 0 },
     hasThumbnail: { type: Boolean, default: false },
+    deleted_at: { type: Date, default: Date.now },
   },
   { strict: false }, // Allows flexibility if other fields exist since it's a mixed collection
 );

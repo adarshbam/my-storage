@@ -1320,8 +1320,10 @@ export default function FileBrowser({ specialView }) {
               onDrop={handleDrop}
               viewMode={viewMode}
               isIntegrationRoot={
-                !specialView &&
-                (dir.provider === "google_drive" || dir.provider === "github")
+                (!specialView &&
+                  (dir.provider === "google_drive" ||
+                    dir.provider === "github")) ||
+                (specialView === "github" && dir.provider === "github")
               }
             />
           ))}
