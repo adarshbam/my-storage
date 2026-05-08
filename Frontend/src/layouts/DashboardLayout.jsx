@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { Outlet, Link, useNavigate } from "react-router-dom";
+import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { SERVER_URL } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
@@ -154,6 +154,8 @@ export default function DashboardLayout() {
     }
   };
 
+  const location = useLocation();
+
   const handleSearch = async (term) => {
     if (!term.trim()) {
       setSearchQuery("");
@@ -170,7 +172,17 @@ export default function DashboardLayout() {
     setSearchQuery(term);
     setShowRecentSearches(false);
 
-    if (currentFolderId) {
+    // If the user is inside a Drive or GitHub view, stay on the current path
+    // and append ?q= so the correct specialView + search endpoint is used.
+    const path = location.pathname;
+    const isDriveOrGithub =
+      path.startsWith("/dashboard/google-drive") ||
+      path.startsWith("/dashboard/github");
+
+    if (isDriveOrGithub) {
+      // Stay on the current route — FileBrowser will pick up ?q= via useSearchParams
+      navigate(`${path}?q=${encodeURIComponent(term)}`);
+    } else if (currentFolderId) {
       navigate(
         `/dashboard/folder/${currentFolderId}?search=${encodeURIComponent(term)}`,
       );

@@ -1,50 +1,51 @@
-import { dir } from "node:console";
 import User from "../models/userModel.js";
 
 export const listRepositories = async (req, res) => {
   const user = await User.findById(req.user.id).select("integrations").lean();
 
-  console.log(user);
-
   if (!user?.integrations?.github?.accessToken) {
     return res.status(403).json({ error: "Github not connected" });
   }
 
-  const githubAccessToken = user?.integrations?.github?.accessToken;
+  const githubAccessToken = user.integrations.github.accessToken;
 
-  const response = await fetch("https://api.github.com/user/repos", {
-    headers: {
-      Authorization: `Bearer ${githubAccessToken}`,
-      Accept: "application/vnd.github+json",
-    },
-  });
-
-  const repos = await response.json();
-
-  const githubRepositories = repos.map((repo) => ({
-    _id: repo.id,
-    id: repo.id,
-    name: repo.name,
-    type: "directory",
-    provider: "github",
-    githubPath: repo.full_name,
-    updatedAt: repo.updated_at,
-  }));
-
-  console.log(githubRepositories);
-
-  if (!githubRepositories)
-    return res.status(200).json({
-      directories: [],
-      files: [],
-      parentDir: null,
+  try {
+    const response = await fetch("https://api.github.com/user/repos?per_page=100", {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
     });
 
-  return res.status(200).json({
-    directories: githubRepositories,
-    files: [],
-    name: "Github",
-  });
+    const repos = await response.json();
+
+    // GitHub returns an error object (not an array) when the token is
+    // expired, revoked, or rate-limited. Guard before calling .map.
+    if (!response.ok || !Array.isArray(repos)) {
+      return res.status(response.status || 400).json({
+        error: repos?.message || "Failed to fetch repositories",
+      });
+    }
+
+    const githubRepositories = repos.map((repo) => ({
+      _id: repo.id,
+      id: repo.id,
+      name: repo.name,
+      type: "directory",
+      provider: "github",
+      githubPath: repo.full_name,
+      updatedAt: repo.updated_at,
+    }));
+
+    return res.status(200).json({
+      directories: githubRepositories,
+      files: [],
+      name: "Github",
+    });
+  } catch (err) {
+    console.error("listRepositories error:", err);
+    return res.status(500).json({ error: "Failed to fetch repositories" });
+  }
 };
 
 export const getRepositoryContents = async (req, res) => {

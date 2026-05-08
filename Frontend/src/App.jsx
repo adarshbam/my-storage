@@ -34,11 +34,11 @@ function LandingPage() {
       <div className="relative z-10 flex flex-col min-h-screen">
         <Navbar />
         <main className="flex-grow">
-        <Hero />
-        <ScaleSecurity />
-        <HowItWorks />
-        <Integrations />
-        <Pricing />
+          <Hero />
+          <ScaleSecurity />
+          <HowItWorks />
+          <Integrations />
+          <Pricing />
           <FinalCTA />
         </main>
         <Footer />
@@ -72,12 +72,34 @@ function App() {
                   <Route index element={<FileBrowser />} />
                   <Route path="folder/:folderId" element={<FileBrowser />} />
                   <Route path="search" element={<FileBrowser />} />
-                  <Route path="shared" element={<FileBrowser specialView="shared" />} />
-                  <Route path="recent" element={<FileBrowser specialView="recent" />} />
-                  <Route path="starred" element={<FileBrowser specialView="starred" />} />
-                  <Route path="google-drive" element={<FileBrowser specialView="google-drive" />} />
-                  <Route path="github" element={<FileBrowser specialView="github" />} />
-                  <Route path="github/*" element={<FileBrowser specialView="github-repo" />} />
+                  <Route
+                    path="shared"
+                    element={<FileBrowser specialView="shared" />}
+                  />
+                  <Route
+                    path="recent"
+                    element={<FileBrowser specialView="recent" />}
+                  />
+                  <Route
+                    path="starred"
+                    element={<FileBrowser specialView="starred" />}
+                  />
+                  <Route
+                    path="google-drive"
+                    element={<FileBrowser specialView="google-drive" />}
+                  />
+                  <Route
+                    path="google-drive/:driveFolderId"
+                    element={<FileBrowser specialView="google-drive-folder" />}
+                  />
+                  <Route
+                    path="github"
+                    element={<FileBrowser specialView="github" />}
+                  />
+                  <Route
+                    path="github/*"
+                    element={<FileBrowser specialView="github-repo" />}
+                  />
                   <Route path="trash" element={<TrashView />} />
                 </Route>
               </Route>
