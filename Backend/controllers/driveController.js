@@ -1,9 +1,20 @@
 import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
+import File from "../models/fileModel.js";
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "../config.js";
 import { google } from "googleapis";
 import { Readable } from "stream";
 import archiver from "archiver";
+import path from "path";
+import { createWriteStream, createReadStream } from "fs";
+import { fileURLToPath } from "url";
+import { stat, mkdir, unlink } from "fs/promises";
+import mongoose from "mongoose";
+import { pipeline } from "stream/promises";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const STORAGE_DIR = path.join(__dirname, "../storage");
 
 // ─── Shared Helper: Build an authenticated Drive client ───────────────────────
 async function getDriveClient(userId) {
@@ -234,7 +245,7 @@ export const getFileFromDrive = async (req, res) => {
     // 1. Get file metadata (name + mimeType) so we can set the right headers
     const metaRes = await drive.files.get({
       fileId,
-      fields: "name, mimeType",
+      fields: "name, mimeType, size",
     });
 
     const { name, mimeType } = metaRes.data;
@@ -270,15 +281,36 @@ export const getFileFromDrive = async (req, res) => {
     }
 
     // 2. Set headers for regular binary files
+    const { size } = metaRes.data;
     res.setHeader("Content-Type", mimeType || "application/octet-stream");
+    res.setHeader("Accept-Ranges", "bytes");
+    res.setHeader("X-Total-Size", size || 0);
+
     if (action === "download") {
       res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
     }
 
-    // 3. Stream the file bytes directly to the response — zero memory buffering!
+    // 3. Handle Range requests for resumption/seeking
+    const range = req.headers.range;
+    const driveParams = { fileId, alt: "media" };
+    const driveOptions = { responseType: "stream" };
+    
+    if (range && !exportMime) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : (size ? size - 1 : undefined);
+      
+      if (!isNaN(start)) {
+        res.status(206);
+        res.setHeader("Content-Range", `bytes ${start}-${end}/${size || "*"}`);
+        driveOptions.headers = { Range: range };
+      }
+    }
+
+    // 4. Stream the file bytes directly to the response — zero memory buffering!
     const fileRes = await drive.files.get(
-      { fileId, alt: "media" },
-      { responseType: "stream" },
+      driveParams,
+      driveOptions,
     );
 
     fileRes.data.pipe(res);
@@ -605,6 +637,187 @@ export const moveDriveItems = async (req, res) => {
   } catch (err) {
     console.error("Drive bulk move error:", err);
     return res.status(500).json({ error: "Failed to move items on Drive" });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /drive/transfer-to-vault
+// Transfer items from Google Drive to local Vault storage.
+// ─────────────────────────────────────────────────────────────────────────────
+export const transferToVault = async (req, res) => {
+  const { items, targetFolderId } = req.body;
+  const userId = req.user.id;
+
+  const client = await getDriveClient(userId);
+  if (!client) {
+    return res.status(403).json({ error: "Google Drive not connected" });
+  }
+  const { drive } = client;
+
+  try {
+    const results = [];
+    
+    // Recursive helper to import Drive folder structure into local DB
+    const importItem = async (driveItem, localParentId) => {
+      if (driveItem.type === "directory") {
+        // 1. Create local directory
+        const newDir = await Directory.create({
+          name: driveItem.name,
+          parentDir: localParentId,
+          userId: userId,
+          size: 0,
+        });
+
+        // 2. List children in Drive
+        const response = await drive.files.list({
+          q: `'${driveItem.id}' in parents and trashed = false`,
+          fields: "files(id, name, mimeType, size)",
+        });
+
+        const children = response.data.files || [];
+        for (const child of children) {
+          const mappedChild = mapDriveItem(child);
+          await importItem(mappedChild, newDir._id.toString());
+        }
+        return newDir;
+      } else {
+        // 1. Create local file entry with new ID
+        const fileId = new mongoose.Types.ObjectId();
+        const ext = path.extname(driveItem.name);
+        const fileName = driveItem.name;
+        const filePath = path.join(STORAGE_DIR, `${fileId}${ext}`);
+
+        // 2. Stream from Drive to local storage
+        const driveRes = await drive.files.get(
+          { fileId: driveItem.id, alt: "media" },
+          { responseType: "stream" }
+        );
+
+        await mkdir(STORAGE_DIR, { recursive: true });
+        const writeStream = createWriteStream(filePath);
+        
+        await pipeline(driveRes.data, writeStream);
+
+        const stats = await stat(filePath);
+        const newFile = await File.create({
+          _id: fileId,
+          name: fileName,
+          extension: ext,
+          size: stats.size,
+          userId: userId,
+          parentDir: localParentId,
+          type: "file",
+        });
+
+        return newFile;
+      }
+    };
+
+    for (const item of items) {
+      await importItem(item, targetFolderId);
+      // Delete from Drive after successful transfer
+      await drive.files.delete({ fileId: item.id });
+    }
+
+    return res.status(200).json({ msg: "Transfer complete", results });
+  } catch (err) {
+    console.error("Transfer to Vault error:", err);
+    return res.status(500).json({ error: "Transfer failed" });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /drive/transfer-from-vault
+// Transfer items from local Vault storage to Google Drive.
+// ─────────────────────────────────────────────────────────────────────────────
+export const transferFromVault = async (req, res) => {
+  const { items, targetDriveFolderId } = req.body;
+  const userId = req.user.id;
+
+  const client = await getDriveClient(userId);
+  if (!client) {
+    return res.status(403).json({ error: "Google Drive not connected" });
+  }
+  const { drive } = client;
+
+  try {
+    const results = [];
+
+    const exportItem = async (localItem, driveParentId) => {
+      if (localItem.type === "directory") {
+        // 1. Create Drive folder
+        const driveFolder = await drive.files.create({
+          requestBody: {
+            name: localItem.name,
+            mimeType: "application/vnd.google-apps.folder",
+            parents: [driveParentId || "root"],
+          },
+          fields: "id, name",
+        });
+
+        // 2. Get local children
+        const parentDir = new mongoose.Types.ObjectId(localItem.id);
+        const childFiles = await File.find({ parentDir }).lean();
+        const childDirs = await Directory.find({ parentDir }).lean();
+
+        for (const f of childFiles) {
+          await exportItem({ ...f, id: f._id.toString() }, driveFolder.data.id);
+        }
+        for (const d of childDirs) {
+          await exportItem({ ...d, id: d._id.toString() }, driveFolder.data.id);
+        }
+        return driveFolder.data;
+      } else {
+        // 1. Stream from local to Drive
+        const ext = localItem.extension || "";
+        const filePath = path.join(STORAGE_DIR, `${localItem.id}${ext}`);
+        
+        const response = await drive.files.create({
+          requestBody: {
+            name: localItem.name,
+            parents: [driveParentId || "root"],
+          },
+          media: {
+            body: createReadStream(filePath),
+          },
+          fields: "id, name",
+        });
+
+        return response.data;
+      }
+    };
+
+    for (const item of items) {
+      await exportItem(item, targetDriveFolderId);
+      
+      // Delete from Vault after successful transfer
+      if (item.type === "directory") {
+        // Recursive delete logic for local directory
+        const deleteLocalDir = async (dirId) => {
+          const files = await File.find({ parentDir: dirId });
+          for (const f of files) {
+            const fPath = path.join(STORAGE_DIR, `${f._id}${f.extension}`);
+            try { await unlink(fPath); } catch (e) {}
+            await File.deleteOne({ _id: f._id });
+          }
+          const dirs = await Directory.find({ parentDir: dirId });
+          for (const d of dirs) {
+            await deleteLocalDir(d._id);
+          }
+          await Directory.deleteOne({ _id: dirId });
+        };
+        await deleteLocalDir(item.id);
+      } else {
+        const fPath = path.join(STORAGE_DIR, `${item.id}${item.extension || ""}`);
+        try { await unlink(fPath); } catch (e) {}
+        await File.deleteOne({ _id: item.id });
+      }
+    }
+
+    return res.status(200).json({ msg: "Transfer complete", results });
+  } catch (err) {
+    console.error("Transfer from Vault error:", err);
+    return res.status(500).json({ error: "Transfer failed" });
   }
 };
 

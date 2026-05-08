@@ -12,6 +12,8 @@ import {
   disconnectGoogleDrive,
   updateDriveItem,
   moveDriveItems,
+  transferToVault,
+  transferFromVault,
 } from "../controllers/driveController.js";
 import checkAuth from "../middlewares/authMiddleware.js";
 
@@ -41,6 +43,9 @@ router.post("/file/:parentFolderId/upload", checkAuth, uploadFileToDrive);
 router.patch("/file/:fileId", checkAuth, updateDriveItem);
 // Bulk move items
 router.post("/move", checkAuth, moveDriveItems);
+// Cross-provider transfer
+router.post("/transfer-to-vault", checkAuth, transferToVault);
+router.post("/transfer-from-vault", checkAuth, transferFromVault);
 
 // ── Folder operations ─────────────────────────────────────────────────────────
 // Create a new folder inside a Drive folder

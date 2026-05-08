@@ -80,15 +80,19 @@ const TransferManager = forwardRef((props, ref) => {
     const xhr = new XMLHttpRequest();
     abortControllers.current[id] = xhr;
 
-    // Detect GitHub destination via prefix or slash
-    const isGithub = dirId && typeof dirId === "string" && (dirId.startsWith("github:") || dirId.includes("/"));
-    const cleanDirId = isGithub && dirId.startsWith("github:") ? dirId.replace("github:", "") : dirId;
+    // Detect destination provider via prefix
+    const isGithub = dirId && typeof dirId === "string" && dirId.startsWith("github:");
+    const isDrive = dirId && typeof dirId === "string" && dirId.startsWith("drive:");
+    
+    const cleanDirId = (isGithub || isDrive) ? dirId.split(":")[1] : dirId;
     
     const uploadUrl = isGithub
       ? `${SERVER_URL}/github/file/${cleanDirId}`
-      : cleanDirId
-        ? `${SERVER_URL}/file/${cleanDirId}`
-        : `${SERVER_URL}/file/`;
+      : isDrive
+        ? `${SERVER_URL}/drive/file/${cleanDirId || "root"}/upload`
+        : cleanDirId
+          ? `${SERVER_URL}/file/${cleanDirId}`
+          : `${SERVER_URL}/file/`;
 
     xhr.open("POST", uploadUrl, true);
     xhr.withCredentials = true;

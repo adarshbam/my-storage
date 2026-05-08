@@ -1,6 +1,7 @@
 import express from "express";
 import checkAuth from "../middlewares/authMiddleware.js";
 import {
+  createRepository,
   listRepositories,
   getRepositoryContents,
   getFiles,
@@ -21,6 +22,8 @@ const router = express.Router();
 
 // list of all the repos
 router.get("/repositories", checkAuth, listRepositories);
+// create repo
+router.post("/repositories", checkAuth, createRepository);
 
 // disconnect github
 router.post("/disconnect", checkAuth, disconnectGithub);

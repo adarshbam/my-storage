@@ -126,7 +126,9 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
           const url =
             file.provider === "github"
               ? `${SERVER_URL}/github/file/${file.githubPath.split('/').map(encodeURIComponent).join('/')}?t=${Date.now()}`
-              : `${SERVER_URL}/file/${file.id}?t=${Date.now()}`;
+              : file.provider === "google_drive"
+                ? `${SERVER_URL}/drive/file/${file.id}?t=${Date.now()}`
+                : `${SERVER_URL}/file/${file.id}?t=${Date.now()}`;
           const res = await fetch(url, { credentials: "include" });
           if (!res.ok) throw new Error("Failed to load content");
           const text = await res.text();
@@ -157,7 +159,9 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
   const fileUrl =
     file.provider === "github"
       ? `${SERVER_URL}/github/file/${file.githubPath.split('/').map(encodeURIComponent).join('/')}`
-      : `${SERVER_URL}/file/${file.id}`;
+      : file.provider === "google_drive"
+        ? `${SERVER_URL}/drive/file/${file.id}`
+        : `${SERVER_URL}/file/${file.id}`;
 
   const handleSave = async () => {
     setSaving(true);
@@ -204,7 +208,9 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
     const downloadUrl =
       file.provider === "github"
         ? `${SERVER_URL}/github/file/${file.githubPath.split('/').map(encodeURIComponent).join('/')}?action=download`
-        : `${SERVER_URL}/file/${file.id}?action=download`;
+        : file.provider === "google_drive"
+          ? `${SERVER_URL}/drive/file/${file.id}?action=download`
+          : `${SERVER_URL}/file/${file.id}?action=download`;
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.download = file.name;
@@ -480,7 +486,7 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
                 </h3>
               )}
               <span className="text-[10px] text-slate-500 font-mono flex items-center gap-2">
-                {file.provider === "github" ? "GitHub Managed" : "Local Storage"}
+                {file.provider === "github" ? "GitHub Managed" : file.provider === "google_drive" ? "Google Drive" : "Local Storage"}
                 {isEditing && <span className="text-[#14b8a6] font-bold">• EDITING</span>}
               </span>
             </div>

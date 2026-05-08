@@ -25,6 +25,50 @@ export const disconnectGithub = async (req, res) => {
   }
 };
 
+export const createRepository = async (req, res) => {
+  const { name, description, private: isPrivate } = req.body;
+  const user = await User.findById(req.user.id).select("integrations").lean();
+
+  if (!user?.integrations?.github?.accessToken) {
+    return res.status(403).json({ error: "Github not connected" });
+  }
+
+  const githubAccessToken = user.integrations.github.accessToken;
+
+  try {
+    const response = await fetch("https://api.github.com/user/repos", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        description,
+        private: isPrivate || false,
+        auto_init: true, // Create with README.md by default for convenience
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: data.message || "Failed to create repository",
+      });
+    }
+
+    return res.status(201).json({
+      message: "Repository created successfully",
+      repository: data,
+    });
+  } catch (err) {
+    console.error("createRepository error:", err);
+    return res.status(500).json({ error: "Failed to create repository" });
+  }
+};
+
 export const listRepositories = async (req, res) => {
   const user = await User.findById(req.user.id).select("integrations").lean();
 
@@ -148,19 +192,18 @@ export const getFiles = async (req, res) => {
   const { owner, repo } = req.params;
   const pathSegment = req.params[0] || req.params.path;
   const path = Array.isArray(pathSegment) ? pathSegment.join("/") : (pathSegment || "");
-  const currentPath = path || "";
-  const { action } = req.query;
+  const { action, ref } = req.query;
 
   const user = await User.findOne({ _id: req.user.id });
-
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
-  if (!user?.integrations?.github?.accessToken) {
+  if (!githubAccessToken) {
     return res.status(403).json({ error: "Github not connected" });
   }
 
-  const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${path || ""}`,
+  // 1. Get file metadata first (to get size and verify it's a file)
+  const metaResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${path}${ref ? `?ref=${ref}` : ""}`,
     {
       headers: {
         Authorization: `Bearer ${githubAccessToken}`,
@@ -169,22 +212,21 @@ export const getFiles = async (req, res) => {
     },
   );
 
-  const file = await response.json();
-
-  // 1. Check if GitHub actually sent content (GitHub API limits to 1MB)
-  if (!file.content) {
-    return res.status(400).json({ error: "File is too large or empty." });
+  if (!metaResponse.ok) {
+    const error = await metaResponse.json().catch(() => ({}));
+    return res.status(metaResponse.status).json({ error: error.message || "File not found" });
   }
 
-  console.log(file);
+  const fileMeta = await metaResponse.json();
+  if (Array.isArray(fileMeta)) {
+    return res.status(400).json({ error: "Path is a directory, not a file" });
+  }
 
-  // 2. Create a raw buffer from the base64 content
-  const buffer = Buffer.from(file.content, "base64");
+  const fileSize = fileMeta.size;
+  const range = req.headers.range;
 
-  // 3. Figure out the mime type so the browser knows how to render it
-  const ext = file.name.includes(".")
-    ? file.name.split(".").pop().toLowerCase()
-    : "";
+  // 2. Prepare headers for the final response
+  const ext = fileMeta.name.split(".").pop().toLowerCase();
   const mimeTypes = {
     png: "image/png",
     jpg: "image/jpeg",
@@ -193,23 +235,69 @@ export const getFiles = async (req, res) => {
     svg: "image/svg+xml",
     pdf: "application/pdf",
     mp4: "video/mp4",
+    zip: "application/zip",
   };
-
-  // Default to octet-stream (binary) if we don't recognize it, but fallback to text for code
   const contentType = mimeTypes[ext] || "text/plain";
 
-  // Set the standard content type
   res.setHeader("Content-Type", contentType);
+  res.setHeader("Accept-Ranges", "bytes");
+  res.setHeader("X-Total-Size", fileSize);
 
-  // If the frontend asked for a download, force the browser to save it as a file!
   if (action === "download") {
-    // "attachment" tells the browser to download it.
-    // You also pass the filename so the browser knows what to name it on the user's computer.
-    res.setHeader("Content-Disposition", `attachment; filename="${file.name}"`);
+    res.setHeader("Content-Disposition", `attachment; filename="${fileMeta.name}"`);
   }
 
-  // Send the raw buffer. If it's a download, it saves to disk. If not, it previews on screen!
-  return res.status(200).send(buffer);
+  // 3. Fetch the raw content (streaming)
+  const fetchOptions = {
+    headers: {
+      Authorization: `Bearer ${githubAccessToken}`,
+      Accept: "application/vnd.github.v3.raw",
+    },
+  };
+
+  if (range) {
+    fetchOptions.headers.Range = range;
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    
+    res.status(206);
+    res.setHeader("Content-Range", `bytes ${start}-${end}/${fileSize}`);
+  }
+
+  const rawResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${path}${ref ? `?ref=${ref}` : ""}`,
+    fetchOptions
+  );
+
+  if (!rawResponse.ok) {
+    return res.status(rawResponse.status).send("Failed to stream file content");
+  }
+
+  // 4. Pipe the stream directly to the response
+  if (rawResponse.body) {
+    // In Node fetch (undici/node-fetch), body is a ReadableStream
+    // If it's a web stream, we can use the following:
+    const reader = rawResponse.body.getReader();
+    const stream = new ReadableStream({
+      async start(controller) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          controller.enqueue(value);
+        }
+        controller.close();
+      }
+    });
+    // Note: Node.js express res.send() or res.end() works differently with web streams.
+    // Better to use a proper bridge or just pipe if it's a Node stream.
+    // Actually, in modern Node (18+), fetch returns a Response with a web body.
+    // We can convert it to a Node stream:
+    const { Readable } = await import("stream");
+    Readable.fromWeb(rawResponse.body).pipe(res);
+  } else {
+    res.status(500).send("No content body available");
+  }
 };
 
 export const updateFiles = async (req, res) => {
@@ -513,40 +601,65 @@ export const downloadRepository = async (req, res) => {
 
 export const downloadFolder = async (req, res) => {
   const { owner, repo } = req.params;
-  const path = req.params.path || "";
-  const pathPrefix = path || "";
+  // Express 5 might return wildcard parameters as arrays
+  const rawPath = req.params.path || req.params[0] || "";
+  const pathPrefix = Array.isArray(rawPath) ? rawPath.join("/") : String(rawPath);
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
+
+  const { ref: queryRef } = req.query;
 
   if (!githubAccessToken) return res.status(403).json({ error: "Github not connected" });
 
   try {
-    // 1. Get repo info to find default branch
-    const repoInfoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-      headers: { Authorization: `Bearer ${githubAccessToken}` }
-    });
-    if (!repoInfoRes.ok) throw new Error("Failed to fetch repository info");
-    const repoInfo = await repoInfoRes.json();
-    const defaultBranch = repoInfo.default_branch || "main";
+    let targetRef = queryRef;
+
+    // 1. If no ref provided, get repo info to find default branch
+    if (!targetRef) {
+      console.log(`No ref provided for ${owner}/${repo}, fetching default branch`);
+      const repoInfoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+        headers: { Authorization: `Bearer ${githubAccessToken}` }
+      });
+      if (!repoInfoRes.ok) throw new Error(`Failed to fetch repo info: ${repoInfoRes.status}`);
+      const repoInfo = await repoInfoRes.json();
+      targetRef = repoInfo.default_branch || "main";
+    }
 
     // 2. Get repo tree recursively
+    console.log(`Fetching recursive tree for ${owner}/${repo} at ${targetRef}`);
     const treeResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/git/trees/${defaultBranch}?recursive=1`,
+      `https://api.github.com/repos/${owner}/${repo}/git/trees/${targetRef}?recursive=1`,
       { headers: { Authorization: `Bearer ${githubAccessToken}` } }
     );
-    if (!treeResponse.ok) throw new Error(`Failed to fetch tree for branch ${defaultBranch}`);
+    
+    if (!treeResponse.ok) {
+      const errorData = await treeResponse.json().catch(() => ({}));
+      throw new Error(`Failed to fetch tree: ${errorData.message || treeResponse.statusText}`);
+    }
+    
     const treeData = await treeResponse.json();
+    if (!treeData.tree || !Array.isArray(treeData.tree)) {
+      throw new Error("Invalid tree data received from GitHub");
+    }
 
     // 3. Filter for files in target path
+    // We check if item.path is exactly pathPrefix or starts with pathPrefix/
     const files = treeData.tree.filter(item => 
-      item.type === "blob" && item.path.startsWith(pathPrefix + "/")
+      item.type === "blob" && (item.path === pathPrefix || item.path.startsWith(pathPrefix + "/"))
     );
+
+    console.log(`Found ${files.length} files in ${pathPrefix}`);
 
     if (files.length === 0) {
       return res.status(404).json({ error: "No files found in this folder" });
     }
 
     const archive = archiver("zip", { zlib: { level: 5 } });
+    
+    archive.on("error", (err) => {
+      console.error("Archiver error:", err);
+    });
+
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="${pathPrefix.split("/").pop() || repo}.zip"`,
@@ -562,18 +675,22 @@ export const downloadFolder = async (req, res) => {
         chunk.map(async (file) => {
           try {
             const fileRes = await fetch(
-              `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}?ref=${defaultBranch}`,
+              `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}?ref=${targetRef}`,
               { headers: { Authorization: `Bearer ${githubAccessToken}` } }
             );
             if (fileRes.ok) {
               const fileData = await fileRes.json();
               if (fileData.content) {
                 const buffer = Buffer.from(fileData.content, "base64");
-                archive.append(buffer, { name: file.path.replace(pathPrefix + "/", "") });
+                // Folder structure inside zip should be relative to the requested folder
+                const relativePath = file.path === pathPrefix 
+                  ? pathPrefix.split("/").pop() 
+                  : file.path.replace(pathPrefix + "/", "");
+                archive.append(buffer, { name: relativePath });
               }
             }
           } catch (e) {
-            console.error(`Failed to fetch file ${file.path}:`, e);
+            console.error(`Error fetching file ${file.path}:`, e);
           }
         })
       );
@@ -582,8 +699,9 @@ export const downloadFolder = async (req, res) => {
     await archive.finalize();
   } catch (err) {
     console.error("Folder download error:", err);
-    if (!res.headersSent)
+    if (!res.headersSent) {
       res.status(500).json({ error: err.message || "Folder download failed" });
+    }
   }
 };
 
@@ -609,7 +727,7 @@ export const listBranches = async (req, res) => {
 
 export const searchRepository = async (req, res) => {
   const { owner, repo } = req.params;
-  const { q, ref } = req.query;
+  const { q, ref, path } = req.query;
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
@@ -646,7 +764,18 @@ export const searchRepository = async (req, res) => {
     const data = await response.json();
     const query = q.toLowerCase();
 
-    const results = data.tree.filter((item) =>
+    let filteredTree = data.tree;
+
+    // If a path is provided, only search within that path and its children
+    if (path) {
+      const normalizedPath = path.endsWith("/") ? path : path + "/";
+      filteredTree = filteredTree.filter(
+        (item) =>
+          item.path === path || item.path.startsWith(normalizedPath)
+      );
+    }
+
+    const results = filteredTree.filter((item) =>
       item.path.toLowerCase().includes(query),
     );
 

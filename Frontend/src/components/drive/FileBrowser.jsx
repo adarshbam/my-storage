@@ -40,6 +40,10 @@ import {
   AlertTriangle,
   Maximize,
   Minimize,
+  Plus,
+  Rocket,
+  Lock,
+  Globe,
   GitBranch,
 } from "lucide-react";
 
@@ -78,6 +82,8 @@ export default function FileBrowser({ specialView }) {
   const [viewMode, setViewMode] = useState("grid");
   const [branches, setBranches] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState("");
+  const [error, setError] = useState(null);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   // --- DRAG SELECTION STATE ---
   const [isDragging, setIsDragging] = useState(false);
@@ -96,6 +102,7 @@ export default function FileBrowser({ specialView }) {
 
   const fetchFiles = async () => {
     setLoading(true);
+    setError(null);
     try {
       let url = joinUrl(SERVER_URL, "directory", folderId || "");
 
@@ -129,8 +136,13 @@ export default function FileBrowser({ specialView }) {
         }
         if (specialView === "github-repo") {
           const parts = githubPath.split("/");
-          const repoPath = `${parts[0]}/${parts[1]}`;
-          url = `${SERVER_URL}/github/repositories/${repoPath}/search?q=${encodeURIComponent(searchQuery)}${selectedBranch ? `&ref=${selectedBranch}` : ""}`;
+          const owner = parts[0];
+          const repo = parts[1];
+          const path = parts.slice(2).join("/");
+          url = `${SERVER_URL}/github/repositories/${owner}/${repo}/search?q=${encodeURIComponent(searchQuery)}${path ? `&path=${encodeURIComponent(path)}` : ""}${selectedBranch ? `&ref=${selectedBranch}` : ""}`;
+        } else if (specialView === "github") {
+          // Frontend level search for repository list
+          url = `${SERVER_URL}/github/repositories`;
         } else if (specialView === "google-drive" || specialView === "google-drive-folder") {
           // Drive search is global across all files — no folder scoping needed
           url = `${SERVER_URL}/drive/search?q=${encodeURIComponent(searchQuery)}`;
@@ -140,13 +152,22 @@ export default function FileBrowser({ specialView }) {
         }
       }
 
-
       const response = await fetch(url, { credentials: "include" });
       if (response.ok) {
         const result = await response.json();
+        let directories = result.directories || [];
+        let files = result.files || [];
+
+        if (specialView === "github" && isSearch) {
+          const query = searchQuery.toLowerCase();
+          directories = directories.filter((repo) =>
+            repo.name.toLowerCase().includes(query),
+          );
+        }
+
         setData({
-          directories: result.directories || [],
-          files: result.files || [],
+          directories,
+          files,
           parentDir: result.parentDir,
           parentId: result.parentId ?? null,
         });
@@ -169,29 +190,17 @@ export default function FileBrowser({ specialView }) {
                           : "Home"),
         );
       } else {
-        console.error("Failed to fetch files");
-        // Fallback title on failure
-        setDirName(
-          isSearch
-            ? `Search: ${searchQuery}`
-            : specialView === "shared"
-              ? "Shared with me"
-              : specialView === "recent"
-                ? "Recent"
-                : specialView === "starred"
-                  ? "Starred"
-                  : specialView === "google-drive"
-                    ? "Google Drive" // Fallback Title
-                    : specialView === "github"
-                      ? "GitHub"
-                      : specialView === "github-repo"
-                        ? "Repository"
-                        : "Home",
-        );
+        const errData = await response.json().catch(() => ({}));
+        setError(errData.error || "Failed to fetch files from server");
         setData({ directories: [], files: [] });
       }
     } catch (error) {
       console.error(error);
+      setError(
+        error.message === "Failed to fetch"
+          ? "Unable to connect to server. Please check if the backend is running."
+          : "An unexpected error occurred.",
+      );
     } finally {
       setLoading(false);
     }
@@ -253,7 +262,9 @@ export default function FileBrowser({ specialView }) {
     setSelectedItems([]);
     setLastSelectedId(null);
     setCurrentFolderId(
-      folderId || (githubPath ? `github:${githubPath}` : null),
+      folderId ||
+        (githubPath ? `github:${githubPath}` : null) ||
+        (driveFolderId ? `drive:${driveFolderId}` : null),
     );
   }, [
     folderId,
@@ -453,7 +464,10 @@ export default function FileBrowser({ specialView }) {
       let body;
       let headers = { "Content-Type": "application/json" };
 
-      if (modalType === "create") {
+      if (modalType === "create-repo") {
+        url = `${SERVER_URL}/github/repositories`;
+        body = JSON.stringify({ name: modalInput, private: isPrivate });
+      } else if (modalType === "create") {
         if (
           specialView === "google-drive" ||
           specialView === "google-drive-folder"
@@ -550,16 +564,19 @@ export default function FileBrowser({ specialView }) {
   // --- HANDLERS ---
 
   const handleNavigate = (dir) => {
+    const isObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+
     if (dir.provider === "google_drive") {
       if (
-        specialView === "google-drive" ||
-        specialView === "google-drive-folder"
+        (specialView === "google-drive" ||
+          specialView === "google-drive-folder") &&
+        !isObjectId(dir.id)
       ) {
         // Already inside Drive — dir.id is a real Drive folder ID, navigate into it
         navigate(`/dashboard/google-drive/${dir.id}`);
       } else {
-        // Coming from the Vault root — the dir.id is a MongoDB ObjectId (mount-point),
-        // not a Drive folder ID. Always open Drive root listing.
+        // Coming from the Vault root or a non-drive view — the dir.id might be a MongoDB ObjectId (mount-point).
+        // Always open Drive root listing unless we are sure it's a drive ID.
         navigate(`/dashboard/google-drive`);
       }
     } else if (dir.provider === "github") {
@@ -723,6 +740,8 @@ export default function FileBrowser({ specialView }) {
     e.preventDefault();
   };
 
+  const isObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+
   const handleDrop = async (e, targetItem) => {
     e.preventDefault();
     e.stopPropagation();
@@ -740,20 +759,14 @@ export default function FileBrowser({ specialView }) {
 
     if (itemsToMove.length > 0) {
       // Filter out if target is one of the moved items (can't move folder into itself)
-      if (itemsToMove.some((i) => i.id === targetItem.id)) return;
+      if (targetItem && itemsToMove.some((i) => i.id === targetItem.id)) return;
 
-      // Check for external items
-      const hasExternalItem = itemsToMove.some(
-        (i) => i.provider === "google_drive" || i.provider === "github",
-      );
+      const sourceProviders = new Set(itemsToMove.map(i => i.provider || "local"));
+      const targetProvider = targetItem?.provider || "local";
 
-      if (hasExternalItem) {
-        const isAllGithub = itemsToMove.every((i) => i.provider === "github");
-        if (
-          isAllGithub &&
-          targetItem.provider === "github" &&
-          targetItem.githubPath
-        ) {
+      // 1. Internal Moves (Same Provider)
+      if (sourceProviders.size === 1 && sourceProviders.has(targetProvider)) {
+        if (targetProvider === "github" && targetItem.githubPath) {
           try {
             await fetch(`${SERVER_URL}/github/move`, {
               method: "POST",
@@ -769,19 +782,20 @@ export default function FileBrowser({ specialView }) {
           } catch (err) {
             console.error("GitHub Move failed", err);
           }
+          return;
         }
 
-        const isAllDrive = itemsToMove.every(
-          (i) => i.provider === "google_drive",
-        );
-        if (isAllDrive && targetItem.provider === "google_drive") {
+        if (targetProvider === "google_drive") {
+          let targetId = targetItem.id;
+          if (isObjectId(targetId)) targetId = "root";
+
           try {
             await fetch(`${SERVER_URL}/drive/move`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 items: itemsToMove,
-                targetId: targetItem.id, // targetItem.id is the Drive folder ID
+                targetId: targetId,
               }),
               credentials: "include",
             });
@@ -790,22 +804,74 @@ export default function FileBrowser({ specialView }) {
           } catch (err) {
             console.error("Drive Move failed", err);
           }
+          return;
+        }
+
+        if (targetProvider === "local") {
+          try {
+            await fetch(`${SERVER_URL}/directory/${targetItem.id}/move`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(itemsToMove),
+              credentials: "include",
+            });
+            fetchFiles();
+            setSelectedItems([]);
+          } catch (err) {
+            console.error("Move failed", err);
+          }
+          return;
+        }
+      }
+
+      // 2. Cross-Provider Transfers
+      
+      // Drive -> Vault
+      if (sourceProviders.has("google_drive") && targetProvider === "local") {
+        let targetFolderId = targetItem.id;
+        if (!targetFolderId || targetFolderId === "root") targetFolderId = user?.rootDirectoryId;
+
+        try {
+          await fetch(`${SERVER_URL}/drive/transfer-to-vault`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              items: itemsToMove.filter(i => i.provider === "google_drive"),
+              targetFolderId: targetFolderId,
+            }),
+            credentials: "include",
+          });
+          fetchFiles();
+          setSelectedItems([]);
+        } catch (err) {
+          console.error("Transfer to Vault failed", err);
         }
         return;
       }
 
-      try {
-        await fetch(`${SERVER_URL}/directory/${targetItem.id}/move`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(itemsToMove),
-          credentials: "include",
-        });
-        fetchFiles();
-        setSelectedItems([]);
-      } catch (err) {
-        console.error("Move failed", err);
+      // Vault -> Drive
+      if (sourceProviders.has("local") && targetProvider === "google_drive") {
+        let targetDriveFolderId = targetItem.id;
+        if (!targetDriveFolderId || isObjectId(targetDriveFolderId)) targetDriveFolderId = "root";
+
+        try {
+          await fetch(`${SERVER_URL}/drive/transfer-from-vault`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              items: itemsToMove.filter(i => !i.provider || i.provider === "local"),
+              targetDriveFolderId: targetDriveFolderId,
+            }),
+            credentials: "include",
+          });
+          fetchFiles();
+          setSelectedItems([]);
+        } catch (err) {
+          console.error("Transfer from Vault failed", err);
+        }
+        return;
       }
+
       return;
     }
 
@@ -817,10 +883,13 @@ export default function FileBrowser({ specialView }) {
       if (targetItem && targetItem.id) {
         if (targetItem.provider === "github" && targetItem.githubPath) {
           targetDirId = `github:${targetItem.githubPath}`;
+        } else if (targetItem.provider === "google_drive") {
+          targetDirId = isObjectId(targetItem.id) ? `drive:root` : `drive:${targetItem.id}`;
         } else {
-          // For Vault
           targetDirId = targetItem.id;
         }
+      } else if (specialView === "google-drive" || specialView === "google-drive-folder") {
+         targetDirId = `drive:${driveFolderId || "root"}`;
       }
 
       uploadFile(files, targetDirId);
@@ -836,12 +905,33 @@ export default function FileBrowser({ specialView }) {
   const handleZoneDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Check if it's an internal drag landing in the empty zone
+    const draggedItemsStr = e.dataTransfer.getData("draggedItems");
+    const singleDraggedItemStr = e.dataTransfer.getData("draggedItem");
+    
+    if (draggedItemsStr || singleDraggedItemStr) {
+      // It's an internal drag. Target is the CURRENT folder.
+      let target = null;
+      if (specialView === "google-drive" || specialView === "google-drive-folder") {
+        target = { id: driveFolderId || "root", provider: "google_drive" };
+      } else if (specialView === "github-repo") {
+        target = { githubPath: githubPath, provider: "github" };
+      } else {
+        target = { id: folderId || user?.rootDirectoryId };
+      }
+      handleDrop(e, target);
+      return;
+    }
+
+    // Otherwise handle desktop upload
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files);
-      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        const files = Array.from(e.dataTransfer.files);
-        uploadFile(files);
+      let targetDirId = folderId;
+      if (specialView === "google-drive" || specialView === "google-drive-folder") {
+        targetDirId = `drive:${driveFolderId || "root"}`;
       }
+      uploadFile(files, targetDirId);
     }
   };
 
@@ -891,12 +981,21 @@ export default function FileBrowser({ specialView }) {
                 if (specialView === "google-drive-folder") {
                   const parentId = data.parentId || "root";
                   handleDrop(e, { id: parentId, provider: "google_drive" });
+                } else if (specialView === "google-drive") {
+                  // Dragging from Drive root back to Vault root
+                  handleDrop(e, { id: user?.rootDirectoryId });
                 } else if (specialView === "github-repo") {
                   const parts = (githubPath || "").split("/").filter(Boolean);
                   if (parts.length > 2) {
                     const parentPath = parts.slice(0, -1).join("/");
                     handleDrop(e, { githubPath: parentPath, provider: "github" });
+                  } else {
+                    // Back to Github repositories list? No, that's just a view.
+                    // But we could transfer from GitHub to local here too.
+                    handleDrop(e, { id: user?.rootDirId });
                   }
+                } else if (specialView === "github") {
+                   handleDrop(e, { id: user?.rootDirId });
                 } else if (data.parentDir) {
                   handleDrop(e, { id: data.parentDir });
                 }
@@ -1087,23 +1186,36 @@ export default function FileBrowser({ specialView }) {
             </button>
           </div>
           {(!specialView ||
+            specialView === "github" ||
             specialView === "github-repo" ||
             specialView === "google-drive" ||
             specialView === "google-drive-folder") && (
-            <>
-              <button
-                onClick={handleCreateClick}
-                className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm text-slate-700 dark:text-slate-200 rounded-xl hover:bg-white/80 dark:hover:bg-white/[0.08] transition-all duration-300 font-medium border border-black/5 dark:border-white/[0.06]"
-              >
-                <FolderPlus size={18} />
-                <span className="hidden sm:inline">New Folder</span>
-              </button>
-              {/* New File and Upload only for Vault and GitHub (Drive upload uses a different flow) */}
+            <div className="flex items-center gap-3">
+              {specialView === "github" && (
+                <button
+                  onClick={() => {
+                    setModalType("create-repo");
+                    setModalInput("");
+                    setIsPrivate(false);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white rounded-xl hover:shadow-[0_0_20px_rgba(20,184,166,0.4)] hover:scale-[1.03] transition-all duration-300 font-medium shadow-lg shadow-[#14b8a6]/20"
+                >
+                  <Rocket size={18} />
+                  <span className="hidden sm:inline">New Repository</span>
+                </button>
+              )}
               {(!specialView ||
                 specialView === "github-repo" ||
                 specialView === "google-drive" ||
                 specialView === "google-drive-folder") && (
                 <>
+                  <button
+                    onClick={handleCreateClick}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm text-slate-700 dark:text-slate-200 rounded-xl hover:bg-white/80 dark:hover:bg-white/[0.08] transition-all duration-300 font-medium border border-black/5 dark:border-white/[0.06]"
+                  >
+                    <FolderPlus size={18} />
+                    <span className="hidden sm:inline">New Folder</span>
+                  </button>
                   <button
                     onClick={() => {
                       setModalInput("");
@@ -1126,12 +1238,36 @@ export default function FileBrowser({ specialView }) {
                   )}
                 </>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
 
-      {loading ? (
+      {error ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mb-4">
+            <AlertTriangle size={32} />
+          </div>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
+            Connection Error
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 max-w-md mb-6">
+            {error}
+          </p>
+          <Button
+            onClick={fetchFiles}
+            className="bg-[#14b8a6] hover:bg-[#14b8a6]/90 text-white px-8"
+          >
+            Retry Connection
+          </Button>
+          <p className="mt-4 text-xs text-slate-400">
+            Current Server:{" "}
+            <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">
+              {SERVER_URL}
+            </code>
+          </p>
+        </div>
+      ) : loading ? (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="animate-spin text-blue-500" size={40} />
         </div>
@@ -1212,9 +1348,27 @@ export default function FileBrowser({ specialView }) {
           {data.directories.length === 0 && data.files.length === 0 && (
             <div className="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
               {specialView ? (
-                <p className="text-lg font-medium mb-2">
-                  {isSearch ? "No search results found" : "No files yet"}
-                </p>
+                <>
+                  <p className="text-lg font-medium mb-2">
+                    {isSearch ? "No search results found" : "No files yet"}
+                  </p>
+                  {specialView === "github-repo" && !isSearch && (
+                    <button
+                      onClick={() => {
+                        setModalInput("README.md");
+                        setModalType("create-file");
+                        setSelectedExt(".md");
+                        setNewFileContent(
+                          "# New Repository\n\nThis is an empty repository.",
+                        );
+                      }}
+                      className="mt-4 px-6 py-2 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white rounded-xl hover:shadow-[0_0_20px_rgba(20,184,166,0.3)] transition-all duration-300 flex items-center gap-2"
+                    >
+                      <Plus size={18} />
+                      Initialize with README.md
+                    </button>
+                  )}
+                </>
               ) : (
                 <>
                   <div
@@ -1322,9 +1476,11 @@ export default function FileBrowser({ specialView }) {
             ? "Create New Folder"
             : modalType === "create-file"
               ? "Create New File"
-              : modalType === "rename"
-                ? "Rename Item"
-                : "Danger: Permanent Deletion"
+              : modalType === "create-repo"
+                ? "Create New GitHub Repository"
+                : modalType === "rename"
+                  ? "Rename Item"
+                  : "Danger: Permanent Deletion"
         }
       >
         <div
@@ -1508,10 +1664,34 @@ export default function FileBrowser({ specialView }) {
                   value={modalInput}
                   onChange={(e) => setModalInput(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  placeholder="Enter name..."
+                  placeholder={modalType === "create-repo" ? "Enter repository name..." : "Enter name..."}
                   autoFocus
                 />
               </div>
+
+              {modalType === "create-repo" && (
+                <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/[0.03] rounded-xl border border-slate-200 dark:border-white/10">
+                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
+                    {isPrivate ? <Lock size={16} /> : <Globe size={16} />}
+                    <span>{isPrivate ? "Private Repository" : "Public Repository"}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsPrivate(!isPrivate)}
+                    className={cn(
+                      "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#14b8a6] focus:ring-offset-2",
+                      isPrivate ? "bg-[#14b8a6]" : "bg-slate-200 dark:bg-slate-700"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                        isPrivate ? "translate-x-5" : "translate-x-0"
+                      )}
+                    />
+                  </button>
+                </div>
+              )}
               <div className="flex justify-end gap-3">
                 <Button
                   type="button"
@@ -1521,7 +1701,7 @@ export default function FileBrowser({ specialView }) {
                   Cancel
                 </Button>
                 <Button type="submit">
-                  {modalType === "create" ? "Create Folder" : "Rename"}
+                  {modalType === "create" ? "Create Folder" : modalType === "create-repo" ? "Create Repository" : "Rename"}
                 </Button>
               </div>
             </form>
