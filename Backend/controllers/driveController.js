@@ -122,7 +122,7 @@ export const disconnectGoogleDrive = async (req, res) => {
         $unset: {
           "integrations.googleDrive": "",
         },
-      }
+      },
     );
 
     await Directory.deleteOne({
@@ -130,7 +130,9 @@ export const disconnectGoogleDrive = async (req, res) => {
       provider: "google_drive",
     });
 
-    return res.status(200).json({ success: true, message: "Drive disconnected" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Drive disconnected" });
   } catch (error) {
     console.error("Drive disconnect error:", error);
     return res.status(500).json({ error: "Failed to disconnect Google Drive" });
@@ -225,7 +227,6 @@ export const listDriveFolder = async (req, res) => {
   }
 };
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /drive/file/:fileId   (preview) or ?action=download
 // Stream a file's raw bytes back to the client.
@@ -294,12 +295,16 @@ export const getFileFromDrive = async (req, res) => {
     const range = req.headers.range;
     const driveParams = { fileId, alt: "media" };
     const driveOptions = { responseType: "stream" };
-    
+
     if (range && !exportMime) {
       const parts = range.replace(/bytes=/, "").split("-");
       const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : (size ? size - 1 : undefined);
-      
+      const end = parts[1]
+        ? parseInt(parts[1], 10)
+        : size
+          ? size - 1
+          : undefined;
+
       if (!isNaN(start)) {
         res.status(206);
         res.setHeader("Content-Range", `bytes ${start}-${end}/${size || "*"}`);
@@ -308,10 +313,7 @@ export const getFileFromDrive = async (req, res) => {
     }
 
     // 4. Stream the file bytes directly to the response — zero memory buffering!
-    const fileRes = await drive.files.get(
-      driveParams,
-      driveOptions,
-    );
+    const fileRes = await drive.files.get(driveParams, driveOptions);
 
     fileRes.data.pipe(res);
   } catch (err) {
@@ -618,7 +620,10 @@ export const moveDriveItems = async (req, res) => {
     const results = [];
     for (const item of items) {
       // To move a file, we need to know its current parents to remove them
-      const file = await drive.files.get({ fileId: item.id, fields: "parents" });
+      const file = await drive.files.get({
+        fileId: item.id,
+        fields: "parents",
+      });
       const previousParents = (file.data.parents || []).join(",");
 
       const response = await drive.files.update({
@@ -656,7 +661,7 @@ export const transferToVault = async (req, res) => {
 
   try {
     const results = [];
-    
+
     // Recursive helper to import Drive folder structure into local DB
     const importItem = async (driveItem, localParentId) => {
       if (driveItem.type === "directory") {
@@ -690,12 +695,12 @@ export const transferToVault = async (req, res) => {
         // 2. Stream from Drive to local storage
         const driveRes = await drive.files.get(
           { fileId: driveItem.id, alt: "media" },
-          { responseType: "stream" }
+          { responseType: "stream" },
         );
 
         await mkdir(STORAGE_DIR, { recursive: true });
         const writeStream = createWriteStream(filePath);
-        
+
         await pipeline(driveRes.data, writeStream);
 
         const stats = await stat(filePath);
@@ -771,7 +776,7 @@ export const transferFromVault = async (req, res) => {
         // 1. Stream from local to Drive
         const ext = localItem.extension || "";
         const filePath = path.join(STORAGE_DIR, `${localItem.id}${ext}`);
-        
+
         const response = await drive.files.create({
           requestBody: {
             name: localItem.name,
@@ -789,7 +794,7 @@ export const transferFromVault = async (req, res) => {
 
     for (const item of items) {
       await exportItem(item, targetDriveFolderId);
-      
+
       // Delete from Vault after successful transfer
       if (item.type === "directory") {
         // Recursive delete logic for local directory
@@ -797,7 +802,9 @@ export const transferFromVault = async (req, res) => {
           const files = await File.find({ parentDir: dirId });
           for (const f of files) {
             const fPath = path.join(STORAGE_DIR, `${f._id}${f.extension}`);
-            try { await unlink(fPath); } catch (e) {}
+            try {
+              await unlink(fPath);
+            } catch (e) {}
             await File.deleteOne({ _id: f._id });
           }
           const dirs = await Directory.find({ parentDir: dirId });
@@ -808,8 +815,13 @@ export const transferFromVault = async (req, res) => {
         };
         await deleteLocalDir(item.id);
       } else {
-        const fPath = path.join(STORAGE_DIR, `${item.id}${item.extension || ""}`);
-        try { await unlink(fPath); } catch (e) {}
+        const fPath = path.join(
+          STORAGE_DIR,
+          `${item.id}${item.extension || ""}`,
+        );
+        try {
+          await unlink(fPath);
+        } catch (e) {}
         await File.deleteOne({ _id: item.id });
       }
     }
@@ -820,4 +832,3 @@ export const transferFromVault = async (req, res) => {
     return res.status(500).json({ error: "Transfer failed" });
   }
 };
-

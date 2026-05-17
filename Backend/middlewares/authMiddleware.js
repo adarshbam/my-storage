@@ -18,7 +18,7 @@ async function checkAuth(req, res, next) {
         httpOnly: true,
         secure: true,
         sameSite: "none",
-        signed: true, 
+        signed: true,
       });
 
       return res.status(404).json({ message: "Sesssion not Found" });
@@ -27,6 +27,13 @@ async function checkAuth(req, res, next) {
 
     if (!user) {
       return res.status(401).json({ message: "User not found" });
+    }
+
+    if (user.status === "Deleted") {
+      return res.status(404).json({
+        message:
+          "User is Deleted contact adarshsinghbam@gmail.com to recover your account",
+      });
     }
     user.id = user._id.toString(); // Map for backwards compat in controllers
     req.user = user;

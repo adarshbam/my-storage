@@ -15,6 +15,8 @@ export function AuthProvider({ children }) {
     loadUser();
   }, []);
 
+  console.log(user?.role);
+
   return (
     <AuthContext.Provider value={{ user, setUser, loading }}>
       {children}

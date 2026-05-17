@@ -20,6 +20,7 @@ import mongoose from "mongoose";
 import File from "../models/fileModel.js";
 import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
+import User from "../models/userModel.js";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
@@ -129,7 +130,7 @@ export const getThumbnail = async (req, res) => {
     }
 
     if (!file) return res.status(404).send("File not found");
-    if (file.userId.toString() !== req.user.id) {
+    if (file.userId.toString() !== req.user.id && req.user.role === "User") {
       return res.status(403).send("Unauthorized");
     }
 
@@ -159,7 +160,7 @@ export const getFileById = async (req, res) => {
     // Check if file exists first
     if (!file) return res.status(404).send("File not found");
 
-    if (file.userId.toString() !== req.user.id) {
+    if (file.userId.toString() !== req.user.id && req.user.role === "User") {
       return res.status(403).send("You are not authorized to access this file");
     }
 
@@ -374,7 +375,7 @@ export const renameFile = async (req, res) => {
     if (!file) {
       return res.status(404).send("File not found");
     }
-    if (file.userId.toString() !== req.user.id) {
+    if (file.userId.toString() !== req.user.id && req.user.role != "Owner") {
       return res.status(403).send("You are not authorized to rename this file");
     }
     const { newFileName } = req.body;
@@ -395,7 +396,10 @@ export const deleteFile = async (req, res) => {
     if (!fileData) {
       return res.status(404).send("File not found");
     }
-    if (fileData.userId.toString() !== req.user.id) {
+    if (
+      fileData.userId.toString() !== req.user.id &&
+      req.user.role != "Owner"
+    ) {
       return res.status(403).send("You are not authorized to delete this file");
     }
 
@@ -430,10 +434,12 @@ export const saveFile = async (req, res) => {
   try {
     const { fileId } = req.params;
     const { content } = req.body;
-    const file = await File.findOne({ _id: fileId }).select("userId extension").lean();
+    const file = await File.findOne({ _id: fileId })
+      .select("userId extension")
+      .lean();
 
     if (!file) return res.status(404).send("File not found");
-    if (file.userId.toString() !== req.user.id) {
+    if (file.userId.toString() !== req.user.id && req.user.role !== "Owner") {
       return res.status(403).send("Unauthorized");
     }
 

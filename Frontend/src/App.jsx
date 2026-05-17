@@ -6,6 +6,8 @@ import ProtectedRoute from "./components/drive/ProtectedRoute";
 import PublicRoute from "./components/drive/PublicRoute";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Users from "./pages/Users";
+import Profile from "./pages/Profile";
 
 // Landing Page Components
 import Navbar from "./components/sections/Navbar";
@@ -62,9 +64,14 @@ function App() {
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<LandingPage />} />
+              <Route path="/users" element={<Users />} />
               <Route element={<PublicRoute />}>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+              </Route>
+              
+              <Route element={<ProtectedRoute />}>
+                <Route path="/profile" element={<Profile />} />
               </Route>
 
               <Route path="/dashboard" element={<ProtectedRoute />}>

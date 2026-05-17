@@ -10,7 +10,7 @@ export const disconnectGithub = async (req, res) => {
         $unset: {
           "integrations.github": "",
         },
-      }
+      },
     );
 
     await Directory.deleteOne({
@@ -18,7 +18,9 @@ export const disconnectGithub = async (req, res) => {
       provider: "github",
     });
 
-    return res.status(200).json({ success: true, message: "Github disconnected" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Github disconnected" });
   } catch (error) {
     console.error("Github disconnect error:", error);
     return res.status(500).json({ error: "Failed to disconnect Github" });
@@ -79,12 +81,15 @@ export const listRepositories = async (req, res) => {
   const githubAccessToken = user.integrations.github.accessToken;
 
   try {
-    const response = await fetch("https://api.github.com/user/repos?per_page=100", {
-      headers: {
-        Authorization: `Bearer ${githubAccessToken}`,
-        Accept: "application/vnd.github+json",
+    const response = await fetch(
+      "https://api.github.com/user/repos?per_page=100",
+      {
+        headers: {
+          Authorization: `Bearer ${githubAccessToken}`,
+          Accept: "application/vnd.github+json",
+        },
       },
-    });
+    );
 
     const repos = await response.json();
 
@@ -120,7 +125,9 @@ export const listRepositories = async (req, res) => {
 export const getRepositoryContents = async (req, res) => {
   const { owner, repo } = req.params;
   const pathSegment = req.params[0] || req.params.path;
-  const path = Array.isArray(pathSegment) ? pathSegment.join("/") : (pathSegment || "");
+  const path = Array.isArray(pathSegment)
+    ? pathSegment.join("/")
+    : pathSegment || "";
   const currentPath = path || "";
 
   const user = await User.findOne({ _id: req.user.id });
@@ -191,7 +198,9 @@ export const getRepositoryContents = async (req, res) => {
 export const getFiles = async (req, res) => {
   const { owner, repo } = req.params;
   const pathSegment = req.params[0] || req.params.path;
-  const path = Array.isArray(pathSegment) ? pathSegment.join("/") : (pathSegment || "");
+  const path = Array.isArray(pathSegment)
+    ? pathSegment.join("/")
+    : pathSegment || "";
   const { action, ref } = req.query;
 
   const user = await User.findOne({ _id: req.user.id });
@@ -214,7 +223,9 @@ export const getFiles = async (req, res) => {
 
   if (!metaResponse.ok) {
     const error = await metaResponse.json().catch(() => ({}));
-    return res.status(metaResponse.status).json({ error: error.message || "File not found" });
+    return res
+      .status(metaResponse.status)
+      .json({ error: error.message || "File not found" });
   }
 
   const fileMeta = await metaResponse.json();
@@ -244,7 +255,10 @@ export const getFiles = async (req, res) => {
   res.setHeader("X-Total-Size", fileSize);
 
   if (action === "download") {
-    res.setHeader("Content-Disposition", `attachment; filename="${fileMeta.name}"`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileMeta.name}"`,
+    );
   }
 
   // 3. Fetch the raw content (streaming)
@@ -260,14 +274,14 @@ export const getFiles = async (req, res) => {
     const parts = range.replace(/bytes=/, "").split("-");
     const start = parseInt(parts[0], 10);
     const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    
+
     res.status(206);
     res.setHeader("Content-Range", `bytes ${start}-${end}/${fileSize}`);
   }
 
   const rawResponse = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/contents/${path}${ref ? `?ref=${ref}` : ""}`,
-    fetchOptions
+    fetchOptions,
   );
 
   if (!rawResponse.ok) {
@@ -287,7 +301,7 @@ export const getFiles = async (req, res) => {
           controller.enqueue(value);
         }
         controller.close();
-      }
+      },
     });
     // Note: Node.js express res.send() or res.end() works differently with web streams.
     // Better to use a proper bridge or just pipe if it's a Node stream.
@@ -303,7 +317,9 @@ export const getFiles = async (req, res) => {
 export const updateFiles = async (req, res) => {
   const { owner, repo } = req.params;
   const pathSegment = req.params[0] || req.params.path;
-  const path = Array.isArray(pathSegment) ? pathSegment.join("/") : (pathSegment || "");
+  const path = Array.isArray(pathSegment)
+    ? pathSegment.join("/")
+    : pathSegment || "";
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
@@ -342,7 +358,9 @@ export const updateFiles = async (req, res) => {
 export const deleteFile = async (req, res) => {
   const { owner, repo } = req.params;
   const pathSegment = req.params[0] || req.params.path;
-  const path = Array.isArray(pathSegment) ? pathSegment.join("/") : (pathSegment || "");
+  const path = Array.isArray(pathSegment)
+    ? pathSegment.join("/")
+    : pathSegment || "";
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
@@ -380,7 +398,9 @@ export const deleteFile = async (req, res) => {
 export const createFile = async (req, res) => {
   const { owner, repo } = req.params;
   const pathSegment = req.params[0] || req.params.path;
-  const path = Array.isArray(pathSegment) ? pathSegment.join("/") : (pathSegment || "");
+  const path = Array.isArray(pathSegment)
+    ? pathSegment.join("/")
+    : pathSegment || "";
   const githubPath = `${owner}/${repo}${path ? `/${path}` : ""}`;
   const fileName = req.headers.filename; // Present if uploading from TransferManager
 
@@ -406,7 +426,7 @@ export const createFile = async (req, res) => {
             Authorization: `Bearer ${githubAccessToken}`,
             Accept: "application/vnd.github+json",
           },
-        }
+        },
       );
       if (getRes.ok) {
         const fileData = await getRes.json();
@@ -495,20 +515,26 @@ export const createFile = async (req, res) => {
 export const deleteFolder = async (req, res) => {
   const { owner, repo } = req.params;
   const pathSegment = req.params[0] || req.params.path;
-  const path = Array.isArray(pathSegment) ? pathSegment.join("/") : (pathSegment || "");
+  const path = Array.isArray(pathSegment)
+    ? pathSegment.join("/")
+    : pathSegment || "";
   const pathPrefix = path || "";
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
-  if (!githubAccessToken) return res.status(403).json({ error: "Github not connected" });
+  if (!githubAccessToken)
+    return res.status(403).json({ error: "Github not connected" });
 
   try {
     const branch = req.query.ref;
     let targetBranch = branch;
     if (!targetBranch) {
-      const repoInfoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-        headers: { Authorization: `Bearer ${githubAccessToken}` }
-      });
+      const repoInfoRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}`,
+        {
+          headers: { Authorization: `Bearer ${githubAccessToken}` },
+        },
+      );
       if (repoInfoRes.ok) {
         const repoInfo = await repoInfoRes.json();
         targetBranch = repoInfo.default_branch || "main";
@@ -522,15 +548,15 @@ export const deleteFolder = async (req, res) => {
       `https://api.github.com/repos/${owner}/${repo}/git/trees/${targetBranch}?recursive=1`,
       {
         headers: { Authorization: `Bearer ${githubAccessToken}` },
-      }
+      },
     );
-    
+
     if (!treeResponse.ok) throw new Error("Failed to fetch repository tree");
     const treeData = await treeResponse.json();
 
     // 2. Filter for files that are inside the target folder
-    const filesToDelete = treeData.tree.filter(item => 
-      item.type === "blob" && item.path.startsWith(pathPrefix + "/")
+    const filesToDelete = treeData.tree.filter(
+      (item) => item.type === "blob" && item.path.startsWith(pathPrefix + "/"),
     );
 
     // 3. Delete each file
@@ -547,14 +573,16 @@ export const deleteFolder = async (req, res) => {
             message: `Delete ${file.path} (Recursive Folder Delete)`,
             sha: file.sha,
           }),
-        }
+        },
       );
     }
 
     return res.status(200).json({ msg: "Folder deleted recursively" });
   } catch (err) {
     console.error("Recursive delete error:", err);
-    return res.status(500).json({ error: "Failed to delete folder recursively" });
+    return res
+      .status(500)
+      .json({ error: "Failed to delete folder recursively" });
   }
 };
 
@@ -603,24 +631,33 @@ export const downloadFolder = async (req, res) => {
   const { owner, repo } = req.params;
   // Express 5 might return wildcard parameters as arrays
   const rawPath = req.params.path || req.params[0] || "";
-  const pathPrefix = Array.isArray(rawPath) ? rawPath.join("/") : String(rawPath);
+  const pathPrefix = Array.isArray(rawPath)
+    ? rawPath.join("/")
+    : String(rawPath);
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
   const { ref: queryRef } = req.query;
 
-  if (!githubAccessToken) return res.status(403).json({ error: "Github not connected" });
+  if (!githubAccessToken)
+    return res.status(403).json({ error: "Github not connected" });
 
   try {
     let targetRef = queryRef;
 
     // 1. If no ref provided, get repo info to find default branch
     if (!targetRef) {
-      console.log(`No ref provided for ${owner}/${repo}, fetching default branch`);
-      const repoInfoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-        headers: { Authorization: `Bearer ${githubAccessToken}` }
-      });
-      if (!repoInfoRes.ok) throw new Error(`Failed to fetch repo info: ${repoInfoRes.status}`);
+      console.log(
+        `No ref provided for ${owner}/${repo}, fetching default branch`,
+      );
+      const repoInfoRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}`,
+        {
+          headers: { Authorization: `Bearer ${githubAccessToken}` },
+        },
+      );
+      if (!repoInfoRes.ok)
+        throw new Error(`Failed to fetch repo info: ${repoInfoRes.status}`);
       const repoInfo = await repoInfoRes.json();
       targetRef = repoInfo.default_branch || "main";
     }
@@ -629,14 +666,16 @@ export const downloadFolder = async (req, res) => {
     console.log(`Fetching recursive tree for ${owner}/${repo} at ${targetRef}`);
     const treeResponse = await fetch(
       `https://api.github.com/repos/${owner}/${repo}/git/trees/${targetRef}?recursive=1`,
-      { headers: { Authorization: `Bearer ${githubAccessToken}` } }
+      { headers: { Authorization: `Bearer ${githubAccessToken}` } },
     );
-    
+
     if (!treeResponse.ok) {
       const errorData = await treeResponse.json().catch(() => ({}));
-      throw new Error(`Failed to fetch tree: ${errorData.message || treeResponse.statusText}`);
+      throw new Error(
+        `Failed to fetch tree: ${errorData.message || treeResponse.statusText}`,
+      );
     }
-    
+
     const treeData = await treeResponse.json();
     if (!treeData.tree || !Array.isArray(treeData.tree)) {
       throw new Error("Invalid tree data received from GitHub");
@@ -644,8 +683,10 @@ export const downloadFolder = async (req, res) => {
 
     // 3. Filter for files in target path
     // We check if item.path is exactly pathPrefix or starts with pathPrefix/
-    const files = treeData.tree.filter(item => 
-      item.type === "blob" && (item.path === pathPrefix || item.path.startsWith(pathPrefix + "/"))
+    const files = treeData.tree.filter(
+      (item) =>
+        item.type === "blob" &&
+        (item.path === pathPrefix || item.path.startsWith(pathPrefix + "/")),
     );
 
     console.log(`Found ${files.length} files in ${pathPrefix}`);
@@ -655,7 +696,7 @@ export const downloadFolder = async (req, res) => {
     }
 
     const archive = archiver("zip", { zlib: { level: 5 } });
-    
+
     archive.on("error", (err) => {
       console.error("Archiver error:", err);
     });
@@ -676,23 +717,24 @@ export const downloadFolder = async (req, res) => {
           try {
             const fileRes = await fetch(
               `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}?ref=${targetRef}`,
-              { headers: { Authorization: `Bearer ${githubAccessToken}` } }
+              { headers: { Authorization: `Bearer ${githubAccessToken}` } },
             );
             if (fileRes.ok) {
               const fileData = await fileRes.json();
               if (fileData.content) {
                 const buffer = Buffer.from(fileData.content, "base64");
                 // Folder structure inside zip should be relative to the requested folder
-                const relativePath = file.path === pathPrefix 
-                  ? pathPrefix.split("/").pop() 
-                  : file.path.replace(pathPrefix + "/", "");
+                const relativePath =
+                  file.path === pathPrefix
+                    ? pathPrefix.split("/").pop()
+                    : file.path.replace(pathPrefix + "/", "");
                 archive.append(buffer, { name: relativePath });
               }
             }
           } catch (e) {
             console.error(`Error fetching file ${file.path}:`, e);
           }
-        })
+        }),
       );
     }
 
@@ -710,15 +752,19 @@ export const listBranches = async (req, res) => {
   const user = await User.findOne({ _id: req.user.id });
   const githubAccessToken = user?.integrations?.github?.accessToken;
 
-  if (!githubAccessToken) return res.status(403).json({ error: "Github not connected" });
+  if (!githubAccessToken)
+    return res.status(403).json({ error: "Github not connected" });
 
   try {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches`, {
-      headers: { Authorization: `Bearer ${githubAccessToken}` }
-    });
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/branches`,
+      {
+        headers: { Authorization: `Bearer ${githubAccessToken}` },
+      },
+    );
     if (!response.ok) throw new Error("Failed to fetch branches");
     const data = await response.json();
-    return res.status(200).json(data.map(b => b.name));
+    return res.status(200).json(data.map((b) => b.name));
   } catch (err) {
     console.error("Fetch branches error:", err);
     return res.status(500).json({ error: "Failed to fetch branches" });
@@ -770,8 +816,7 @@ export const searchRepository = async (req, res) => {
     if (path) {
       const normalizedPath = path.endsWith("/") ? path : path + "/";
       filteredTree = filteredTree.filter(
-        (item) =>
-          item.path === path || item.path.startsWith(normalizedPath)
+        (item) => item.path === path || item.path.startsWith(normalizedPath),
       );
     }
 
@@ -826,9 +871,12 @@ export const getRepositoryDetails = async (req, res) => {
   }
 
   try {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-      headers: { Authorization: `Bearer ${githubAccessToken}` }
-    });
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}`,
+      {
+        headers: { Authorization: `Bearer ${githubAccessToken}` },
+      },
+    );
     if (!response.ok) throw new Error("Failed to fetch repo details");
     const data = await response.json();
     return res.status(200).json(data);
@@ -869,40 +917,52 @@ export const moveGithubItems = async (req, res) => {
       }
 
       // Fetch content of old file
-      const getRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${oldPath}`, {
-        headers: { Authorization: `Bearer ${githubAccessToken}` }
-      });
+      const getRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${oldPath}`,
+        {
+          headers: { Authorization: `Bearer ${githubAccessToken}` },
+        },
+      );
       if (!getRes.ok) continue;
       const fileData = await getRes.json();
 
       // Create new file at new path
-      const putRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${newPath}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${githubAccessToken}`,
-          Accept: "application/vnd.github+json"
+      const putRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${newPath}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${githubAccessToken}`,
+            Accept: "application/vnd.github+json",
+          },
+          body: JSON.stringify({
+            message: `Move ${oldPath} to ${newPath}`,
+            content: fileData.content.replace(/\n/g, ""),
+          }),
         },
-        body: JSON.stringify({
-          message: `Move ${oldPath} to ${newPath}`,
-          content: fileData.content.replace(/\n/g, "")
-        })
-      });
+      );
       if (!putRes.ok) continue;
 
       // Delete old file
-      const delRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${oldPath}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${githubAccessToken}`,
-          Accept: "application/vnd.github+json"
+      const delRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${oldPath}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${githubAccessToken}`,
+            Accept: "application/vnd.github+json",
+          },
+          body: JSON.stringify({
+            message: `Delete old ${oldPath}`,
+            sha: fileData.sha,
+          }),
         },
-        body: JSON.stringify({
-          message: `Delete old ${oldPath}`,
-          sha: fileData.sha
-        })
-      });
+      );
       if (!delRes.ok) {
-        console.error(`Failed to delete old file: ${oldPath}`, await delRes.text());
+        console.error(
+          `Failed to delete old file: ${oldPath}`,
+          await delRes.text(),
+        );
       }
     }
 

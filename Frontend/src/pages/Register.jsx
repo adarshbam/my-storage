@@ -6,11 +6,20 @@ import { handleGoogleAuth } from "../lib/googleAuth";
 import Button from "../components/ui/Button";
 import GoogleSignInButton from "../components/ui/GoogleSignInButton";
 import AuthLayout from "../layouts/AuthLayout";
-import { Cloud, Send, Loader2, ShieldCheck, CheckCircle2, Box } from "lucide-react";
+import {
+  Cloud,
+  Send,
+  Loader2,
+  ShieldCheck,
+  CheckCircle2,
+  Box,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Register() {
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
@@ -118,14 +127,14 @@ export default function Register() {
       const response = await fetch(`${SERVER_URL}/user/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, name, password }),
       });
 
       if (response.ok) {
         const loginRes = await fetch(`${SERVER_URL}/user/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email, name, password }),
           credentials: "include",
         });
 
@@ -153,6 +162,11 @@ export default function Register() {
       setOtpVerified(false);
       setOtp(["", "", "", "", "", ""]);
     }
+  };
+
+  const handleNameChange = (e) => {
+    const newName = e.target.value;
+    setName(newName);
   };
 
   return (
@@ -183,6 +197,19 @@ export default function Register() {
           {/* Email + Send OTP */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              Name
+            </label>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={handleNameChange}
+                className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-[#14b8a6]/50 focus:border-[#14b8a6]/50 dark:focus:shadow-[0_0_15px_rgba(20,184,166,0.15)] outline-none transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                placeholder="Full Name"
+              />
+            </div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Email
             </label>
             <div className="flex gap-2">
@@ -196,6 +223,7 @@ export default function Register() {
                 placeholder="name@example.com"
               />
 
+              {/* TODO: Uncomment for deployment
               <AnimatePresence>
                 {isEmailValid && !otpVerified && (
                   <motion.button
@@ -239,10 +267,12 @@ export default function Register() {
                   </motion.div>
                 )}
               </AnimatePresence>
+              */}
             </div>
           </div>
 
           {/* OTP input — between email and password */}
+          {/* TODO: Uncomment for deployment
           <AnimatePresence>
             {otpSent && !otpVerified && (
               <motion.div
@@ -293,6 +323,7 @@ export default function Register() {
               </motion.div>
             )}
           </AnimatePresence>
+          */}
 
           {/* Password */}
           <div>
@@ -310,6 +341,7 @@ export default function Register() {
           </div>
 
           <div className="w-full relative group">
+            {/* TODO: Uncomment for deployment
             <Button 
               type="submit" 
               disabled={!otpVerified}
@@ -317,9 +349,15 @@ export default function Register() {
             >
               Create Account
             </Button>
+            */}
+            <Button type="submit" className="w-full py-3.5 text-[15px]">
+              Create Account
+            </Button>
+            {/* TODO: Uncomment for deployment
             {!otpVerified && (
               <div className="absolute inset-0 z-10 cursor-not-allowed" title="Verify email first" />
             )}
+            */}
           </div>
         </form>
 

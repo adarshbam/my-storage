@@ -139,7 +139,7 @@ export const deleteFileForever = async (req, res) => {
   }
 };
 
-async function deleteByParentChain(parentId) {
+export async function deleteByParentChain(parentId) {
   const filesToDelete = await File.find({ parentDir: parentId })
     .select("_id extension")
     .lean();

@@ -20,6 +20,7 @@ export const getUser = (req, res) => {
   return res.status(200).json({
     name: user.name,
     email: user.email,
+    role: user.role || "User",
     profilepic: user.profilepic,
     rootDirectoryId: user.rootDirId,
     theme: user.theme || "dark",
@@ -33,11 +34,11 @@ export const getUser = (req, res) => {
 // ─── Email/Password Registration ────────────────────────────────────────────────
 
 export const registerUser = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, name, password } = req.body;
 
   try {
     await createUserWithRootDir({
-      name: "user",
+      name: name || "User",
       email,
       password,
       profilepicId: null,
@@ -68,6 +69,13 @@ export const loginUser = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({ error: "Email not registered" });
+    }
+
+    if (user.status === "Deleted") {
+      return res.status(404).json({
+        message:
+          "User is Deleted contact adarshsinghbam@gmail.com to recover your account",
+      });
     }
 
     if (!user.isVerified) {
@@ -131,6 +139,12 @@ export const authGoogle = async (req, res) => {
       .lean();
 
     if (existingUser) {
+      if (existingUser.status === "Deleted") {
+        return res.status(404).json({
+          message:
+            "User is Deleted contact adarshsinghbam@gmail.com to recover your account",
+        });
+      }
       const rootDir = await Directory.findOne({ _id: existingUser.rootDirId })
         .select("_id")
         .lean();
@@ -305,6 +319,14 @@ export const authGithub = async (req, res) => {
       const rootDir = await Directory.findOne({ _id: existingUser.rootDirId })
         .select("_id")
         .lean();
+      ``;
+      if (existingUser.status === "Deleted") {
+        return res.status(404).json({
+          message:
+            "User is Deleted contact adarshsinghbam@gmail.com to recover your account",
+        });
+      }
+
       if (!rootDir) {
         return res.status(500).json({ error: "Internal Server Error" });
       }
@@ -457,10 +479,23 @@ export const uploadProfilePic = async (req, res) => {
 };
 
 export const getProfilePic = async (req, res) => {
-  if (!req.user.profilepic) {
+  const { id } = req.query;
+  const profilePicId = id || req.user.profilepic;
+
+  if (!profilePicId) {
     return res.status(404).send("No profile pic set");
   }
-  const profilePic = await File.findOne({ _id: req.user.profilepic })
+
+  // If requesting someone else's profile pic, check if user is > User role
+  if (id && id !== req.user.profilepic?.toString()) {
+    const hierarchy = ["User", "Manager", "Admin", "Owner"];
+    const userRoleIndex = hierarchy.indexOf(req.user.role || "User");
+    if (userRoleIndex <= 0) {
+      return res.status(403).send("Not authorised");
+    }
+  }
+
+  const profilePic = await File.findOne({ _id: profilePicId })
     .select("extension externalUrl")
     .lean();
 
@@ -543,4 +578,29 @@ export const updateTheme = async (req, res) => {
     console.error(err);
     return res.status(500).json({ error: "Internal Server Error" });
   }
+};
+
+// ─── Profile Settings ──────────────────────────────────────────────────────────
+
+export const updateName = async (req, res) => {
+  const { name } = req.body;
+
+  const user = await User.findOne({ _id: req.user.id });
+  user.name = name;
+  await user.save();
+  return res.status(200).json({ message: "Name update logged" });
+};
+
+export const updatePassword = async (req, res) => {
+  const { currentPassword, password } = req.body;
+  console.log(`Password update request received`, {
+    currentPassword,
+    password,
+  });
+
+  if (!req.user.password) {
+    req.user.
+  }
+
+  return res.status(200).json({ message: "Password update logged" });
 };

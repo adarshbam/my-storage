@@ -1,7 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, User, CreditCard, Tag, Monitor, Camera, ShieldCheck, Zap } from "lucide-react";
-import { SERVER_URL } from "../../lib/api";
+import {
+  LogOut,
+  User,
+  CreditCard,
+  Tag,
+  Monitor,
+  Camera,
+  ShieldCheck,
+  Zap,
+  Shield,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function ProfileMenu({
@@ -72,9 +81,21 @@ export default function ProfileMenu({
       label: "Profile",
       onClick: () => {
         setIsOpen(false);
-        // navigate("/dashboard/profile"); // Uncomment when you have a profile page
+        navigate("/profile");
       },
     },
+    ...(user && user.role !== "User"
+      ? [
+          {
+            icon: Shield,
+            label: "Users",
+            onClick: () => {
+              setIsOpen(false);
+              navigate("/users");
+            },
+          },
+        ]
+      : []),
     {
       icon: CreditCard,
       label: "Billing",
@@ -103,26 +124,26 @@ export default function ProfileMenu({
       />
 
       {/* Avatar trigger */}
-      <button
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="flex items-center justify-center w-9 h-9 rounded-full bg-[#14b8a6]/15 border-2 border-[#14b8a6]/30 hover:border-[#14b8a6]/60 text-[#14b8a6] font-bold overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-[0_0_16px_rgba(20,184,166,0.35)] focus:outline-none focus:ring-2 focus:ring-[#14b8a6]/40"
-        title="Account menu"
-        id="profile-menu-trigger"
-      >
-        {profilePicUrl ? (
-          <img
-            src={profilePicUrl}
-            alt="Profile"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <span className="text-sm select-none">
-            {user?.name?.[0]?.toUpperCase() ||
-              user?.email?.[0]?.toUpperCase() ||
-              "A"}
-          </span>
-        )}
-      </button>
+        <button
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="flex items-center justify-center w-9 h-9 rounded-full bg-[#14b8a6]/15 border-2 border-[#14b8a6]/30 hover:border-[#14b8a6]/60 text-[#14b8a6] font-bold overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-[0_0_16px_rgba(20,184,166,0.35)] focus:outline-none focus:ring-2 focus:ring-[#14b8a6]/40"
+          title="Account menu"
+          id="profile-menu-trigger"
+        >
+          {profilePicUrl ? (
+            <img
+              src={profilePicUrl}
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-sm select-none">
+              {user?.name?.[0]?.toUpperCase() ||
+                user?.email?.[0]?.toUpperCase() ||
+                "A"}
+            </span>
+          )}
+        </button>
 
       {/* Dropdown */}
       <AnimatePresence>
@@ -136,10 +157,9 @@ export default function ProfileMenu({
             style={{ zIndex: 9999 }}
           >
             <div className="relative rounded-3xl overflow-hidden bg-white/90 dark:bg-[#021f17]/90 backdrop-blur-3xl border border-black/10 dark:border-teal-500/20 shadow-[0_30px_80px_rgba(0,0,0,0.15)] dark:shadow-[0_30px_80px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.1)]">
-              
               {/* Animated Top Glow */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-teal-400 to-transparent opacity-50 dark:opacity-80" />
-              
+
               {/* Background ambient light */}
               <div className="absolute top-[-50px] right-[-50px] w-32 h-32 bg-teal-400/20 dark:bg-teal-500/10 blur-[50px] rounded-full pointer-events-none" />
 
@@ -200,7 +220,7 @@ export default function ProfileMenu({
                     {usedPercent}%
                   </span>
                 </div>
-                
+
                 <div className="w-full h-2.5 bg-black/5 dark:bg-black/40 rounded-full overflow-hidden shadow-inner relative">
                   <motion.div
                     initial={{ width: 0 }}

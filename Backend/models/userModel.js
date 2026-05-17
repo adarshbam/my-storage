@@ -25,9 +25,19 @@ const userSchema = new Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, default: null },
-    profilepic: { type: Schema.Types.ObjectId, default: null },
+    profilepic: { type: Schema.Types.ObjectId, default: null, ref: "File" },
     rootDirId: { type: Schema.Types.ObjectId, required: true },
     recentlySearchedItems: { type: Array, default: [] },
+    role: {
+      type: String,
+      enum: ["Owner", "Admin", "Manager", "User"],
+      default: "User",
+    },
+    status: {
+      type: String,
+      enum: ["Active", "Deleted"],
+      default: "Active",
+    },
     integrations: {
       googleDrive: {
         type: googleDriveSchema,

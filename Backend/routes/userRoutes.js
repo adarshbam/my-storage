@@ -13,6 +13,8 @@ import {
   uploadProfilePic,
   authGithub,
   updateTheme,
+  updateName,
+  updatePassword,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -30,5 +32,8 @@ router.get("/profilepic", checkAuth, getProfilePic);
 router.get("/searchedItems", checkAuth, getSearchedItems);
 router.post("/searchedItems", checkAuth, storeSearchedItem);
 router.put("/theme", checkAuth, updateTheme);
+router.patch("/name", checkAuth, updateName);
+router.post("/password", checkAuth, updatePassword);
+router.patch("/password", checkAuth, updatePassword);
 
 export default router;
