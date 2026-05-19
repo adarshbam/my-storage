@@ -1,8 +1,8 @@
 // OTP Controller — stub functions (implement logic manually)
-import nodemailer from "nodemailer";
 
 import OTP from "../models/otpModel.js";
 import User from "../models/userModel.js";
+import sendEmail from "../utils/email.js";
 
 export const sendOtp = async (req, res) => {
   // TODO: Implement OTP sending logic
@@ -16,30 +16,21 @@ export const sendOtp = async (req, res) => {
   await OTP.deleteMany({ email });
   await OTP.create({ email, otp: generatedOTP });
   // 3. Send OTP via email/SMS
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false, // use STARTTLS (upgrade connection to TLS after connecting)
-    auth: {
-      user: "adarshsingh800515@gmail.com",
-      pass: "ukui pftm aeos sgza",
-    },
-  });
 
   try {
-    const info = await transporter.sendMail({
+    await sendEmail({
       from: `"Storiffy" <no-reply@storiffy.com>`,
-      to: email,
-      subject: "Your Storiffy OTP Code",
-      text: `Your OTP is ${generatedOTP}. It will expire in 10 minutes.`,
-      html: `
+    to: email,
+    subject: "Your Storiffy OTP Code",
+    text: `Your OTP is ${generatedOTP}. It will expire in 10 minutes.`,
+    html: `
         <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-          <h2 style="color: #333;">Storiffy Verification</h2>
-          <p style="font-size: 16px; color: #555;">
+        <h2 style="color: #333;">Storiffy Verification</h2>
+        <p style="font-size: 16px; color: #555;">
             Use the OTP below to complete your verification:
-          </p>
-  
-          <div style="
+        </p>
+
+        <div style="
             display: inline-block;
             margin: 20px 0;
             padding: 15px 30px;
@@ -50,23 +41,20 @@ export const sendOtp = async (req, res) => {
             border-radius: 8px;
             border: 1px solid #ddd;
             user-select: all;
-          ">
+        ">
             ${generatedOTP}
-          </div>
-  
-          <p style="color: #888; font-size: 14px;">
-            This OTP is valid for 10 minutes.
-          </p>
-  
-          <p style="color: #aaa; font-size: 12px;">
-            If you didn’t request this, you can ignore this email.
-          </p>
         </div>
-      `,
+
+        <p style="color: #888; font-size: 14px;">
+            This OTP is valid for 10 minutes.
+        </p>
+
+        <p style="color: #aaa; font-size: 12px;">
+            If you didn’t request this, you can ignore this email.
+        </p>
+        </div>
+    `,
     });
-
-    console.log("Message sent: %s", info.messageId);
-
     return res.status(200).json({ message: "OTP sent successfully" });
   } catch (err) {
     console.error("Error while sending mail:", err);

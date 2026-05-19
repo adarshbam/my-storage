@@ -25,6 +25,8 @@ const userSchema = new Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, default: null },
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordTokenExpires: { type: Date, default: Date.now },
     profilepic: { type: Schema.Types.ObjectId, default: null, ref: "File" },
     rootDirId: { type: Schema.Types.ObjectId, required: true },
     recentlySearchedItems: { type: Array, default: [] },

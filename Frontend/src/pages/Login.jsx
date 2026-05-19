@@ -6,18 +6,21 @@ import { handleGoogleAuth } from "../lib/googleAuth";
 import Button from "../components/ui/Button";
 import GoogleSignInButton from "../components/ui/GoogleSignInButton";
 import AuthLayout from "../layouts/AuthLayout";
-import { Cloud, Send, Loader2, ShieldCheck, CheckCircle2, Box } from "lucide-react";
+import { Eye, EyeOff, Cloud, Send, Loader2, ShieldCheck, CheckCircle2, Box } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [sendingForgot, setSendingForgot] = useState(false);
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
@@ -120,9 +123,40 @@ export default function Login() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!isEmailValid) {
+      setError("Please enter a valid email address");
+      return;
+    }
+    setError("");
+    setMessage("");
+    setSendingForgot(true);
+
+    try {
+      const response = await fetch(`${SERVER_URL}/user/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        setMessage("If an account exists, a reset email will be sent.");
+      } else {
+        const data = await response.json();
+        setError(data.message || data.error || "Failed to process request");
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setSendingForgot(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setMessage("");
 
     try {
       const response = await fetch(`${SERVER_URL}/user/login`, {
@@ -174,6 +208,11 @@ export default function Login() {
         {error && (
           <div className="bg-red-500/10 text-red-600 dark:text-red-400 p-3 rounded-xl text-sm mb-6 border border-red-500/20">
             {error}
+          </div>
+        )}
+        {message && (
+          <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl text-sm mb-6 border border-emerald-500/20">
+            {message}
           </div>
         )}
 
@@ -301,15 +340,32 @@ export default function Login() {
           <div>
             <label className="flex text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 justify-between items-center">
               <span>Password</span>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={sendingForgot}
+                className="text-[#14b8a6] hover:text-[#0d9488] text-sm font-semibold transition-colors disabled:opacity-50"
+              >
+                {sendingForgot ? "Sending..." : "Forgot password?"}
+              </button>
             </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-[#14b8a6]/50 focus:border-[#14b8a6]/50 dark:focus:shadow-[0_0_15px_rgba(20,184,166,0.15)] outline-none transition-all duration-300"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 pr-11 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-[#14b8a6]/50 focus:border-[#14b8a6]/50 dark:focus:shadow-[0_0_15px_rgba(20,184,166,0.15)] outline-none transition-all duration-300"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <div className="w-full relative group">

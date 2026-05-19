@@ -15,6 +15,8 @@ import {
   updateTheme,
   updateName,
   updatePassword,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -24,6 +26,8 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/auth/google", authGoogle);
 router.get("/auth/github", authGithub);
+router.post("/auth/forgot-password", forgotPassword);
+router.post("/auth/reset-password", resetPassword);
 
 router.post("/logout", logoutUser);
 router.post("/logout-all", checkAuth, logoutAllDevices);

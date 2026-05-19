@@ -8,10 +8,13 @@ import Session from "../models/sessionModel.js";
 import mongoose from "mongoose";
 import { OAuth2Client } from "google-auth-library";
 import { GOOGLE_CLIENT_ID } from "../config.js";
+import crypto from "crypto";
+
 import {
   createSessionAndSetCookies,
   createUserWithRootDir,
 } from "../utils/authHelpers.js";
+import sendEmail from "../utils/email.js";
 
 // ─── User Info ──────────────────────────────────────────────────────────────────
 
@@ -613,6 +616,155 @@ export const updatePassword = async (req, res) => {
   }
 
   user.password = password;
+  await user.save();
+
+  return res.status(200).json({ message: "Password updated successfully" });
+};
+
+export const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  console.log(email);
+
+  const user = await User.findOne({ email });
+
+  if (user) {
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordTokenExpires = Date.now() + 1000 * 60 * 15;
+    await user.save();
+
+    const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
+
+    await sendEmail({
+      from: `"Vault" <no-reply@vault.com>`,
+      to: email,
+      subject: "Reset Your Vault Password",
+
+      text: `
+      We received a request to reset your Vault account password.
+      
+      Reset your password using the link below:
+      ${resetUrl}
+      
+      This link will expire in 15 minutes.
+      
+      If you did not request a password reset, you can safely ignore this email.
+        `,
+
+      html: `
+          <div style="
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            padding: 40px 20px;
+            color: #333;
+          ">
+            <div style="
+              max-width: 500px;
+              margin: auto;
+              background: #ffffff;
+              padding: 40px 30px;
+              border-radius: 12px;
+              border: 1px solid #e5e5e5;
+              text-align: center;
+            ">
+              <h1 style="
+                margin-bottom: 10px;
+                font-size: 28px;
+                color: #111827;
+              ">
+                Vault
+              </h1>
+      
+              <p style="
+                font-size: 16px;
+                line-height: 1.6;
+                color: #4b5563;
+                margin-top: 20px;
+              ">
+                We received a request to reset your password.
+              </p>
+      
+              <p style="
+                font-size: 16px;
+                line-height: 1.6;
+                color: #4b5563;
+              ">
+                Click the button below to set a new password.
+              </p>
+      
+              <a
+                href="${resetUrl}"
+                style="
+                  display: inline-block;
+                  margin-top: 25px;
+                  padding: 14px 28px;
+                  background-color: #111827;
+                  color: #ffffff;
+                  text-decoration: none;
+                  border-radius: 8px;
+                  font-size: 16px;
+                  font-weight: bold;
+                "
+              >
+                Reset Password
+              </a>
+      
+              <p style="
+                margin-top: 30px;
+                font-size: 14px;
+                color: #6b7280;
+                line-height: 1.6;
+              ">
+                This link will expire in 15 minutes.
+              </p>
+      
+              <p style="
+                margin-top: 10px;
+                font-size: 13px;
+                color: #9ca3af;
+                line-height: 1.6;
+              ">
+                If you did not request a password reset, you can safely ignore this email.
+              </p>
+            </div>
+          </div>
+        `,
+    });
+  }
+
+  return res.status(200).json({
+    message:
+      "If an account exists with this email, a reset link has been sent.",
+  });
+};
+
+export const resetPassword = async (req, res) => {
+  const { token, newPassword: password } = req.body;
+
+  if (!token)
+    return res.status(400).json({ message: "Invalid or missing token" });
+
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  console.log(hashedToken);
+
+  const user = await User.findOne({
+    resetPasswordToken: hashedToken,
+    resetPasswordTokenExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return res.status(401).json({ message: "Reset Token Invalid or Expired" });
+  }
+
+  user.password = password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordTokenExpires = undefined;
   await user.save();
 
   return res.status(200).json({ message: "Password updated successfully" });
