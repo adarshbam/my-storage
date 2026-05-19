@@ -341,17 +341,25 @@ export default function DashboardLayout() {
 
   const openUploadModal = () => setShowUploadModal(true);
 
+  // Helper for sidebar active state
+  const isActive = (path, exact = false) => {
+    if (exact) {
+      return location.pathname === path;
+    }
+    return location.pathname.startsWith(path);
+  };
+
   return (
     <div className="h-screen bg-[#faf5f7] dark:bg-[#020b08] flex flex-col transition-colors duration-300 overflow-hidden relative">
       {/* Layered Gradient Background — matching landing page */}
       <div className="fixed inset-0 z-[0] pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-[#14b8a6]/8 dark:bg-[#14b8a6]/6 rounded-full blur-[120px]" />
-        <div className="absolute top-[30%] right-[-10%] w-[35vw] h-[35vw] bg-[#3b82f6]/8 dark:bg-[#3b82f6]/6 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[50vw] h-[50vw] bg-[#a855f7]/6 dark:bg-[#a855f7]/4 rounded-full blur-[120px]" />
+        <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-[#14b8a6]/10 dark:bg-[#14b8a6]/15 rounded-full blur-[140px]" />
+        <div className="absolute top-[20%] right-[-10%] w-[40vw] h-[40vw] bg-[#3b82f6]/10 dark:bg-[#3b82f6]/15 rounded-full blur-[140px]" />
+        <div className="absolute bottom-[-20%] left-[20%] w-[60vw] h-[60vw] bg-[#a855f7]/10 dark:bg-[#a855f7]/15 rounded-full blur-[140px]" />
       </div>
 
       {/* Global Top Navbar */}
-      <header className="h-16 bg-white/70 dark:bg-white/[0.03] backdrop-blur-2xl border-b border-black/5 dark:border-white/[0.06] flex items-center justify-between px-4 sm:px-6 z-50 shrink-0">
+      <header className="h-20 bg-white/40 dark:bg-[#020b08]/40 backdrop-blur-3xl border-b border-black/5 dark:border-white/[0.08] flex items-center justify-between px-4 sm:px-6 z-50 shrink-0 shadow-[0_4px_30px_rgba(0,0,0,0.02)]">
         <div className="flex items-center gap-4">
           <button
             onClick={() => {
@@ -389,7 +397,7 @@ export default function DashboardLayout() {
                   );
                 }
               }}
-              className="w-full pl-10 pr-10 py-2 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-[#14b8a6]/50 focus:border-[#14b8a6]/30 dark:focus:shadow-[0_0_12px_rgba(20,184,166,0.15)] outline-none transition-all duration-300"
+              className="w-full pl-11 pr-11 py-2.5 bg-white/60 dark:bg-white/[0.04] backdrop-blur-xl border border-black/5 dark:border-white/10 text-slate-900 dark:text-white rounded-2xl focus:ring-2 focus:ring-[#14b8a6]/50 focus:border-[#14b8a6]/50 dark:focus:shadow-[0_0_20px_rgba(20,184,166,0.15)] outline-none transition-all duration-300 placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-inner dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"
             />
             <button
               onClick={() => setShowGlobalFilters(!showGlobalFilters)}
@@ -522,9 +530,9 @@ export default function DashboardLayout() {
 
         {/* Sidebar */}
         <aside
-          className={`w-64 shrink-0 bg-white/70 dark:bg-white/[0.03] backdrop-blur-2xl border-r border-black/5 dark:border-white/[0.06] flex flex-col absolute md:relative inset-y-0 left-0 z-40 transition-all duration-300 ${
+          className={`w-[280px] shrink-0 bg-white/40 dark:bg-[#020b08]/40 backdrop-blur-3xl border-r border-black/5 dark:border-white/[0.08] flex flex-col absolute md:relative inset-y-0 left-0 z-40 transition-all duration-300 ${
             isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-          } md:translate-x-0 ${isDesktopSidebarOpen ? "md:ml-0" : "md:-ml-64"}`}
+          } md:translate-x-0 ${isDesktopSidebarOpen ? "md:ml-0" : "md:-ml-[280px]"}`}
         >
           <div className="p-6 pb-4 flex items-center justify-between gap-2">
             <Link
@@ -547,58 +555,78 @@ export default function DashboardLayout() {
             </button>
           </div>
 
-          <div className="px-6 pb-6 border-b border-black/5 dark:border-white/[0.06]">
+          <div className="px-5 pb-6 border-b border-black/5 dark:border-white/[0.06]">
             <Button
               onClick={() => {
                 openUploadModal();
                 setIsSidebarOpen(false);
               }}
-              className="w-full shadow-lg shadow-[#14b8a6]/20"
+              className="w-full shadow-lg shadow-[#14b8a6]/25 hover:shadow-xl hover:shadow-[#14b8a6]/30 transition-all duration-300 py-3 rounded-xl text-base font-semibold"
             >
               + New Upload
             </Button>
           </div>
 
-          <div className="p-4 flex-1">
-            <nav className="space-y-1">
+          <div className="p-4 flex-1 overflow-y-auto">
+            <nav className="space-y-1.5">
               <Link
                 to="/dashboard"
                 onClick={() => setIsSidebarOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
+                className={`flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-300 font-medium ${
+                  isActive("/dashboard", true)
+                    ? "bg-gradient-to-r from-[#14b8a6]/10 to-transparent text-[#14b8a6] border border-[#14b8a6]/20 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
               >
-                <HardDrive size={18} />
+                <HardDrive size={18} className={isActive("/dashboard", true) ? "text-[#14b8a6]" : ""} />
                 <span>My Drive</span>
               </Link>
               <Link
                 to="/dashboard/shared"
                 onClick={() => setIsSidebarOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
+                className={`flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-300 font-medium ${
+                  isActive("/dashboard/shared")
+                    ? "bg-gradient-to-r from-[#3b82f6]/10 to-transparent text-[#3b82f6] border border-[#3b82f6]/20 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
               >
-                <Users size={18} />
+                <Users size={18} className={isActive("/dashboard/shared") ? "text-[#3b82f6]" : ""} />
                 <span>Shared with me</span>
               </Link>
               <Link
                 to="/dashboard/recent"
                 onClick={() => setIsSidebarOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
+                className={`flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-300 font-medium ${
+                  isActive("/dashboard/recent")
+                    ? "bg-gradient-to-r from-[#8b5cf6]/10 to-transparent text-[#8b5cf6] border border-[#8b5cf6]/20 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
               >
-                <Clock size={18} />
+                <Clock size={18} className={isActive("/dashboard/recent") ? "text-[#8b5cf6]" : ""} />
                 <span>Recent</span>
               </Link>
               <Link
                 to="/dashboard/starred"
                 onClick={() => setIsSidebarOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
+                className={`flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-300 font-medium ${
+                  isActive("/dashboard/starred")
+                    ? "bg-gradient-to-r from-[#eab308]/10 to-transparent text-[#eab308] border border-[#eab308]/20 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
               >
-                <Star size={18} />
+                <Star size={18} className={isActive("/dashboard/starred") ? "text-[#eab308]" : ""} />
                 <span>Starred</span>
               </Link>
               <Link
                 to="/dashboard/trash"
                 onClick={() => setIsSidebarOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-slate-700 dark:text-slate-300 hover:bg-white/50 dark:hover:bg-white/[0.06] rounded-xl transition-all duration-300"
+                className={`flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-300 font-medium ${
+                  isActive("/dashboard/trash")
+                    ? "bg-gradient-to-r from-[#ef4444]/10 to-transparent text-[#ef4444] border border-[#ef4444]/20 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
               >
-                <Trash2 size={18} />
+                <Trash2 size={18} className={isActive("/dashboard/trash") ? "text-[#ef4444]" : ""} />
                 <span>Trash</span>
               </Link>
             </nav>

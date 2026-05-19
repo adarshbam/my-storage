@@ -598,9 +598,22 @@ export const updatePassword = async (req, res) => {
     password,
   });
 
-  if (!req.user.password) {
-    req.user.
+  const user = await User.findOne({ _id: req.user.id });
+
+  if (!user.password) {
+    user.password = password;
+    await user.save();
+    return res.status(200).json({ message: "Password created successfully" });
   }
 
-  return res.status(200).json({ message: "Password update logged" });
+  const isMatch = await user.comparePassword(currentPassword);
+
+  if (!isMatch) {
+    return res.status(404).json({ error: "Invalid current password" });
+  }
+
+  user.password = password;
+  await user.save();
+
+  return res.status(200).json({ message: "Password updated successfully" });
 };

@@ -20,6 +20,8 @@ const Profile = () => {
 
   const [editNameOpen, setEditNameOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [nameMessage, setNameMessage] = useState(null);
+  const [passwordMessage, setPasswordMessage] = useState(null);
 
   const profilePicUrl = user?.profilepic
     ? `${SERVER_URL}/user/profilepic?id=${user.profilepic}`
@@ -69,46 +71,70 @@ const Profile = () => {
 
   const handleUpdateName = async (e) => {
     e.preventDefault();
+    setNameMessage(null);
     const newName = e.target.name.value;
-    console.log("Updating name to:", newName);
     try {
-      await fetch(`${SERVER_URL}/user/name`, {
+      const res = await fetch(`${SERVER_URL}/user/name`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newName }),
         credentials: "include",
       });
-      setEditNameOpen(false);
-      // In a real app, update AuthContext user
+      const data = await res.json();
+      if (!res.ok) {
+        setNameMessage({ type: "error", text: data.error || data.message || "Failed to update name" });
+      } else {
+        setNameMessage({ type: "success", text: data.message || "Name updated successfully!" });
+        setTimeout(() => setEditNameOpen(false), 1500);
+      }
     } catch (err) {
-      console.error(err);
+      setNameMessage({ type: "error", text: "Network error occurred." });
     }
   };
 
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
+    setPasswordMessage(null);
     const currentPassword = e.target.currentPassword?.value;
     const newPassword = e.target.newPassword.value;
-    console.log("Updating password...");
+
+    if (!newPassword || newPassword.trim() === "") {
+      setPasswordMessage({ type: "error", text: "New password cannot be empty" });
+      return;
+    }
+
+    if (currentPassword && currentPassword === newPassword) {
+      setPasswordMessage({ type: "error", text: "New password cannot be the same as current password" });
+      return;
+    }
+
     try {
+      let res;
       if (currentPassword) {
-        await fetch(`${SERVER_URL}/user/password`, {
+        res = await fetch(`${SERVER_URL}/user/password`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ currentPassword, password: newPassword }),
           credentials: "include",
         });
       } else {
-        await fetch(`${SERVER_URL}/user/password`, {
+        res = await fetch(`${SERVER_URL}/user/password`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ password: newPassword }),
           credentials: "include",
         });
       }
-      setPasswordOpen(false);
+      
+      const data = await res.json();
+      if (!res.ok) {
+        setPasswordMessage({ type: "error", text: data.error || data.message || "Failed to update password" });
+      } else {
+        setPasswordMessage({ type: "success", text: data.message || "Password updated successfully!" });
+        setTimeout(() => setPasswordOpen(false), 1500);
+      }
     } catch (err) {
-      console.error(err);
+      setPasswordMessage({ type: "error", text: "Network error occurred." });
     }
   };
 
@@ -304,6 +330,11 @@ const Profile = () => {
                         placeholder="Enter your name"
                       />
                     </div>
+                    {nameMessage && (
+                      <div className={`text-sm px-4 py-2 rounded-lg font-medium ${nameMessage.type === "success" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
+                        {nameMessage.text}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="bg-black/20 p-6 flex justify-end gap-3 border-t border-white/5">
@@ -377,6 +408,11 @@ const Profile = () => {
                         placeholder="Enter new password"
                       />
                     </div>
+                    {passwordMessage && (
+                      <div className={`text-sm px-4 py-2 rounded-lg font-medium ${passwordMessage.type === "success" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
+                        {passwordMessage.text}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="bg-black/20 p-6 flex justify-end gap-3 border-t border-white/5">

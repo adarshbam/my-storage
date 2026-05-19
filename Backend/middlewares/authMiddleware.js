@@ -23,7 +23,7 @@ async function checkAuth(req, res, next) {
 
       return res.status(404).json({ message: "Sesssion not Found" });
     }
-    const user = await User.findOne({ _id: session.userId }).lean();
+    const user = await User.findOne({ _id: session.userId });
 
     if (!user) {
       return res.status(401).json({ message: "User not found" });
