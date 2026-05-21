@@ -25,7 +25,7 @@ export const getAllSystemUsers = async (req, res) => {
   const yourAuthority = hierarchy.slice(0, userHierarchy);
 
   const transformedUsers = allUsers.map(
-    ({ _id, name, role, email, status, profilepic }) => ({
+    ({ _id, name, role, email, status, profilepic, rootDirId }) => ({
       _id,
       name,
       role,
@@ -38,6 +38,7 @@ export const getAllSystemUsers = async (req, res) => {
         : null,
       status: status || "Active",
       yourAuthority,
+      rootDirId: rootDirId?.toString() || null,
       isLoggedIn: allSessionsUserIdSet.has(_id.toString()),
     }),
   );

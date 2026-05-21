@@ -96,6 +96,7 @@ export default function FileBrowser({ specialView }) {
   const searchQuery = searchParams.get("q") || searchParams.get("search");
   const isSearch = location.pathname.endsWith("/search") || !!searchQuery;
   const isReadOnly = specialView === "shared" || specialView === "admin";
+  const ownerId = searchParams.get("ownerId");
 
   const handlePreview = (file) => {
     setPreviewFile(file);
@@ -158,6 +159,12 @@ export default function FileBrowser({ specialView }) {
         }
       }
 
+      // Append ownerId if present to delegate Google Drive & GitHub credentials
+      if (ownerId) {
+        const separator = url.includes("?") ? "&" : "?";
+        url = `${url}${separator}ownerId=${ownerId}`;
+      }
+
       const response = await fetch(url, { credentials: "include" });
       if (response.ok) {
         if (specialView === "shared" && !folderId) {
@@ -193,6 +200,17 @@ export default function FileBrowser({ specialView }) {
         const result = await response.json();
         let directories = result.directories || [];
         let files = result.files || [];
+
+        // Hide external integration mount points from administrative eye views
+        if (specialView === "admin" || specialView === "owner") {
+          directories = directories.filter(
+            (dir) =>
+              dir.provider !== "google_drive" &&
+              dir.provider !== "github" &&
+              dir.name !== "Google Drive" &&
+              dir.name !== "GitHub"
+          );
+        }
 
         if (specialView === "github" && isSearch) {
           const query = searchQuery.toLowerCase();
@@ -249,9 +267,10 @@ export default function FileBrowser({ specialView }) {
     try {
       const parts = githubPath.split("/");
       const repoPath = `${parts[0]}/${parts[1]}`;
-      // Fetch repo info for default branch
+      const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
+      
       const repoRes = await fetch(
-        `${SERVER_URL}/github/repositories/${repoPath}`,
+        `${SERVER_URL}/github/repositories/${repoPath}${ownerParam}`,
         { credentials: "include" },
       );
       if (repoRes.ok) {
@@ -263,7 +282,7 @@ export default function FileBrowser({ specialView }) {
       }
 
       const response = await fetch(
-        `${SERVER_URL}/github/repositories/${repoPath}/branches`,
+        `${SERVER_URL}/github/repositories/${repoPath}/branches${ownerParam}`,
         { credentials: "include" },
       );
       if (response.ok) {
@@ -576,6 +595,11 @@ export default function FileBrowser({ specialView }) {
         body = JSON.stringify({ [bodyKey]: modalInput });
       }
 
+      if (ownerId) {
+        const separator = url.includes("?") ? "&" : "?";
+        url = `${url}${separator}ownerId=${ownerId}`;
+      }
+
       const res = await fetch(url, {
         method,
         headers,
@@ -603,6 +627,8 @@ export default function FileBrowser({ specialView }) {
 
   const handleNavigate = (dir) => {
     const isObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+    const targetOwnerId = dir.userId || ownerId;
+    const ownerParam = targetOwnerId ? `?ownerId=${targetOwnerId}` : "";
 
     if (dir.provider === "google_drive") {
       if (
@@ -611,22 +637,24 @@ export default function FileBrowser({ specialView }) {
         !isObjectId(dir.id)
       ) {
         // Already inside Drive — dir.id is a real Drive folder ID, navigate into it
-        navigate(`/dashboard/google-drive/${dir.id}`);
+        navigate(`/dashboard/google-drive/${dir.id}${ownerParam}`);
       } else {
         // Coming from the Vault root or a non-drive view — the dir.id might be a MongoDB ObjectId (mount-point).
         // Always open Drive root listing unless we are sure it's a drive ID.
-        navigate(`/dashboard/google-drive`);
+        navigate(`/dashboard/google-drive${ownerParam}`);
       }
     } else if (dir.provider === "github") {
       if (dir.githubPath) {
-        navigate(`/dashboard/github/${dir.githubPath}`);
+        navigate(`/dashboard/github/${dir.githubPath}${ownerParam}`);
       } else {
-        navigate(`/dashboard/github`);
+        navigate(`/dashboard/github${ownerParam}`);
       }
     } else if (dir.provider === "shared_drive" || specialView === "shared") {
-      navigate(`/dashboard/shared/folder/${dir.id}`);
+      navigate(`/dashboard/shared/folder/${dir.id}${ownerParam}`);
     } else if (specialView === "admin") {
       navigate(`/dashboard/admin/folder/${dir.id}`);
+    } else if (specialView === "owner") {
+      navigate(`/dashboard/owner/folder/${dir.id}`);
     } else {
       navigate(`/dashboard/folder/${dir.id}`);
     }
@@ -694,6 +722,11 @@ export default function FileBrowser({ specialView }) {
         url = `${SERVER_URL}/${typeEndpoint}/${item.id}`;
       }
 
+      if (ownerId) {
+        const separator = url.includes("?") ? "&" : "?";
+        url = `${url}${separator}ownerId=${ownerId}`;
+      }
+
       const res = await fetch(url, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -717,9 +750,15 @@ export default function FileBrowser({ specialView }) {
 
     try {
       const isDirectory = modalItem.type === "directory";
-      const url = isDirectory
+      let url = isDirectory
         ? `${SERVER_URL}/github/repositories/${modalItem.githubPath}${selectedBranch ? `?ref=${selectedBranch}` : ""}`
         : `${SERVER_URL}/github/file/${modalItem.githubPath}`;
+      
+      if (ownerId) {
+        const separator = url.includes("?") ? "&" : "?";
+        url = `${url}${separator}ownerId=${ownerId}`;
+      }
+
       const body = isDirectory
         ? undefined
         : JSON.stringify({ sha: modalItem.sha });
@@ -810,12 +849,13 @@ export default function FileBrowser({ specialView }) {
         itemsToMove.map((i) => i.provider || "local"),
       );
       const targetProvider = targetItem?.provider || "local";
+      const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
 
       // 1. Internal Moves (Same Provider)
       if (sourceProviders.size === 1 && sourceProviders.has(targetProvider)) {
         if (targetProvider === "github" && targetItem.githubPath) {
           try {
-            await fetch(`${SERVER_URL}/github/move`, {
+            await fetch(`${SERVER_URL}/github/move${ownerParam}`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -837,7 +877,7 @@ export default function FileBrowser({ specialView }) {
           if (isObjectId(targetId)) targetId = "root";
 
           try {
-            await fetch(`${SERVER_URL}/drive/move`, {
+            await fetch(`${SERVER_URL}/drive/move${ownerParam}`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -856,7 +896,7 @@ export default function FileBrowser({ specialView }) {
 
         if (targetProvider === "local") {
           try {
-            await fetch(`${SERVER_URL}/directory/${targetItem.id}/move`, {
+            await fetch(`${SERVER_URL}/directory/${targetItem.id}/move${ownerParam}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(itemsToMove),
@@ -880,7 +920,7 @@ export default function FileBrowser({ specialView }) {
           targetFolderId = user?.rootDirectoryId;
 
         try {
-          await fetch(`${SERVER_URL}/drive/transfer-to-vault`, {
+          await fetch(`${SERVER_URL}/drive/transfer-to-vault${ownerParam}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -904,7 +944,7 @@ export default function FileBrowser({ specialView }) {
           targetDriveFolderId = "root";
 
         try {
-          await fetch(`${SERVER_URL}/drive/transfer-from-vault`, {
+          await fetch(`${SERVER_URL}/drive/transfer-from-vault${ownerParam}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1490,23 +1530,25 @@ export default function FileBrowser({ specialView }) {
             onClick={async () => {
               if (!confirm(`Delete ${selectedItems.length} items?`)) return;
               const deletePromises = selectedItems.map((item) => {
+                const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
                 if (item.provider === "google_drive") {
-                  return fetch(`${SERVER_URL}/drive/file/${item.id}`, {
+                  return fetch(`${SERVER_URL}/drive/file/${item.id}${ownerParam}`, {
                     method: "DELETE",
                     credentials: "include",
                   });
                 } else if (item.provider === "github") {
-                  return fetch(`${SERVER_URL}/github/file/${item.githubPath}`, {
+                  return fetch(`${SERVER_URL}/github/file/${item.githubPath}${ownerParam}`, {
                     method: "DELETE",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ sha: item.sha }),
                     credentials: "include",
                   });
                 } else {
-                  const finalTypeEndpoint =
-                    item.type === "directory" ? "directory" : "file";
+                  const typeEndpoint = data.directories.find((d) => d.id === item.id)
+                    ? "directory"
+                    : "file";
                   return fetch(
-                    `${SERVER_URL}/${finalTypeEndpoint}/${item.id}`,
+                    `${SERVER_URL}/${typeEndpoint}/${item.id}${ownerParam}`,
                     {
                       method: "DELETE",
                       credentials: "include",
@@ -1809,6 +1851,7 @@ export default function FileBrowser({ specialView }) {
             file={previewFile}
             isOpen={!!previewFile}
             onClose={() => setPreviewFile(null)}
+            ownerId={ownerId}
           />
         )}
       </Suspense>

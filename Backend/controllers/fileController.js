@@ -3,6 +3,7 @@ import path from "path";
 import { stat, unlink, mkdir } from "fs/promises";
 import { fileURLToPath } from "url";
 import SharedAccess from "../models/sharedAccessModel.js";
+import { hasWriteAccess } from "../utils/integrationHelper.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -131,7 +132,11 @@ export const getThumbnail = async (req, res) => {
     }
 
     if (!file) return res.status(404).send("File not found");
-    if (file.userId.toString() !== req.user.id && req.user.role === "User") {
+    if (
+      file.userId.toString() !== req.user.id &&
+      req.user.role !== "Owner" &&
+      req.user.role !== "Admin"
+    ) {
       const hasAccess = await SharedAccess.findOne({
         userId: file.userId,
         targetUserId: req.user.id,
@@ -167,7 +172,11 @@ export const getFileById = async (req, res) => {
     // Check if file exists first
     if (!file) return res.status(404).send("File not found");
 
-    if (file.userId.toString() !== req.user.id && req.user.role === "User") {
+    if (
+      file.userId.toString() !== req.user.id &&
+      req.user.role !== "Owner" &&
+      req.user.role !== "Admin"
+    ) {
       const hasAccess = await SharedAccess.findOne({
         userId: file.userId,
         targetUserId: req.user.id,
@@ -259,21 +268,20 @@ export const uploadFile = async (req, res) => {
       parentDirId = rootDirId;
     }
 
-    // Verify parent directory ownership to prevent uploads into shared folders
+    let ownerId = req.user.id;
+    // Verify parent directory ownership and check shared permissions
     if (parentDirId && parentDirId !== rootDirId) {
       const parentDir = await Directory.findOne({ _id: parentDirId })
         .select("userId")
         .lean();
-      if (
-        parentDir &&
-        parentDir.userId &&
-        parentDir.userId.toString() !== req.user.id
-      ) {
-        return res
-          .status(403)
-          .send(
-            "You are not authorized to upload files in a shared directory (Read-only)",
-          );
+      if (parentDir && parentDir.userId) {
+        ownerId = parentDir.userId.toString();
+        const canWrite = await hasWriteAccess(ownerId, req);
+        if (!canWrite) {
+          return res
+            .status(403)
+            .send("You are not authorized to upload files in this directory");
+        }
       }
     }
 
@@ -375,7 +383,7 @@ export const uploadFile = async (req, res) => {
           _id: id,
           extension: ext,
           type: "file",
-          userId: req.user.id,
+          userId: ownerId,
           size: fileSize,
           name: fileName,
           parentDir: parentDirId,
@@ -408,7 +416,9 @@ export const renameFile = async (req, res) => {
     if (!file) {
       return res.status(404).send("File not found");
     }
-    if (file.userId.toString() !== req.user.id && req.user.role != "Owner") {
+    const ownerId = file.userId ? file.userId.toString() : req.user.id;
+    const canWrite = await hasWriteAccess(ownerId, req);
+    if (!canWrite) {
       return res.status(403).send("You are not authorized to rename this file");
     }
     const { newFileName } = req.body;
@@ -429,10 +439,9 @@ export const deleteFile = async (req, res) => {
     if (!fileData) {
       return res.status(404).send("File not found");
     }
-    if (
-      fileData.userId.toString() !== req.user.id &&
-      req.user.role != "Owner"
-    ) {
+    const ownerId = fileData.userId ? fileData.userId.toString() : req.user.id;
+    const canWrite = await hasWriteAccess(ownerId, req);
+    if (!canWrite) {
       return res.status(403).send("You are not authorized to delete this file");
     }
 
@@ -472,7 +481,9 @@ export const saveFile = async (req, res) => {
       .lean();
 
     if (!file) return res.status(404).send("File not found");
-    if (file.userId.toString() !== req.user.id && req.user.role !== "Owner") {
+    const ownerId = file.userId ? file.userId.toString() : req.user.id;
+    const canWrite = await hasWriteAccess(ownerId, req);
+    if (!canWrite) {
       return res.status(403).send("Unauthorized");
     }
 

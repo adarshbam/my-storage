@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { SERVER_URL } from "../lib/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldAlert, AlertTriangle, X, Edit2, Shield, Eye } from "lucide-react";
+import {
+  ShieldAlert,
+  AlertTriangle,
+  X,
+  Edit2,
+  Shield,
+  Eye,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -171,7 +178,8 @@ const Users = () => {
   };
 
   const getDisplayStatus = (u) => {
-    if (u.status === "TERMINATED" || u.status === "Deleted") return "TERMINATED";
+    if (u.status === "TERMINATED" || u.status === "Deleted")
+      return "TERMINATED";
     return u.isLoggedIn ? "ONLINE" : "OFFLINE";
   };
 
@@ -224,7 +232,9 @@ const Users = () => {
                       {currentUser.role?.toUpperCase()}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-400 mb-3">{currentUser.email}</p>
+                  <p className="text-sm text-gray-400 mb-3">
+                    {currentUser.email}
+                  </p>
                   <div className="inline-flex items-center gap-2 text-xs font-medium text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-md border border-emerald-400/20">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
                     Current User
@@ -279,19 +289,26 @@ const Users = () => {
                   <div className="flex gap-3 mb-8 relative z-10">
                     <button
                       onClick={() =>
-                        user.status !== "TERMINATED" && user.status !== "Deleted" && openEditRoleModal(user)
+                        user.status !== "TERMINATED" &&
+                        user.status !== "Deleted" &&
+                        openEditRoleModal(user)
                       }
                       className={`px-3 py-1 rounded-full text-[10px] font-bold border tracking-widest flex items-center gap-1.5 transition-all ${
-                        user.status === "TERMINATED" || user.status === "Deleted"
+                        user.status === "TERMINATED" ||
+                        user.status === "Deleted"
                           ? "opacity-50 cursor-not-allowed"
                           : "hover:brightness-125"
                       } ${getRoleStyle(user.role)}`}
                       title={
-                        user.status === "TERMINATED" || user.status === "Deleted"
+                        user.status === "TERMINATED" ||
+                        user.status === "Deleted"
                           ? "Cannot change role of terminated user"
                           : "Change Permission"
                       }
-                      disabled={user.status === "TERMINATED" || user.status === "Deleted"}
+                      disabled={
+                        user.status === "TERMINATED" ||
+                        user.status === "Deleted"
+                      }
                     >
                       {user.role} <Edit2 size={10} />
                     </button>
@@ -315,9 +332,14 @@ const Users = () => {
                     ) : null
                   ) : (
                     <div className="flex gap-3 relative z-10">
-                      {(currentUser?.role?.toUpperCase() === "OWNER" || currentUser?.role?.toUpperCase() === "ADMIN") && (
+                      {(currentUser?.role?.toUpperCase() === "OWNER" ||
+                        currentUser?.role?.toUpperCase() === "ADMIN") && (
                         <button
-                          onClick={() => navigate(`/dashboard/admin/folder/${user.rootDirId}`)}
+                          onClick={() =>
+                            navigate(
+                              `/dashboard/${currentUser?.role?.toLowerCase()}/folder/${user.rootDirId}`,
+                            )
+                          }
                           className="px-3 bg-white/5 hover:bg-[#14b8a6]/10 border border-white/5 hover:border-[#14b8a6]/30 text-gray-300 hover:text-[#14b8a6] rounded-xl transition-all flex items-center justify-center shrink-0"
                           title={`View ${user.name}'s Drive`}
                         >

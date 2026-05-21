@@ -6,6 +6,7 @@ import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import Trash from "../models/trashModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
+import { hasWriteAccess } from "../utils/integrationHelper.js";
 
 export const getDirectoryById = async (req, res) => {
   const rootDirId = req.user.rootDirId.toString();
@@ -33,6 +34,26 @@ export const getDirectoryById = async (req, res) => {
     const childDirs = await Directory.find({ parentDir: dirId })
       .select("-__v")
       .lean();
+
+    if (
+      directoryData.userId &&
+      directoryData.userId.toString() !== req.user.id &&
+      req.user.role !== "Owner" &&
+      req.user.role !== "Admin"
+    ) {
+      const hasAccess = await SharedAccess.findOne({
+        userId: directoryData.userId,
+        targetUserId: req.user.id,
+      });
+
+      console.log(hasAccess);
+
+      if (!hasAccess) {
+        return res
+          .status(403)
+          .send("You are not authorized to access this directory");
+      }
+    }
 
     directoryData.directories = await Promise.all(
       childDirs.map(async (dir) => {
@@ -68,24 +89,6 @@ export const getDirectoryById = async (req, res) => {
     );
 
     // console.log(directoryData);
-
-    if (
-      directoryData.userId &&
-      directoryData.userId.toString() !== req.user.id
-    ) {
-      const hasAccess = await SharedAccess.findOne({
-        userId: directoryData.userId,
-        targetUserId: req.user.id,
-      });
-
-      console.log(hasAccess);
-
-      if (!hasAccess) {
-        return res
-          .status(403)
-          .send("You are not authorized to access this directory");
-      }
-    }
 
     if (action === "download") {
       const archive = archiver("zip", { zlib: { level: 9 } });
@@ -205,21 +208,20 @@ export const createDirectory = async (req, res) => {
       parentDirId = rootDirId;
     }
 
-    // Verify parent directory ownership
+    let ownerId = req.user.id;
+    // Verify parent directory ownership and check shared permissions
     if (parentDirId && parentDirId !== rootDirId) {
       const parentDir = await Directory.findOne({ _id: parentDirId })
         .select("userId")
         .lean();
-      if (
-        parentDir &&
-        parentDir.userId &&
-        parentDir.userId.toString() !== req.user.id
-      ) {
-        return res
-          .status(403)
-          .send(
-            "You are not authorized to create folders in a shared directory (Read-only)",
-          );
+      if (parentDir && parentDir.userId) {
+        ownerId = parentDir.userId.toString();
+        const canWrite = await hasWriteAccess(ownerId, req);
+        if (!canWrite) {
+          return res
+            .status(403)
+            .send("You are not authorized to create folders in this directory");
+        }
       }
     }
 
@@ -231,7 +233,7 @@ export const createDirectory = async (req, res) => {
     await Directory.create({
       _id: dirId,
       name: dirName,
-      userId: req.user.id,
+      userId: ownerId,
       type: "directory",
       parentDir: parentDirId,
     });
@@ -258,10 +260,9 @@ export const renameDirectory = async (req, res) => {
       return res.status(404).send("Folder not found");
     }
 
-    if (
-      directoryData.userId &&
-      directoryData.userId.toString() !== req.user.id
-    ) {
+    const ownerId = directoryData.userId ? directoryData.userId.toString() : req.user.id;
+    const canWrite = await hasWriteAccess(ownerId, req);
+    if (!canWrite) {
       return res
         .status(403)
         .send("You are not authorized to rename this directory");
@@ -286,7 +287,9 @@ export const deleteDirectory = async (req, res) => {
       return res.status(404).send("Folder not found");
     }
 
-    if (dirData.userId && dirData.userId.toString() !== req.user.id) {
+    const ownerId = dirData.userId ? dirData.userId.toString() : req.user.id;
+    const canWrite = await hasWriteAccess(ownerId, req);
+    if (!canWrite) {
       return res
         .status(403)
         .send("You are not authorized to delete this directory");
@@ -327,7 +330,10 @@ export const moveDirectory = async (req, res) => {
     const rootDirId = req.user.rootDirId.toString();
     let targetDir = null;
 
-    if (dirId === rootDirId || dirId === "undefined") {
+    if (
+      dirId === rootDirId ||
+      (dirId === "undefined" && req.user.role !== "Owner")
+    ) {
       targetDir = { _id: rootDirId };
     } else {
       targetDir = await Directory.findOne({ _id: dirId }).select("_id").lean();
@@ -337,7 +343,31 @@ export const moveDirectory = async (req, res) => {
       return res.status(404).json({ message: "Target folder not found" });
     }
 
+    let targetOwnerId = req.user.id;
+    if (dirId !== rootDirId && dirId !== "undefined") {
+      const fullTargetDir = await Directory.findOne({ _id: dirId }).select("userId").lean();
+      if (fullTargetDir && fullTargetDir.userId) {
+        targetOwnerId = fullTargetDir.userId.toString();
+      }
+    }
+    const canWriteTarget = await hasWriteAccess(targetOwnerId, req);
+    if (!canWriteTarget) {
+      return res.status(403).json({ message: "You are not authorized to move items to this folder" });
+    }
+
     const itemIds = transfers.map((t) => t.id);
+
+    // Check write access for all items being moved
+    const sourceDirs = await Directory.find({ _id: { $in: itemIds } }).select("userId").lean();
+    const sourceFiles = await File.find({ _id: { $in: itemIds } }).select("userId").lean();
+
+    for (const item of [...sourceDirs, ...sourceFiles]) {
+      const itemOwnerId = item.userId ? item.userId.toString() : req.user.id;
+      const canWriteItem = await hasWriteAccess(itemOwnerId, req);
+      if (!canWriteItem) {
+        return res.status(403).json({ message: "You are not authorized to move some of these items" });
+      }
+    }
 
     const session = await mongoose.startSession();
     session.startTransaction();

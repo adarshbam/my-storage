@@ -6,7 +6,7 @@ import {
   useImperativeHandle,
   useEffect,
 } from "react";
-import { X, Pause, Play, Trash2, Minimize2, Maximize2 } from "lucide-react";
+import { X, Pause, Play, Trash2, Minimize2, Maximize2, RotateCcw } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
 import { formatSpeed, formatTime, cn } from "../../lib/utils";
 import getFileImage from "../../lib/FileImages";
@@ -25,6 +25,9 @@ const TransferManager = forwardRef((props, ref) => {
   const downloadReaders = useRef({});
   const abortControllers = useRef({});
   const downloadWritables = useRef({});
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const ownerId = searchParams.get("ownerId");
 
   // --- HELPER: Update a specific transfer's status/progress ---
   const updateTransfer = useCallback((id, updates) => {
@@ -86,13 +89,18 @@ const TransferManager = forwardRef((props, ref) => {
     
     const cleanDirId = (isGithub || isDrive) ? dirId.split(":")[1] : dirId;
     
-    const uploadUrl = isGithub
+    let uploadUrl = isGithub
       ? `${SERVER_URL}/github/file/${cleanDirId}`
       : isDrive
         ? `${SERVER_URL}/drive/file/${cleanDirId || "root"}/upload`
         : cleanDirId
           ? `${SERVER_URL}/file/${cleanDirId}`
           : `${SERVER_URL}/file/`;
+
+    if (ownerId) {
+      const separator = uploadUrl.includes("?") ? "&" : "?";
+      uploadUrl = `${uploadUrl}${separator}ownerId=${ownerId}`;
+    }
 
     xhr.open("POST", uploadUrl, true);
     xhr.withCredentials = true;
@@ -229,6 +237,10 @@ const TransferManager = forwardRef((props, ref) => {
     id = generateObjectId(),
     startByte = 0,
   ) => {
+    if (ownerId) {
+      const separator = url.includes("?") ? "&" : "?";
+      url = `${url}${separator}ownerId=${ownerId}`;
+    }
     const hasFileSystemAccess = "showSaveFilePicker" in window;
 
     if (!hasFileSystemAccess) {
@@ -433,6 +445,30 @@ const TransferManager = forwardRef((props, ref) => {
     }
   };
 
+  const retryTransfer = (id) => {
+    const transfer = transfers.find((t) => t.id === id);
+    if (!transfer || transfer.status !== "error") return;
+
+    if (transfer.type === "upload") {
+      updateTransfer(id, {
+        status: "queued",
+        progress: 0,
+        loaded: 0,
+        speed: 0,
+        timeRemaining: 0,
+      });
+    } else {
+      updateTransfer(id, {
+        status: "active",
+        progress: 0,
+        loaded: 0,
+        speed: 0,
+        timeRemaining: 0,
+      });
+      downloadFile(transfer.url, transfer.name, transfer.id, 0);
+    }
+  };
+
   const clearCompleted = () => {
     setTransfers((prev) => prev.filter((t) => t.status !== "completed"));
   };
@@ -499,21 +535,32 @@ const TransferManager = forwardRef((props, ref) => {
                         {transfer.status === "active" ? (
                           <button
                             onClick={() => pauseTransfer(transfer.id)}
-                            className="text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400"
+                            className="text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                            title="Pause"
                           >
                             <Pause size={14} />
                           </button>
                         ) : transfer.status === "paused" ? (
                           <button
                             onClick={() => resumeTransfer(transfer.id)}
-                            className="text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400"
+                            className="text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                            title="Resume"
                           >
                             <Play size={14} />
+                          </button>
+                        ) : transfer.status === "error" ? (
+                          <button
+                            onClick={() => retryTransfer(transfer.id)}
+                            className="text-slate-500 dark:text-slate-400 hover:text-[#14b8a6] dark:hover:text-[#14b8a6] transition-colors"
+                            title="Retry Upload"
+                          >
+                            <RotateCcw size={14} className="animate-hover-spin" />
                           </button>
                         ) : null}
                         <button
                           onClick={() => cancelTransfer(transfer.id)}
-                          className="text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400"
+                          className="text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                          title="Remove"
                         >
                           <X size={14} />
                         </button>

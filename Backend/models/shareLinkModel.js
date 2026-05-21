@@ -4,7 +4,7 @@ const shareLinkSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true, ref: "User" },
     token: { type: String, required: true, unique: true },
-    permission: [{ type: String, enum: ["read", "write"], default: ["read"] }],
+    permission: [{ type: String, enum: ["read", "write", "owner"], default: ["read"] }],
     expiresAt: {
       type: Date,
       default: () => Date.now() + 24 * 60 * 60 * 1000,

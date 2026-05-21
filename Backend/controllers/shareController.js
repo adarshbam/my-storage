@@ -4,9 +4,17 @@ import SharedAccess from "../models/sharedAccessModel.js";
 import User from "../models/userModel.js";
 
 export const generateShareLink = async (req, res) => {
-  const { expiresAt } = req.body;
+  const { expiresAt, permission } = req.body;
 
-  // TODO: Add logic to generate a unique token, hash it, and save to ShareLink collection
+  // Ensure permission is valid, default to ["read"]
+  let cleanPermission = ["read"];
+  if (Array.isArray(permission)) {
+    const allowed = ["read", "write", "owner"];
+    const filtered = permission.filter((p) => allowed.includes(p));
+    if (filtered.length > 0) {
+      cleanPermission = filtered;
+    }
+  }
 
   const shareToken = crypto.randomBytes(32).toString("hex");
   const hashedToken = crypto
@@ -17,13 +25,12 @@ export const generateShareLink = async (req, res) => {
   const shareLink = await ShareLink.create({
     userId: req.user.id,
     token: hashedToken,
-    permission: ["read"],
+    permission: cleanPermission,
     expiresAt: expiresAt
       ? new Date(expiresAt)
       : Date.now() + 24 * 60 * 60 * 1000,
   });
 
-  // Fake response to keep frontend happy
   return res.status(201).json({
     message: "Share link generated successfully",
     token: shareToken,

@@ -26,6 +26,9 @@ import {
   Copy,
   Calendar,
   AlertCircle,
+  Info,
+  AlertTriangle,
+  ShieldAlert,
 } from "lucide-react";
 import Button from "../components/ui/Button";
 import ProfileMenu from "../components/ui/ProfileMenu";
@@ -61,6 +64,8 @@ export default function DashboardLayout() {
   const [generatingLink, setGeneratingLink] = useState(false);
   const [expiryDate, setExpiryDate] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
+  const [selectedPermission, setSelectedPermission] = useState("read");
+  const [ownerAgreed, setOwnerAgreed] = useState(false);
 
   const fetchShareLinks = async () => {
     setLoadingLinks(true);
@@ -80,12 +85,19 @@ export default function DashboardLayout() {
   };
 
   const handleCreateShareLink = async () => {
+    if (selectedPermission === "owner" && !ownerAgreed) {
+      alert("Please accept the risk agreement before generating an Owner link.");
+      return;
+    }
     setGeneratingLink(true);
     try {
       const res = await fetch(`${SERVER_URL}/share/link`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expiresAt: expiryDate || null }),
+        body: JSON.stringify({
+          expiresAt: expiryDate || null,
+          permission: [selectedPermission],
+        }),
         credentials: "include",
       });
       if (res.ok) {
@@ -896,9 +908,71 @@ export default function DashboardLayout() {
                         </div>
                       </div>
 
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                          Permission Level
+                        </label>
+                        <select
+                          value={selectedPermission}
+                          onChange={(e) => {
+                            setSelectedPermission(e.target.value);
+                            setOwnerAgreed(false);
+                          }}
+                          className="w-full px-3 py-2 bg-white dark:bg-black/20 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl text-sm focus:ring-2 focus:ring-[#14b8a6]/40 focus:border-[#14b8a6] outline-none transition-all duration-300 cursor-pointer"
+                        >
+                          <option value="read" className="bg-white dark:bg-[#040e0b]">Read Only</option>
+                          <option value="write" className="bg-white dark:bg-[#040e0b]">Read & Write</option>
+                          <option value="owner" className="bg-white dark:bg-[#040e0b]">Owner (Full Control + Integrations)</option>
+                        </select>
+                      </div>
+
+                      {/* Warning/Info banners based on selectedPermission */}
+                      {selectedPermission === "read" && (
+                        <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs rounded-xl flex items-start gap-2.5">
+                          <Info size={16} className="shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-semibold block">Read Access</span>
+                            Guests can browse and view all local files inside this Vault. No external integrations are shared.
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedPermission === "write" && (
+                        <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs rounded-xl flex items-start gap-2.5">
+                          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-semibold block">Read & Write Access</span>
+                            Guests can browse, view, create, rename, and delete files inside this local Vault.
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedPermission === "owner" && (
+                        <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs rounded-xl flex flex-col gap-2 animate-pulse">
+                          <div className="flex items-start gap-2.5">
+                            <ShieldAlert size={16} className="shrink-0 mt-0.5 text-red-500" />
+                            <div>
+                              <span className="font-semibold block text-red-500">Owner Access (High Risk)</span>
+                              Warning: This grants full write and delete permissions, and shares active Google Drive & GitHub integrations using your active credentials.
+                            </div>
+                          </div>
+                          <label className="flex items-center gap-2 mt-1 cursor-pointer select-none bg-red-500/5 hover:bg-red-500/10 p-2 rounded-lg border border-red-500/10 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={ownerAgreed}
+                              onChange={(e) => setOwnerAgreed(e.target.checked)}
+                              className="rounded border-red-500 text-red-600 focus:ring-red-500/30"
+                            />
+                            <span className="text-[10px] font-medium text-red-700 dark:text-red-300">
+                              I understand the risk and agree to share my external integrations
+                            </span>
+                          </label>
+                        </div>
+                      )}
+
                       <Button
                         onClick={handleCreateShareLink}
-                        disabled={generatingLink}
+                        disabled={generatingLink || (selectedPermission === "owner" && !ownerAgreed)}
                         className="w-full py-2.5 text-sm font-semibold rounded-xl"
                       >
                         {generatingLink ? "Generating..." : "Generate Link"}
@@ -956,15 +1030,34 @@ export default function DashboardLayout() {
                             key={link._id}
                             className="flex items-center justify-between p-3.5 bg-slate-500/5 dark:bg-white/[0.02] border border-black/5 dark:border-white/[0.04] rounded-2xl hover:border-black/10 dark:hover:border-white/10 transition-colors"
                           >
-                            <div className="overflow-hidden pr-2">
-                              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
-                                Expires:{" "}
-                                {link.expiresAt
-                                  ? new Date(
-                                      link.expiresAt,
-                                    ).toLocaleDateString()
-                                  : "Never"}
-                              </p>
+                            <div className="overflow-hidden pr-2 flex-1">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
+                                  Expires:{" "}
+                                  {link.expiresAt
+                                    ? new Date(
+                                        link.expiresAt,
+                                      ).toLocaleDateString()
+                                    : "Never"}
+                                </span>
+                                {link.permission && link.permission.length > 0 && (
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider shrink-0 ${
+                                      link.permission.includes("owner")
+                                        ? "bg-red-500/10 text-red-500 border border-red-500/20 animate-pulse"
+                                        : link.permission.includes("write")
+                                        ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                                        : "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                                    }`}
+                                  >
+                                    {link.permission.includes("owner")
+                                      ? "Owner"
+                                      : link.permission.includes("write")
+                                      ? "Write"
+                                      : "Read"}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[10px] text-slate-400">
                                 Created:{" "}
                                 {new Date(link.createdAt).toLocaleDateString()}

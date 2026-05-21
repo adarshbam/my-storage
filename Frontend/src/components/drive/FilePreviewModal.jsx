@@ -37,7 +37,7 @@ import "prismjs/components/prism-markdown";
 import "prismjs/components/prism-json";
 import "prismjs/themes/prism-tomorrow.css"; // Base theme for the editor components
 
-export default function FilePreviewModal({ file, isOpen, onClose }) {
+export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
   const [content, setContent] = useState(null);
   const [editedContent, setEditedContent] = useState("");
   const [loading, setLoading] = useState(false);
@@ -72,7 +72,11 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
         return;
       }
 
-      const res = await fetch(`${SERVER_URL}/file/${file.id}`, {
+      let url = `${SERVER_URL}/file/${file.id}`;
+      if (ownerId) {
+        url += `?ownerId=${ownerId}`;
+      }
+      const res = await fetch(url, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newFileName: tempName.trim() }),
@@ -123,12 +127,15 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
         setError(null);
         try {
           // Add timestamp to prevent caching
-          const url =
+          let url =
             file.provider === "github"
               ? `${SERVER_URL}/github/file/${file.githubPath.split('/').map(encodeURIComponent).join('/')}?t=${Date.now()}`
               : file.provider === "google_drive"
                 ? `${SERVER_URL}/drive/file/${file.id}?t=${Date.now()}`
                 : `${SERVER_URL}/file/${file.id}?t=${Date.now()}`;
+          if (ownerId) {
+            url += `&ownerId=${ownerId}`;
+          }
           const res = await fetch(url, { credentials: "include" });
           if (!res.ok) throw new Error("Failed to load content");
           const text = await res.text();
@@ -156,20 +163,28 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
 
   if (!isOpen || !file) return null;
 
-  const fileUrl =
+  let fileUrl =
     file.provider === "github"
       ? `${SERVER_URL}/github/file/${file.githubPath.split('/').map(encodeURIComponent).join('/')}`
       : file.provider === "google_drive"
         ? `${SERVER_URL}/drive/file/${file.id}`
         : `${SERVER_URL}/file/${file.id}`;
 
+  if (ownerId) {
+    fileUrl += (fileUrl.includes("?") ? "&" : "?") + `ownerId=${ownerId}`;
+  }
+
   const handleSave = async () => {
     setSaving(true);
     try {
       const isGithub = file.provider === "github";
-      const url = isGithub
+      let url = isGithub
         ? `${SERVER_URL}/github/file/${file.githubPath.split('/').map(encodeURIComponent).join('/')}`
         : `${SERVER_URL}/file/${file.id}/save`;
+
+      if (ownerId) {
+        url += `?ownerId=${ownerId}`;
+      }
 
       const body = isGithub
         ? JSON.stringify({
@@ -185,8 +200,16 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
         credentials: "include",
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save file");
+      let data = {};
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        data = { message: text };
+      }
+
+      if (!res.ok) throw new Error(data.error || data.message || "Failed to save file");
 
       if (isGithub && data.content?.sha) {
         setCurrentSha(data.content.sha);
@@ -205,12 +228,15 @@ export default function FilePreviewModal({ file, isOpen, onClose }) {
   };
 
   const handleDownload = () => {
-    const downloadUrl =
+    let downloadUrl =
       file.provider === "github"
         ? `${SERVER_URL}/github/file/${file.githubPath.split('/').map(encodeURIComponent).join('/')}?action=download`
         : file.provider === "google_drive"
           ? `${SERVER_URL}/drive/file/${file.id}?action=download`
           : `${SERVER_URL}/file/${file.id}?action=download`;
+    if (ownerId) {
+      downloadUrl += `&ownerId=${ownerId}`;
+    }
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.download = file.name;

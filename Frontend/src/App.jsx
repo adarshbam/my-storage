@@ -67,13 +67,16 @@ function App() {
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/users" element={<Users />} />
-              <Route path="/shared-access/:token" element={<SharedAccessClaim />} />
+              <Route
+                path="/shared-access/:token"
+                element={<SharedAccessClaim />}
+              />
               <Route element={<PublicRoute />}>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
               </Route>
-              
+
               <Route element={<ProtectedRoute />}>
                 <Route path="/profile" element={<Profile />} />
               </Route>
@@ -94,6 +97,10 @@ function App() {
                   <Route
                     path="admin/folder/:folderId"
                     element={<FileBrowser specialView="admin" />}
+                  />
+                  <Route
+                    path="owner/folder/:folderId"
+                    element={<FileBrowser specialView="owner" />}
                   />
                   <Route
                     path="recent"
