@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import Trash from "../models/trashModel.js";
+import SharedAccess from "../models/sharedAccessModel.js";
 
 export const getDirectoryById = async (req, res) => {
   const rootDirId = req.user.rootDirId.toString();
@@ -72,9 +73,18 @@ export const getDirectoryById = async (req, res) => {
       directoryData.userId &&
       directoryData.userId.toString() !== req.user.id
     ) {
-      return res
-        .status(403)
-        .send("You are not authorized to access this directory");
+      const hasAccess = await SharedAccess.findOne({
+        userId: directoryData.userId,
+        targetUserId: req.user.id,
+      });
+
+      console.log(hasAccess);
+
+      if (!hasAccess) {
+        return res
+          .status(403)
+          .send("You are not authorized to access this directory");
+      }
     }
 
     if (action === "download") {
@@ -194,6 +204,25 @@ export const createDirectory = async (req, res) => {
     if (!parentDirId || parentDirId === "undefined") {
       parentDirId = rootDirId;
     }
+
+    // Verify parent directory ownership
+    if (parentDirId && parentDirId !== rootDirId) {
+      const parentDir = await Directory.findOne({ _id: parentDirId })
+        .select("userId")
+        .lean();
+      if (
+        parentDir &&
+        parentDir.userId &&
+        parentDir.userId.toString() !== req.user.id
+      ) {
+        return res
+          .status(403)
+          .send(
+            "You are not authorized to create folders in a shared directory (Read-only)",
+          );
+      }
+    }
+
     // console.log(parentDirId);
     const dirName = req.body.foldername ?? "new-folder";
     // console.log(dirName);

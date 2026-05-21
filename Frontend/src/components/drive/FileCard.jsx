@@ -27,6 +27,7 @@ export default function FileCard({
   isTrash = false,
   viewMode = "grid",
   isIntegrationRoot = false,
+  readOnly = false,
   ...props
 }) {
   const [showMenu, setShowMenu] = useState(false);
@@ -76,10 +77,10 @@ export default function FileCard({
         onSelect(item, e);
       }}
       onDoubleClick={handleDoubleClick}
-      draggable
-      onDragStart={(e) => onDragStart(e, item)}
-      onDragOver={(e) => onDragOver(e, item)}
-      onDrop={(e) => onDrop(e, item)}
+      draggable={!readOnly}
+      onDragStart={readOnly ? undefined : (e) => onDragStart(e, item)}
+      onDragOver={readOnly ? undefined : (e) => onDragOver(e, item)}
+      onDrop={readOnly ? undefined : (e) => onDrop(e, item)}
       {...props}
     >
       {/* Thumbnail Area */}
@@ -241,7 +242,7 @@ export default function FileCard({
                 >
                   <ExternalLink size={14} /> Open
                 </button>
-                {item.provider !== "github" && (
+                {item.provider !== "github" && !readOnly && (
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -305,15 +306,17 @@ export default function FileCard({
                     {isTrash ? "Restore" : "Download"}
                   </button>
 
-                  <button
-                    onClick={() => {
-                      setShowMenu(false);
-                      onDelete(item);
-                    }}
-                    className="w-full text-left px-3 py-2 text-[13px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2"
-                  >
-                    <Trash2 size={14} /> {isTrash ? "Delete Forever" : "Delete"}
-                  </button>
+                  {!readOnly && (
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        onDelete(item);
+                      }}
+                      className="w-full text-left px-3 py-2 text-[13px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2"
+                    >
+                      <Trash2 size={14} /> {isTrash ? "Delete Forever" : "Delete"}
+                    </button>
+                  )}
                 </>
               )}
           </div>

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { SERVER_URL } from "../lib/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldAlert, AlertTriangle, X, Edit2, Shield } from "lucide-react";
+import { ShieldAlert, AlertTriangle, X, Edit2, Shield, Eye } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const Users = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -313,6 +315,15 @@ const Users = () => {
                     ) : null
                   ) : (
                     <div className="flex gap-3 relative z-10">
+                      {(currentUser?.role?.toUpperCase() === "OWNER" || currentUser?.role?.toUpperCase() === "ADMIN") && (
+                        <button
+                          onClick={() => navigate(`/dashboard/admin/folder/${user.rootDirId}`)}
+                          className="px-3 bg-white/5 hover:bg-[#14b8a6]/10 border border-white/5 hover:border-[#14b8a6]/30 text-gray-300 hover:text-[#14b8a6] rounded-xl transition-all flex items-center justify-center shrink-0"
+                          title={`View ${user.name}'s Drive`}
+                        >
+                          <Eye size={16} />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleForceLogout(user._id)}
                         disabled={!user.isLoggedIn}

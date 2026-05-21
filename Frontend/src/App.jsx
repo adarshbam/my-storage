@@ -9,6 +9,7 @@ import Register from "./pages/Register";
 import ResetPassword from "./pages/ResetPassword";
 import Users from "./pages/Users";
 import Profile from "./pages/Profile";
+import SharedAccessClaim from "./pages/SharedAccessClaim";
 
 // Landing Page Components
 import Navbar from "./components/sections/Navbar";
@@ -66,6 +67,7 @@ function App() {
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/users" element={<Users />} />
+              <Route path="/shared-access/:token" element={<SharedAccessClaim />} />
               <Route element={<PublicRoute />}>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
@@ -84,6 +86,14 @@ function App() {
                   <Route
                     path="shared"
                     element={<FileBrowser specialView="shared" />}
+                  />
+                  <Route
+                    path="shared/folder/:folderId"
+                    element={<FileBrowser specialView="shared" />}
+                  />
+                  <Route
+                    path="admin/folder/:folderId"
+                    element={<FileBrowser specialView="admin" />}
                   />
                   <Route
                     path="recent"

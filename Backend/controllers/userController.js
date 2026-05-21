@@ -10,6 +10,9 @@ import { OAuth2Client } from "google-auth-library";
 import { GOOGLE_CLIENT_ID } from "../config.js";
 import crypto from "crypto";
 
+import ShareLink from "../models/shareLinkModel.js";
+import SharedAccess from "../models/sharedAccessModel.js";
+
 import {
   createSessionAndSetCookies,
   createUserWithRootDir,
@@ -488,19 +491,30 @@ export const getProfilePic = async (req, res) => {
   if (!profilePicId) {
     return res.status(404).send("No profile pic set");
   }
+  const profilePic = await File.findOne({ _id: profilePicId })
+    .select("extension externalUrl userId")
+    .lean();
 
   // If requesting someone else's profile pic, check if user is > User role
   if (id && id !== req.user.profilepic?.toString()) {
     const hierarchy = ["User", "Manager", "Admin", "Owner"];
     const userRoleIndex = hierarchy.indexOf(req.user.role || "User");
-    if (userRoleIndex <= 0) {
-      return res.status(403).send("Not authorised");
+
+    console.log(profilePic.userId, req.user.id);
+    const hasAccess =
+      (await SharedAccess.findOne({
+        userId: profilePic.userId,
+        targetUserId: req.user.id,
+      })) ||
+      (await ShareLink.findOne({
+        userId: profilePic.userId,
+        targetUserId: req.user.id,
+      }));
+
+    if (!hasAccess && userRoleIndex <= 0) {
+      return res.status(403).send("Unauthorized");
     }
   }
-
-  const profilePic = await File.findOne({ _id: profilePicId })
-    .select("extension externalUrl")
-    .lean();
 
   if (!profilePic) {
     return res.status(404).send("Profile pic not found");

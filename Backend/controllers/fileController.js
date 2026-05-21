@@ -2,6 +2,7 @@ import { createReadStream, createWriteStream } from "fs";
 import path from "path";
 import { stat, unlink, mkdir } from "fs/promises";
 import { fileURLToPath } from "url";
+import SharedAccess from "../models/sharedAccessModel.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -131,7 +132,13 @@ export const getThumbnail = async (req, res) => {
 
     if (!file) return res.status(404).send("File not found");
     if (file.userId.toString() !== req.user.id && req.user.role === "User") {
-      return res.status(403).send("Unauthorized");
+      const hasAccess = await SharedAccess.findOne({
+        userId: file.userId,
+        targetUserId: req.user.id,
+      });
+      if (!hasAccess) {
+        return res.status(403).send("Unauthorized");
+      }
     }
 
     const thumbnailPath = path.join(THUMBNAILS_DIR, `${fileId}.jpg`);
@@ -161,7 +168,15 @@ export const getFileById = async (req, res) => {
     if (!file) return res.status(404).send("File not found");
 
     if (file.userId.toString() !== req.user.id && req.user.role === "User") {
-      return res.status(403).send("You are not authorized to access this file");
+      const hasAccess = await SharedAccess.findOne({
+        userId: file.userId,
+        targetUserId: req.user.id,
+      });
+      if (!hasAccess) {
+        return res
+          .status(403)
+          .send("You are not authorized to access this file");
+      }
     }
 
     const filePath = path.join(STORAGE_DIR, `${fileId}${file.extension}`);
@@ -242,6 +257,24 @@ export const uploadFile = async (req, res) => {
 
     if (!parentDirId || parentDirId === "undefined") {
       parentDirId = rootDirId;
+    }
+
+    // Verify parent directory ownership to prevent uploads into shared folders
+    if (parentDirId && parentDirId !== rootDirId) {
+      const parentDir = await Directory.findOne({ _id: parentDirId })
+        .select("userId")
+        .lean();
+      if (
+        parentDir &&
+        parentDir.userId &&
+        parentDir.userId.toString() !== req.user.id
+      ) {
+        return res
+          .status(403)
+          .send(
+            "You are not authorized to upload files in a shared directory (Read-only)",
+          );
+      }
     }
 
     // Support client-provided ID for resumption, or generate new one

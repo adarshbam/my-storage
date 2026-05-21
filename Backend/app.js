@@ -8,6 +8,7 @@ import otpRouter from "./routes/otpRoutes.js";
 import driveRouter from "./routes/driveRoutes.js";
 import githubRouter from "./routes/githubRoutes.js";
 import systemUsersRouter from "./routes/systemUsersRoutes.js";
+import shareRouter from "./routes/shareRoutes.js";
 import cors from "cors";
 import checkAuth from "./middlewares/authMiddleware.js";
 import https from "https";
@@ -45,6 +46,7 @@ app.use("/otp", otpRouter);
 app.use("/drive", driveRouter);
 app.use("/github", githubRouter);
 app.use("/users", systemUsersRouter);
+app.use("/share", shareRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);

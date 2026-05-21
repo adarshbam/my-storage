@@ -22,6 +22,10 @@ import {
   HardDrive,
   ChevronRight,
   Box,
+  Share2,
+  Copy,
+  Calendar,
+  AlertCircle,
 } from "lucide-react";
 import Button from "../components/ui/Button";
 import ProfileMenu from "../components/ui/ProfileMenu";
@@ -48,6 +52,83 @@ export default function DashboardLayout() {
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
   const [showGlobalFilters, setShowGlobalFilters] = useState(false);
   const { theme, setTheme } = useTheme();
+
+  // --- SHARE STATES & FUNCTIONS ---
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareLinks, setShareLinks] = useState([]);
+  const [loadingLinks, setLoadingLinks] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState("");
+  const [generatingLink, setGeneratingLink] = useState(false);
+  const [expiryDate, setExpiryDate] = useState("");
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const fetchShareLinks = async () => {
+    setLoadingLinks(true);
+    try {
+      const res = await fetch(`${SERVER_URL}/share/links`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setShareLinks(data.links || []);
+      }
+    } catch (error) {
+      console.error("Error fetching share links:", error);
+    } finally {
+      setLoadingLinks(false);
+    }
+  };
+
+  const handleCreateShareLink = async () => {
+    setGeneratingLink(true);
+    try {
+      const res = await fetch(`${SERVER_URL}/share/link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expiresAt: expiryDate || null }),
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const fullUrl = `${window.location.origin}/shared-access/${data.token}`;
+        setGeneratedLink(fullUrl);
+        fetchShareLinks();
+      }
+    } catch (error) {
+      console.error("Error creating share link:", error);
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
+
+  const handleRevokeShareLink = async (linkId) => {
+    if (
+      !confirm(
+        "Are you sure you want to revoke this share link? This will instantly revoke access for everyone who claimed access through this link!",
+      )
+    )
+      return;
+    try {
+      const res = await fetch(`${SERVER_URL}/share/link/${linkId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        fetchShareLinks();
+        if (generatedLink) {
+          setGeneratedLink("");
+        }
+      }
+    } catch (error) {
+      console.error("Error revoking share link:", error);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
 
   useEffect(() => {
     if (user?.theme && user.theme !== theme) {
@@ -146,7 +227,7 @@ export default function DashboardLayout() {
   const toggleTheme = async () => {
     const newTheme = theme === "dark" ? "light" : "dark";
     setTheme(newTheme);
-    
+
     try {
       await fetch(`${SERVER_URL}/user/theme`, {
         method: "PUT",
@@ -197,7 +278,9 @@ export default function DashboardLayout() {
         if (typeof data === "string") {
           try {
             parsed = JSON.parse(data);
-          } catch {}
+          } catch {
+            console.log("Failed to parse recent searches, using raw string");
+          }
         }
         setRecentSearches(parsed || []);
       }
@@ -456,13 +539,21 @@ export default function DashboardLayout() {
 
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <button
-            onClick={() => user?.integrations?.googleDrive?.connected ? disconnectDrive() : connectDrive()}
+            onClick={() =>
+              user?.integrations?.googleDrive?.connected
+                ? disconnectDrive()
+                : connectDrive()
+            }
             className={`flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all duration-300 rounded-lg border ${
               user?.integrations?.googleDrive?.connected
                 ? "text-red-500 bg-red-50/50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border-red-200 dark:border-red-500/30"
                 : "text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-white/[0.06] hover:bg-white/80 dark:hover:bg-white/[0.1] hover:border-[#14b8a6]/40 hover:shadow-[0_0_12px_rgba(20,184,166,0.15)] border-black/10 dark:border-white/10"
             }`}
-            title={user?.integrations?.googleDrive?.connected ? "Unlink Google Drive" : "Connect Google Drive"}
+            title={
+              user?.integrations?.googleDrive?.connected
+                ? "Unlink Google Drive"
+                : "Connect Google Drive"
+            }
           >
             {/* Google Drive icon — official colors */}
             <img
@@ -471,17 +562,27 @@ export default function DashboardLayout() {
               className={`w-5 h-5 ${user?.integrations?.googleDrive?.connected ? "grayscale" : ""}`}
             />
             <span className="hidden sm:block">
-              {user?.integrations?.googleDrive?.connected ? "Unlink Drive" : "Drive"}
+              {user?.integrations?.googleDrive?.connected
+                ? "Unlink Drive"
+                : "Drive"}
             </span>
           </button>
           <button
-            onClick={() => user?.integrations?.github?.connected ? disconnectGithub() : connectGithub()}
+            onClick={() =>
+              user?.integrations?.github?.connected
+                ? disconnectGithub()
+                : connectGithub()
+            }
             className={`flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all duration-300 rounded-lg border ${
               user?.integrations?.github?.connected
                 ? "text-red-500 bg-red-50/50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border-red-200 dark:border-red-500/30"
                 : "text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-white/[0.06] hover:bg-white/80 dark:hover:bg-white/[0.1] hover:border-[#14b8a6]/40 hover:shadow-[0_0_12px_rgba(20,184,166,0.15)] border-black/10 dark:border-white/10"
             }`}
-            title={user?.integrations?.github?.connected ? "Unlink Github" : "Connect with Github"}
+            title={
+              user?.integrations?.github?.connected
+                ? "Unlink Github"
+                : "Connect with Github"
+            }
           >
             {/* Github icon — official colors */}
             <svg
@@ -499,8 +600,24 @@ export default function DashboardLayout() {
               />
             </svg>
             <span className="hidden sm:block">
-              {user?.integrations?.github?.connected ? "Unlink Github" : "Github"}
+              {user?.integrations?.github?.connected
+                ? "Unlink Github"
+                : "Github"}
             </span>
+          </button>
+
+          <button
+            onClick={() => {
+              setIsShareModalOpen(true);
+              fetchShareLinks();
+              setGeneratedLink("");
+              setExpiryDate("");
+            }}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all duration-300 rounded-lg border text-emerald-600 dark:text-[#14b8a6] bg-emerald-500/10 dark:bg-[#14b8a6]/10 hover:bg-emerald-500/20 dark:hover:bg-[#14b8a6]/20 border-emerald-500/30 dark:border-[#14b8a6]/30 hover:shadow-[0_0_12px_rgba(20,184,166,0.25)]"
+            title="Share Vault with others"
+          >
+            <Share2 size={18} />
+            <span className="hidden sm:block">Share Vault</span>
           </button>
 
           <button
@@ -578,7 +695,12 @@ export default function DashboardLayout() {
                     : "text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
-                <HardDrive size={18} className={isActive("/dashboard", true) ? "text-[#14b8a6]" : ""} />
+                <HardDrive
+                  size={18}
+                  className={
+                    isActive("/dashboard", true) ? "text-[#14b8a6]" : ""
+                  }
+                />
                 <span>My Drive</span>
               </Link>
               <Link
@@ -590,7 +712,12 @@ export default function DashboardLayout() {
                     : "text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
-                <Users size={18} className={isActive("/dashboard/shared") ? "text-[#3b82f6]" : ""} />
+                <Users
+                  size={18}
+                  className={
+                    isActive("/dashboard/shared") ? "text-[#3b82f6]" : ""
+                  }
+                />
                 <span>Shared with me</span>
               </Link>
               <Link
@@ -602,7 +729,12 @@ export default function DashboardLayout() {
                     : "text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
-                <Clock size={18} className={isActive("/dashboard/recent") ? "text-[#8b5cf6]" : ""} />
+                <Clock
+                  size={18}
+                  className={
+                    isActive("/dashboard/recent") ? "text-[#8b5cf6]" : ""
+                  }
+                />
                 <span>Recent</span>
               </Link>
               <Link
@@ -614,7 +746,12 @@ export default function DashboardLayout() {
                     : "text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
-                <Star size={18} className={isActive("/dashboard/starred") ? "text-[#eab308]" : ""} />
+                <Star
+                  size={18}
+                  className={
+                    isActive("/dashboard/starred") ? "text-[#eab308]" : ""
+                  }
+                />
                 <span>Starred</span>
               </Link>
               <Link
@@ -626,7 +763,12 @@ export default function DashboardLayout() {
                     : "text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
-                <Trash2 size={18} className={isActive("/dashboard/trash") ? "text-[#ef4444]" : ""} />
+                <Trash2
+                  size={18}
+                  className={
+                    isActive("/dashboard/trash") ? "text-[#ef4444]" : ""
+                  }
+                />
                 <span>Trash</span>
               </Link>
             </nav>
@@ -698,6 +840,152 @@ export default function DashboardLayout() {
             onClose={() => setShowUploadModal(false)}
             onUpload={handleUpload}
           />
+
+          {/* Share Drive Modal */}
+          {isShareModalOpen && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+              <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+                onClick={() => setIsShareModalOpen(false)}
+              />
+              <div className="relative z-10 w-full max-w-2xl bg-white/95 dark:bg-[#040e0b]/95 backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] rounded-3xl p-6 sm:p-8 shadow-2xl dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                <button
+                  onClick={() => setIsShareModalOpen(false)}
+                  className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors"
+                >
+                  <X size={20} />
+                </button>
+
+                <h2 className="text-2xl font-extrabold mb-1 bg-clip-text text-transparent bg-gradient-to-r from-[#14b8a6] to-[#3b82f6]">
+                  Share Vault
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                  Create a link to grant other users read-only access to all
+                  your files in this Vault.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                  {/* Left Column: Create Link */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-sm uppercase tracking-wider">
+                      Generate Share Link
+                    </h3>
+
+                    <div className="space-y-3 p-4 bg-slate-500/5 dark:bg-white/[0.02] border border-black/5 dark:border-white/[0.04] rounded-2xl">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                          Expiry Date (Optional)
+                        </label>
+                        <div className="relative">
+                          <Calendar
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                            size={16}
+                          />
+                          <input
+                            type="date"
+                            value={expiryDate}
+                            onClick={(e) => {
+                              if ('showPicker' in HTMLInputElement.prototype) {
+                                e.target.showPicker();
+                              }
+                            }}
+                            onChange={(e) => setExpiryDate(e.target.value)}
+                            min={new Date().toLocaleDateString('en-CA')}
+                            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-black/20 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl text-sm focus:ring-2 focus:ring-[#14b8a6]/40 focus:border-[#14b8a6] outline-none transition-all duration-300 dark:[&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                          />
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={handleCreateShareLink}
+                        disabled={generatingLink}
+                        className="w-full py-2.5 text-sm font-semibold rounded-xl"
+                      >
+                        {generatingLink ? "Generating..." : "Generate Link"}
+                      </Button>
+                    </div>
+
+                    {generatedLink && (
+                      <div className="p-4 bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/30 rounded-2xl space-y-2 animate-in slide-in-from-bottom-2 duration-300">
+                        <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                          Link Generated!
+                        </p>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={generatedLink}
+                            className="flex-1 bg-white dark:bg-black/30 border border-emerald-500/20 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none"
+                          />
+                          <button
+                            onClick={() => copyToClipboard(generatedLink)}
+                            className="p-1.5 bg-[#14b8a6] hover:bg-[#14b8a6]/90 text-white rounded-lg transition-colors flex items-center justify-center shrink-0"
+                            title="Copy to clipboard"
+                          >
+                            {copiedLink ? (
+                              <span className="text-xs px-1 font-semibold text-emerald-600 dark:text-[#14b8a6]">
+                                Copied!
+                              </span>
+                            ) : (
+                              <Copy size={14} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Column: Manage Links */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-sm uppercase tracking-wider">
+                      Active Share Links ({shareLinks.length})
+                    </h3>
+
+                    <div className="space-y-3 max-h-[250px] overflow-y-auto pr-1">
+                      {loadingLinks ? (
+                        <div className="text-center py-8 text-slate-400 text-sm">
+                          Loading active links...
+                        </div>
+                      ) : shareLinks.length === 0 ? (
+                        <div className="text-center py-8 bg-slate-500/5 dark:bg-white/[0.01] border border-dashed border-black/10 dark:border-white/10 rounded-2xl text-slate-400 text-sm">
+                          No active share links.
+                        </div>
+                      ) : (
+                        shareLinks.map((link) => (
+                          <div
+                            key={link._id}
+                            className="flex items-center justify-between p-3.5 bg-slate-500/5 dark:bg-white/[0.02] border border-black/5 dark:border-white/[0.04] rounded-2xl hover:border-black/10 dark:hover:border-white/10 transition-colors"
+                          >
+                            <div className="overflow-hidden pr-2">
+                              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
+                                Expires:{" "}
+                                {link.expiresAt
+                                  ? new Date(
+                                      link.expiresAt,
+                                    ).toLocaleDateString()
+                                  : "Never"}
+                              </p>
+                              <p className="text-[10px] text-slate-400">
+                                Created:{" "}
+                                {new Date(link.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleRevokeShareLink(link._id)}
+                              className="px-2.5 py-1 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 rounded-lg text-xs font-semibold transition-all shrink-0"
+                              title="Revoke access link"
+                            >
+                              Revoke
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>
