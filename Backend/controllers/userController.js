@@ -12,6 +12,7 @@ import crypto from "crypto";
 
 import ShareLink from "../models/shareLinkModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
+import { cacheDel, invalidateUserSessions } from "../utils/redis.js";
 
 import {
   createSessionAndSetCookies,
@@ -311,6 +312,7 @@ export const authGithub = async (req, res) => {
         });
       }
       user.save();
+      await invalidateUserSessions(user._id.toString());
 
       console.log(user);
       return res.redirect("http://localhost:5173/dashboard");
@@ -382,6 +384,7 @@ export const logoutUser = async (req, res) => {
   const { sessionId } = req.signedCookies;
 
   await Session.deleteOne({ _id: sessionId });
+  await cacheDel("session:" + sessionId);
   res.clearCookie("rootDirId", {
     httpOnly: true,
     secure: true,
@@ -399,8 +402,9 @@ export const logoutUser = async (req, res) => {
 
 export const logoutAllDevices = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user._id || req.user.id;
     await Session.deleteMany({ userId });
+    await invalidateUserSessions(userId.toString());
     res.clearCookie("rootDirId", {
       httpOnly: true,
       secure: true,
@@ -474,7 +478,8 @@ export const uploadProfilePic = async (req, res) => {
       { $set: { profilepic: profilePicId } },
     );
 
-    writeStream.on("finish", () => {
+    writeStream.on("finish", async () => {
+      await invalidateUserSessions(req.user.id);
       return res.status(200).json({ message: "Profile pic updated" });
     });
   } catch (err) {
@@ -590,6 +595,7 @@ export const updateTheme = async (req, res) => {
 
   try {
     await User.updateOne({ _id: req.user.id }, { $set: { theme } });
+    await invalidateUserSessions(req.user.id);
     return res.status(200).json({ message: "Theme updated successfully" });
   } catch (err) {
     console.error(err);
@@ -605,6 +611,7 @@ export const updateName = async (req, res) => {
   const user = await User.findOne({ _id: req.user.id });
   user.name = name;
   await user.save();
+  await invalidateUserSessions(req.user.id);
   return res.status(200).json({ message: "Name update logged" });
 };
 

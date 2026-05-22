@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import File from "../models/fileModel.js";
 import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
+import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 
 export const getTrashItems = async (req, res, next) => {
   try {
@@ -11,16 +12,33 @@ export const getTrashItems = async (req, res, next) => {
     const itemsWithCount = await Promise.all(
       trashItems.map(async (item) => {
         if (item.type === "directory") {
+          const dirIdStr = item._id.toString();
+          const cachedMeta = await cacheHgetall("dir:meta:" + dirIdStr);
+          if (cachedMeta) {
+            return {
+              ...item,
+              id: dirIdStr,
+              itemCount: Number(cachedMeta.itemCount || 0),
+            };
+          }
+
           const fileCount = await File.countDocuments({
-            parentDir: item._id.toString(),
+            parentDir: dirIdStr,
           });
           const dirCount = await Directory.countDocuments({
-            parentDir: item._id.toString(),
+            parentDir: dirIdStr,
           });
+          const itemCount = fileCount + dirCount;
+
+          await cacheHset("dir:meta:" + dirIdStr, {
+            size: item.size || 0,
+            itemCount: itemCount,
+          }, 600);
+
           return {
             ...item,
-            id: item._id.toString(),
-            itemCount: fileCount + dirCount,
+            id: dirIdStr,
+            itemCount: itemCount,
           };
         }
         return { ...item, id: item._id.toString() };
@@ -94,6 +112,9 @@ export const restoreFile = async (req, res, next) => {
       await Trash.deleteOne({ _id: id }).session(session);
 
       await session.commitTransaction();
+      if (trashfile.parentDir) {
+        await cacheDel("dir:meta:" + trashfile.parentDir.toString());
+      }
       return res.status(201).send("File restored successfully");
     } catch (txError) {
       await session.abortTransaction();
@@ -212,6 +233,9 @@ export const restoreDirectory = async (req, res, next) => {
       await Trash.deleteOne({ _id: dirId }).session(session);
 
       await session.commitTransaction();
+      if (trashDir.parentDir) {
+        await cacheDel("dir:meta:" + trashDir.parentDir.toString());
+      }
       return res.status(201).send("Directory restored successfully");
     } catch (txError) {
       await session.abortTransaction();

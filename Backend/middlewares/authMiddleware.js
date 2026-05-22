@@ -1,5 +1,6 @@
 import Session from "../models/sessionModel.js";
 import User from "../models/userModel.js";
+import redis, { cacheGet, cacheSet } from "../utils/redis.js";
 
 async function checkAuth(req, res, next) {
   const { sessionId } = req.signedCookies;
@@ -10,7 +11,28 @@ async function checkAuth(req, res, next) {
     return res.status(401).json({ message: "Not logged in" });
   }
 
+  req.sessionId = sessionId; // Attach sessionId to req for easy invalidation in controllers
+
   try {
+    // 1. Try to read from Redis session cache
+    const cachedUser = await cacheGet("session:" + sessionId);
+    if (cachedUser) {
+      try {
+        const user = JSON.parse(cachedUser);
+        if (user.status === "Deleted") {
+          return res.status(404).json({
+            message:
+              "User is Deleted contact adarshsinghbam@gmail.com to recover your account",
+          });
+        }
+        req.user = user;
+        return next();
+      } catch (parseErr) {
+        console.error("Failed to parse cached session:", parseErr);
+      }
+    }
+
+    // 2. Cache MISS: Fallback to MongoDB
     const session = await Session.findOne({ _id: sessionId });
 
     if (!session) {
@@ -35,8 +57,30 @@ async function checkAuth(req, res, next) {
           "User is Deleted contact adarshsinghbam@gmail.com to recover your account",
       });
     }
+
     user.id = user._id.toString(); // Map for backwards compat in controllers
-    req.user = user;
+
+    const sessionUser = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      rootDirId: user.rootDirId ? user.rootDirId.toString() : "",
+      status: user.status,
+      profilepic: user.profilepic,
+      theme: user.theme,
+      integrations: user.integrations
+    };
+
+    await cacheSet("session:" + sessionId, JSON.stringify(sessionUser), 900); // 15-minute TTL
+    try {
+      await redis.sadd("user_sessions:" + user.id, sessionId);
+      await redis.expire("user_sessions:" + user.id, 900);
+    } catch (setErr) {
+      console.error("Failed to track session in user_sessions set:", setErr);
+    }
+
+    req.user = sessionUser;
     next();
   } catch (err) {
     console.error("Auth Middleware Error:", err);

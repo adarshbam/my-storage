@@ -18,6 +18,7 @@ const STORAGE_DIR = path.join(__dirname, "../storage");
 
 import { resolveIntegrationOwnerId, hasWriteAccess } from "../utils/integrationHelper.js";
 import SharedAccess from "../models/sharedAccessModel.js";
+import { invalidateUserSessions } from "../utils/redis.js";
 
 // ─── Shared Helper: Build an authenticated Drive client ───────────────────────
 async function getDriveClient(userId) {
@@ -141,6 +142,7 @@ export const connectGoogleDrive = async (req, res) => {
         },
       },
     );
+    await invalidateUserSessions(req.user.id);
 
     // Create a special mount-point directory if it doesn't exist yet
     const existingDir = await Directory.findOne({
@@ -178,6 +180,7 @@ export const disconnectGoogleDrive = async (req, res) => {
         },
       },
     );
+    await invalidateUserSessions(req.user.id);
 
     await Directory.deleteOne({
       userId: req.user.id,

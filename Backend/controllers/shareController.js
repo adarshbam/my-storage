@@ -2,6 +2,7 @@ import crypto from "crypto";
 import ShareLink from "../models/shareLinkModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
 import User from "../models/userModel.js";
+import { cacheDel } from "../utils/redis.js";
 
 export const generateShareLink = async (req, res) => {
   const { expiresAt, permission } = req.body;
@@ -55,8 +56,16 @@ export const revokeShareLink = async (req, res) => {
     return res.status(404).json({ error: "Share link not found" });
   }
 
+  const affectedAccesses = await SharedAccess.find({ grantedBy: linkId })
+    .select("userId targetUserId")
+    .lean();
+
   await ShareLink.deleteOne({ _id: linkId });
   await SharedAccess.deleteMany({ grantedBy: linkId });
+
+  for (const access of affectedAccesses) {
+    await cacheDel(`share:${access.userId}:${access.targetUserId}`);
+  }
 
   // TODO: Find the link by ID, set isRevoked to true, and delete associated SharedAccess records
   return res.status(200).json({
@@ -126,6 +135,8 @@ export const claimShareAccess = async (req, res) => {
       upsert: true,
     },
   );
+
+  await cacheDel(`share:${shareLink.userId}:${req.user.id}`);
 
   // TODO: Validate token, check if user is not the owner, and upsert a SharedAccess record
   return res.status(200).json({

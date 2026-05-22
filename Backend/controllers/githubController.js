@@ -3,6 +3,7 @@ import Directory from "../models/directoryModel.js";
 import archiver from "archiver";
 import { resolveIntegrationOwnerId } from "../utils/integrationHelper.js";
 import SharedAccess from "../models/sharedAccessModel.js";
+import { invalidateUserSessions } from "../utils/redis.js";
 
 async function getAuthenticatedAccessToken(req, requireWrite = false) {
   try {
@@ -64,6 +65,7 @@ export const disconnectGithub = async (req, res) => {
         },
       },
     );
+    await invalidateUserSessions(req.user.id);
 
     await Directory.deleteOne({
       userId: req.user.id,

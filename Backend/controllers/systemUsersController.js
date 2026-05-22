@@ -3,6 +3,7 @@ import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import Session from "../models/sessionModel.js";
 import User from "../models/userModel.js";
+import { invalidateUserSessions } from "../utils/redis.js";
 
 const hierarchy = ["User", "Manager", "Admin", "Owner"];
 
@@ -65,7 +66,8 @@ export const deleteSystemUser = async (req, res) => {
   console.log(userHierarchy, newRoleHierarchy);
 
   if (newRoleHierarchy < userHierarchy && userHierarchy >= 2) {
-    Session.deleteMany({ userId: id });
+    await Session.deleteMany({ userId: id });
+    await invalidateUserSessions(id);
     if (deleteType === "soft") {
       userToDelete.status = "Deleted";
       await userToDelete.save();
@@ -93,6 +95,7 @@ export const deleteSystemUser = async (req, res) => {
     await File.deleteMany({ userId: id });
     await User.deleteMany({ _id: id });
     await Session.deleteMany({ userId: id });
+    await invalidateUserSessions(id);
     await Directory.deleteMany({ userId: id });
 
     console.log("Doing hard delete");
@@ -115,6 +118,7 @@ export const forceLogoutUser = async (req, res) => {
 
   if (newRoleHierarchy < userHierarchy && userHierarchy >= 1) {
     await Session.deleteMany({ userId: id });
+    await invalidateUserSessions(id);
     return res.status(200).json({ message: "Role update request logged" });
   }
 
@@ -141,6 +145,7 @@ export const updateSystemUserRole = async (req, res) => {
   ) {
     userUpdate.role = role;
     await userUpdate.save();
+    await invalidateUserSessions(userId);
     return res.status(200).json({ message: "Role update request logged" });
   }
   return res.status(403).json({ message: `Not Authorised` });
@@ -154,5 +159,6 @@ export const reactivateSystemUser = async (req, res) => {
   const userToReactivate = await User.findOne({ _id: id });
   userToReactivate.status = "Active";
   await userToReactivate.save();
+  await invalidateUserSessions(id);
   return res.status(200).json({ message: "Reactivate request logged" });
 };

@@ -23,6 +23,7 @@ import File from "../models/fileModel.js";
 import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
 import User from "../models/userModel.js";
+import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
@@ -77,16 +78,33 @@ export const search = async (req, res) => {
 
     const finalMatchingDirs = await Promise.all(
       finalMatchingDirsRaw.map(async (dir) => {
+        const dirIdStr = dir._id.toString();
+        const cachedMeta = await cacheHgetall("dir:meta:" + dirIdStr);
+        if (cachedMeta) {
+          return {
+            ...dir,
+            id: dirIdStr,
+            itemCount: Number(cachedMeta.itemCount || 0),
+          };
+        }
+
         const fileCount = await File.countDocuments({
-          parentDir: dir._id.toString(),
+          parentDir: dirIdStr,
         });
         const dirCount = await Directory.countDocuments({
-          parentDir: dir._id.toString(),
+          parentDir: dirIdStr,
         });
+        const itemCount = fileCount + dirCount;
+
+        await cacheHset("dir:meta:" + dirIdStr, {
+          size: dir.size || 0,
+          itemCount: itemCount || 0,
+        }, 600);
+
         return {
           ...dir,
-          id: dir._id.toString(),
-          itemCount: fileCount + dirCount,
+          id: dirIdStr,
+          itemCount: itemCount,
         };
       }),
     );
@@ -267,7 +285,7 @@ export const uploadFile = async (req, res) => {
     if (!parentDirId || parentDirId === "undefined") {
       parentDirId = rootDirId;
     }
-
+    
     let ownerId = req.user.id;
     // Verify parent directory ownership and check shared permissions
     if (parentDirId && parentDirId !== rootDirId) {
@@ -331,6 +349,7 @@ export const uploadFile = async (req, res) => {
       );
       parentDir.size += fileSize;
       await parentDir.save();
+      await cacheDel("dir:meta:" + parentDirId);
       let hasThumbnail = false;
 
       // Generate thumbnail if image or video
@@ -433,7 +452,7 @@ export const deleteFile = async (req, res) => {
   try {
     const { fileId } = req.params;
     const fileData = await File.findOne({ _id: fileId })
-      .select("userId")
+      .select("userId parentDir")
       .lean();
 
     if (!fileData) {
@@ -459,6 +478,9 @@ export const deleteFile = async (req, res) => {
       }
 
       await session.commitTransaction();
+      if (fileData && fileData.parentDir) {
+        await cacheDel("dir:meta:" + fileData.parentDir.toString());
+      }
       return res.status(200).send("File deleted successfully");
     } catch (txError) {
       await session.abortTransaction();
@@ -477,7 +499,7 @@ export const saveFile = async (req, res) => {
     const { fileId } = req.params;
     const { content } = req.body;
     const file = await File.findOne({ _id: fileId })
-      .select("userId extension")
+      .select("userId extension parentDir")
       .lean();
 
     if (!file) return res.status(404).send("File not found");
@@ -495,6 +517,9 @@ export const saveFile = async (req, res) => {
     writeStream.on("finish", async () => {
       const stats = await stat(filePath);
       await File.updateOne({ _id: fileId }, { size: stats.size });
+      if (file && file.parentDir) {
+        await cacheDel("dir:meta:" + file.parentDir.toString());
+      }
       return res.status(200).send("File saved");
     });
 

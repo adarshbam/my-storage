@@ -1,4 +1,30 @@
 import SharedAccess from "../models/sharedAccessModel.js";
+import { cacheGet, cacheSet } from "./redis.js";
+
+/**
+ * Helper to get cached SharedAccess record with negative caching.
+ */
+export async function getCachedSharedAccess(ownerId, guestUserId) {
+  const cacheKey = `share:${ownerId}:${guestUserId}`;
+  
+  const cached = await cacheGet(cacheKey);
+  if (cached !== null) {
+    return cached === "null" ? null : JSON.parse(cached);
+  }
+  
+  // Cache miss -> Query MongoDB
+  const sharedAccess = await SharedAccess.findOne({
+    userId: ownerId,
+    targetUserId: guestUserId,
+  }).lean();
+  
+  const result = sharedAccess
+    ? { permission: sharedAccess.permission, exists: true }
+    : null;
+  
+  await cacheSet(cacheKey, result ? JSON.stringify(result) : "null", 300); // 5-minute TTL
+  return result;
+}
 
 /**
  * Resolves the ownerId for a Google Drive or GitHub integration request.
@@ -26,10 +52,7 @@ export async function resolveIntegrationOwnerId(req) {
   }
   
   // 2. Check if the current user has shared access to this owner's files
-  const sharedAccess = await SharedAccess.findOne({
-    userId: ownerId,
-    targetUserId: req.user.id
-  });
+  const sharedAccess = await getCachedSharedAccess(ownerId, req.user.id);
   
   if (!sharedAccess) {
     throw new Error("UNAUTHORIZED_SHARE_ACCESS");
@@ -53,10 +76,7 @@ export async function hasWriteAccess(ownerId, req) {
     return false;
   }
   
-  const sharedAccess = await SharedAccess.findOne({
-    userId: ownerId,
-    targetUserId: req.user.id,
-  });
+  const sharedAccess = await getCachedSharedAccess(ownerId, req.user.id);
   
   if (sharedAccess && (sharedAccess.permission.includes("write") || sharedAccess.permission.includes("owner"))) {
     return true;

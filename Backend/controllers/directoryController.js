@@ -7,6 +7,7 @@ import File from "../models/fileModel.js";
 import Trash from "../models/trashModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
 import { hasWriteAccess } from "../utils/integrationHelper.js";
+import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 
 export const getDirectoryById = async (req, res) => {
   const rootDirId = req.user.rootDirId.toString();
@@ -57,33 +58,52 @@ export const getDirectoryById = async (req, res) => {
 
     directoryData.directories = await Promise.all(
       childDirs.map(async (dir) => {
+        const dirIdStr = dir._id.toString();
+        const cachedMeta = await cacheHgetall("dir:meta:" + dirIdStr);
+
+        if (cachedMeta) {
+          return {
+            ...dir,
+            id: dirIdStr,
+            size: Number(cachedMeta.size || 0),
+            itemCount: Number(cachedMeta.itemCount || 0),
+          };
+        }
+
         const fileCount = await File.countDocuments({
-          parentDir: dir._id.toString(),
+          parentDir: dirIdStr,
         });
         const dirCount = await Directory.countDocuments({
-          parentDir: dir._id.toString(),
+          parentDir: dirIdStr,
         });
         if (!dir.size) {
-          const files = await File.find({ parentDir: dir._id.toString() })
+          const files = await File.find({ parentDir: dirIdStr })
             .select("size")
             .lean();
           const dirFiles = await Directory.find({
-            parentDir: dir._id.toString(),
+            parentDir: dirIdStr,
           })
             .select("size")
             .lean();
           dir.size = files.reduce((acc, file) => acc + file.size, 0);
           dir.size += dirFiles.reduce((acc, dir) => acc + dir.size, 0);
           await Directory.updateOne(
-            { _id: dir._id.toString() },
+            { _id: dirIdStr },
             { $set: { size: dir.size } },
           );
         }
 
+        const itemCount = fileCount + dirCount;
+
+        await cacheHset("dir:meta:" + dirIdStr, {
+          size: dir.size || 0,
+          itemCount: itemCount || 0,
+        }, 600);
+
         return {
           ...dir,
-          id: dir._id.toString(),
-          itemCount: fileCount + dirCount,
+          id: dirIdStr,
+          itemCount: itemCount,
         };
       }),
     );
@@ -107,6 +127,14 @@ export const getDirectoryById = async (req, res) => {
       });
 
       const getDirectorySize = async (dirId) => {
+        const cachedMeta = await cacheHgetall("dir:meta:" + dirId);
+        if (cachedMeta) {
+          return {
+            size: Number(cachedMeta.size || 0),
+            count: Number(cachedMeta.itemCount || 0),
+          };
+        }
+
         let totalSize = 0;
         let totalFiles = 0;
         const dirDirectories = await Directory.find({
@@ -139,6 +167,12 @@ export const getDirectoryById = async (req, res) => {
             totalFiles += count;
           }
         }
+
+        await cacheHset("dir:meta:" + dirId, {
+          size: totalSize,
+          itemCount: totalFiles,
+        }, 600);
+
         return { size: totalSize, count: totalFiles };
       };
 
@@ -238,6 +272,8 @@ export const createDirectory = async (req, res) => {
       parentDir: parentDirId,
     });
 
+    await cacheDel("dir:meta:" + parentDirId);
+
     return res.status(201).send("Folder created successfully");
   } catch (err) {
     if (err.code === "EEXIST") {
@@ -280,7 +316,7 @@ export const deleteDirectory = async (req, res) => {
   try {
     const { dirId } = req.params;
     const dirData = await Directory.findOne({ _id: dirId })
-      .select("userId")
+      .select("userId parentDir")
       .lean();
 
     if (!dirData) {
@@ -309,6 +345,12 @@ export const deleteDirectory = async (req, res) => {
       }
 
       await session.commitTransaction();
+
+      await cacheDel("dir:meta:" + dirId);
+      if (dirData && dirData.parentDir) {
+        await cacheDel("dir:meta:" + dirData.parentDir.toString());
+      }
+
       return res.status(200).send("Folder deleted successfully");
     } catch (txError) {
       await session.abortTransaction();
@@ -358,8 +400,8 @@ export const moveDirectory = async (req, res) => {
     const itemIds = transfers.map((t) => t.id);
 
     // Check write access for all items being moved
-    const sourceDirs = await Directory.find({ _id: { $in: itemIds } }).select("userId").lean();
-    const sourceFiles = await File.find({ _id: { $in: itemIds } }).select("userId").lean();
+    const sourceDirs = await Directory.find({ _id: { $in: itemIds } }).select("userId parentDir").lean();
+    const sourceFiles = await File.find({ _id: { $in: itemIds } }).select("userId parentDir").lean();
 
     for (const item of [...sourceDirs, ...sourceFiles]) {
       const itemOwnerId = item.userId ? item.userId.toString() : req.user.id;
@@ -384,6 +426,18 @@ export const moveDirectory = async (req, res) => {
       ).session(session);
 
       await session.commitTransaction();
+
+      const oldParentDirs = new Set();
+      for (const item of [...sourceDirs, ...sourceFiles]) {
+        if (item.parentDir) {
+          oldParentDirs.add(item.parentDir.toString());
+        }
+      }
+      for (const oldPid of oldParentDirs) {
+        await cacheDel("dir:meta:" + oldPid);
+      }
+      await cacheDel("dir:meta:" + dirId);
+
       return res.status(200).json({ message: "Items moved successfully" });
     } catch (txError) {
       await session.abortTransaction();
