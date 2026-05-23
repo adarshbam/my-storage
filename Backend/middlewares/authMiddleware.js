@@ -1,6 +1,6 @@
 import Session from "../models/sessionModel.js";
 import User from "../models/userModel.js";
-import redis, { cacheGet, cacheSet } from "../utils/redis.js";
+import { cacheGet, cacheSet, cacheSadd } from "../utils/redis.js";
 
 async function checkAuth(req, res, next) {
   const { sessionId } = req.signedCookies;
@@ -74,8 +74,7 @@ async function checkAuth(req, res, next) {
 
     await cacheSet("session:" + sessionId, JSON.stringify(sessionUser), 900); // 15-minute TTL
     try {
-      await redis.sadd("user_sessions:" + user.id, sessionId);
-      await redis.expire("user_sessions:" + user.id, 900);
+      await cacheSadd("user_sessions:" + user.id, sessionId, 900);
     } catch (setErr) {
       console.error("Failed to track session in user_sessions set:", setErr);
     }
