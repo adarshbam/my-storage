@@ -4,6 +4,7 @@ import File from "../models/fileModel.js";
 import Session from "../models/sessionModel.js";
 import User from "../models/userModel.js";
 import { invalidateUserSessions } from "../utils/redis.js";
+import { BACKEND_URL } from "../config.js";
 
 const hierarchy = ["User", "Manager", "Admin", "Owner"];
 
@@ -35,7 +36,7 @@ export const getAllSystemUsers = async (req, res) => {
       profilepic: profilepic
         ? profilepic.externalUrl
           ? profilepic.externalUrl
-          : `https://localhost:4000/user/profilepic?id=${profilepic._id}`
+          : `${BACKEND_URL}/user/profilepic?id=${profilepic._id}`
         : null,
       status: status || "Active",
       yourAuthority,

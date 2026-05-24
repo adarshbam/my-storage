@@ -9,10 +9,12 @@ const directorySchema = new Schema(
     userId: {
       type: Schema.Types.ObjectId,
       required: true,
+      ref: "User" 
     },
     parentDir: {
       type: Schema.Types.ObjectId,
       default: null,
+      ref: 'Directory'
     },
     type: {
       type: String,

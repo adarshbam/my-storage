@@ -231,7 +231,7 @@ export default function DashboardLayout() {
 
   const connectGithub = async () => {
     // TODO: Replace with your actual GitHub Client ID
-    const clientId = `Ov23lizS9BOqZ4r4jQPZ`;
+    const clientId = import.meta.env.VITE_GITHUB_CLIENTID;
     const redirectUri = `${SERVER_URL}/user/auth/github`;
     window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user:email,repo&state=connect`;
   };

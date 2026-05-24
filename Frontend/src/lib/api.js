@@ -1,1 +1,1 @@
-export const SERVER_URL = "https://localhost:4000";
+export const SERVER_URL = import.meta.env.VITE_SERVER_URL;

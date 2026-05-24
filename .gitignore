@@ -1,5 +1,6 @@
 node_modules/
 .env
+.env.*
 .DS_Store
 dist/
 build/
@@ -9,3 +10,7 @@ coverage/
 Backend/storage/
 Frontend/node_modules
 Backend/node_modules
+
+# SSL Credentials for local development
+Backend/server.cert
+Backend/server.key

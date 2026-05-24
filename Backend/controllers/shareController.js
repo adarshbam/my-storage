@@ -3,6 +3,7 @@ import ShareLink from "../models/shareLinkModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
 import User from "../models/userModel.js";
 import { cacheDel } from "../utils/redis.js";
+import { BACKEND_URL } from "../config.js";
 
 export const generateShareLink = async (req, res) => {
   const { expiresAt, permission } = req.body;
@@ -89,7 +90,7 @@ export const getShareLinkByToken = async (req, res) => {
       profilepic: owner.profilepic
         ? owner.profilepic.externalUrl
           ? owner.profilepic.externalUrl
-          : `https://localhost:4000/user/profilepic?id=${owner.profilepic._id}`
+          : `${BACKEND_URL}/user/profilepic?id=${owner.profilepic._id}`
         : null,
     },
     permission: shareLink ? shareLink.permission : ["read"],

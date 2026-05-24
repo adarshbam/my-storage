@@ -7,7 +7,7 @@ import File from "../models/fileModel.js";
 import Session from "../models/sessionModel.js";
 import mongoose from "mongoose";
 import { OAuth2Client } from "google-auth-library";
-import { GOOGLE_CLIENT_ID } from "../config.js";
+import { GOOGLE_CLIENT_ID, CLIENT_URL } from "../config.js";
 import crypto from "crypto";
 
 import ShareLink from "../models/shareLinkModel.js";
@@ -213,11 +213,11 @@ export const authGithub = async (req, res) => {
   try {
     const { code, state } = req.query;
     if (!code) {
-      return res.redirect("http://localhost:5173/login?error=NoCodeProvided");
+      return res.redirect(`${CLIENT_URL}/login?error=NoCodeProvided`);
     }
 
-    const CLIENT_ID = `Ov23lizS9BOqZ4r4jQPZ`;
-    const CLIENT_SECRET = `e0bb8b004b802d048a1f8f66eaa102fd18eb7dac`;
+    const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
+    const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 
     // 2. Exchange the 'code' for an access token via POST https://github.com/login/oauth/access_token
     const response = await fetch(
@@ -239,7 +239,7 @@ export const authGithub = async (req, res) => {
     const { access_token } = await response.json();
 
     if (!access_token) {
-      return res.redirect("http://localhost:5173/login?error=InvalidToken");
+      return res.redirect(`${CLIENT_URL}/login?error=InvalidToken`);
     }
 
     // 3. Fetch user data using the access token from GET https://api.github.com/user
@@ -273,7 +273,7 @@ export const authGithub = async (req, res) => {
     }
 
     if (!email) {
-      return res.redirect("http://localhost:5173/login?error=NoEmailFound");
+      return res.redirect(`${CLIENT_URL}/login?error=NoEmailFound`);
     }
 
     // 5. To Connect Github
@@ -315,7 +315,7 @@ export const authGithub = async (req, res) => {
       await invalidateUserSessions(user._id.toString());
 
       console.log(user);
-      return res.redirect("http://localhost:5173/dashboard");
+      return res.redirect(`${CLIENT_URL}/dashboard`);
     }
 
     // 6. Check if user exists in the database
@@ -340,7 +340,7 @@ export const authGithub = async (req, res) => {
       }
 
       await createSessionAndSetCookies(existingUser._id, rootDir._id, req, res);
-      return res.redirect("http://localhost:5173/dashboard");
+      return res.redirect(`${CLIENT_URL}/dashboard`);
     }
 
     // ── New user → register + log them in ────────────────────────────────────
@@ -371,10 +371,10 @@ export const authGithub = async (req, res) => {
     }
 
     await createSessionAndSetCookies(userId, rootDirId, req, res);
-    return res.redirect("http://localhost:5173/dashboard");
+    return res.redirect(`${CLIENT_URL}/dashboard`);
   } catch (err) {
     console.error("GitHub auth error:", err);
-    return res.redirect("http://localhost:5173/login?error=AuthFailed");
+    return res.redirect(`${CLIENT_URL}/login?error=AuthFailed`);
   }
 };
 
@@ -421,6 +421,7 @@ export const logoutAllDevices = async (req, res) => {
     console.error(err);
     return res.status(500).json({ error: "Internal Server Error" });
   }
+  ``;
 };
 
 // ─── Profile Pic ────────────────────────────────────────────────────────────────
@@ -660,7 +661,7 @@ export const forgotPassword = async (req, res) => {
     user.resetPasswordTokenExpires = Date.now() + 1000 * 60 * 15;
     await user.save();
 
-    const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
+    const resetUrl = `${CLIENT_URL}/reset-password?token=${resetToken}`;
 
     await sendEmail({
       from: `"Vault" <no-reply@vault.com>`,

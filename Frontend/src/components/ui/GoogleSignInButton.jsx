@@ -32,8 +32,7 @@ export default function GoogleSignInButton({
   const handleClick = useCallback(() => {
     setLoading(true);
 
-    const clientId =
-      "621477951745-lmj5ogqo7fkmd9sv50t97dj11kdjffpa.apps.googleusercontent.com";
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENTID;
 
     if (!window.google?.accounts?.id) {
       setLoading(false);

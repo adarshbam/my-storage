@@ -12,13 +12,16 @@ import shareRouter from "./routes/shareRoutes.js";
 import cors from "cors";
 import checkAuth from "./middlewares/authMiddleware.js";
 import https from "https";
-import { readFileSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 import "./utils/mongoose.js";
 import path from "path";
 import { rm } from "fs/promises";
 import Trash from "./models/trashModel.js";
 import File from "./models/fileModel.js";
 import Directory from "./models/directoryModel.js";
+import User from "./models/userModel.js";
+
+import { PORT, REDIS_URL, CLIENT_URL, SESSION_SECRET } from "./config.js";
 
 const app = express();
 
@@ -26,16 +29,12 @@ app.use(
   cors({
     exposedHeaders: ["X-Total-Size", "X-Total-Files"],
     origin: [
-      "http://localhost:5173",
-      "http://localhost:5173",
-      "http://192.168.31.12:5173",
-      "http://192.168.31.10:5173",
-      "http://[2409:40e3:176:1a68:eb0f:b7fd:bb7a:937e]:5173",
+      CLIENT_URL,
     ],
     credentials: true,
   }),
 );
-app.use(cookieParser("my-storage-secret-key"));
+app.use(cookieParser(SESSION_SECRET));
 app.use(express.json());
 
 app.use("/directory", checkAuth, directoryRouter);
@@ -75,64 +74,169 @@ const httpsServer = https.createServer(sslOptions, app);
 const UPLOAD_DIR = "./storage";
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
-async function cleanOldFiles() {
+async function cleanFiles() {
   try {
     const expiryDate = new Date(Date.now() - THIRTY_DAYS);
-    const itemsToDelete = await Trash.find({ deleted_at: { $lt: expiryDate } });
 
-    if (itemsToDelete.length > 0) {
-      console.log(
-        `Found ${itemsToDelete.length} expired trash items. Cleaning up...`,
-      );
+    // -------------------------
+    // Trash cleanup
+    // -------------------------
+    const trashItems = await Trash.find({
+      deleted_at: { $lt: expiryDate },
+    });
+
+    // -------------------------
+    // Ghost DB records
+    // -------------------------
+
+   const userIds = await User.distinct("_id");
+
+    const ghostFiles = await File.find({
+      userId: { $nin: userIds }
+    });
+
+    const ghostDirectories = await Directory.find({
+      userId: { $nin: userIds }
+    });
+
+
+    // -------------------------
+    // Ghost storage files
+    // -------------------------
+    const storageItems = readdirSync(UPLOAD_DIR);
+
+    const storedFileIds = storageItems
+      .filter(name => name.includes("."))
+      .map(name => name.split(".")[0]);
+
+    const existingFiles = await File.find(
+      { _id: { $in: storedFileIds } },
+      { _id: 1, extension: 1 }
+    );
+
+    const existingIds = new Set(
+      existingFiles.map(f => f._id.toString())
+    );
+
+    const missingStorageFiles = storageItems.filter(fileName => {
+      const id = fileName.split(".")[0];
+      return !existingIds.has(id);
+    });
+
+    // -------------------------
+    // Delete orphan storage files
+    // -------------------------
+    for (const fileName of missingStorageFiles) {
+      const filePath = path.join(UPLOAD_DIR, fileName);
+      await rm(filePath, { force: true }).catch(() => {});
+      console.log(`Deleted ghost storage file: ${fileName}`);
     }
 
+    // Delete ghost directories
+    await Directory.deleteMany({
+      _id: {
+        $in: ghostDirectories.map(dir => dir._id)
+      }
+    });
+
+    // -------------------------
+    // Combine DB items
+    // -------------------------
+    const itemsToDelete = [
+      ...trashItems,
+      ...ghostFiles,
+    ];
+
+    console.log(`Found ${itemsToDelete.length} DB items to cleanup`);
+
     for (const item of itemsToDelete) {
+
+      // -------------------------
+      // Directory cleanup
+      // -------------------------
       if (item.type === "directory") {
-        // Recursive delete logic for local directory structure
+
         const recursiveDelete = async (dirId) => {
           const files = await File.find({ parentDir: dirId });
           for (const f of files) {
-            const fPath = path.join(UPLOAD_DIR, `${f._id}${f.extension}`);
-            const tPath = path.join(UPLOAD_DIR, "thumbnails", `${f._id}.jpg`);
+            const fPath = path.join(
+              UPLOAD_DIR,
+              `${f._id}${f.extension}`
+            );
+            const tPath = path.join(
+              UPLOAD_DIR,
+              "thumbnails",
+              `${f._id}.jpg`
+            );
+            
             await rm(fPath, { force: true }).catch(() => {});
             await rm(tPath, { force: true }).catch(() => {});
           }
+
           await File.deleteMany({ parentDir: dirId });
 
-          const dirs = await Directory.find({ parentDir: dirId });
+          const dirs = await Directory.find({
+            parentDir: dirId,
+          });
+
           for (const d of dirs) {
             await recursiveDelete(d._id.toString());
           }
-          await Directory.deleteMany({ parentDir: dirId });
+
+          await Directory.deleteMany({
+            parentDir: dirId,
+          });
         };
 
         await recursiveDelete(item._id.toString());
+
+        await Directory.deleteOne({
+          _id: item._id,
+        });
+
       } else {
-        // Single file deletion
-        const filePath = path.join(UPLOAD_DIR, `${item._id}${item.extension}`);
+
+        // -------------------------
+        // File cleanup
+        // -------------------------
+        const filePath = path.join(
+          UPLOAD_DIR,
+          `${item._id}${item.extension}`
+        );
+
         const thumbPath = path.join(
           UPLOAD_DIR,
           "thumbnails",
-          `${item._id}.jpg`,
+          `${item._id}.jpg`
         );
+
         await rm(filePath, { force: true }).catch(() => {});
         await rm(thumbPath, { force: true }).catch(() => {});
+
+        await File.deleteOne({
+          _id: item._id,
+        });
       }
 
-      await Trash.deleteOne({ _id: item._id });
-      console.log(
-        `Permanently deleted expired trash item: ${item.name} (${item._id})`,
-      );
+      // remove from trash if exists
+      await Trash.deleteOne({
+        _id: item._id,
+      }).catch(() => {});
+
+      console.log(`Deleted: ${item.name || item._id}`);
     }
+
   } catch (err) {
-    console.error("Error during trash cleanup:", err);
+    console.error("Cleanup error:", err);
   }
 }
 
-cleanOldFiles();
+cleanFiles();
 
-setInterval(cleanOldFiles, 24 * 60 * 60 * 1000); // Check every minute
+setInterval(cleanFiles, 24 * 60 * 60 * 1000); // Check every minute
 
-httpsServer.listen(4000, () => {
-  console.log(`HTTPS Server running on port 4000`);
+console.log();
+
+httpsServer.listen(PORT, () => {
+  console.log(`HTTPS Server running on port ${PORT}`);
 });
