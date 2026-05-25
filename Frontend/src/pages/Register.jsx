@@ -223,7 +223,6 @@ export default function Register() {
                 placeholder="name@example.com"
               />
 
-              {/* TODO: Uncomment for deployment
               <AnimatePresence>
                 {isEmailValid && !otpVerified && (
                   <motion.button
@@ -267,12 +266,10 @@ export default function Register() {
                   </motion.div>
                 )}
               </AnimatePresence>
-              */}
             </div>
           </div>
 
           {/* OTP input — between email and password */}
-          {/* TODO: Uncomment for deployment
           <AnimatePresence>
             {otpSent && !otpVerified && (
               <motion.div
@@ -323,7 +320,6 @@ export default function Register() {
               </motion.div>
             )}
           </AnimatePresence>
-          */}
 
           {/* Password */}
           <div>
@@ -341,7 +337,6 @@ export default function Register() {
           </div>
 
           <div className="w-full relative group">
-            {/* TODO: Uncomment for deployment
             <Button 
               type="submit" 
               disabled={!otpVerified}
@@ -349,15 +344,9 @@ export default function Register() {
             >
               Create Account
             </Button>
-            */}
-            <Button type="submit" className="w-full py-3.5 text-[15px]">
-              Create Account
-            </Button>
-            {/* TODO: Uncomment for deployment
             {!otpVerified && (
               <div className="absolute inset-0 z-10 cursor-not-allowed" title="Verify email first" />
             )}
-            */}
           </div>
         </form>
 
@@ -390,7 +379,7 @@ export default function Register() {
           <button
             type="button"
             onClick={() => {
-              const clientId = `Ov23lizS9BOqZ4r4jQPZ`;
+              const clientId = import.meta.env.VITE_GITHUB_CLIENTID;
               const redirectUri = `${SERVER_URL}/user/auth/github`;
               window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user:email`;
             }}

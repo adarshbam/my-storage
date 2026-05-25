@@ -4,6 +4,7 @@ import { stat, unlink, mkdir } from "fs/promises";
 import { fileURLToPath } from "url";
 import SharedAccess from "../models/sharedAccessModel.js";
 import { hasWriteAccess } from "../utils/integrationHelper.js";
+import { escapeRegExp } from "../utils/escapeRegExp.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,7 +49,7 @@ export const search = async (req, res) => {
     const { q, parentId } = req.query;
     if (!q) return res.status(400).send("Search query required");
 
-    const query = q.toLowerCase();
+    const query = escapeRegExp(q.toLowerCase());
 
     // Ensure users have loaded data (though imports should handle it)
     if (!req.user || !req.user.id) {

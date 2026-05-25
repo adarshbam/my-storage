@@ -3,6 +3,7 @@
 import OTP from "../models/otpModel.js";
 import User from "../models/userModel.js";
 import sendEmail from "../utils/email.js";
+import { OTPSchema } from "../validators/authSchema.js";
 
 export const sendOtp = async (req, res) => {
   // TODO: Implement OTP sending logic
@@ -65,7 +66,10 @@ export const sendOtp = async (req, res) => {
 export const verifyOtp = async (req, res) => {
   // TODO: Implement OTP verification logic
   // Expected body: { email, otp }
-  const { email, otp } = req.body;
+  const {success, data, error} = OTPSchema.safeParse(req.body);
+  if(!success) return res.status(400).json({ error: z.flattenError(error)});
+  
+  const { email, otp } = data;
 
   // 1. Look up stored OTP for this email
   const otpData = await OTP.findOne({ email });
@@ -82,8 +86,8 @@ export const verifyOtp = async (req, res) => {
     { new: true },
   );
 
-  // Clean up the used OTP
-  await OTP.deleteOne({ _id: otpData._id });
+  // Mark OTP as verified (so the register endpoint can confirm it)
+  await OTP.updateOne({ _id: otpData._id }, { $set: { isVerified: true } });
 
   // 4. Return success
   return res.status(200).json({ message: "OTP verified successfully" });

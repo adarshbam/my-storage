@@ -19,6 +19,9 @@ import {
   createUserWithRootDir,
 } from "../utils/authHelpers.js";
 import sendEmail from "../utils/email.js";
+import OTP from "../models/otpModel.js";
+import { z } from "zod";
+import { loginSchema, registerSchema } from "../validators/authSchema.js";
 
 // ─── User Info ──────────────────────────────────────────────────────────────────
 
@@ -41,9 +44,21 @@ export const getUser = (req, res) => {
 // ─── Email/Password Registration ────────────────────────────────────────────────
 
 export const registerUser = async (req, res) => {
-  const { email, name, password } = req.body;
+  const {success, data, error} = registerSchema.safeParse(req.body);
+  if(!success) return res.status(400).json({ error: z.flattenError(error)});
+
+  const { email, name, password } = data;
 
   try {
+    // Check that the email was verified via OTP
+    const otpRecord = await OTP.findOne({ email }).sort({ createdAt: -1 });
+
+    if (!otpRecord || !otpRecord.isVerified) {
+      return res
+        .status(403)
+        .json({ error: "Email not verified. Please verify OTP first." });
+    }
+
     await createUserWithRootDir({
       name: name || "User",
       email,
@@ -51,11 +66,15 @@ export const registerUser = async (req, res) => {
       profilepicId: null,
       isVerified: true,
     });
+
+    // Clean up all OTP records for this email after successful registration
+    await OTP.deleteMany({ email });
+
     return res.status(201).json({ message: "Registered" });
   } catch (err) {
     console.error(err);
     if (err.code === 121) {
-      return res.status(400).json({ error: "Invalid Fields" });
+      return res.status(400).json({error: 'Invalid Fields'});
     } else if (err.code === 11000 && err.keyValue?.email) {
       return res.status(409).json({ error: "Email already exists" });
     } else {
@@ -67,9 +86,29 @@ export const registerUser = async (req, res) => {
 // ─── Email/Password Login ───────────────────────────────────────────────────────
 
 export const loginUser = async (req, res) => {
-  const { email, password } = req.body;
-
+const {success, data, error} = loginSchema.safeParse(req.body);
+  if(!success) return res.status(400).json({ error: z.flattenError(error)});
+  
+  const { email, password, otp } = data;
   try {
+    // ── OTP verification ──────────────────────────────────────────────────────
+    if (!otp) {
+      return res.status(401).json({ error: "OTP is required" });
+    }
+
+    const otpRecord = await OTP.findOne({ email }).sort({ createdAt: -1 });
+
+    if (!otpRecord) {
+      return res
+        .status(401)
+        .json({ error: "OTP expired or not found. Please request a new one." });
+    }
+
+    if (String(otpRecord.otp) !== String(otp)) {
+      return res.status(401).json({ error: "Invalid OTP" });
+    }
+
+    // ── Credential verification ───────────────────────────────────────────────
     const user = await User.findOne({ email }).select(
       "password rootDirId name isVerified",
     );
@@ -112,6 +151,9 @@ export const loginUser = async (req, res) => {
     }
 
     await createSessionAndSetCookies(user._id, rootDir._id, req, res);
+
+    // Clean up OTP records after successful login
+    await OTP.deleteMany({ email });
 
     return res.status(200).json({ message: `Login successful ${user.name}` });
   } catch (err) {

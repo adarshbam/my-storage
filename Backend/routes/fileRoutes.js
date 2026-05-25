@@ -12,6 +12,16 @@ import {
   uploadFile,
   saveFile,
 } from "../controllers/fileController.js";
+import { validate } from "../middlewares/validationMiddleware.js";
+import {
+  searchSchema,
+  getThumbnailSchema,
+  getFileByIdSchema,
+  uploadFileSchema,
+  renameFileSchema,
+  saveFileSchema,
+  deleteFileSchema,
+} from "../validators/fileSchema.js";
 
 const router = express.Router();
 
@@ -19,18 +29,18 @@ router.param("parentDirId", validateIdMiddleware);
 router.param("fileId", validateIdMiddleware);
 
 // Search Endpoint - MUST BE BEFORE /:fileId
-router.get("/search", checkAuth, search);
+router.get("/search", checkAuth, validate(searchSchema), search);
 
-router.get("/:fileId/thumbnail", checkAuth, getThumbnail);
+router.get("/:fileId/thumbnail", checkAuth, validate(getThumbnailSchema), getThumbnail);
 
-router.get("/:fileId", checkAuth, getFileById);
+router.get("/:fileId", checkAuth, validate(getFileByIdSchema), getFileById);
 
 // Allow both root upload (no param) and param upload
 // Note: router.param middleware will NOT run for "/"
-router.post(["/", "/:parentDirId"], checkAuth, uploadFile);
+router.post(["/", "/:parentDirId"], checkAuth, validate(uploadFileSchema), uploadFile);
 
-router.patch("/:fileId", checkAuth, renameFile);
-router.put("/:fileId/save", checkAuth, saveFile);
-router.delete("/:fileId", checkAuth, deleteFile);
+router.patch("/:fileId", checkAuth, validate(renameFileSchema), renameFile);
+router.put("/:fileId/save", checkAuth, validate(saveFileSchema), saveFile);
+router.delete("/:fileId", checkAuth, validate(deleteFileSchema), deleteFile);
 
 export default router;
