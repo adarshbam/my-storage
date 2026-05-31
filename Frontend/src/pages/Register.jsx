@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   CheckCircle2,
   Box,
+  Pencil,
+  X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -169,6 +171,13 @@ export default function Register() {
     setName(newName);
   };
 
+  const handleResetEmailVerification = () => {
+    setOtpVerified(false);
+    setOtpSent(false);
+    setOtp(["", "", "", "", "", ""]);
+    setError("");
+  };
+
   return (
     <AuthLayout>
       <div className="w-full">
@@ -256,14 +265,25 @@ export default function Register() {
                 )}
 
                 {otpVerified && (
-                  <motion.div
+                  <motion.button
+                    type="button"
+                    onClick={handleResetEmailVerification}
                     initial={{ opacity: 0, scale: 0.85 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center gap-1.5 px-4 py-3 rounded-xl text-sm font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex-shrink-0"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="group relative flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl text-sm font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-rose-500/10 hover:text-rose-600 hover:border-rose-500/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-400 dark:hover:border-rose-500/20 transition-all duration-300 flex-shrink-0 overflow-hidden min-w-[105px]"
+                    title="Click to change email address"
                   >
-                    <CheckCircle2 size={16} />
-                    Verified
-                  </motion.div>
+                    <span className="flex items-center gap-1.5 group-hover:hidden transition-all duration-300">
+                      <CheckCircle2 size={16} />
+                      Verified
+                    </span>
+                    <span className="hidden group-hover:flex items-center gap-1.5 transition-all duration-300">
+                      <Pencil size={14} />
+                      Change
+                    </span>
+                  </motion.button>
                 )}
               </AnimatePresence>
             </div>
@@ -297,26 +317,38 @@ export default function Register() {
                     />
                   ))}
                 </div>
-                <motion.button
-                  id="verify-otp-btn"
-                  type="button"
-                  onClick={handleVerifyOtp}
-                  disabled={verifyingOtp || otp.join("").length < 6}
-                  whileTap={{ scale: 0.97 }}
-                  className="w-full py-2.5 rounded-xl font-semibold text-sm bg-[#0f463e]/90 backdrop-blur-3xl border-2 border-[#14b8a6] shadow-[0_0_20px_rgba(20,184,166,0.3)] text-white hover:bg-[#115e52] hover:border-[#2dd4bf] hover:shadow-[0_0_30px_rgba(20,184,166,0.5)] transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {verifyingOtp ? (
-                    <>
-                      <Loader2 className="animate-spin" size={16} />
-                      Verifying…
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck size={16} />
-                      Verify
-                    </>
-                  )}
-                </motion.button>
+                <div className="flex gap-3">
+                  <motion.button
+                    id="verify-otp-btn"
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    disabled={verifyingOtp || otp.join("").length < 6}
+                    whileTap={{ scale: 0.97 }}
+                    className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-[#0f463e]/90 backdrop-blur-3xl border-2 border-[#14b8a6] shadow-[0_0_20px_rgba(20,184,166,0.3)] text-white hover:bg-[#115e52] hover:border-[#2dd4bf] hover:shadow-[0_0_30px_rgba(20,184,166,0.5)] transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {verifyingOtp ? (
+                      <>
+                        <Loader2 className="animate-spin" size={16} />
+                        Verifying…
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck size={16} />
+                        Verify
+                      </>
+                    )}
+                  </motion.button>
+
+                  <motion.button
+                    type="button"
+                    onClick={handleResetEmailVerification}
+                    whileTap={{ scale: 0.97 }}
+                    className="px-4 py-2.5 rounded-xl font-semibold text-sm bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] border border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300 transition-all duration-300 flex items-center justify-center gap-1.5"
+                  >
+                    <X size={16} />
+                    Cancel
+                  </motion.button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
