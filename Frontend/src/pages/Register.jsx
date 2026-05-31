@@ -130,21 +130,22 @@ export default function Register() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, name, password }),
+        credentials: "include",
       });
 
       if (response.ok) {
-        const loginRes = await fetch(`${SERVER_URL}/user/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, name, password }),
+        // Registration now auto-logs in (session cookie set by server)
+        // Fetch user info to update the auth context
+        const userRes = await fetch(`${SERVER_URL}/user`, {
           credentials: "include",
         });
 
-        if (loginRes.ok) {
-          const userInfo = await loginRes.json();
+        if (userRes.ok) {
+          const userInfo = await userRes.json();
           setUser(userInfo);
           navigate("/dashboard");
         } else {
+          // Fallback: session was created but user fetch failed, redirect to login
           navigate("/login");
         }
       } else {

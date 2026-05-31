@@ -1,4 +1,5 @@
 import archiver from "archiver";
+import { sanitize } from "../utils/sanitize.js";
 import path from "path";
 import crypto from "crypto";
 import mongoose from "mongoose";
@@ -260,7 +261,7 @@ export const createDirectory = async (req, res) => {
     }
 
     // console.log(parentDirId);
-    const dirName = req.body.foldername ?? "new-folder";
+    const dirName = sanitize(req.body.foldername ?? "new-folder");
     // console.log(dirName);
     const dirId = new mongoose.Types.ObjectId();
 
@@ -304,7 +305,7 @@ export const renameDirectory = async (req, res) => {
         .send("You are not authorized to rename this directory");
     }
     const { newDirName } = req.body;
-    await Directory.updateOne({ _id: dirId }, { $set: { name: newDirName } });
+    await Directory.updateOne({ _id: dirId }, { $set: { name: sanitize(newDirName) } });
     return res.status(200).send("Folder renamed successfully");
   } catch (error) {
     console.error("Rename Error:", error);

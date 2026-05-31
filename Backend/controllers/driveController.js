@@ -1,4 +1,5 @@
 import User from "../models/userModel.js";
+import { sanitize } from "../utils/sanitize.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "../config.js";
@@ -380,13 +381,15 @@ export const createDriveFolder = async (req, res) => {
 
   if (!name) return res.status(400).json({ error: "Folder name is required" });
 
+  const safeName = sanitize(name);
+
   try {
     const client = await getAuthenticatedClient(req, true);
     const { drive } = client;
 
     const response = await drive.files.create({
       requestBody: {
-        name,
+        name: safeName,
         mimeType: "application/vnd.google-apps.folder",
         parents: [parentFolderId || "root"],
       },
@@ -411,7 +414,7 @@ export const createDriveFolder = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const uploadFileToDrive = async (req, res) => {
   const { parentFolderId } = req.params;
-  const fileName = req.headers.filename;
+  const fileName = sanitize(req.headers.filename);
 
   if (!fileName) return res.status(400).json({ error: "No filename provided" });
 
@@ -610,7 +613,7 @@ export const updateDriveItem = async (req, res) => {
     };
 
     if (name) {
-      updateParams.requestBody = { name };
+      updateParams.requestBody = { name: sanitize(name) };
     }
 
     if (parentId) {

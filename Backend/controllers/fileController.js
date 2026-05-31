@@ -1,4 +1,5 @@
 import { createReadStream, createWriteStream } from "fs";
+import { sanitize } from "../utils/sanitize.js";
 import path from "path";
 import { stat, unlink, mkdir } from "fs/promises";
 import { fileURLToPath } from "url";
@@ -307,7 +308,7 @@ export const uploadFile = async (req, res) => {
     // Support client-provided ID for resumption, or generate new one
     const id =
       req.headers["x-file-id"] || new mongoose.Types.ObjectId().toString();
-    const fileName = req.headers.filename;
+    const fileName = sanitize(req.headers.filename);
     const startByte = parseInt(req.headers["x-start-byte"] || "0", 10);
     const ext = path.extname(fileName);
     const fullFileName = `${id}${ext}`;
@@ -442,7 +443,7 @@ export const renameFile = async (req, res) => {
       return res.status(403).send("You are not authorized to rename this file");
     }
     const { newFileName } = req.body;
-    await File.updateOne({ _id: fileId }, { $set: { name: newFileName } });
+    await File.updateOne({ _id: fileId }, { $set: { name: sanitize(newFileName) } });
     return res.status(200).send("File renamed successfully");
   } catch {
     return res.status(500).send("Internal Server Error");

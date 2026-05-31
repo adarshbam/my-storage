@@ -28,9 +28,7 @@ const app = express();
 app.use(
   cors({
     exposedHeaders: ["X-Total-Size", "X-Total-Files"],
-    origin: [
-      CLIENT_URL,
-    ],
+    origin: [CLIENT_URL],
     credentials: true,
   }),
 );
@@ -89,16 +87,15 @@ async function cleanFiles() {
     // Ghost DB records
     // -------------------------
 
-   const userIds = await User.distinct("_id");
+    const userIds = await User.distinct("_id");
 
     const ghostFiles = await File.find({
-      userId: { $nin: userIds }
+      userId: { $nin: userIds },
     });
 
     const ghostDirectories = await Directory.find({
-      userId: { $nin: userIds }
+      userId: { $nin: userIds },
     });
-
 
     // -------------------------
     // Ghost storage files
@@ -106,19 +103,17 @@ async function cleanFiles() {
     const storageItems = readdirSync(UPLOAD_DIR);
 
     const storedFileIds = storageItems
-      .filter(name => name.includes("."))
-      .map(name => name.split(".")[0]);
+      .filter((name) => name.includes("."))
+      .map((name) => name.split(".")[0]);
 
     const existingFiles = await File.find(
       { _id: { $in: storedFileIds } },
-      { _id: 1, extension: 1 }
+      { _id: 1, extension: 1 },
     );
 
-    const existingIds = new Set(
-      existingFiles.map(f => f._id.toString())
-    );
+    const existingIds = new Set(existingFiles.map((f) => f._id.toString()));
 
-    const missingStorageFiles = storageItems.filter(fileName => {
+    const missingStorageFiles = storageItems.filter((fileName) => {
       const id = fileName.split(".")[0];
       return !existingIds.has(id);
     });
@@ -135,40 +130,28 @@ async function cleanFiles() {
     // Delete ghost directories
     await Directory.deleteMany({
       _id: {
-        $in: ghostDirectories.map(dir => dir._id)
-      }
+        $in: ghostDirectories.map((dir) => dir._id),
+      },
     });
 
     // -------------------------
     // Combine DB items
     // -------------------------
-    const itemsToDelete = [
-      ...trashItems,
-      ...ghostFiles,
-    ];
+    const itemsToDelete = [...trashItems, ...ghostFiles];
 
     console.log(`Found ${itemsToDelete.length} DB items to cleanup`);
 
     for (const item of itemsToDelete) {
-
       // -------------------------
       // Directory cleanup
       // -------------------------
       if (item.type === "directory") {
-
         const recursiveDelete = async (dirId) => {
           const files = await File.find({ parentDir: dirId });
           for (const f of files) {
-            const fPath = path.join(
-              UPLOAD_DIR,
-              `${f._id}${f.extension}`
-            );
-            const tPath = path.join(
-              UPLOAD_DIR,
-              "thumbnails",
-              `${f._id}.jpg`
-            );
-            
+            const fPath = path.join(UPLOAD_DIR, `${f._id}${f.extension}`);
+            const tPath = path.join(UPLOAD_DIR, "thumbnails", `${f._id}.jpg`);
+
             await rm(fPath, { force: true }).catch(() => {});
             await rm(tPath, { force: true }).catch(() => {});
           }
@@ -193,21 +176,16 @@ async function cleanFiles() {
         await Directory.deleteOne({
           _id: item._id,
         });
-
       } else {
-
         // -------------------------
         // File cleanup
         // -------------------------
-        const filePath = path.join(
-          UPLOAD_DIR,
-          `${item._id}${item.extension}`
-        );
+        const filePath = path.join(UPLOAD_DIR, `${item._id}${item.extension}`);
 
         const thumbPath = path.join(
           UPLOAD_DIR,
           "thumbnails",
-          `${item._id}.jpg`
+          `${item._id}.jpg`,
         );
 
         await rm(filePath, { force: true }).catch(() => {});
@@ -225,7 +203,6 @@ async function cleanFiles() {
 
       console.log(`Deleted: ${item.name || item._id}`);
     }
-
   } catch (err) {
     console.error("Cleanup error:", err);
   }
@@ -237,6 +214,10 @@ setInterval(cleanFiles, 24 * 60 * 60 * 1000); // Check every minute
 
 console.log();
 
-httpsServer.listen(PORT, () => {
-  console.log(`HTTPS Server running on port ${PORT}`);
+// httpsServer.listen(PORT, () => {
+//   console.log(`HTTPS Server running on port ${PORT}`);
+// });
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

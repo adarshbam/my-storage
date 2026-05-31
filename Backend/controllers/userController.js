@@ -14,6 +14,8 @@ import ShareLink from "../models/shareLinkModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
 import { cacheDel, invalidateUserSessions } from "../utils/redis.js";
 
+import { sanitize } from "../utils/sanitize.js";
+
 import {
   createSessionAndSetCookies,
   createUserWithRootDir,
@@ -44,10 +46,12 @@ export const getUser = (req, res) => {
 // ─── Email/Password Registration ────────────────────────────────────────────────
 
 export const registerUser = async (req, res) => {
-  const {success, data, error} = registerSchema.safeParse(req.body);
-  if(!success) return res.status(400).json({ error: z.flattenError(error)});
+  const { success, data, error } = registerSchema.safeParse(req.body);
+  if (!success) return res.status(400).json({ error: z.flattenError(error) });
 
-  const { email, name, password } = data;
+  let { email, name, password } = data;
+
+  name = sanitize(name);
 
   try {
     // Check that the email was verified via OTP
@@ -59,7 +63,7 @@ export const registerUser = async (req, res) => {
         .json({ error: "Email not verified. Please verify OTP first." });
     }
 
-    await createUserWithRootDir({
+    const { userId, rootDirId } = await createUserWithRootDir({
       name: name || "User",
       email,
       password,
@@ -70,11 +74,14 @@ export const registerUser = async (req, res) => {
     // Clean up all OTP records for this email after successful registration
     await OTP.deleteMany({ email });
 
-    return res.status(201).json({ message: "Registered" });
+    // Auto-login: create session and set cookies
+    await createSessionAndSetCookies(userId, rootDirId, req, res);
+
+    return res.status(201).json({ message: `Welcome ${name || "User"}` });
   } catch (err) {
     console.error(err);
     if (err.code === 121) {
-      return res.status(400).json({error: 'Invalid Fields'});
+      return res.status(400).json({ error: "Invalid Fields" });
     } else if (err.code === 11000 && err.keyValue?.email) {
       return res.status(409).json({ error: "Email already exists" });
     } else {
@@ -86,9 +93,9 @@ export const registerUser = async (req, res) => {
 // ─── Email/Password Login ───────────────────────────────────────────────────────
 
 export const loginUser = async (req, res) => {
-const {success, data, error} = loginSchema.safeParse(req.body);
-  if(!success) return res.status(400).json({ error: z.flattenError(error)});
-  
+  const { success, data, error } = loginSchema.safeParse(req.body);
+  if (!success) return res.status(400).json({ error: z.flattenError(error) });
+
   const { email, password, otp } = data;
   try {
     // ── OTP verification ──────────────────────────────────────────────────────
@@ -477,7 +484,7 @@ export const uploadProfilePic = async (req, res) => {
     return res.status(404).json({ message: "User not found" });
   }
 
-  const fileName = req.headers.filename;
+  const fileName = sanitize(req.headers.filename);
   const ext = path.extname(fileName);
 
   const profilePicId = new mongoose.Types.ObjectId();
@@ -586,7 +593,8 @@ export const getSearchedItems = (req, res) => {
 };
 
 export const storeSearchedItem = async (req, res) => {
-  const { searchItem } = req.body;
+  const rawSearchItem = req.body.searchItem;
+  const searchItem = typeof rawSearchItem === "string" ? sanitize(rawSearchItem) : rawSearchItem;
 
   try {
     const user = await User.findOne({ _id: req.user.id })
@@ -652,7 +660,7 @@ export const updateName = async (req, res) => {
   const { name } = req.body;
 
   const user = await User.findOne({ _id: req.user.id });
-  user.name = name;
+  user.name = sanitize(name);
   await user.save();
   await invalidateUserSessions(req.user.id);
   return res.status(200).json({ message: "Name update logged" });

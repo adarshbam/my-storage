@@ -1,4 +1,5 @@
 import User from "../models/userModel.js";
+import { sanitize } from "../utils/sanitize.js";
 import Directory from "../models/directoryModel.js";
 import archiver from "archiver";
 import { resolveIntegrationOwnerId } from "../utils/integrationHelper.js";
@@ -82,7 +83,9 @@ export const disconnectGithub = async (req, res) => {
 };
 
 export const createRepository = async (req, res) => {
-  const { name, description, private: isPrivate } = req.body;
+  const { name: rawName, description: rawDescription, private: isPrivate } = req.body;
+  const name = sanitize(rawName);
+  const description = sanitize(rawDescription);
 
   try {
     const auth = await getAuthenticatedAccessToken(req, true);
@@ -430,7 +433,7 @@ export const createFile = async (req, res) => {
     ? pathSegment.join("/")
     : pathSegment || "";
   const githubPath = `${owner}/${repo}${path ? `/${path}` : ""}`;
-  const fileName = req.headers.filename; // Present if uploading from TransferManager
+  const fileName = req.headers.filename ? sanitize(req.headers.filename) : null; // Present if uploading from TransferManager
 
   try {
     const auth = await getAuthenticatedAccessToken(req, true);
