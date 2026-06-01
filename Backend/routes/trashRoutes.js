@@ -16,15 +16,16 @@ import {
   deleteDirectoryForeverSchema,
   batchDeleteSchema,
 } from "../validators/trashSchema.js";
+import { heavyOpLimiter } from "../middlewares/rateLimiter.js";
 
 const router = express.Router();
 
 router.get("/", getTrashItems);
-router.delete("/", emptyTrash);
+router.delete("/", heavyOpLimiter, emptyTrash);
 router.post("/:id/restore", validate(restoreFileSchema), restoreFile);
 router.delete("/:fileid", validate(deleteFileForeverSchema), deleteFileForever);
 router.post("/directory/:dirId/restore", validate(restoreDirectorySchema), restoreDirectory);
 router.delete("/directory/:dirId", validate(deleteDirectoryForeverSchema), deleteDirectoryForever);
-router.post("/delete-batch", validate(batchDeleteSchema), batchDelete);
+router.post("/delete-batch", heavyOpLimiter, validate(batchDeleteSchema), batchDelete);
 
 export default router;

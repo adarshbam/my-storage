@@ -29,12 +29,13 @@ import {
   transferFromVaultSchema,
   searchDriveFilesSchema,
 } from "../validators/driveSchema.js";
+import { heavyOpLimiter } from "../middlewares/rateLimiter.js";
 
 const router = express.Router();
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 // Exchange the Google OAuth code for tokens and save to user
-router.post("/connect", checkAuth, validate(connectGoogleDriveSchema), connectGoogleDrive);
+router.post("/connect", checkAuth, heavyOpLimiter, validate(connectGoogleDriveSchema), connectGoogleDrive);
 
 // Disconnect Google Drive
 router.post("/disconnect", checkAuth, disconnectGoogleDrive);
@@ -57,9 +58,9 @@ router.patch("/file/:fileId", checkAuth, validate(updateDriveItemSchema), update
 // Bulk move items
 router.post("/move", checkAuth, validate(moveDriveItemsSchema), moveDriveItems);
 // Cross-provider transfer
-router.post("/transfer-to-vault", checkAuth, validate(transferToVaultSchema), transferToVault);
+router.post("/transfer-to-vault", checkAuth, heavyOpLimiter, validate(transferToVaultSchema), transferToVault);
 // Cross-provider transfer from Vault to Google Drive
-router.post("/transfer-from-vault", checkAuth, validate(transferFromVaultSchema), transferFromVault);
+router.post("/transfer-from-vault", checkAuth, heavyOpLimiter, validate(transferFromVaultSchema), transferFromVault);
 
 // ── Folder operations ─────────────────────────────────────────────────────────
 // Create a new folder inside a Drive folder
@@ -70,7 +71,7 @@ router.post(
   createDriveFolder,
 );
 // Download an entire folder as a .zip
-router.get("/folder/:folderId/download", checkAuth, validate(listDriveFolderSchema), downloadDriveFolder);
+router.get("/folder/:folderId/download", checkAuth, heavyOpLimiter, validate(listDriveFolderSchema), downloadDriveFolder);
 
 // Search on drive
 router.get("/search", checkAuth, validate(searchDriveFilesSchema), searchDriveFiles);

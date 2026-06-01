@@ -8,6 +8,7 @@ import Session from "../models/sessionModel.js";
 import mongoose from "mongoose";
 import { OAuth2Client } from "google-auth-library";
 import { GOOGLE_CLIENT_ID, CLIENT_URL } from "../config.js";
+
 import crypto from "crypto";
 
 import ShareLink from "../models/shareLinkModel.js";
@@ -594,7 +595,8 @@ export const getSearchedItems = (req, res) => {
 
 export const storeSearchedItem = async (req, res) => {
   const rawSearchItem = req.body.searchItem;
-  const searchItem = typeof rawSearchItem === "string" ? sanitize(rawSearchItem) : rawSearchItem;
+  const searchItem =
+    typeof rawSearchItem === "string" ? sanitize(rawSearchItem) : rawSearchItem;
 
   try {
     const user = await User.findOne({ _id: req.user.id })

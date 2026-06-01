@@ -20,10 +20,103 @@ import Trash from "./models/trashModel.js";
 import File from "./models/fileModel.js";
 import Directory from "./models/directoryModel.js";
 import User from "./models/userModel.js";
+import helmet from "helmet";
 
 import { PORT, REDIS_URL, CLIENT_URL, SESSION_SECRET } from "./config.js";
 
 const app = express();
+
+app.use(
+  helmet({
+    // 1. Content Security Policy (CSP) - Extremely strict whitelist
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: {
+        defaultSrc: ["'none'"],
+        scriptSrc: [
+          "'self'",
+          "https://accounts.google.com/gsi/client",
+          "https://apis.google.com",
+        ],
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://accounts.google.com/gsi/style",
+        ],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "blob:",
+          "https://lh3.googleusercontent.com",
+          "https://*.googleusercontent.com",
+          "https://avatars.githubusercontent.com",
+          "https://*.githubusercontent.com",
+        ],
+        connectSrc: [
+          "'self'",
+          CLIENT_URL,
+          "https://accounts.google.com",
+          "https://oauth2.googleapis.com",
+          "https://api.github.com",
+          "https://github.com",
+          "https://*.googleapis.com",
+        ],
+        frameSrc: [
+          "'self'",
+          "https://accounts.google.com/",
+        ],
+        formAction: [
+          "'self'",
+          CLIENT_URL,
+          "https://accounts.google.com/",
+          "https://github.com/login/oauth/authorize",
+        ],
+        frameAncestors: ["'none'"],
+        fontSrc: ["'self'", "data:"],
+        objectSrc: ["'none'"],
+        baseUri: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    // 2. Strict Transport Security (HSTS) - Enforce HTTPS for 1 year, all subdomains, preload-ready
+    strictTransportSecurity: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    // 3. X-Frame-Options - Complete Clickjacking protection
+    frameguard: {
+      action: "deny",
+    },
+    // 4. X-Content-Type-Options - Prevent MIME-type sniffing
+    noSniff: true,
+    // 5. Referrer-Policy - Leak-free referrer controls
+    referrerPolicy: {
+      policy: "strict-origin-when-cross-origin",
+    },
+    // 6. X-XSS-Protection - Enable legacy browser security
+    xssFilter: true,
+    // 7. Cross-Origin Opener Policy (COOP) - Crucial for popup OAuth flows
+    crossOriginOpenerPolicy: {
+      policy: "same-origin-allow-popups",
+    },
+    // 8. Cross-Origin Resource Policy (CORP) - Allow client app to read static files
+    crossOriginResourcePolicy: {
+      policy: "cross-origin",
+    },
+    // Disable COEP to allow loading external profile pictures without CORP headers
+    crossOriginEmbedderPolicy: false,
+  })
+);
+
+// 9. Extra Professional Header: Permissions-Policy - Disable all unused hardware features
+app.use((req, res, next) => {
+  res.setHeader(
+    "Permissions-Policy",
+    "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+  );
+  next();
+});
 
 app.use(
   cors({

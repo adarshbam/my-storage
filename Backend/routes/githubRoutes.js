@@ -33,6 +33,7 @@ import {
   searchRepositorySchema,
   moveGithubItemsSchema,
 } from "../validators/githubSchema.js";
+import { heavyOpLimiter } from "../middlewares/rateLimiter.js";
 
 const router = express.Router();
 
@@ -68,10 +69,10 @@ router.delete("/file/:owner/:repo/*path", checkAuth, validate(deleteFileSchema),
 router.delete("/repositories/:owner/:repo/*path", checkAuth, validate(deleteFolderSchema), deleteFolder);
 
 // download repo
-router.get("/repositories/:owner/:repo/download", checkAuth, validate(downloadRepositorySchema), downloadRepository);
+router.get("/repositories/:owner/:repo/download", checkAuth, heavyOpLimiter, validate(downloadRepositorySchema), downloadRepository);
 
 // download folder
-router.get("/repositories/:owner/:repo/folder-download/*path", checkAuth, validate(downloadFolderSchema), downloadFolder);
+router.get("/repositories/:owner/:repo/folder-download/*path", checkAuth, heavyOpLimiter, validate(downloadFolderSchema), downloadFolder);
 
 // list branches
 router.get("/repositories/:owner/:repo/branches", checkAuth, validate(listBranchesSchema), listBranches);

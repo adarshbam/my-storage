@@ -22,6 +22,11 @@ import {
   saveFileSchema,
   deleteFileSchema,
 } from "../validators/fileSchema.js";
+import {
+  searchLimiter,
+  thumbnailLimiter,
+  uploadLimiter,
+} from "../middlewares/rateLimiter.js";
 
 const router = express.Router();
 
@@ -29,15 +34,15 @@ router.param("parentDirId", validateIdMiddleware);
 router.param("fileId", validateIdMiddleware);
 
 // Search Endpoint - MUST BE BEFORE /:fileId
-router.get("/search", checkAuth, validate(searchSchema), search);
+router.get("/search", checkAuth, searchLimiter, validate(searchSchema), search);
 
-router.get("/:fileId/thumbnail", checkAuth, validate(getThumbnailSchema), getThumbnail);
+router.get("/:fileId/thumbnail", checkAuth, thumbnailLimiter, validate(getThumbnailSchema), getThumbnail);
 
 router.get("/:fileId", checkAuth, validate(getFileByIdSchema), getFileById);
 
 // Allow both root upload (no param) and param upload
 // Note: router.param middleware will NOT run for "/"
-router.post(["/", "/:parentDirId"], checkAuth, validate(uploadFileSchema), uploadFile);
+router.post(["/", "/:parentDirId"], checkAuth, uploadLimiter, validate(uploadFileSchema), uploadFile);
 
 router.patch("/:fileId", checkAuth, validate(renameFileSchema), renameFile);
 router.put("/:fileId/save", checkAuth, validate(saveFileSchema), saveFile);
