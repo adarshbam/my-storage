@@ -9,17 +9,17 @@ export default {
       },
       colors: {
         brand: {
-          50: "#ecfdf5",
-          100: "#d1fae5",
-          200: "#a7f3d0",
-          300: "#6ee7b7",
-          400: "#34d399",
-          500: "#10b981", // Emerald 500
-          600: "#059669",
-          700: "#047857",
-          800: "#065f46",
-          900: "#064e3b",
-          950: "#022c22", // Very dark green
+          50: "#eafaf1",
+          100: "#cbf5df",
+          200: "#96ebd7",
+          300: "#54dbb8",
+          400: "#14b8a6", // Vibrant glowing teal/emerald hybrid
+          500: "#0f967e", // Rich dark-glow green
+          600: "#0b7c69",
+          700: "#086253",
+          800: "#05493e",
+          900: "#033129",
+          950: "#011a16", // Deep obsidian dark-green base
         },
         accent: {
           50: "#fdf2f8",

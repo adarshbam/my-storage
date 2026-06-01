@@ -26,7 +26,10 @@ import {
   searchLimiter,
   thumbnailLimiter,
   uploadLimiter,
+  standardWriteLimiter,
+  mediumWriteLimiter,
 } from "../middlewares/rateLimiter.js";
+import throttle from "../utils/throttle.js";
 
 const router = express.Router();
 
@@ -34,18 +37,18 @@ router.param("parentDirId", validateIdMiddleware);
 router.param("fileId", validateIdMiddleware);
 
 // Search Endpoint - MUST BE BEFORE /:fileId
-router.get("/search", checkAuth, searchLimiter, validate(searchSchema), search);
+router.get("/search", checkAuth, searchLimiter, throttle(200, 10, "file-search"), validate(searchSchema), search);
 
-router.get("/:fileId/thumbnail", checkAuth, thumbnailLimiter, validate(getThumbnailSchema), getThumbnail);
+router.get("/:fileId/thumbnail", checkAuth, thumbnailLimiter, throttle(50, 20, "thumbnail"), validate(getThumbnailSchema), getThumbnail);
 
-router.get("/:fileId", checkAuth, validate(getFileByIdSchema), getFileById);
+router.get("/:fileId", checkAuth, standardWriteLimiter, throttle(100, 12, "file-get"), validate(getFileByIdSchema), getFileById);
 
 // Allow both root upload (no param) and param upload
 // Note: router.param middleware will NOT run for "/"
-router.post(["/", "/:parentDirId"], checkAuth, uploadLimiter, validate(uploadFileSchema), uploadFile);
+router.post(["/", "/:parentDirId"], checkAuth, uploadLimiter, throttle(300, 8, "file-upload"), validate(uploadFileSchema), uploadFile);
 
-router.patch("/:fileId", checkAuth, validate(renameFileSchema), renameFile);
-router.put("/:fileId/save", checkAuth, validate(saveFileSchema), saveFile);
-router.delete("/:fileId", checkAuth, validate(deleteFileSchema), deleteFile);
+router.patch("/:fileId", checkAuth, standardWriteLimiter, throttle(100, 12, "file-rename"), validate(renameFileSchema), renameFile);
+router.put("/:fileId/save", checkAuth, mediumWriteLimiter, throttle(300, 8, "file-save"), validate(saveFileSchema), saveFile);
+router.delete("/:fileId", checkAuth, standardWriteLimiter, throttle(100, 12, "file-delete"), validate(deleteFileSchema), deleteFile);
 
 export default router;

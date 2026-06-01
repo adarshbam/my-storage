@@ -52,9 +52,60 @@ export const search = async (req, res) => {
 
     const query = escapeRegExp(q.toLowerCase());
 
-    // Ensure users have loaded data (though imports should handle it)
+    // Ensure users have loaded data
     if (!req.user || !req.user.id) {
       return res.status(401).send("Unauthorized");
+    }
+
+    let searchFilter = { name: { $regex: query, $options: "i" } };
+
+    // Resolve target owner of search
+    if (parentId && parentId !== "null" && parentId !== "undefined") {
+      const parentDir = await Directory.findById(parentId).select("userId").lean();
+      if (!parentDir) {
+        return res.status(404).send("Search directory not found");
+      }
+
+      const targetOwnerId = parentDir.userId.toString();
+
+      // Check if current user is authorized to access target owner's files
+      if (
+        targetOwnerId !== req.user.id &&
+        req.user.role !== "Owner" &&
+        req.user.role !== "Admin" &&
+        req.user.role !== "Manager"
+      ) {
+        const hasAccess = await SharedAccess.findOne({
+          userId: targetOwnerId,
+          targetUserId: req.user.id,
+        }).lean();
+
+        if (!hasAccess) {
+          return res.status(403).send("Unauthorized to access directory contents");
+        }
+      }
+
+      // If authorized, restrict search to the target owner's files
+      searchFilter.userId = targetOwnerId;
+    } else {
+      // Global search (no parentId):
+      // - Admins/Owners/Managers search globally across all users
+      // - Regular users search their own files + shared files
+      if (
+        req.user.role !== "Owner" &&
+        req.user.role !== "Admin" &&
+        req.user.role !== "Manager"
+      ) {
+        const sharedWithMe = await SharedAccess.find({
+          targetUserId: req.user.id,
+        }).select("userId").lean();
+
+        const authorizedOwnerIds = [
+          req.user.id,
+          ...sharedWithMe.map((s) => s.userId.toString()),
+        ];
+        searchFilter.userId = { $in: authorizedOwnerIds };
+      }
     }
 
     let validParentIds = null;
@@ -67,10 +118,7 @@ export const search = async (req, res) => {
     }
 
     // Filter DirectoryDB
-    const matchingDirs = await Directory.find({
-      userId: req.user.id,
-      name: { $regex: query, $options: "i" },
-    })
+    const matchingDirs = await Directory.find(searchFilter)
       .select("-__v")
       .lean();
 
@@ -112,10 +160,7 @@ export const search = async (req, res) => {
     );
 
     // Filter FilesDB
-    const matchingFiles = await File.find({
-      userId: req.user.id,
-      name: { $regex: query, $options: "i" },
-    })
+    const matchingFiles = await File.find(searchFilter)
       .select("-__v")
       .lean();
 
@@ -139,7 +184,7 @@ export const search = async (req, res) => {
     console.error("Search error:", err);
     return res.status(500).send("Internal Server Error");
   }
-};
+}
 
 export const getThumbnail = async (req, res) => {
   try {
@@ -155,7 +200,8 @@ export const getThumbnail = async (req, res) => {
     if (
       file.userId.toString() !== req.user.id &&
       req.user.role !== "Owner" &&
-      req.user.role !== "Admin"
+      req.user.role !== "Admin" &&
+      req.user.role !== "Manager"
     ) {
       const hasAccess = await SharedAccess.findOne({
         userId: file.userId,
@@ -195,7 +241,8 @@ export const getFileById = async (req, res) => {
     if (
       file.userId.toString() !== req.user.id &&
       req.user.role !== "Owner" &&
-      req.user.role !== "Admin"
+      req.user.role !== "Admin" &&
+      req.user.role !== "Manager"
     ) {
       const hasAccess = await SharedAccess.findOne({
         userId: file.userId,

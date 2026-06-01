@@ -41,7 +41,8 @@ export const getDirectoryById = async (req, res) => {
       directoryData.userId &&
       directoryData.userId.toString() !== req.user.id &&
       req.user.role !== "Owner" &&
-      req.user.role !== "Admin"
+      req.user.role !== "Admin" &&
+      req.user.role !== "Manager"
     ) {
       const hasAccess = await SharedAccess.findOne({
         userId: directoryData.userId,
@@ -71,27 +72,30 @@ export const getDirectoryById = async (req, res) => {
           };
         }
 
-        const fileCount = await File.countDocuments({
-          parentDir: dirIdStr,
-        });
-        const dirCount = await Directory.countDocuments({
-          parentDir: dirIdStr,
-        });
+        const [fileCount, dirCount] = await Promise.all([
+          File.countDocuments({ parentDir: dirIdStr }),
+          Directory.countDocuments({ parentDir: dirIdStr }),
+        ]);
+
         if (!dir.size) {
-          const files = await File.find({ parentDir: dirIdStr })
-            .select("size")
-            .lean();
-          const dirFiles = await Directory.find({
-            parentDir: dirIdStr,
-          })
-            .select("size")
-            .lean();
-          dir.size = files.reduce((acc, file) => acc + file.size, 0);
-          dir.size += dirFiles.reduce((acc, dir) => acc + dir.size, 0);
-          await Directory.updateOne(
+          const [fileStats, dirStats] = await Promise.all([
+            File.aggregate([
+              { $match: { parentDir: new mongoose.Types.ObjectId(dirIdStr) } },
+              { $group: { _id: null, totalSize: { $sum: "$size" } } }
+            ]),
+            Directory.aggregate([
+              { $match: { parentDir: new mongoose.Types.ObjectId(dirIdStr) } },
+              { $group: { _id: null, totalSize: { $sum: "$size" } } }
+            ])
+          ]);
+
+          dir.size = (fileStats[0]?.totalSize || 0) + (dirStats[0]?.totalSize || 0);
+          
+          // Asynchronously update DB so it does not block API response
+          Directory.updateOne(
             { _id: dirIdStr },
-            { $set: { size: dir.size } },
-          );
+            { $set: { size: dir.size } }
+          ).catch(e => console.error("Error updating size:", e));
         }
 
         const itemCount = fileCount + dirCount;

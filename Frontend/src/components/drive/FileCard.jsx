@@ -98,6 +98,7 @@ export default function FileCard({
                 src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg"
                 alt="Google Drive"
                 className={`${viewMode === "list" ? "w-8 h-8 mr-4 ml-1 shrink-0" : "w-14 h-14"} drop-shadow-sm group-hover:scale-105 transition-transform duration-300`}
+                loading="lazy"
               />
             ) : isIntegrationRoot && item.provider === "github" ? (
               <svg
@@ -117,6 +118,7 @@ export default function FileCard({
                 src="/folder.png"
                 alt="folder"
                 className={`${viewMode === "list" ? "w-10 h-10 mr-3 shrink-0" : "w-14 h-14"} object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300`}
+                loading="lazy"
               />
             )}
             {viewMode === "list" && (
@@ -137,6 +139,7 @@ export default function FileCard({
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 onError={() => setImageError(true)}
                 crossOrigin="use-credentials"
+                loading="lazy"
               />
             ) : viewMode === "grid" ? (
               <div className="flex flex-col items-center justify-center p-4 w-full h-full">
@@ -145,6 +148,7 @@ export default function FileCard({
                   alt="file"
                   className="w-16 h-16 mb-2 object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300"
                   onError={(e) => (e.target.src = "/file-images/file.png")}
+                  loading="lazy"
                 />
               </div>
             ) : (
@@ -154,6 +158,7 @@ export default function FileCard({
                   alt="file"
                   className="w-10 h-10 mr-3 shrink-0 object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-300"
                   onError={(e) => (e.target.src = "/file-images/file.png")}
+                  loading="lazy"
                 />
                 <h3
                   className="text-sm font-medium text-slate-900 dark:text-slate-200 truncate w-full"

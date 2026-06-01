@@ -14,5 +14,10 @@ const fileSchema = new Schema(
   { strict: "throw", timestamps: true },
 );
 
+fileSchema.index({ userId: 1 });
+fileSchema.index({ parentDir: 1 });
+fileSchema.index({ parentDir: 1, userId: 1 });
+
+
 const File = model("File", fileSchema);
 export default File;

@@ -445,12 +445,12 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="h-screen bg-[#faf5f7] dark:bg-[#020b08] flex flex-col transition-colors duration-300 overflow-hidden relative">
-      {/* Layered Gradient Background — matching landing page */}
+    <div className="h-screen bg-gradient-to-br from-[#f2faf7] via-[#e6f4f1] to-[#eaf7f4] dark:from-[#010a08] dark:via-[#021612] dark:to-[#010806] flex flex-col transition-colors duration-300 overflow-hidden relative">
+      {/* Layered Gradient Background — matching premium glow dark-green reference */}
       <div className="fixed inset-0 z-[0] pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-[#14b8a6]/10 dark:bg-[#14b8a6]/15 rounded-full blur-[140px]" />
-        <div className="absolute top-[20%] right-[-10%] w-[40vw] h-[40vw] bg-[#3b82f6]/10 dark:bg-[#3b82f6]/15 rounded-full blur-[140px]" />
-        <div className="absolute bottom-[-20%] left-[20%] w-[60vw] h-[60vw] bg-[#a855f7]/10 dark:bg-[#a855f7]/15 rounded-full blur-[140px]" />
+        <div className="absolute top-[-25%] left-[-15%] w-[55vw] h-[55vw] bg-emerald-500/10 dark:bg-emerald-500/15 rounded-full blur-[150px]" />
+        <div className="absolute top-[15%] right-[-15%] w-[45vw] h-[45vw] bg-teal-500/10 dark:bg-teal-500/15 rounded-full blur-[140px]" />
+        <div className="absolute bottom-[-25%] left-[15%] w-[65vw] h-[65vw] bg-[#05493e]/20 dark:bg-[#05493e]/30 rounded-full blur-[160px]" />
       </div>
 
       {/* Global Top Navbar */}

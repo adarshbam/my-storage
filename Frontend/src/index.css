@@ -7,25 +7,29 @@
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-[#f0f9f7] dark:bg-[#020b08] text-slate-900 dark:text-slate-50 transition-colors duration-500;
+    @apply bg-gradient-to-br from-[#f2faf7] via-[#e6f4f1] to-[#eaf7f4] 
+           dark:from-[#010a08] dark:via-[#021612] dark:to-[#010806] 
+           text-slate-900 dark:text-slate-50 
+           transition-colors duration-500 min-h-screen;
   }
 }
 
 @layer utilities {
-  /* ── Glassmorphism ─────────────────────────────────────── */
+  /* ── Premium Obsidian Glassmorphism ───────────────────── */
   .glass-card {
-    @apply bg-white/60 dark:bg-white/[0.04]
-           backdrop-blur-2xl
-           border border-white/80 dark:border-white/[0.08]
-           shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.9)]
-           dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_32px_rgba(0,0,0,0.5)];
+    @apply bg-white/70 dark:bg-[#01140f]/45
+           backdrop-blur-3xl
+           border border-white/80 dark:border-emerald-500/[0.08]
+           shadow-[0_8px_32px_rgba(4,24,19,0.06),inset_0_1px_0_rgba(255,255,255,0.95)]
+           dark:shadow-[inset_0_1px_0_rgba(20,184,166,0.08),0_12px_40px_rgba(0,0,0,0.65),0_0_20px_rgba(20,184,166,0.03)];
   }
+  
   .glass-panel {
-    @apply bg-white/50 dark:bg-white/[0.04]
-           backdrop-blur-2xl
-           border border-white/70 dark:border-white/[0.08]
-           shadow-[0_4px_20px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.8)]
-           dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_4px_20px_rgba(0,0,0,0.4)];
+    @apply bg-white/50 dark:bg-[#011a14]/40
+           backdrop-blur-3xl
+           border border-white/70 dark:border-emerald-500/[0.06]
+           shadow-[0_4px_20px_rgba(4,24,19,0.04),inset_0_1px_0_rgba(255,255,255,0.85)]
+           dark:shadow-[inset_0_1px_0_rgba(20,184,166,0.06),0_8px_24px_rgba(0,0,0,0.5),0_0_15px_rgba(20,184,166,0.02)];
   }
 
   /* Light theme section backgrounds */
@@ -35,8 +39,19 @@
            border-y border-slate-200/60 dark:border-white/[0.05];
   }
 
+  /* High-end Holographic Glows */
   .text-glow {
-    text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+    text-shadow: 0 0 20px rgba(20, 184, 166, 0.65);
+  }
+
+  .shadow-glow-green {
+    box-shadow: 0 0 25px rgba(20, 184, 166, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .shadow-glow-green-hover:hover {
+    box-shadow: 0 0 35px rgba(20, 184, 166, 0.35), 0 0 15px rgba(16, 185, 129, 0.2);
+    transform: translateY(-1px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* ── Scroll Reveal Animations ──────────────────────────── */
@@ -45,6 +60,7 @@
     transform: translateY(32px);
     transition: opacity 0.7s cubic-bezier(.22,1,.36,1), transform 0.7s cubic-bezier(.22,1,.36,1);
   }
+  
   .reveal-up.in-view {
     opacity: 1;
     transform: translateY(0);
@@ -74,18 +90,18 @@
 }
 
 /* ── Custom Scrollbar ────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { @apply bg-transparent; }
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300/60 dark:bg-teal-900/60 rounded-full;
+  @apply bg-slate-300/60 dark:bg-emerald-950/70 rounded-full border border-transparent dark:border-teal-900/30;
 }
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400/80 dark:bg-teal-700/80;
+  @apply bg-slate-400/80 dark:bg-emerald-800/80;
 }
 
 /* ── Selection ───────────────────────────────────────────── */
 ::selection {
-  background: rgba(20, 184, 166, 0.25);
+  background: rgba(20, 184, 166, 0.3);
   color: inherit;
 }
 
