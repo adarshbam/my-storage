@@ -8,7 +8,8 @@ import {
 } from "react-router-dom";
 import { SERVER_URL } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
-import { joinUrl, cn } from "../../lib/utils";
+import { joinUrl, cn, formatSize } from "../../lib/utils";
+import getFileImage from "../../lib/FileImages";
 import Button from "../ui/Button";
 import Editor from "react-simple-code-editor";
 import * as Prism from "prismjs";
@@ -84,6 +85,7 @@ export default function FileBrowser({ specialView }) {
   const [selectedBranch, setSelectedBranch] = useState("");
   const [error, setError] = useState(null);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [detailsItem, setDetailsItem] = useState(null);
 
   // --- DRAG SELECTION STATE ---
   const [isDragging, setIsDragging] = useState(false);
@@ -225,6 +227,27 @@ export default function FileBrowser({ specialView }) {
           parentDir: result.parentDir,
           parentId: result.parentId ?? null,
         });
+
+        // Cache folder names to resolve paths on the client
+        try {
+          const cached = JSON.parse(sessionStorage.getItem("folder_paths") || "{}");
+          if (folderId && result.name) {
+            cached[folderId] = {
+              name: result.name,
+              parentId: result.parentId || null
+            };
+          }
+          // Cache all child directories in view as well
+          directories.forEach((d) => {
+            cached[d.id] = {
+              name: d.name,
+              parentId: d.parentDir || folderId || null
+            };
+          });
+          sessionStorage.setItem("folder_paths", JSON.stringify(cached));
+        } catch (e) {
+          console.error("Path cache error:", e);
+        }
         setDirName(
           result.name ||
             (isSearch
@@ -331,6 +354,41 @@ export default function FileBrowser({ specialView }) {
     specialView,
     selectedBranch,
   ]);
+
+  const resolveItemPath = (item) => {
+    if (!item) return "/";
+    if (item.provider === "google_drive") {
+      return `Google Drive/${item.name}`;
+    }
+    if (item.provider === "github") {
+      return `GitHub/${item.githubPath || item.name}`;
+    }
+
+    const parentId = item.parentDir || folderId || "";
+    const pathParts = [item.name];
+    let currentId = parentId;
+    let depth = 0;
+
+    try {
+      const cached = JSON.parse(sessionStorage.getItem("folder_paths") || "{}");
+      while (currentId && depth < 20) {
+        const folder = cached[currentId];
+        if (!folder) {
+          pathParts.unshift("...");
+          break;
+        }
+        if (folder.name && folder.name !== "root" && folder.name !== "Home") {
+          pathParts.unshift(folder.name);
+        }
+        currentId = folder.parentId;
+        depth++;
+      }
+    } catch (e) {
+      console.error("Path resolution error:", e);
+    }
+
+    return "/" + pathParts.join("/");
+  };
 
   // --- HANDLERS ---
 
@@ -1436,6 +1494,7 @@ export default function FileBrowser({ specialView }) {
               onDelete={handleDelete}
               onDownload={handleDownload}
               onPreview={handlePreview}
+              onDetails={(item) => setDetailsItem(item)}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
@@ -1462,6 +1521,7 @@ export default function FileBrowser({ specialView }) {
               onDelete={handleDelete}
               onDownload={handleDownload}
               onPreview={handlePreview}
+              onDetails={(item) => setDetailsItem(item)}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
@@ -1843,6 +1903,104 @@ export default function FileBrowser({ specialView }) {
             </form>
           )}
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!detailsItem}
+        onClose={() => setDetailsItem(null)}
+        title={`${detailsItem?.type === "directory" ? "Folder" : "File"} Details`}
+        className="max-w-md animate-in zoom-in-95 duration-200"
+      >
+        {detailsItem && (
+          <div className="space-y-6">
+            {/* Header info card */}
+            <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-white/[0.02] border border-black/5 dark:border-white/[0.05] rounded-2xl">
+              <div className="p-3 bg-teal-500/10 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400 rounded-xl">
+                {detailsItem.type === "directory" ? (
+                  <img src="/folder.png" alt="folder" className="w-10 h-10 object-contain" />
+                ) : (
+                  <img
+                    src={getFileImage(detailsItem.extension?.slice(1))}
+                    alt="file"
+                    className="w-10 h-10 object-contain"
+                    onError={(e) => (e.target.src = "/file-images/file.png")}
+                  />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white truncate" title={detailsItem.name}>
+                  {detailsItem.name}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
+                  {detailsItem.provider || "Local Vault"} {detailsItem.type}
+                </p>
+              </div>
+            </div>
+
+            {/* Fields list */}
+            <div className="space-y-3.5">
+              <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-white/[0.04] pb-2">
+                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Path
+                </span>
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-200 break-all select-all">
+                  {resolveItemPath(detailsItem)}
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-white/[0.04] pb-2">
+                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Size
+                </span>
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                  {detailsItem.type === "directory" && (detailsItem.provider === "google_drive" || detailsItem.provider === "github") ? "N/A" : formatSize(detailsItem.size)}
+                </span>
+              </div>
+
+              {detailsItem.type === "directory" && (
+                <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-white/[0.04] pb-2">
+                  <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    Contains
+                  </span>
+                  <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                    {detailsItem.provider === "google_drive" || detailsItem.provider === "github" ? (
+                      "N/A"
+                    ) : (
+                      <>
+                        {detailsItem.fileCount ?? 0} {detailsItem.fileCount === 1 ? "file" : "files"}, {detailsItem.dirCount ?? 0} {detailsItem.dirCount === 1 ? "folder" : "folders"}
+                      </>
+                    )}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-white/[0.04] pb-2">
+                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Created At
+                </span>
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                  {detailsItem.createdAt ? new Date(detailsItem.createdAt).toLocaleString() : detailsItem.modifiedTime ? new Date(detailsItem.modifiedTime).toLocaleString() : "N/A"}
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-1 pb-1">
+                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Last Modified
+                </span>
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                  {detailsItem.updatedAt ? new Date(detailsItem.updatedAt).toLocaleString() : detailsItem.modifiedTime ? new Date(detailsItem.modifiedTime).toLocaleString() : "N/A"}
+                </span>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex justify-end pt-2">
+              <Button onClick={() => setDetailsItem(null)} className="px-5">
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       <Suspense fallback={null}>
