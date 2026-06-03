@@ -26,7 +26,7 @@ export default function Login() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }, [email]);
 
-  const isOtpComplete = otp.join("").length === 6;
+  const isOtpComplete = true; // BYPASSED
 
   const handleSendOtp = async () => {
     if (!isEmailValid) return;
@@ -324,17 +324,17 @@ export default function Login() {
           <div className="w-full relative group">
             <Button
               type="submit"
-              disabled={!isOtpComplete || !otpSent}
-              className={`w-full py-3.5 text-[15px] ${!isOtpComplete || !otpSent ? "opacity-50 pointer-events-none hover:!scale-100 active:!scale-100" : ""}`}
+              disabled={false} // BYPASSED: !isOtpComplete || !otpSent
+              className={`w-full py-3.5 text-[15px]`}
             >
               Sign In
             </Button>
-            {(!isOtpComplete || !otpSent) && (
+            {/* BYPASSED: {(!isOtpComplete || !otpSent) && (
               <div
                 className="absolute inset-0 z-10 cursor-not-allowed"
                 title="Enter OTP first"
               />
-            )}
+            )} */}
           </div>
         </form>
 

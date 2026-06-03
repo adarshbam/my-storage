@@ -59,19 +59,32 @@ export default function FileCard({
     }
   };
 
+  const getEnvClass = () => {
+    if (type === "directory") {
+      if (item.provider === "google_drive" || item.provider === "shared_drive") return "env-team";
+      if (item.provider === "github") return "env-creative";
+      return "";
+    }
+    const ext = item.extension?.toLowerCase() || "";
+    if ([".pdf", ".doc", ".docx", ".txt"].includes(ext)) return "env-document";
+    if ([".png", ".jpg", ".jpeg", ".svg", ".mp4", ".mov"].includes(ext)) return "env-media";
+    if ([".csv", ".xlsx", ".xls", ".json"].includes(ext)) return "env-analytics";
+    return "";
+  };
+
   return (
     <div
-      className={`relative group bg-white/60 dark:bg-white/[0.04] backdrop-blur-xl border rounded-xl transition-all duration-300 cursor-pointer hover:shadow-[0_0_20px_rgba(20,184,166,0.08)] dark:hover:shadow-[0_0_25px_rgba(20,184,166,0.12)] ${
+      className={`relative group glass-panel transition-all duration-300 cursor-pointer hover:shadow-glow-green-hover ${getEnvClass()} ${
         showMenu ? "z-[100]" : "z-0"
       } ${
         viewMode === "list"
-          ? "grid grid-cols-[1fr,100px,150px,40px] items-center p-2 pr-2 gap-4 hover:bg-white/80 dark:hover:bg-white/[0.06] border-transparent hover:border-black/10 dark:hover:border-white/10"
-          : "flex flex-col px-5 py-3 gap-1.5 border-black/5 dark:border-white/[0.06] hover:border-[#14b8a6]/30 dark:hover:border-[#14b8a6]/30 hover:scale-[1.02]"
+          ? "grid grid-cols-[1fr,100px,150px,40px] items-center p-2 pr-2 gap-4 hover:bg-white/80 dark:hover:bg-vault-surface border-transparent hover:border-black/10 dark:hover:border-vault-emerald/30 rounded-xl"
+          : "flex flex-col px-5 py-3 gap-1.5 border-black/5 dark:border-vault-emerald/[0.08] hover:border-vault-emerald/50 rounded-2xl"
       } ${
         selected && viewMode !== "list"
-          ? "border-[#14b8a6]/60 ring-2 ring-[#14b8a6]/30 shadow-[0_0_20px_rgba(20,184,166,0.15)]"
+          ? "border-vault-emerald ring-1 ring-vault-emerald/50 shadow-[inset_0_1px_0_rgba(0,212,165,0.2),0_0_25px_rgba(0,212,165,0.15)] bg-vault-emerald/[0.02]"
           : selected && viewMode === "list"
-            ? "bg-white/80 dark:bg-white/[0.06] border-[#14b8a6]/30 dark:border-[#14b8a6]/20"
+            ? "bg-white/80 dark:bg-vault-emerald/[0.03] border-vault-emerald/30 dark:border-vault-emerald/30"
             : ""
       }`}
       onClick={(e) => {
@@ -90,7 +103,7 @@ export default function FileCard({
         className={
           viewMode === "list"
             ? "flex flex-row items-center min-w-0"
-            : "relative w-full aspect-square bg-white/30 dark:bg-white/[0.03] flex items-center justify-center overflow-hidden rounded-lg"
+            : "relative w-full aspect-square bg-white/30 dark:bg-vault-surface/40 flex items-center justify-center overflow-hidden rounded-xl border border-black/5 dark:border-vault-emerald/5"
         }
       >
         {type === "directory" ? (

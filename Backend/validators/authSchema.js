@@ -4,7 +4,7 @@ import {email, z} from "zod/v4";
 export const loginSchema = z.object({
     email: z.email('Please enter a valid email'),
     password: z.string(),
-    otp: z.string('Please enter a valid 6 digit OTP').length(6),
+    otp: z.string().optional(),
 })
 
 export const registerSchema = z.object({

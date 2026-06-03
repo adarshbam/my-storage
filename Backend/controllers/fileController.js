@@ -47,17 +47,35 @@ const getAllDescendantIds = (rootDirId, allDirs) => {
 
 export const search = async (req, res) => {
   try {
-    const { q, parentId } = req.query;
-    if (!q) return res.status(400).send("Search query required");
+    const { q, parentId, ext, size } = req.query;
+    if (!q && !ext && !size) return res.status(400).send("Search query required");
 
-    const query = escapeRegExp(q.toLowerCase());
+    const query = q ? escapeRegExp(q.toLowerCase()) : "";
 
     // Ensure users have loaded data
     if (!req.user || !req.user.id) {
       return res.status(401).send("Unauthorized");
     }
 
-    let searchFilter = { name: { $regex: query, $options: "i" } };
+    let searchFilter = {};
+    if (query) {
+      searchFilter.name = { $regex: query, $options: "i" };
+    }
+    
+    // Process extensions
+    if (ext) {
+      const extList = ext.split(",").map(e => {
+        let eStr = e.trim().toLowerCase();
+        return eStr.startsWith(".") ? eStr : "." + eStr;
+      });
+      searchFilter.extension = { $in: extList };
+    }
+
+    // Process size (Max size in MB)
+    if (size) {
+      const maxSizeBytes = parseInt(size, 10) * 1024 * 1024;
+      searchFilter.size = { $lte: maxSizeBytes };
+    }
 
     // Resolve target owner of search
     if (parentId && parentId !== "null" && parentId !== "undefined") {
@@ -117,10 +135,13 @@ export const search = async (req, res) => {
       );
     }
 
-    // Filter DirectoryDB
-    const matchingDirs = await Directory.find(searchFilter)
-      .select("-__v")
-      .lean();
+    // Filter DirectoryDB (Don't search directories if extension filter is used)
+    let matchingDirs = [];
+    if (!ext) {
+      matchingDirs = await Directory.find(searchFilter)
+        .select("-__v")
+        .lean();
+    }
 
     const finalMatchingDirsRaw = validParentIds
       ? matchingDirs.filter((d) => validParentIds.has(d._id.toString()))

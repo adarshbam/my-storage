@@ -98,7 +98,7 @@ app.use(
     xssFilter: true,
     // 7. Cross-Origin Opener Policy (COOP) - Crucial for popup OAuth flows
     crossOriginOpenerPolicy: {
-      policy: "same-origin-allow-popups",
+      policy: "unsafe-none",
     },
     // 8. Cross-Origin Resource Policy (CORP) - Allow client app to read static files
     crossOriginResourcePolicy: {

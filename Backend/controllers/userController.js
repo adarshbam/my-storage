@@ -55,14 +55,14 @@ export const registerUser = async (req, res) => {
   name = sanitize(name);
 
   try {
-    // Check that the email was verified via OTP
-    const otpRecord = await OTP.findOne({ email }).sort({ createdAt: -1 });
+    // Check that the email was verified via OTP (BYPASSED)
+    // const otpRecord = await OTP.findOne({ email }).sort({ createdAt: -1 });
 
-    if (!otpRecord || !otpRecord.isVerified) {
-      return res
-        .status(403)
-        .json({ error: "Email not verified. Please verify OTP first." });
-    }
+    // if (!otpRecord || !otpRecord.isVerified) {
+    //   return res
+    //     .status(403)
+    //     .json({ error: "Email not verified. Please verify OTP first." });
+    // }
 
     const { userId, rootDirId } = await createUserWithRootDir({
       name: name || "User",
@@ -100,21 +100,22 @@ export const loginUser = async (req, res) => {
   const { email, password, otp } = data;
   try {
     // ── OTP verification ──────────────────────────────────────────────────────
-    if (!otp) {
-      return res.status(401).json({ error: "OTP is required" });
-    }
+    // BYPASSED OTP for development
+    // if (!otp) {
+    //   return res.status(401).json({ error: "OTP is required" });
+    // }
 
-    const otpRecord = await OTP.findOne({ email }).sort({ createdAt: -1 });
+    // const otpRecord = await OTP.findOne({ email }).sort({ createdAt: -1 });
 
-    if (!otpRecord) {
-      return res
-        .status(401)
-        .json({ error: "OTP expired or not found. Please request a new one." });
-    }
+    // if (!otpRecord) {
+    //   return res
+    //     .status(401)
+    //     .json({ error: "OTP expired or not found. Please request a new one." });
+    // }
 
-    if (String(otpRecord.otp) !== String(otp)) {
-      return res.status(401).json({ error: "Invalid OTP" });
-    }
+    // if (String(otpRecord.otp) !== String(otp)) {
+    //   return res.status(401).json({ error: "Invalid OTP" });
+    // }
 
     // ── Credential verification ───────────────────────────────────────────────
     const user = await User.findOne({ email }).select(

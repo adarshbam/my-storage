@@ -8,6 +8,21 @@ export default {
         sans: ["Inter", "sans-serif"],
       },
       colors: {
+        vault: {
+          black: "#030706",
+          bg: "#050A08",
+          surface: "#07110E",
+          panel: "#091613",
+          emerald: "#00D4A5",
+          "emerald-soft": "#1FC8A7",
+          "emerald-dark": "#0D8F73",
+        },
+        team: { accent: "#20E5C0" },
+        document: { accent: "#4DA6FF" },
+        creative: { accent: "#C65CFF" },
+        media: { accent: "#FF7A3D" },
+        analytics: { accent: "#FFD166" },
+        danger: { accent: "#FF5A7A" },
         brand: {
           50: "#eafaf1",
           100: "#cbf5df",
@@ -41,6 +56,8 @@ export default {
         "pulse-glow": "pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "gradient-x": "gradientX 3s ease infinite",
         "float": "float 6s ease-in-out infinite",
+        "slide-in-right": "slideInRight 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+        "scan-line": "scanLine 3s linear infinite",
       },
       keyframes: {
         fadeIn: {
@@ -68,6 +85,16 @@ export default {
         float: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-10px)' },
+        },
+        slideInRight: {
+          '0%': { transform: 'translateX(100%)', opacity: 0 },
+          '100%': { transform: 'translateX(0)', opacity: 1 },
+        },
+        scanLine: {
+          '0%': { top: '-5%', opacity: 0 },
+          '10%': { opacity: 1 },
+          '90%': { opacity: 1 },
+          '100%': { top: '105%', opacity: 0 },
         }
       },
     },

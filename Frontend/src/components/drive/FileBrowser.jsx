@@ -25,7 +25,8 @@ import "prismjs/components/prism-json";
 import "prismjs/components/prism-markdown";
 import "prismjs/themes/prism-tomorrow.css";
 import Modal from "../ui/Modal";
-import FileCard from "./FileCard";
+import AssetCard from "../dashboard/AssetCard";
+import FileDetailsModal from "../dashboard/FileDetailsModal";
 import {
   Upload,
   FolderPlus,
@@ -96,13 +97,30 @@ export default function FileBrowser({ specialView }) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get("q") || searchParams.get("search");
-  const isSearch = location.pathname.endsWith("/search") || !!searchQuery;
+  const searchExt = searchParams.get("ext");
+  const searchSize = searchParams.get("size");
+  const isSearch = location.pathname.endsWith("/search") || !!searchQuery || !!searchExt || !!searchSize;
   const isReadOnly = specialView === "shared" || specialView === "admin";
   const ownerId = searchParams.get("ownerId");
 
   const handlePreview = (file) => {
     setPreviewFile(file);
   };
+
+  useEffect(() => {
+    const onFolderTrigger = () => handleCreateClick();
+    const onFileTrigger = () => {
+      setModalInput("");
+      setModalType("create-file");
+      setSelectedExt(".txt");
+    };
+    document.addEventListener("createFolderTrigger", onFolderTrigger);
+    document.addEventListener("createFileTrigger", onFileTrigger);
+    return () => {
+      document.removeEventListener("createFolderTrigger", onFolderTrigger);
+      document.removeEventListener("createFileTrigger", onFileTrigger);
+    };
+  }, []);
 
   const fetchFiles = async () => {
     setLoading(true);
@@ -134,30 +152,29 @@ export default function FileBrowser({ specialView }) {
       }
 
       if (isSearch) {
-        if (!searchQuery) {
+        if (!searchQuery && !searchExt && !searchSize) {
           setLoading(false);
           setData({ directories: [], files: [] });
           setDirName("Search");
           return;
         }
+        const filterParams = `${searchExt ? `&ext=${encodeURIComponent(searchExt)}` : ""}${searchSize ? `&size=${encodeURIComponent(searchSize)}` : ""}`;
         if (specialView === "github-repo") {
           const parts = githubPath.split("/");
           const owner = parts[0];
           const repo = parts[1];
           const path = parts.slice(2).join("/");
-          url = `${SERVER_URL}/github/repositories/${owner}/${repo}/search?q=${encodeURIComponent(searchQuery)}${path ? `&path=${encodeURIComponent(path)}` : ""}${selectedBranch ? `&ref=${selectedBranch}` : ""}`;
+          url = `${SERVER_URL}/github/repositories/${owner}/${repo}/search?q=${encodeURIComponent(searchQuery || "")}${path ? `&path=${encodeURIComponent(path)}` : ""}${selectedBranch ? `&ref=${selectedBranch}` : ""}`;
         } else if (specialView === "github") {
-          // Frontend level search for repository list
           url = `${SERVER_URL}/github/repositories`;
         } else if (
           specialView === "google-drive" ||
           specialView === "google-drive-folder"
         ) {
-          // Drive search is global across all files — no folder scoping needed
-          url = `${SERVER_URL}/drive/search?q=${encodeURIComponent(searchQuery)}`;
+          url = `${SERVER_URL}/drive/search?q=${encodeURIComponent(searchQuery || "")}`;
         } else {
           const parentId = folderId;
-          url = `${SERVER_URL}/file/search?q=${encodeURIComponent(searchQuery)}${parentId ? `&parentId=${parentId}` : ""}`;
+          url = `${SERVER_URL}/file/search?q=${encodeURIComponent(searchQuery || "")}${parentId ? `&parentId=${parentId}` : ""}${filterParams}`;
         }
       }
 
@@ -354,41 +371,6 @@ export default function FileBrowser({ specialView }) {
     specialView,
     selectedBranch,
   ]);
-
-  const resolveItemPath = (item) => {
-    if (!item) return "/";
-    if (item.provider === "google_drive") {
-      return `Google Drive/${item.name}`;
-    }
-    if (item.provider === "github") {
-      return `GitHub/${item.githubPath || item.name}`;
-    }
-
-    const parentId = item.parentDir || folderId || "";
-    const pathParts = [item.name];
-    let currentId = parentId;
-    let depth = 0;
-
-    try {
-      const cached = JSON.parse(sessionStorage.getItem("folder_paths") || "{}");
-      while (currentId && depth < 20) {
-        const folder = cached[currentId];
-        if (!folder) {
-          pathParts.unshift("...");
-          break;
-        }
-        if (folder.name && folder.name !== "root" && folder.name !== "Home") {
-          pathParts.unshift(folder.name);
-        }
-        currentId = folder.parentId;
-        depth++;
-      }
-    } catch (e) {
-      console.error("Path resolution error:", e);
-    }
-
-    return "/" + pathParts.join("/");
-  };
 
   // --- HANDLERS ---
 
@@ -841,26 +823,7 @@ export default function FileBrowser({ specialView }) {
     }
   };
 
-  // const onFileUpload = (files) => { ... } // Replaced by uploadFile from context
-
-  // We don't need onFileUpload function anymore, we use uploadFile directly or via handleDrop
-
-  // Actually handleDrop calls transferRef.current.uploadFile.
-  // We need to update handleDrop to use `uploadFile` from context.
-
-  // And the header upload button uses `openUploadModal`.
-
-  // So `onFileUpload` is dead code?
-  // It was used by the hidden input.
-  // The hidden input is for the "Upload" button?
-  // No, I replaced that with `setShowUploadModal(true)`.
-  // So I can remove `onFileUpload`.
-
   const handleDragStart = (e, item) => {
-    // If we are dragging an item that is selected, we drag all selected items
-    // If we drag an item NOT selected, we only drag that item (and maybe clear selection? standard behavior depends)
-    // Let's go with: if item is selected, drag all selected. If not, drag only item.
-
     let itemsToDrag = [item];
     if (selectedItems.some((i) => i.id === item.id)) {
       itemsToDrag = selectedItems;
@@ -873,7 +836,6 @@ export default function FileBrowser({ specialView }) {
     }));
 
     e.dataTransfer.setData("draggedItems", JSON.stringify(preparedItems));
-    // Keep 'draggedItem' for backward compatibility or single item logic if needed, but 'draggedItems' is main now
     e.dataTransfer.setData("draggedItem", JSON.stringify(preparedItems[0]));
   };
 
@@ -1102,8 +1064,8 @@ export default function FileBrowser({ specialView }) {
       onDrop={handleZoneDrop}
       onDragOver={handleZoneDragOver}
     >
-      <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-2 pb-5 mb-5 -mx-4 px-4 md:-mx-8 md:px-8 border-b border-slate-200 dark:border-slate-800 shrink-0">
-        <div className="flex items-center gap-2 shrink-0 order-1">
+      <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-2 pb-5 mb-5 border-b border-white/5 shrink-0 px-2">
+        <div className="flex items-center gap-2 shrink-0">
           {(data.parentDir ||
             (specialView === "shared" && folderId) ||
             specialView === "admin" ||
@@ -1183,13 +1145,13 @@ export default function FileBrowser({ specialView }) {
                 e.preventDefault();
                 e.stopPropagation();
               }}
-              className="p-2 text-slate-600 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+              className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-xl transition-all border border-transparent hover:border-white/20 mr-2"
               title="Go Back"
             >
-              ←
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
             </button>
           )}
-          <h2 className="text-2xl capitalize font-bold text-slate-800 dark:text-white flex items-center gap-2">
+          <h2 className="text-2xl capitalize font-bold text-white flex items-center gap-2 drop-shadow-md tracking-wide">
             {dirName}
             {folderId && !isSearch && !isReadOnly && (
               <button
@@ -1202,10 +1164,10 @@ export default function FileBrowser({ specialView }) {
                   setModalInput(dirName);
                   setModalType("rename");
                 }}
-                className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-all"
+                className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-md transition-all ml-2"
                 title="Rename Folder"
               >
-                <Edit2 size={18} />
+                <Edit2 size={16} />
               </button>
             )}
           </h2>
@@ -1235,118 +1197,14 @@ export default function FileBrowser({ specialView }) {
           )}
         </div>
 
-        {/* MIDDLE SECTION: Search Bar from Context */}
-        <div className="relative w-full md:flex-1 md:max-w-md xl:max-w-lg flex items-center gap-2 mx-0 md:mx-4 group order-3 md:order-2">
-          <div className="relative flex-1 opacity-90 hover:opacity-100 transition-opacity">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer z-10"
-              size={18}
-              onClick={() => handleSearch(inputSearchQuery)}
-            />
-            <input
-              type="text"
-              placeholder="Search files..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:bg-white/80 dark:focus:bg-white/[0.08] focus:ring-1 focus:ring-[#14b8a6]/40 focus:border-[#14b8a6]/30 dark:focus:shadow-[0_0_12px_rgba(20,184,166,0.12)] outline-none transition-all duration-300 shadow-sm text-sm font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
-              value={inputSearchQuery || ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                setInputSearchQuery(val);
-                if (!val) {
-                  handleSearch("");
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSearch(inputSearchQuery);
-              }}
-              onFocus={() => setShowRecentSearches(true)}
-              onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
-            />
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`p-2.5 rounded-xl border transition-all ${
-              showFilters
-                ? "bg-white/80 dark:bg-white/[0.08] border-black/10 dark:border-white/10 text-slate-900 dark:text-white"
-                : "bg-white/40 dark:bg-white/[0.04] border-black/5 dark:border-white/[0.06] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 shadow-sm"
-            }`}
-          >
-            <SlidersHorizontal size={18} />
-          </button>
-
-          {showRecentSearches &&
-            recentSearches &&
-            recentSearches.length > 0 && (
-              <div className="absolute top-full left-0 right-20 mt-2 bg-white/90 dark:bg-white/[0.06] backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] rounded-xl shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-20 overflow-hidden">
-                <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 dark:bg-slate-800/50">
-                  Recent Searches
-                </div>
-                {recentSearches.map((term, index) => (
-                  <div
-                    key={index}
-                    className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"
-                    onClick={() => handleSearch(term)}
-                  >
-                    <Search size={14} className="text-slate-400" />
-                    {term}
-                  </div>
-                ))}
-              </div>
-            )}
-          {showFilters && (
-            <div className="absolute top-full left-0 md:left-auto md:right-20 mt-2 w-72 bg-white/90 dark:bg-white/[0.05] backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] rounded-xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-20 overflow-hidden">
-              <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-                <h3 className="font-semibold text-slate-900 dark:text-white">
-                  Filters
-                </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Refine your search results.
-                </p>
-              </div>
-              <div className="p-4 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">
-                    Extensions
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. pdf, png, docx"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-1">
-                    Size
-                  </label>
-                  <select className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-colors text-slate-900 dark:text-slate-200">
-                    <option>Any Size</option>
-                    <option>&lt; 1MB</option>
-                    <option>1MB - 10MB</option>
-                    <option>10MB - 100MB</option>
-                    <option>&gt; 100MB</option>
-                  </select>
-                </div>
-                <div className="flex items-center justify-between pt-2">
-                  <span className="text-sm font-medium text-slate-900 dark:text-white">
-                    Starred Only
-                  </span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
-                    <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-400 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-500 peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0 order-2 md:order-3">
-          <div className="flex items-center bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm rounded-xl p-1 mr-2 hidden md:flex border border-black/5 dark:border-white/[0.06]">
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center bg-black/40 backdrop-blur-sm rounded-xl p-1 border border-white/5">
             <button
               onClick={() => setViewMode("grid")}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === "grid"
-                  ? "bg-white dark:bg-white/10 shadow-sm text-[#14b8a6]"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                  ? "bg-white/10 shadow-sm text-vault-emerald"
+                  : "text-white/40 hover:text-white/80"
               }`}
               title="Grid view"
             >
@@ -1356,69 +1214,14 @@ export default function FileBrowser({ specialView }) {
               onClick={() => setViewMode("list")}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === "list"
-                  ? "bg-white dark:bg-white/10 shadow-sm text-[#14b8a6]"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                  ? "bg-white/10 shadow-sm text-vault-emerald"
+                  : "text-white/40 hover:text-white/80"
               }`}
               title="List view"
             >
               <List size={18} />
             </button>
           </div>
-          {(!specialView ||
-            specialView === "github" ||
-            specialView === "github-repo" ||
-            specialView === "google-drive" ||
-            specialView === "google-drive-folder") && (
-            <div className="flex items-center gap-3">
-              {specialView === "github" && (
-                <button
-                  onClick={() => {
-                    setModalType("create-repo");
-                    setModalInput("");
-                    setIsPrivate(false);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white rounded-xl hover:shadow-[0_0_20px_rgba(20,184,166,0.4)] hover:scale-[1.03] transition-all duration-300 font-medium shadow-lg shadow-[#14b8a6]/20"
-                >
-                  <Rocket size={18} />
-                  <span className="hidden sm:inline">New Repository</span>
-                </button>
-              )}
-              {(!specialView ||
-                specialView === "github-repo" ||
-                specialView === "google-drive" ||
-                specialView === "google-drive-folder") && (
-                <>
-                  <button
-                    onClick={handleCreateClick}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm text-slate-700 dark:text-slate-200 rounded-xl hover:bg-white/80 dark:hover:bg-white/[0.08] transition-all duration-300 font-medium border border-black/5 dark:border-white/[0.06]"
-                  >
-                    <FolderPlus size={18} />
-                    <span className="hidden sm:inline">New Folder</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setModalInput("");
-                      setModalType("create-file");
-                      setSelectedExt(".txt");
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm text-slate-700 dark:text-slate-200 rounded-xl hover:bg-white/80 dark:hover:bg-white/[0.08] transition-all duration-300 font-medium border border-black/5 dark:border-white/[0.06]"
-                  >
-                    <FilePlus size={18} />
-                    <span className="hidden sm:inline">New File</span>
-                  </button>
-                  {(!specialView || specialView === "github-repo") && (
-                    <button
-                      onClick={openUploadModal}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white rounded-xl hover:shadow-[0_0_20px_rgba(20,184,166,0.4)] hover:scale-[1.03] transition-all duration-300 font-medium shadow-lg shadow-[#14b8a6]/20"
-                    >
-                      <Upload size={18} />
-                      <span className="hidden sm:inline">Upload</span>
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
@@ -1455,7 +1258,7 @@ export default function FileBrowser({ specialView }) {
           className={`pb-20 relative select-none flex-1 content-start ${
             viewMode === "list"
               ? "flex flex-col gap-1"
-              : "grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-4"
+              : "grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-6 p-6 rounded-[2.5rem] vault-glass-panel"
           }`}
           onMouseDown={handleMouseDown}
         >
@@ -1482,11 +1285,10 @@ export default function FileBrowser({ specialView }) {
           )}
 
           {data.directories.map((dir) => (
-            <FileCard
+            <AssetCard
               id={`file-card-${dir.id}`}
               key={dir.id}
               item={dir}
-              type="directory"
               selected={selectedItems.some((i) => i.id === dir.id)}
               onSelect={(item, e) => handleSelect(item, e)}
               onNavigate={handleNavigate}
@@ -1509,11 +1311,10 @@ export default function FileBrowser({ specialView }) {
             />
           ))}
           {data.files.map((file) => (
-            <FileCard
+            <AssetCard
               id={`file-card-${file.id}`}
               key={file.id}
               item={file}
-              type="file"
               selected={selectedItems.some((i) => i.id === file.id)}
               onSelect={(item, e) => handleSelect(item, e)}
               onNavigate={() => {}} // Files don't navigate
@@ -1905,104 +1706,14 @@ export default function FileBrowser({ specialView }) {
         </div>
       </Modal>
 
-      <Modal
-        isOpen={!!detailsItem}
-        onClose={() => setDetailsItem(null)}
-        title={`${detailsItem?.type === "directory" ? "Folder" : "File"} Details`}
-        className="max-w-md animate-in zoom-in-95 duration-200"
-      >
-        {detailsItem && (
-          <div className="space-y-6">
-            {/* Header info card */}
-            <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-white/[0.02] border border-black/5 dark:border-white/[0.05] rounded-2xl">
-              <div className="p-3 bg-teal-500/10 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400 rounded-xl">
-                {detailsItem.type === "directory" ? (
-                  <img src="/folder.png" alt="folder" className="w-10 h-10 object-contain" />
-                ) : (
-                  <img
-                    src={getFileImage(detailsItem.extension?.slice(1))}
-                    alt="file"
-                    className="w-10 h-10 object-contain"
-                    onError={(e) => (e.target.src = "/file-images/file.png")}
-                  />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base font-semibold text-slate-900 dark:text-white truncate" title={detailsItem.name}>
-                  {detailsItem.name}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
-                  {detailsItem.provider || "Local Vault"} {detailsItem.type}
-                </p>
-              </div>
-            </div>
-
-            {/* Fields list */}
-            <div className="space-y-3.5">
-              <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-white/[0.04] pb-2">
-                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Path
-                </span>
-                <span className="text-sm font-medium text-slate-800 dark:text-slate-200 break-all select-all">
-                  {resolveItemPath(detailsItem)}
-                </span>
-              </div>
-
-              <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-white/[0.04] pb-2">
-                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Size
-                </span>
-                <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                  {detailsItem.type === "directory" && (detailsItem.provider === "google_drive" || detailsItem.provider === "github") ? "N/A" : formatSize(detailsItem.size)}
-                </span>
-              </div>
-
-              {detailsItem.type === "directory" && (
-                <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-white/[0.04] pb-2">
-                  <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                    Contains
-                  </span>
-                  <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                    {detailsItem.provider === "google_drive" || detailsItem.provider === "github" ? (
-                      "N/A"
-                    ) : (
-                      <>
-                        {detailsItem.fileCount ?? 0} {detailsItem.fileCount === 1 ? "file" : "files"}, {detailsItem.dirCount ?? 0} {detailsItem.dirCount === 1 ? "folder" : "folders"}
-                      </>
-                    )}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex flex-col gap-1 border-b border-slate-100 dark:border-white/[0.04] pb-2">
-                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Created At
-                </span>
-                <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                  {detailsItem.createdAt ? new Date(detailsItem.createdAt).toLocaleString() : detailsItem.modifiedTime ? new Date(detailsItem.modifiedTime).toLocaleString() : "N/A"}
-                </span>
-              </div>
-
-              <div className="flex flex-col gap-1 pb-1">
-                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Last Modified
-                </span>
-                <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                  {detailsItem.updatedAt ? new Date(detailsItem.updatedAt).toLocaleString() : detailsItem.modifiedTime ? new Date(detailsItem.modifiedTime).toLocaleString() : "N/A"}
-                </span>
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex justify-end pt-2">
-              <Button onClick={() => setDetailsItem(null)} className="px-5">
-                Close
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
+      {/* New Vault OS Details Modal */}
+      {detailsItem && (
+        <FileDetailsModal 
+          item={detailsItem} 
+          onClose={() => setDetailsItem(null)} 
+        />
+      )}
+      
       <Suspense fallback={null}>
         {!!previewFile && (
           <FilePreviewModal

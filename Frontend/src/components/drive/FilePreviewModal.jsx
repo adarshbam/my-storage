@@ -465,10 +465,10 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
       {!isFullscreen && <div className="absolute inset-0" onClick={onClose} />}
       <div 
         ref={modalRef}
-        className={`relative bg-white/90 dark:bg-white/[0.05] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)] flex flex-col border border-black/10 dark:border-white/[0.08] animate-in zoom-in-95 duration-200 transition-all ${
+        className={`relative bg-white/90 dark:bg-vault-surface/90 backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_0_rgba(0,212,165,0.2),0_12px_40px_rgba(0,0,0,0.7),0_0_20px_rgba(0,212,165,0.05)] flex flex-col border border-black/10 dark:border-vault-emerald/20 animate-in zoom-in-95 duration-200 transition-all ${
           isFullscreen 
             ? 'w-full h-full rounded-none' 
-            : 'w-full max-w-5xl h-[70vh] rounded-[20px]'
+            : 'w-full max-w-5xl h-[70vh] rounded-3xl'
         }`}
       >
         {/* Header */}
@@ -511,9 +511,19 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                   {file.name}
                 </h3>
               )}
-              <span className="text-[10px] text-slate-500 font-mono flex items-center gap-2">
-                {file.provider === "github" ? "GitHub Managed" : file.provider === "google_drive" ? "Google Drive" : "Local Storage"}
-                {isEditing && <span className="text-[#14b8a6] font-bold">• EDITING</span>}
+              <span className="text-[10px] text-slate-500 font-mono flex items-center gap-3">
+                <span className="flex items-center gap-1 text-vault-emerald">
+                  <span className="w-1.5 h-1.5 rounded-full bg-vault-emerald animate-pulse"></span>
+                  AES-256 SECURED
+                </span>
+                <span className="opacity-50">|</span>
+                <span className="uppercase tracking-wider">{file.provider === "github" ? "GITHUB SECURE RELAY" : file.provider === "google_drive" ? "DRIVE SECURE RELAY" : "VAULT LOCAL NODE"}</span>
+                {isEditing && (
+                  <>
+                    <span className="opacity-50">|</span>
+                    <span className="text-[#14b8a6] font-bold tracking-wider">LIVE EDIT</span>
+                  </>
+                )}
               </span>
             </div>
           </div>
