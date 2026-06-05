@@ -61,14 +61,38 @@ export default function FileCard({
 
   const getEnvClass = () => {
     if (type === "directory") {
-      if (item.provider === "google_drive" || item.provider === "shared_drive") return "env-team";
+      if (item.provider === "google_drive" || item.provider === "shared_drive")
+        return "env-team";
       if (item.provider === "github") return "env-creative";
       return "";
     }
     const ext = item.extension?.toLowerCase() || "";
-    if ([".pdf", ".doc", ".docx", ".txt"].includes(ext)) return "env-document";
-    if ([".png", ".jpg", ".jpeg", ".svg", ".mp4", ".mov"].includes(ext)) return "env-media";
-    if ([".csv", ".xlsx", ".xls", ".json"].includes(ext)) return "env-analytics";
+    if ([".pdf", ".doc", ".docx", ".txt"].includes(ext)) return "env-glow-cyan";
+    if ([".png", ".jpg", ".jpeg", ".svg", ".mp4", ".mov"].includes(ext))
+      return "env-media";
+    if ([".csv", ".xlsx", ".xls", ".json"].includes(ext))
+      return "env-analytics";
+    if ([".js", ".py", ".ts", ".jsx", ".tsx", ".html", ".css"].includes(ext))
+      return "env-glow-emerald";
+    return "";
+  };
+
+  const getTypeDotClass = () => {
+    if (type === "directory") {
+      if (item.provider === "github") return "status-dot-purple";
+      if (item.provider === "google_drive" || item.provider === "shared_drive")
+        return "status-dot-cyan";
+      return "";
+    }
+    const ext = item.extension?.toLowerCase() || "";
+    if ([".pdf", ".doc", ".docx", ".txt"].includes(ext))
+      return "status-dot-cyan";
+    if ([".png", ".jpg", ".jpeg", ".svg", ".mp4", ".mov"].includes(ext))
+      return "status-dot-orange";
+    if ([".csv", ".xlsx", ".xls", ".json"].includes(ext))
+      return "status-dot-gold";
+    if ([".js", ".py", ".ts", ".jsx", ".tsx", ".html", ".css"].includes(ext))
+      return "status-dot-emerald";
     return "";
   };
 
@@ -149,7 +173,7 @@ export default function FileCard({
           <>
             {viewMode === "grid" && item.hasThumbnail && !imageError ? (
               <img
-                src={`${SERVER_URL}/file/${item.id}/thumbnail`}
+                src={`${SERVER_URL}/file/${item._id}/thumbnail`}
                 alt="thumbnail"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 onError={() => setImageError(true)}
@@ -190,15 +214,22 @@ export default function FileCard({
       {/* Info Area */}
       {viewMode === "grid" ? (
         <div className="px-1 pb-1 flex-1 flex flex-col items-center justify-center w-full min-w-0">
-          <h3
-            style={{ textTransform: "capitalize" }}
-            className="text-sm capitalize mt-2 font-medium text-slate-900 dark:text-white truncate w-full text-center mb-0.5"
-            title={item.name}
-          >
-            {item.name}
-          </h3>
+          <div className="flex items-center justify-center gap-1.5 mt-2 w-full min-w-0">
+            {getTypeDotClass() && (
+              <div className={`status-dot ${getTypeDotClass()} shrink-0`} />
+            )}
+            <h3
+              style={{ textTransform: "capitalize" }}
+              className="text-sm capitalize font-medium text-slate-900 dark:text-white truncate mb-0.5"
+              title={item.name}
+            >
+              {item.name}
+            </h3>
+          </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 w-full truncate text-center min-h-[16px]">
-            {type === "directory" && (item.provider === "google_drive" || item.provider === "github") ? null : (
+            {type === "directory" &&
+            (item.provider === "google_drive" ||
+              item.provider === "github") ? null : (
               <>
                 {formatSize(item.size)}
                 {` `}
@@ -211,12 +242,18 @@ export default function FileCard({
       ) : (
         <>
           <div className="text-xs text-slate-400 text-right truncate">
-            {type === "directory" && (item.provider === "google_drive" || item.provider === "github") ? null : type === "directory"
-              ? `${item.itemCount !== undefined ? item.itemCount : (item.files?.length || 0) + (item.directories?.length || 0)} items`
-              : formatSize(item.size)}
+            {type === "directory" &&
+            (item.provider === "google_drive" || item.provider === "github")
+              ? null
+              : type === "directory"
+                ? `${item.itemCount !== undefined ? item.itemCount : (item.files?.length || 0) + (item.directories?.length || 0)} items`
+                : formatSize(item.size)}
           </div>
           <div className="text-xs text-slate-400 text-right pr-4 truncate">
-            {type === "directory" && (item.provider === "google_drive" || item.provider === "github") ? null : "few minutes ago"}
+            {type === "directory" &&
+            (item.provider === "google_drive" || item.provider === "github")
+              ? null
+              : "few minutes ago"}
           </div>
         </>
       )}
@@ -343,7 +380,8 @@ export default function FileCard({
                       }}
                       className="w-full text-left px-3 py-2 text-[13px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2"
                     >
-                      <Trash2 size={14} /> {isTrash ? "Delete Forever" : "Delete"}
+                      <Trash2 size={14} />{" "}
+                      {isTrash ? "Delete Forever" : "Delete"}
                     </button>
                   )}
                 </>

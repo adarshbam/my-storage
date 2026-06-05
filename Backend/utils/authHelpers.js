@@ -83,7 +83,7 @@ export async function createUserWithRootDir({
 
   const rootDir = {
     _id: rootDirId,
-    name: "root",
+    name: "Vault",
     userId,
     type: "directory",
     parentDir: null,

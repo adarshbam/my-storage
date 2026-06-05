@@ -159,7 +159,7 @@ const Integrations = () => {
 
             return (
               <motion.div
-                key={panel.id}
+                key={panel._id}
                 onHoverStart={() => setActivePanel(idx)}
                 onClick={() => setActivePanel(idx)}
                 animate={{ flex: isActive ? 5 : 1 }}

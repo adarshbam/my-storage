@@ -21,7 +21,7 @@ export default function DashboardLayout() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // File actions context
   const transferRef = useRef(null);
   const [recentSearches, setRecentSearches] = useState([]);
@@ -47,7 +47,7 @@ export default function DashboardLayout() {
     const distance = touchStart - touchEnd;
     const isRightSwipe = distance < -minSwipeDistance;
     const isLeftSwipe = distance > minSwipeDistance;
-    
+
     // Swipe from left edge (x < 50) to right
     if (isRightSwipe && touchStart < 50 && !isMobileOpen) {
       setIsMobileOpen(true);
@@ -62,6 +62,12 @@ export default function DashboardLayout() {
   useEffect(() => {
     fetchRecentSearches();
   }, []);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const q = searchParams.get("q") || searchParams.get("search") || "";
+    setGlobalSearchQuery(q);
+  }, [location.pathname, location.search]);
 
   const fetchRecentSearches = async () => {
     try {
@@ -89,29 +95,46 @@ export default function DashboardLayout() {
     const { scope = "current", ext = "", size = "" } = filters;
     const filterQuery = `${ext ? `&ext=${encodeURIComponent(ext)}` : ""}${size ? `&size=${encodeURIComponent(size)}` : ""}`;
 
+    const path = location.pathname;
+    const isTrashPage = path.startsWith("/dashboard/trash");
+
     if (!term.trim() && !ext && !size) {
       setGlobalSearchQuery("");
       setShowRecentSearches(false);
-      if (currentFolderId) navigate(`/dashboard/folder/${currentFolderId}`);
-      else navigate("/dashboard");
+      if (isTrashPage) {
+        navigate("/dashboard/trash");
+      } else if (currentFolderId) {
+        navigate(`/dashboard/folder/${currentFolderId}`);
+      } else {
+        navigate("/dashboard");
+      }
       return;
     }
 
     setGlobalSearchQuery(term);
     setShowRecentSearches(false);
 
-    const path = location.pathname;
-    const isDriveOrGithub = path.startsWith("/dashboard/google-drive") || path.startsWith("/dashboard/github");
+    const isDriveOrGithub =
+      path.startsWith("/dashboard/google-drive") ||
+      path.startsWith("/dashboard/github");
 
     if (scope === "global") {
       navigate(`/dashboard/search?q=${encodeURIComponent(term)}${filterQuery}`);
     } else {
-      if (isDriveOrGithub) {
+      if (isTrashPage) {
+        navigate(
+          `/dashboard/trash?q=${encodeURIComponent(term)}${filterQuery}`,
+        );
+      } else if (isDriveOrGithub) {
         navigate(`${path}?q=${encodeURIComponent(term)}${filterQuery}`);
       } else if (currentFolderId) {
-        navigate(`/dashboard/folder/${currentFolderId}?search=${encodeURIComponent(term)}${filterQuery}`);
+        navigate(
+          `/dashboard/folder/${currentFolderId}?search=${encodeURIComponent(term)}${filterQuery}`,
+        );
       } else {
-        navigate(`/dashboard/search?q=${encodeURIComponent(term)}${filterQuery}`);
+        navigate(
+          `/dashboard/search?q=${encodeURIComponent(term)}${filterQuery}`,
+        );
       }
     }
 
@@ -160,7 +183,9 @@ export default function DashboardLayout() {
       });
 
       if (response.ok) {
-        const userRes = await fetch(`${SERVER_URL}/user`, { credentials: "include" });
+        const userRes = await fetch(`${SERVER_URL}/user`, {
+          credentials: "include",
+        });
         if (userRes.ok) {
           const newUser = await userRes.json();
           setUser(newUser);
@@ -195,7 +220,7 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div 
+    <div
       className="h-screen flex flex-col bg-vault-bg text-white overflow-hidden relative font-sans"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
@@ -212,37 +237,43 @@ export default function DashboardLayout() {
         isMobileOpen={isMobileOpen}
         setIsMobileOpen={setIsMobileOpen}
         handleCreateClick={() => {
-          // This should be handled inside VaultViewport if needed, 
+          // This should be handled inside VaultViewport if needed,
           // or we emit an event. For now, rely on FileBrowser internal methods.
           // In original DashboardLayout, it was handled in FileBrowser directly
           // but there was a button in DashboardLayout too. Let's just pass a trigger if needed.
-          document.dispatchEvent(new CustomEvent('createFolderTrigger'));
+          document.dispatchEvent(new CustomEvent("createFolderTrigger"));
         }}
         handleCreateFileClick={() => {
-          document.dispatchEvent(new CustomEvent('createFileTrigger'));
+          document.dispatchEvent(new CustomEvent("createFileTrigger"));
         }}
         handleProfilePicUpload={handleProfilePicUpload}
         profilePicUrl={profilePicUrl}
       />
 
       <div className="flex flex-1 overflow-hidden relative z-10">
-        <NavigationRail isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
+        <NavigationRail
+          isMobileOpen={isMobileOpen}
+          setIsMobileOpen={setIsMobileOpen}
+        />
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-6 lg:p-8 custom-scrollbar">
           <div className="mx-auto max-w-7xl h-full flex flex-col">
             <Outlet context={contextValue} />
           </div>
-          <ShareVaultModal 
-            isOpen={isShareModalOpen} 
-            onClose={() => setIsShareModalOpen(false)} 
+          <ShareVaultModal
+            isOpen={isShareModalOpen}
+            onClose={() => setIsShareModalOpen(false)}
           />
-
         </main>
       </div>
 
       <FileUploadModal
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
+        onUpload={(files) => {
+          handleUpload(files, currentFolderId);
+          setShowUploadModal(false);
+        }}
         onFilesSelected={(files) => {
           handleUpload(files, currentFolderId);
           setShowUploadModal(false);

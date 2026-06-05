@@ -195,3 +195,96 @@
 .asset-card-hover:hover {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
+
+/* ── Per-Module Nav Hover Glows ────────────────────────── */
+.nav-glow-emerald { transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.nav-glow-emerald:hover {
+  box-shadow: 0 0 20px rgba(0, 212, 165, 0.25), inset 0 0 12px rgba(0, 212, 165, 0.08);
+  background: rgba(0, 212, 165, 0.08);
+}
+
+.nav-glow-purple { transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.nav-glow-purple:hover {
+  box-shadow: 0 0 20px rgba(155, 77, 255, 0.3), inset 0 0 12px rgba(198, 92, 255, 0.1);
+  background: rgba(198, 92, 255, 0.08);
+}
+
+.nav-glow-cyan { transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.nav-glow-cyan:hover {
+  box-shadow: 0 0 20px rgba(0, 207, 255, 0.3), inset 0 0 12px rgba(0, 207, 255, 0.1);
+  background: rgba(0, 207, 255, 0.08);
+}
+
+.nav-glow-gold { transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.nav-glow-gold:hover {
+  box-shadow: 0 0 20px rgba(255, 209, 102, 0.3), inset 0 0 12px rgba(255, 209, 102, 0.1);
+  background: rgba(255, 209, 102, 0.08);
+}
+
+.nav-glow-crimson { transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.nav-glow-crimson:hover {
+  box-shadow: 0 0 20px rgba(255, 90, 122, 0.3), inset 0 0 12px rgba(255, 90, 122, 0.1);
+  background: rgba(255, 90, 122, 0.08);
+}
+
+.nav-glow-blue { transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.nav-glow-blue:hover {
+  box-shadow: 0 0 20px rgba(77, 166, 255, 0.3), inset 0 0 12px rgba(77, 166, 255, 0.1);
+  background: rgba(77, 166, 255, 0.08);
+}
+
+.nav-glow-orange { transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.nav-glow-orange:hover {
+  box-shadow: 0 0 20px rgba(255, 122, 61, 0.3), inset 0 0 12px rgba(255, 122, 61, 0.1);
+  background: rgba(255, 122, 61, 0.08);
+}
+
+/* ── Cyan Environmental Glow ───────────────────────────── */
+.env-glow-cyan {
+  box-shadow: 0 0 40px rgba(0, 207, 255, 0.15), inset 0 0 20px rgba(0, 207, 255, 0.05);
+  border-color: rgba(0, 207, 255, 0.2);
+}
+
+/* ── Mobile Control Center ──────────────────────────────── */
+.control-center-backdrop {
+  @apply fixed inset-0 bg-black/70 backdrop-blur-xl z-[100];
+  animation: controlCenterFadeIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.control-center-panel {
+  @apply fixed bottom-0 left-0 right-0 z-[101] px-4 pt-6 lg:hidden 
+         bg-vault-panel/95 backdrop-blur-2xl border-t border-white/[0.08] rounded-t-[2.5rem] 
+         shadow-[0_-15px_40px_rgba(0,0,0,0.6)] max-h-[90dvh] overflow-y-auto overscroll-contain;
+  padding-bottom: calc(2.5rem + env(safe-area-inset-bottom));
+  animation: controlCenterSlideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.control-center-tile {
+  @apply relative flex flex-col items-center justify-center gap-2 p-5 rounded-2xl 
+         border border-white/10 backdrop-blur-md bg-vault-surface/80
+         active:scale-95 transition-transform duration-150;
+}
+
+@keyframes controlCenterFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes controlCenterSlideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ── Status Badge Dots ──────────────────────────────────── */
+.status-dot {
+  @apply w-2 h-2 rounded-full shrink-0;
+}
+
+.status-dot-emerald { @apply bg-vault-emerald shadow-[0_0_6px_rgba(0,212,165,0.6)]; }
+.status-dot-purple { background: #C65CFF; box-shadow: 0 0 6px rgba(198,92,255,0.6); }
+.status-dot-cyan { background: #00CFFF; box-shadow: 0 0 6px rgba(0,207,255,0.6); }
+.status-dot-gold { @apply bg-analytics-accent shadow-[0_0_6px_rgba(255,209,102,0.6)]; }
+.status-dot-crimson { @apply bg-danger-accent shadow-[0_0_6px_rgba(255,90,122,0.6)]; }
+.status-dot-blue { background: #4DA6FF; box-shadow: 0 0 6px rgba(77,166,255,0.6); }
+.status-dot-orange { background: #FF7A3D; box-shadow: 0 0 6px rgba(255,122,61,0.6); }
+

@@ -4,7 +4,7 @@ import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { cn, formatSize } from "../../lib/utils";
 
-export default function FileUploadModal({ isOpen, onClose, onUpload }) {
+export default function FileUploadModal({ isOpen, onClose, onUpload, onFilesSelected }) {
   const [dragActive, setDragActive] = useState(false);
   const [files, setFiles] = useState([]);
   const inputRef = useRef(null);
@@ -41,25 +41,43 @@ export default function FileUploadModal({ isOpen, onClose, onUpload }) {
 
   const handleSubmit = () => {
     if (files.length > 0) {
-      onUpload(files);
+      const uploadFn = onFilesSelected || onUpload;
+      if (uploadFn) {
+        uploadFn(files);
+      }
       setFiles([]);
       onClose();
     }
   };
 
-  const getFileIcon = (file) => {
+  const getFileIconConfig = (file) => {
     const type = file.type.split("/")[0];
     switch (type) {
       case "image":
-        return <Image className="text-purple-500" size={24} />;
+        return {
+          icon: <Image className="text-purple-400" size={20} />,
+          bgClass: "bg-purple-500/10 border-purple-500/20 text-purple-400"
+        };
       case "video":
-        return <Video className="text-red-500" size={24} />;
+        return {
+          icon: <Video className="text-rose-400" size={20} />,
+          bgClass: "bg-rose-500/10 border-rose-500/20 text-rose-400"
+        };
       case "audio":
-        return <Music className="text-yellow-500" size={24} />;
+        return {
+          icon: <Music className="text-amber-400" size={20} />,
+          bgClass: "bg-amber-500/10 border-amber-500/20 text-amber-400"
+        };
       case "text":
-        return <FileText className="text-blue-500" size={24} />;
+        return {
+          icon: <FileText className="text-sky-400" size={20} />,
+          bgClass: "bg-sky-500/10 border-sky-500/20 text-sky-400"
+        };
       default:
-        return <File className="text-slate-500" size={24} />;
+        return {
+          icon: <File className="text-slate-400" size={20} />,
+          bgClass: "bg-white/5 border-white/10 text-slate-400"
+        };
     }
   };
 
@@ -71,15 +89,15 @@ export default function FileUploadModal({ isOpen, onClose, onUpload }) {
         onClose();
       }}
       title="Upload Files"
-      className="max-w-2xl"
+      className="max-w-2xl bg-vault-surface border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
     >
       <div className="space-y-6">
         <div
           className={cn(
-            "relative border-2 border-dashed rounded-xl p-8 transition-all duration-200 flex flex-col items-center justify-center text-center cursor-pointer",
+            "relative border-2 border-dashed rounded-2xl p-10 transition-all duration-300 flex flex-col items-center justify-center text-center cursor-pointer group overflow-hidden",
             dragActive
-              ? "border-[#14b8a6] bg-[#14b8a6]/5 dark:bg-[#14b8a6]/5"
-              : "border-black/10 dark:border-white/[0.08] hover:border-[#14b8a6]/40 dark:hover:border-[#14b8a6]/30 bg-white/30 dark:bg-white/[0.03]",
+              ? "border-vault-emerald bg-vault-emerald/10 shadow-[0_0_25px_rgba(20,184,166,0.15)]"
+              : "border-white/10 hover:border-vault-emerald/40 bg-black/40 hover:bg-black/50",
           )}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -95,54 +113,64 @@ export default function FileUploadModal({ isOpen, onClose, onUpload }) {
             onChange={handleChange}
           />
 
-          <div className="w-16 h-16 bg-[#14b8a6]/10 dark:bg-[#14b8a6]/10 text-[#14b8a6] rounded-full flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(20,184,166,0.1)]">
-            <Upload size={32} />
+          <div className="w-16 h-16 bg-vault-emerald/10 text-vault-emerald border border-vault-emerald/20 rounded-2xl flex items-center justify-center mb-5 shadow-[0_0_20px_rgba(20,184,166,0.1)] group-hover:scale-105 transition-transform duration-300">
+            <Upload size={28} />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-            Click to upload or drag and drop
+          
+          <h3 className="text-base font-bold text-white mb-2 tracking-wide uppercase">
+            Click to upload or drag files here
           </h3>
-          <p className="text-slate-500 dark:text-slate-400 text-sm max-w-xs">
-            SVG, PNG, JPG or GIF (max. 800x400px)
+          <p className="text-white/50 text-xs max-w-xs mb-3">
+            Securely encrypt and store documents, media, or archive files.
+          </p>
+          <p className="text-[9px] uppercase tracking-widest text-white/30 font-bold">
+            Supports all file extensions
           </p>
         </div>
 
         {files.length > 0 && (
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-slate-900 dark:text-white">
+          <div className="space-y-3 pt-4 border-t border-white/5">
+            <h4 className="text-[11px] font-bold tracking-wider uppercase text-white/40 mb-2">
               Selected Files ({files.length})
             </h4>
-            <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
-              {files.map((file, index) => (
-                <div
-                  key={`${file.name}-${index}`}
-                  className="flex items-center justify-between p-3 bg-white/60 dark:bg-white/[0.04] rounded-xl border border-black/5 dark:border-white/[0.06] hover:shadow-sm transition-shadow"
-                >
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="p-2 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
-                      {getFileIcon(file)}
-                    </div>
-                    <div className="overflow-hidden">
-                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {formatSize(file.size)}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
+            <div className="max-h-56 overflow-y-auto space-y-2.5 pr-2 scrollbar-thin">
+              {files.map((file, index) => {
+                const config = getFileIconConfig(file);
+                return (
+                  <div
+                    key={`${file.name}-${index}`}
+                    className="flex items-center justify-between p-3.5 bg-black/40 hover:bg-black/65 border border-white/5 hover:border-vault-emerald/20 rounded-xl transition-all shadow-[0_4px_12px_rgba(0,0,0,0.15)] group/item"
                   >
-                    <X size={18} />
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-3.5 overflow-hidden">
+                      <div className={cn("p-2.5 rounded-xl border shrink-0 flex items-center justify-center transition-all", config.bgClass)}>
+                        {config.icon}
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-sm font-semibold text-white truncate max-w-[200px] sm:max-w-[320px]">
+                          {file.name}
+                        </p>
+                        <p className="text-xs font-mono text-white/40 mt-0.5">
+                          {formatSize(file.size)}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFile(index);
+                      }}
+                      className="p-2 text-white/20 hover:text-danger-accent hover:bg-danger-accent/10 rounded-lg transition-all opacity-60 hover:opacity-100"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex justify-end gap-3 pt-6 border-t border-white/5 mt-6">
           <Button
             variant="ghost"
             onClick={() => {
@@ -153,10 +181,12 @@ export default function FileUploadModal({ isOpen, onClose, onUpload }) {
             Cancel
           </Button>
           <Button
+            variant="primary"
             onClick={handleSubmit}
             disabled={files.length === 0}
             className={cn(
-              files.length === 0 && "opacity-50 cursor-not-allowed",
+              files.length === 0 && "opacity-40 cursor-not-allowed",
+              "px-8 py-3 rounded-xl",
             )}
           >
             Upload {files.length > 0 && `(${files.length})`}

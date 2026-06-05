@@ -13,13 +13,22 @@ export default {
           bg: "#050A08",
           surface: "#07110E",
           panel: "#091613",
-          emerald: "#00D4A5",
-          "emerald-soft": "#1FC8A7",
-          "emerald-dark": "#0D8F73",
+          emerald: "#00A884",
+          "emerald-soft": "#1A9B82",
+          "emerald-dark": "#0B6B56",
         },
-        team: { accent: "#20E5C0" },
-        document: { accent: "#4DA6FF" },
-        creative: { accent: "#C65CFF" },
+        // ── Feature Module Identity Colors ──
+        relay: { accent: "#7E86FF", glow: "#5F66FF" }, // Secure Relay → Purple
+        pulse: { accent: "#00CFFF", glow: "#00A8CC" }, // Activity Pulse → Cyan
+        beacon: { accent: "#FFD166", glow: "#E6B84D" }, // Priority Beacon → Gold
+        recycle: { accent: "#FF5A7A", glow: "#E6364F" }, // Recycle Vault → Crimson
+        core: { accent: "#4DA6FF", glow: "#3D8BE6" }, // System Core → Electric Blue
+        linkdrive: { accent: "#FF7A3D", glow: "#E66A2E" }, // Link Drive → Orange
+        linkgit: { accent: "#7E86FF", glow: "#5F66FF" }, // Link GitHub → Purple
+        // ── Legacy aliases (backward compat) ──
+        team: { accent: "#7E86FF" },
+        document: { accent: "#00CFFF" },
+        creative: { accent: "#7E86FF" },
         media: { accent: "#FF7A3D" },
         analytics: { accent: "#FFD166" },
         danger: { accent: "#FF5A7A" },
@@ -48,15 +57,16 @@ export default {
           800: "#9d174d",
           900: "#831843",
           950: "#500724",
-        }
+        },
       },
       animation: {
         "fade-in": "fadeIn 0.5s ease-out forwards",
         "slide-up": "slideUp 0.5s ease-out forwards",
         "pulse-glow": "pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "gradient-x": "gradientX 3s ease infinite",
-        "float": "float 6s ease-in-out infinite",
-        "slide-in-right": "slideInRight 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+        float: "float 6s ease-in-out infinite",
+        "slide-in-right":
+          "slideInRight 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards",
         "scan-line": "scanLine 3s linear infinite",
       },
       keyframes: {
@@ -69,33 +79,33 @@ export default {
           "100%": { transform: "translateY(0)", opacity: "1" },
         },
         pulseGlow: {
-          '0%, 100%': { opacity: 1 },
-          '50%': { opacity: .5 },
+          "0%, 100%": { opacity: 1 },
+          "50%": { opacity: 0.5 },
         },
         gradientX: {
-          '0%, 100%': {
-            'background-size': '200% 200%',
-            'background-position': 'left center'
+          "0%, 100%": {
+            "background-size": "200% 200%",
+            "background-position": "left center",
           },
-          '50%': {
-            'background-size': '200% 200%',
-            'background-position': 'right center'
+          "50%": {
+            "background-size": "200% 200%",
+            "background-position": "right center",
           },
         },
         float: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-10px)' },
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
         },
         slideInRight: {
-          '0%': { transform: 'translateX(100%)', opacity: 0 },
-          '100%': { transform: 'translateX(0)', opacity: 1 },
+          "0%": { transform: "translateX(100%)", opacity: 0 },
+          "100%": { transform: "translateX(0)", opacity: 1 },
         },
         scanLine: {
-          '0%': { top: '-5%', opacity: 0 },
-          '10%': { opacity: 1 },
-          '90%': { opacity: 1 },
-          '100%': { top: '105%', opacity: 0 },
-        }
+          "0%": { top: "-5%", opacity: 0 },
+          "10%": { opacity: 1 },
+          "90%": { opacity: 1 },
+          "100%": { top: "105%", opacity: 0 },
+        },
       },
     },
   },

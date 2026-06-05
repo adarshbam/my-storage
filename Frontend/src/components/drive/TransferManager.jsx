@@ -6,7 +6,15 @@ import {
   useImperativeHandle,
   useEffect,
 } from "react";
-import { X, Pause, Play, Trash2, Minimize2, Maximize2, RotateCcw } from "lucide-react";
+import {
+  X,
+  Pause,
+  Play,
+  Trash2,
+  Minimize2,
+  Maximize2,
+  RotateCcw,
+} from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
 import { formatSpeed, formatTime, cn } from "../../lib/utils";
 import getFileImage from "../../lib/FileImages";
@@ -32,7 +40,7 @@ const TransferManager = forwardRef((props, ref) => {
   // --- HELPER: Update a specific transfer's status/progress ---
   const updateTransfer = useCallback((id, updates) => {
     setTransfers((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+      prev.map((t) => (t._id === id ? { ...t, ...updates } : t)),
     );
   }, []);
 
@@ -75,20 +83,22 @@ const TransferManager = forwardRef((props, ref) => {
   }, [transfers, props.onUploadComplete]);
 
   const startUpload = (transfer) => {
-    const { id, file, dirId, loaded: startByte } = transfer;
+    const { _id, file, dirId, loaded: startByte } = transfer;
 
     // Update status to active immediately to prevent double starting
-    updateTransfer(id, { status: "active", speed: 0 });
+    updateTransfer(_id, { status: "active", speed: 0 });
 
     const xhr = new XMLHttpRequest();
-    abortControllers.current[id] = xhr;
+    abortControllers.current[_id] = xhr;
 
     // Detect destination provider via prefix
-    const isGithub = dirId && typeof dirId === "string" && dirId.startsWith("github:");
-    const isDrive = dirId && typeof dirId === "string" && dirId.startsWith("drive:");
-    
-    const cleanDirId = (isGithub || isDrive) ? dirId.split(":")[1] : dirId;
-    
+    const isGithub =
+      dirId && typeof dirId === "string" && dirId.startsWith("github:");
+    const isDrive =
+      dirId && typeof dirId === "string" && dirId.startsWith("drive:");
+
+    const cleanDirId = isGithub || isDrive ? dirId.split(":")[1] : dirId;
+
     let uploadUrl = isGithub
       ? `${SERVER_URL}/github/file/${cleanDirId}`
       : isDrive
@@ -105,7 +115,7 @@ const TransferManager = forwardRef((props, ref) => {
     xhr.open("POST", uploadUrl, true);
     xhr.withCredentials = true;
     xhr.setRequestHeader("filename", file.name);
-    xhr.setRequestHeader("x-file-id", id);
+    xhr.setRequestHeader("x-file-id", _id);
     xhr.setRequestHeader("x-start-byte", startByte.toString());
 
     let lastLoaded = startByte;
@@ -133,7 +143,7 @@ const TransferManager = forwardRef((props, ref) => {
         }
 
         if (now - lastUpdate > 100 || percent >= 100) {
-          updateTransfer(id, {
+          updateTransfer(_id, {
             progress: percent,
             loaded: totalLoaded,
             total: file.size,
@@ -146,12 +156,12 @@ const TransferManager = forwardRef((props, ref) => {
     };
 
     xhr.upload.onload = () => {
-      updateTransfer(id, { progress: 100 });
+      updateTransfer(_id, { progress: 100 });
     };
 
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        updateTransfer(id, {
+        updateTransfer(_id, {
           status: "completed",
           progress: 100,
           speed: 0,
@@ -160,14 +170,14 @@ const TransferManager = forwardRef((props, ref) => {
         // Remove from list after a short delay or keep it?
         // User wants to see progress. We keep it as completed.
       } else {
-        updateTransfer(id, { status: "error", speed: 0 });
+        updateTransfer(_id, { status: "error", speed: 0 });
       }
-      delete abortControllers.current[id];
+      delete abortControllers.current[_id];
     };
 
     xhr.onerror = () => {
-      updateTransfer(id, { status: "error", speed: 0 });
-      delete abortControllers.current[id];
+      updateTransfer(_id, { status: "error", speed: 0 });
+      delete abortControllers.current[_id];
     };
 
     xhr.onabort = () => {
@@ -189,7 +199,7 @@ const TransferManager = forwardRef((props, ref) => {
         setTransfers((prev) => [
           ...prev,
           {
-            id,
+            _id: id,
             type: "upload",
             name: file.name,
             progress: 0,
@@ -213,7 +223,7 @@ const TransferManager = forwardRef((props, ref) => {
 
   const uploadFiles = useCallback((files, dirId) => {
     const newTransfers = files.map((file) => ({
-      id: generateObjectId(),
+      _id: generateObjectId(),
       type: "upload",
       name: file.name,
       progress: 0,
@@ -284,7 +294,7 @@ const TransferManager = forwardRef((props, ref) => {
       setTransfers((prev) => [
         ...prev,
         {
-          id,
+          _id: id,
           type: "download",
           name: filename,
           progress: 0,
@@ -394,7 +404,7 @@ const TransferManager = forwardRef((props, ref) => {
   };
 
   const cancelTransfer = (id) => {
-    const transfer = transfers.find((t) => t.id === id);
+    const transfer = transfers.find((t) => t._id === id);
     if (transfer && transfer.status === "active") {
       if (downloadReaders.current[id]) {
         downloadReaders.current[id]
@@ -412,11 +422,11 @@ const TransferManager = forwardRef((props, ref) => {
       downloadWritables.current[id].abort().catch(() => {});
       delete downloadWritables.current[id];
     }
-    setTransfers((prev) => prev.filter((t) => t.id !== id));
+    setTransfers((prev) => prev.filter((t) => t._id !== id));
   };
 
   const pauseTransfer = (id) => {
-    const transfer = transfers.find((t) => t.id === id);
+    const transfer = transfers.find((t) => t._id === id);
     if (!transfer || transfer.status !== "active") return;
 
     if (downloadReaders.current[id]) {
@@ -435,18 +445,18 @@ const TransferManager = forwardRef((props, ref) => {
   };
 
   const resumeTransfer = (id) => {
-    const transfer = transfers.find((t) => t.id === id);
+    const transfer = transfers.find((t) => t._id === id);
     if (!transfer || transfer.status !== "paused") return;
 
     if (transfer.type === "upload") {
-      uploadFile(transfer.file, transfer.dirId, transfer.id, transfer.loaded);
+      uploadFile(transfer.file, transfer.dirId, transfer._id, transfer.loaded);
     } else {
-      downloadFile(transfer.url, transfer.name, transfer.id, transfer.loaded);
+      downloadFile(transfer.url, transfer.name, transfer._id, transfer.loaded);
     }
   };
 
   const retryTransfer = (id) => {
-    const transfer = transfers.find((t) => t.id === id);
+    const transfer = transfers.find((t) => t._id === id);
     if (!transfer || transfer.status !== "error") return;
 
     if (transfer.type === "upload") {
@@ -465,7 +475,7 @@ const TransferManager = forwardRef((props, ref) => {
         speed: 0,
         timeRemaining: 0,
       });
-      downloadFile(transfer.url, transfer.name, transfer.id, 0);
+      downloadFile(transfer.url, transfer.name, transfer._id, 0);
     }
   };
 
@@ -511,7 +521,7 @@ const TransferManager = forwardRef((props, ref) => {
           <div className="max-h-80 overflow-y-auto p-0">
             {transfers.map((transfer) => (
               <div
-                key={transfer.id}
+                key={transfer._id}
                 className="p-3 border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
               >
                 <div className="flex items-start gap-3">
@@ -534,7 +544,7 @@ const TransferManager = forwardRef((props, ref) => {
                       <div className="flex items-center gap-1 ml-2">
                         {transfer.status === "active" ? (
                           <button
-                            onClick={() => pauseTransfer(transfer.id)}
+                            onClick={() => pauseTransfer(transfer._id)}
                             className="text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
                             title="Pause"
                           >
@@ -542,7 +552,7 @@ const TransferManager = forwardRef((props, ref) => {
                           </button>
                         ) : transfer.status === "paused" ? (
                           <button
-                            onClick={() => resumeTransfer(transfer.id)}
+                            onClick={() => resumeTransfer(transfer._id)}
                             className="text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
                             title="Resume"
                           >
@@ -550,15 +560,18 @@ const TransferManager = forwardRef((props, ref) => {
                           </button>
                         ) : transfer.status === "error" ? (
                           <button
-                            onClick={() => retryTransfer(transfer.id)}
+                            onClick={() => retryTransfer(transfer._id)}
                             className="text-slate-500 dark:text-slate-400 hover:text-[#14b8a6] dark:hover:text-[#14b8a6] transition-colors"
                             title="Retry Upload"
                           >
-                            <RotateCcw size={14} className="animate-hover-spin" />
+                            <RotateCcw
+                              size={14}
+                              className="animate-hover-spin"
+                            />
                           </button>
                         ) : null}
                         <button
-                          onClick={() => cancelTransfer(transfer.id)}
+                          onClick={() => cancelTransfer(transfer._id)}
                           className="text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                           title="Remove"
                         >

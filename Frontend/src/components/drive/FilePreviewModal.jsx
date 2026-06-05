@@ -66,13 +66,15 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
     try {
       const isGithub = file.provider === "github";
       if (isGithub) {
-        alert("GitHub inline renaming is limited. Use the dashboard menu for full control.");
+        alert(
+          "GitHub inline renaming is limited. Use the dashboard menu for full control.",
+        );
         setTempName(file.name);
         setIsRenaming(false);
         return;
       }
 
-      let url = `${SERVER_URL}/file/${file.id}`;
+      let url = `${SERVER_URL}/file/${file._id}`;
       if (ownerId) {
         url += `?ownerId=${ownerId}`;
       }
@@ -84,7 +86,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
       });
 
       if (!res.ok) throw new Error("Rename failed");
-      
+
       // Update the file object in place for the current view
       file.name = tempName.trim();
       setIsRenaming(false);
@@ -95,7 +97,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
       setIsRenaming(false);
     }
   };
-  
+
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -129,10 +131,10 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
           // Add timestamp to prevent caching
           let url =
             file.provider === "github"
-              ? `${SERVER_URL}/github/file/${file.githubPath.split('/').map(encodeURIComponent).join('/')}?t=${Date.now()}`
+              ? `${SERVER_URL}/github/file/${file.githubPath.split("/").map(encodeURIComponent).join("/")}?t=${Date.now()}`
               : file.provider === "google_drive"
-                ? `${SERVER_URL}/drive/file/${file.id}?t=${Date.now()}`
-                : `${SERVER_URL}/file/${file.id}?t=${Date.now()}`;
+                ? `${SERVER_URL}/drive/file/${file._id}?t=${Date.now()}`
+                : `${SERVER_URL}/file/${file._id}?t=${Date.now()}`;
           if (ownerId) {
             url += `&ownerId=${ownerId}`;
           }
@@ -165,10 +167,10 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
 
   let fileUrl =
     file.provider === "github"
-      ? `${SERVER_URL}/github/file/${file.githubPath.split('/').map(encodeURIComponent).join('/')}`
+      ? `${SERVER_URL}/github/file/${file.githubPath.split("/").map(encodeURIComponent).join("/")}`
       : file.provider === "google_drive"
-        ? `${SERVER_URL}/drive/file/${file.id}`
-        : `${SERVER_URL}/file/${file.id}`;
+        ? `${SERVER_URL}/drive/file/${file._id}`
+        : `${SERVER_URL}/file/${file._id}`;
 
   if (ownerId) {
     fileUrl += (fileUrl.includes("?") ? "&" : "?") + `ownerId=${ownerId}`;
@@ -179,8 +181,8 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
     try {
       const isGithub = file.provider === "github";
       let url = isGithub
-        ? `${SERVER_URL}/github/file/${file.githubPath.split('/').map(encodeURIComponent).join('/')}`
-        : `${SERVER_URL}/file/${file.id}/save`;
+        ? `${SERVER_URL}/github/file/${file.githubPath.split("/").map(encodeURIComponent).join("/")}`
+        : `${SERVER_URL}/file/${file._id}/save`;
 
       if (ownerId) {
         url += `?ownerId=${ownerId}`;
@@ -209,7 +211,8 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
         data = { message: text };
       }
 
-      if (!res.ok) throw new Error(data.error || data.message || "Failed to save file");
+      if (!res.ok)
+        throw new Error(data.error || data.message || "Failed to save file");
 
       if (isGithub && data.content?.sha) {
         setCurrentSha(data.content.sha);
@@ -230,10 +233,10 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
   const handleDownload = () => {
     let downloadUrl =
       file.provider === "github"
-        ? `${SERVER_URL}/github/file/${file.githubPath.split('/').map(encodeURIComponent).join('/')}?action=download`
+        ? `${SERVER_URL}/github/file/${file.githubPath.split("/").map(encodeURIComponent).join("/")}?action=download`
         : file.provider === "google_drive"
-          ? `${SERVER_URL}/drive/file/${file.id}?action=download`
-          : `${SERVER_URL}/file/${file.id}?action=download`;
+          ? `${SERVER_URL}/drive/file/${file._id}?action=download`
+          : `${SERVER_URL}/file/${file._id}?action=download`;
     if (ownerId) {
       downloadUrl += `&ownerId=${ownerId}`;
     }
@@ -394,7 +397,10 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                 highlight={(code) => {
                   const lang = getLanguage(ext);
                   try {
-                    const grammar = Prism.languages[lang] || Prism.languages.javascript || Prism.languages.clike;
+                    const grammar =
+                      Prism.languages[lang] ||
+                      Prism.languages.javascript ||
+                      Prism.languages.clike;
                     return Prism.highlight(code, grammar, lang);
                   } catch (e) {
                     return code;
@@ -402,7 +408,8 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                 }}
                 padding={24}
                 style={{
-                  fontFamily: '"Cascadia Code", "Fira Code", "Fira Mono", "Source Code Pro", monospace',
+                  fontFamily:
+                    '"Cascadia Code", "Fira Code", "Fira Mono", "Source Code Pro", monospace',
                   fontSize: 14,
                   minHeight: "100%",
                   color: "#d4d4d4",
@@ -461,14 +468,16 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
   };
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200 ${isFullscreen ? 'p-0' : 'p-4'}`}>
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200 ${isFullscreen ? "p-0" : "p-4"}`}
+    >
       {!isFullscreen && <div className="absolute inset-0" onClick={onClose} />}
-      <div 
+      <div
         ref={modalRef}
         className={`relative bg-white/90 dark:bg-vault-surface/90 backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_0_rgba(0,212,165,0.2),0_12px_40px_rgba(0,0,0,0.7),0_0_20px_rgba(0,212,165,0.05)] flex flex-col border border-black/10 dark:border-vault-emerald/20 animate-in zoom-in-95 duration-200 transition-all ${
-          isFullscreen 
-            ? 'w-full h-full rounded-none' 
-            : 'w-full max-w-5xl h-[70vh] rounded-3xl'
+          isFullscreen
+            ? "w-full h-full rounded-none"
+            : "w-full max-w-5xl h-[70vh] rounded-3xl"
         }`}
       >
         {/* Header */}
@@ -517,11 +526,19 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                   AES-256 SECURED
                 </span>
                 <span className="opacity-50">|</span>
-                <span className="uppercase tracking-wider">{file.provider === "github" ? "GITHUB SECURE RELAY" : file.provider === "google_drive" ? "DRIVE SECURE RELAY" : "VAULT LOCAL NODE"}</span>
+                <span className="uppercase tracking-wider">
+                  {file.provider === "github"
+                    ? "GITHUB SECURE RELAY"
+                    : file.provider === "google_drive"
+                      ? "DRIVE SECURE RELAY"
+                      : "VAULT LOCAL NODE"}
+                </span>
                 {isEditing && (
                   <>
                     <span className="opacity-50">|</span>
-                    <span className="text-[#14b8a6] font-bold tracking-wider">LIVE EDIT</span>
+                    <span className="text-[#14b8a6] font-bold tracking-wider">
+                      LIVE EDIT
+                    </span>
                   </>
                 )}
               </span>

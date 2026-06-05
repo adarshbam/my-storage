@@ -17,7 +17,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STORAGE_DIR = path.join(__dirname, "../storage");
 
-import { resolveIntegrationOwnerId, hasWriteAccess } from "../utils/integrationHelper.js";
+import {
+  resolveIntegrationOwnerId,
+  hasWriteAccess,
+} from "../utils/integrationHelper.js";
 import SharedAccess from "../models/sharedAccessModel.js";
 import { invalidateUserSessions } from "../utils/redis.js";
 
@@ -45,7 +48,7 @@ async function getDriveClient(userId) {
 async function getAuthenticatedClient(req, requireWrite = false) {
   try {
     const ownerId = await resolveIntegrationOwnerId(req);
-    
+
     // If accessing someone else's integration, check permissions
     if (ownerId !== req.user.id) {
       const sharedAccess = await SharedAccess.findOne({
@@ -58,19 +61,21 @@ async function getAuthenticatedClient(req, requireWrite = false) {
         throw err;
       }
       if (requireWrite && !sharedAccess.permission.includes("owner")) {
-        const err = new Error("Integration modification requires 'owner' permission level");
+        const err = new Error(
+          "Integration modification requires 'owner' permission level",
+        );
         err.statusCode = 403;
         throw err;
       }
     }
-    
+
     const client = await getDriveClient(ownerId);
     if (!client) {
       const err = new Error("Google Drive not connected");
       err.statusCode = 403;
       throw err;
     }
-    
+
     return {
       drive: client.drive,
       ownerId,
@@ -80,7 +85,8 @@ async function getAuthenticatedClient(req, requireWrite = false) {
     if (!error.statusCode) {
       if (error.message === "FORBIDDEN_ADMIN_ACCESS") {
         error.statusCode = 403;
-        error.message = "Admins are not permitted to access other users' personal integrations.";
+        error.message =
+          "Admins are not permitted to access other users' personal integrations.";
       } else if (error.message === "UNAUTHORIZED_SHARE_ACCESS") {
         error.statusCode = 403;
         error.message = "You do not have shared access to this user's files.";
@@ -97,7 +103,6 @@ function mapDriveItem(file) {
   const isFolder = file.mimeType === "application/vnd.google-apps.folder";
   return {
     _id: file.id,
-    id: file.id,
     name: file.name,
     mimeType: file.mimeType,
     size: parseInt(file.size) || 0,
@@ -225,7 +230,9 @@ export const listDriveFiles = async (req, res) => {
     });
   } catch (err) {
     console.error("List Drive root error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch Drive files" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to fetch Drive files" });
   }
 };
 
@@ -274,7 +281,9 @@ export const listDriveFolder = async (req, res) => {
     });
   } catch (err) {
     console.error("List Drive folder error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch folder contents" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to fetch folder contents" });
   }
 };
 
@@ -366,7 +375,9 @@ export const getFileFromDrive = async (req, res) => {
   } catch (err) {
     console.error("Get Drive file error:", err);
     if (!res.headersSent) {
-      return res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch file" });
+      return res
+        .status(err.statusCode || 500)
+        .json({ error: err.message || "Failed to fetch file" });
     }
   }
 };
@@ -403,7 +414,9 @@ export const createDriveFolder = async (req, res) => {
     });
   } catch (err) {
     console.error("Create Drive folder error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to create folder" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to create folder" });
   }
 };
 
@@ -462,7 +475,9 @@ export const uploadFileToDrive = async (req, res) => {
     });
   } catch (err) {
     console.error("Drive upload auth error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to authenticate upload request" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to authenticate upload request" });
   }
 };
 
@@ -555,7 +570,9 @@ export const downloadDriveFolder = async (req, res) => {
   } catch (err) {
     console.error("Drive folder download error:", err);
     if (!res.headersSent) {
-      res.status(err.statusCode || 500).json({ error: err.message || "Failed to download folder" });
+      res
+        .status(err.statusCode || 500)
+        .json({ error: err.message || "Failed to download folder" });
     }
   }
 };
@@ -591,7 +608,9 @@ export const searchDriveFiles = async (req, res) => {
     });
   } catch (err) {
     console.error("Drive search error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Drive search failed" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Drive search failed" });
   }
 };
 
@@ -634,7 +653,9 @@ export const updateDriveItem = async (req, res) => {
     });
   } catch (err) {
     console.error("Drive update error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to update item on Drive" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to update item on Drive" });
   }
 };
 
@@ -647,15 +668,16 @@ export const moveDriveItems = async (req, res) => {
 
     const results = [];
     for (const item of items) {
+      const itemId = item._id || item.id;
       // To move a file, we need to know its current parents to remove them
       const file = await drive.files.get({
-        fileId: item.id,
+        fileId: itemId,
         fields: "parents",
       });
       const previousParents = (file.data.parents || []).join(",");
 
       const response = await drive.files.update({
-        fileId: item.id,
+        fileId: itemId,
         addParents: targetId,
         removeParents: previousParents,
         fields: "id, name, parents",
@@ -669,7 +691,9 @@ export const moveDriveItems = async (req, res) => {
     });
   } catch (err) {
     console.error("Drive bulk move error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to move items on Drive" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to move items on Drive" });
   }
 };
 
@@ -689,13 +713,16 @@ export const transferToVault = async (req, res) => {
     const localOwnerId = targetDir ? targetDir.userId.toString() : ownerId;
     const hasLocalWrite = await hasWriteAccess(localOwnerId, req);
     if (!hasLocalWrite) {
-      return res.status(403).json({ error: "No write access to target local folder" });
+      return res
+        .status(403)
+        .json({ error: "No write access to target local folder" });
     }
 
     const results = [];
 
     // Recursive helper to import Drive folder structure into local DB
     const importItem = async (driveItem, localParentId) => {
+      const driveItemId = driveItem._id || driveItem.id;
       if (driveItem.type === "directory") {
         // 1. Create local directory
         const newDir = await Directory.create({
@@ -707,7 +734,7 @@ export const transferToVault = async (req, res) => {
 
         // 2. List children in Drive
         const response = await drive.files.list({
-          q: `'${driveItem.id}' in parents and trashed = false`,
+          q: `'${driveItemId}' in parents and trashed = false`,
           fields: "files(id, name, mimeType, size)",
         });
 
@@ -726,7 +753,7 @@ export const transferToVault = async (req, res) => {
 
         // 2. Stream from Drive to local storage
         const driveRes = await drive.files.get(
-          { fileId: driveItem.id, alt: "media" },
+          { fileId: driveItemId, alt: "media" },
           { responseType: "stream" },
         );
 
@@ -751,15 +778,18 @@ export const transferToVault = async (req, res) => {
     };
 
     for (const item of items) {
+      const itemId = item._id || item.id;
       await importItem(item, targetFolderId);
       // Delete from Drive after successful transfer
-      await drive.files.delete({ fileId: item.id });
+      await drive.files.delete({ fileId: itemId });
     }
 
     return res.status(200).json({ msg: "Transfer complete", results });
   } catch (err) {
     console.error("Transfer to Vault error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Transfer failed" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Transfer failed" });
   }
 };
 
@@ -777,12 +807,15 @@ export const transferFromVault = async (req, res) => {
     // Check if the user has write/delete access to the local items
     const hasLocalWrite = await hasWriteAccess(ownerId, req);
     if (!hasLocalWrite) {
-      return res.status(403).json({ error: "No permission to delete local items for transfer" });
+      return res
+        .status(403)
+        .json({ error: "No permission to delete local items for transfer" });
     }
 
     const results = [];
 
     const exportItem = async (localItem, driveParentId) => {
+      const localItemId = localItem._id || localItem.id;
       if (localItem.type === "directory") {
         // 1. Create Drive folder
         const driveFolder = await drive.files.create({
@@ -795,7 +828,7 @@ export const transferFromVault = async (req, res) => {
         });
 
         // 2. Get local children
-        const parentDir = new mongoose.Types.ObjectId(localItem.id);
+        const parentDir = new mongoose.Types.ObjectId(localItemId);
         const childFiles = await File.find({ parentDir }).lean();
         const childDirs = await Directory.find({ parentDir }).lean();
 
@@ -809,7 +842,7 @@ export const transferFromVault = async (req, res) => {
       } else {
         // 1. Stream from local to Drive
         const ext = localItem.extension || "";
-        const filePath = path.join(STORAGE_DIR, `${localItem.id}${ext}`);
+        const filePath = path.join(STORAGE_DIR, `${localItemId}${ext}`);
 
         const response = await drive.files.create({
           requestBody: {
@@ -829,6 +862,7 @@ export const transferFromVault = async (req, res) => {
     for (const item of items) {
       await exportItem(item, targetDriveFolderId);
 
+      const itemId = item._id || item.id;
       // Delete from Vault after successful transfer
       if (item.type === "directory") {
         // Recursive delete logic for local directory
@@ -847,22 +881,24 @@ export const transferFromVault = async (req, res) => {
           }
           await Directory.deleteOne({ _id: dirId });
         };
-        await deleteLocalDir(item.id);
+        await deleteLocalDir(itemId);
       } else {
         const fPath = path.join(
           STORAGE_DIR,
-          `${item.id}${item.extension || ""}`,
+          `${itemId}${item.extension || ""}`,
         );
         try {
           await unlink(fPath);
         } catch (e) {}
-        await File.deleteOne({ _id: item.id });
+        await File.deleteOne({ _id: itemId });
       }
     }
 
     return res.status(200).json({ msg: "Transfer complete", results });
   } catch (err) {
     console.error("Transfer from Vault error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Transfer failed" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Transfer failed" });
   }
 };

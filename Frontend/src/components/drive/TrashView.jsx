@@ -1,19 +1,29 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { SERVER_URL } from "../../lib/api";
-import { Loader2, Trash2, RotateCcw, Ban, Search, SlidersHorizontal, LayoutGrid, List } from "lucide-react";
-import FileCard from "./FileCard";
-import Button from "../ui/Button";
+import {
+  Loader2,
+  Trash2,
+  RotateCcw,
+  Ban,
+  LayoutGrid,
+  List,
+} from "lucide-react";
+import AssetCard from "../dashboard/AssetCard";
+import FileDetailsModal from "../dashboard/FileDetailsModal";
 
 export default function TrashView() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedItems, setSelectedItems] = useState([]);
   const [lastSelectedId, setLastSelectedId] = useState(null);
-  
+  const [detailsItem, setDetailsItem] = useState(null);
+
   // Header state
-  const [inputSearchQuery, setInputSearchQuery] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem("viewMode") || "grid");
+  const [searchParams] = useSearchParams();
+  const [viewMode, setViewMode] = useState(
+    () => localStorage.getItem("viewMode") || "grid",
+  );
 
   // --- DRAG SELECTION STATE ---
   const [isDragging, setIsDragging] = useState(false);
@@ -47,10 +57,40 @@ export default function TrashView() {
     localStorage.setItem("viewMode", viewMode);
   }, [viewMode]);
 
-  // Filter items by search
-  const filteredItems = items.filter(item => 
-    item.name?.toLowerCase().includes(inputSearchQuery.toLowerCase())
-  );
+  const searchQuery = searchParams.get("q") || "";
+  const searchExt = searchParams.get("ext") || "";
+  const searchSize = searchParams.get("size") || "";
+
+  // Filter items by search, extension, and size
+  const filteredItems = items.filter((item) => {
+    // 1. Search term filter
+    if (
+      searchQuery &&
+      !item.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    ) {
+      return false;
+    }
+
+    // 2. Extension filter
+    if (searchExt) {
+      const itemExt = (item.extension || item.name?.split(".").pop() || "")
+        .replace(/^\./, "")
+        .toLowerCase();
+      if (itemExt !== searchExt.toLowerCase()) {
+        return false;
+      }
+    }
+
+    // 3. Max Size filter
+    if (searchSize) {
+      const maxSizeBytes = parseInt(searchSize) * 1024 * 1024;
+      if (item.size && item.size > maxSizeBytes) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 
   // --- DRAG SELECTION HANDLERS ---
   const handleMouseDown = (e) => {
@@ -98,7 +138,7 @@ export default function TrashView() {
       };
 
       const newSelected = items.filter((item) => {
-        const element = document.getElementById(`file-card-${item.id}`);
+        const element = document.getElementById(`file-card-${item._id}`);
         if (!element) return false;
         const rect = element.getBoundingClientRect();
         return (
@@ -129,8 +169,8 @@ export default function TrashView() {
 
   const handleSelect = (item, e) => {
     if (e && e.shiftKey && lastSelectedId) {
-      const lastIndex = items.findIndex((i) => i.id === lastSelectedId);
-      const currentIndex = items.findIndex((i) => i.id === item.id);
+      const lastIndex = items.findIndex((i) => i._id === lastSelectedId);
+      const currentIndex = items.findIndex((i) => i._id === item._id);
 
       if (lastIndex !== -1 && currentIndex !== -1) {
         const start = Math.min(lastIndex, currentIndex);
@@ -138,17 +178,17 @@ export default function TrashView() {
         const range = items.slice(start, end + 1);
 
         setSelectedItems((prev) => {
-          const existingIds = new Set(prev.map((i) => i.id));
-          const newItems = range.filter((i) => !existingIds.has(i.id));
+          const existingIds = new Set(prev.map((i) => i._id));
+          const newItems = range.filter((i) => !existingIds.has(i._id));
           return [...prev, ...newItems];
         });
-        setLastSelectedId(item.id);
+        setLastSelectedId(item._id);
       }
     } else {
-      setLastSelectedId(item.id);
+      setLastSelectedId(item._id);
       setSelectedItems((prev) =>
-        prev.some((i) => i.id === item.id)
-          ? prev.filter((i) => i.id !== item.id)
+        prev.some((i) => i._id === item._id)
+          ? prev.filter((i) => i._id !== item._id)
           : [...prev, item],
       );
     }
@@ -180,8 +220,8 @@ export default function TrashView() {
       const isDirectory =
         item.type === "directory" || (!item.extension && item.files);
       const endpoint = isDirectory
-        ? `${SERVER_URL}/trash/directory/${item.id}/restore`
-        : `${SERVER_URL}/trash/${item.id}/restore`;
+        ? `${SERVER_URL}/trash/directory/${item._id}/restore`
+        : `${SERVER_URL}/trash/${item._id}/restore`;
       return fetch(endpoint, { method: "POST", credentials: "include" });
     });
 
@@ -208,8 +248,8 @@ export default function TrashView() {
         const isDirectory =
           item.type === "directory" || (!item.extension && item.files);
         const endpoint = isDirectory
-          ? `${SERVER_URL}/trash/directory/${item.id}`
-          : `${SERVER_URL}/trash/${item.id}`;
+          ? `${SERVER_URL}/trash/directory/${item._id}`
+          : `${SERVER_URL}/trash/${item._id}`;
         await fetch(endpoint, { method: "DELETE", credentials: "include" });
       } else {
         await fetch(`${SERVER_URL}/trash/delete-batch`, {
@@ -217,7 +257,7 @@ export default function TrashView() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             items: itemsToDelete.map((i) => ({
-              id: i.id,
+              id: i._id,
               type:
                 i.type ||
                 (i.extension || i.files === undefined ? "file" : "directory"),
@@ -236,47 +276,21 @@ export default function TrashView() {
 
   return (
     <div className="flex-1 flex flex-col relative h-full">
-      <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-2 pb-5 mb-5 -mx-4 px-4 md:-mx-8 md:px-8 border-b border-slate-200 dark:border-slate-800 shrink-0">
-        <div className="flex items-center gap-2 shrink-0 order-1">
-          <h2 className="text-2xl capitalize font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            Trash
+      <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-2 pb-5 mb-5 border-b border-white/5 shrink-0 px-2">
+        <div className="flex items-center gap-2 shrink-0">
+          <h2 className="text-2xl capitalize font-bold text-white flex items-center gap-2 drop-shadow-md tracking-wide">
+            Recycle Vault
           </h2>
         </div>
 
-        <div className="relative w-full md:flex-1 md:max-w-md xl:max-w-lg flex items-center gap-2 mx-0 md:mx-4 group order-3 md:order-2">
-          <div className="relative flex-1 opacity-90 hover:opacity-100 transition-opacity">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer z-10"
-              size={18}
-            />
-            <input
-              type="text"
-              placeholder="Search trash..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white rounded-xl focus:bg-white/80 dark:focus:bg-white/[0.08] focus:ring-1 focus:ring-[#14b8a6]/40 focus:border-[#14b8a6]/30 dark:focus:shadow-[0_0_12px_rgba(20,184,166,0.12)] outline-none transition-all duration-300 shadow-sm text-sm font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
-              value={inputSearchQuery}
-              onChange={(e) => setInputSearchQuery(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`p-2.5 rounded-xl border transition-all ${
-              showFilters 
-                ? "bg-white/80 dark:bg-white/[0.08] border-black/10 dark:border-white/10 text-slate-900 dark:text-white" 
-                : "bg-white/40 dark:bg-white/[0.04] border-black/5 dark:border-white/[0.06] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 shadow-sm"
-            }`}
-          >
-            <SlidersHorizontal size={18} />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0 order-2 md:order-3">
-          <div className="flex items-center bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm rounded-xl p-1 mr-2 hidden md:flex border border-black/5 dark:border-white/[0.06]">
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center bg-black/40 backdrop-blur-sm rounded-xl p-1 border border-white/5">
             <button
               onClick={() => setViewMode("grid")}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === "grid"
-                  ? "bg-white dark:bg-white/10 shadow-sm text-[#14b8a6]"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                  ? "bg-white/10 shadow-sm text-vault-emerald"
+                  : "text-white/40 hover:text-white/80"
               }`}
               title="Grid view"
             >
@@ -286,19 +300,19 @@ export default function TrashView() {
               onClick={() => setViewMode("list")}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === "list"
-                  ? "bg-white dark:bg-white/10 shadow-sm text-[#14b8a6]"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                  ? "bg-white/10 shadow-sm text-vault-emerald"
+                  : "text-white/40 hover:text-white/80"
               }`}
               title="List view"
             >
               <List size={18} />
             </button>
           </div>
-          
+
           {items.length > 0 && (
             <button
               onClick={handleEmptyTrash}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600/10 text-red-600 dark:bg-red-500/10 dark:text-red-400 rounded-lg hover:bg-red-600/20 dark:hover:bg-red-500/20 transition-colors font-medium shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-danger-accent/10 border border-danger-accent/30 text-danger-accent hover:bg-danger-accent/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,90,122,0.3)] shrink-0"
             >
               <Trash2 size={18} />
               <span className="hidden sm:inline">Empty Trash</span>
@@ -308,7 +322,7 @@ export default function TrashView() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-64">
+        <div className="flex-1 flex items-center justify-center">
           <Loader2 className="animate-spin text-blue-500" size={40} />
         </div>
       ) : (
@@ -316,7 +330,7 @@ export default function TrashView() {
           className={`pb-20 relative select-none flex-1 content-start ${
             viewMode === "list"
               ? "flex flex-col gap-1"
-              : "grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-4"
+              : "grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-6 p-6 rounded-[2.5rem] vault-glass-panel"
           }`}
           onMouseDown={handleMouseDown}
         >
@@ -342,25 +356,40 @@ export default function TrashView() {
             />
           )}
 
-          {filteredItems.map((item) => (
-            <FileCard
-              id={`file-card-${item.id}`}
-              key={item.id}
-              item={item}
-              type={item.type || (item.extension ? "file" : "directory")}
-              isTrash={true}
-              viewMode={viewMode}
-              selected={selectedItems.some((i) => i.id === item.id)}
-              onSelect={(item, e) => handleSelect(item, e)}
-              onNavigate={() => {}}
-              // Map buttons for trash context
-              onDownload={() => handleRestore([item])} // Restore
-              onDelete={() => handleDeleteForever([item])} // Delete Forever
-            />
-          ))}
+          {filteredItems.map((item) => {
+            const type = item.type || (item.extension ? "file" : "directory");
+            const normalizedItem = { ...item, type };
+            return (
+              <AssetCard
+                id={`file-card-${item._id}`}
+                key={item._id}
+                item={normalizedItem}
+                isTrash={true}
+                viewMode={viewMode}
+                selected={selectedItems.some((i) => i._id === item._id)}
+                onSelect={(item, e) => handleSelect(item, e)}
+                onNavigate={() => {}}
+                onRestore={() => handleRestore([item])}
+                onDeleteForever={() => handleDeleteForever([item])}
+                onDetails={(item) => setDetailsItem(item)}
+              />
+            );
+          })}
           {filteredItems.length === 0 && (
-            <div className="col-span-full text-center py-20 text-slate-400">
-              <p>Trash is empty or no files match search</p>
+            <div className="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
+              <div className="bg-white/40 dark:bg-white/[0.03] p-6 rounded-full mb-4 shadow-[0_0_30px_rgba(255,90,122,0.05)] dark:shadow-[0_0_30px_rgba(255,90,122,0.1)] text-danger-accent/60">
+                <Trash2 size={40} />
+              </div>
+              <p className="text-lg font-medium mb-2">
+                {searchQuery
+                  ? "No search results in trash"
+                  : "Trash is completely clear"}
+              </p>
+              <p className="text-sm text-white/40 max-w-sm text-center">
+                {searchQuery
+                  ? "Try adjusting your search query parameters."
+                  : "Any files or folders you delete will remain here until they are purged or expire."}
+              </p>
             </div>
           )}
         </div>
@@ -388,6 +417,15 @@ export default function TrashView() {
             <Ban size={16} /> Delete Forever
           </button>
         </div>
+      )}
+
+      {/* New Vault OS Details Modal */}
+      {detailsItem && (
+        <FileDetailsModal
+          item={detailsItem}
+          onClose={() => setDetailsItem(null)}
+          isTrash={true}
+        />
       )}
     </div>
   );

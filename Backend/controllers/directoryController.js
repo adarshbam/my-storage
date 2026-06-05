@@ -10,6 +10,28 @@ import SharedAccess from "../models/sharedAccessModel.js";
 import { hasWriteAccess } from "../utils/integrationHelper.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 
+const getDirectorySize = async (dirId) => {
+  let size = 0;
+  let count = 0;
+
+  const files = await File.find({ parentDir: dirId }).select("size").lean();
+  for (const file of files) {
+    size += file.size || 0;
+    count += 1;
+  }
+
+  const childDirs = await Directory.find({ parentDir: dirId })
+    .select("_id")
+    .lean();
+  for (const subDir of childDirs) {
+    const sub = await getDirectorySize(subDir._id.toString());
+    size += sub.size;
+    count += sub.count;
+  }
+
+  return { size, count };
+};
+
 export const getDirectoryById = async (req, res) => {
   const rootDirId = req.user.rootDirId.toString();
 
@@ -29,7 +51,7 @@ export const getDirectoryById = async (req, res) => {
       return res.status(404).json({ error: "Directory not found" });
     }
 
-    directoryData.id = directoryData._id.toString();
+    directoryData._id = directoryData._id.toString();
     const files = await File.find({ parentDir: dirId }).select("-__v").lean();
     directoryData.files = files.map((f) => ({ ...f, id: f._id.toString() }));
 
@@ -58,60 +80,7 @@ export const getDirectoryById = async (req, res) => {
       }
     }
 
-    directoryData.directories = await Promise.all(
-      childDirs.map(async (dir) => {
-        const dirIdStr = dir._id.toString();
-        const cachedMeta = await cacheHgetall("dir:meta:" + dirIdStr);
-
-        if (cachedMeta) {
-          return {
-            ...dir,
-            id: dirIdStr,
-            size: Number(cachedMeta.size || 0),
-            itemCount: Number(cachedMeta.itemCount || 0),
-          };
-        }
-
-        const [fileCount, dirCount] = await Promise.all([
-          File.countDocuments({ parentDir: dirIdStr }),
-          Directory.countDocuments({ parentDir: dirIdStr }),
-        ]);
-
-        if (!dir.size) {
-          const [fileStats, dirStats] = await Promise.all([
-            File.aggregate([
-              { $match: { parentDir: new mongoose.Types.ObjectId(dirIdStr) } },
-              { $group: { _id: null, totalSize: { $sum: "$size" } } }
-            ]),
-            Directory.aggregate([
-              { $match: { parentDir: new mongoose.Types.ObjectId(dirIdStr) } },
-              { $group: { _id: null, totalSize: { $sum: "$size" } } }
-            ])
-          ]);
-
-          dir.size = (fileStats[0]?.totalSize || 0) + (dirStats[0]?.totalSize || 0);
-          
-          // Asynchronously update DB so it does not block API response
-          Directory.updateOne(
-            { _id: dirIdStr },
-            { $set: { size: dir.size } }
-          ).catch(e => console.error("Error updating size:", e));
-        }
-
-        const itemCount = fileCount + dirCount;
-
-        await cacheHset("dir:meta:" + dirIdStr, {
-          size: dir.size || 0,
-          itemCount: itemCount || 0,
-        }, 600);
-
-        return {
-          ...dir,
-          id: dirIdStr,
-          itemCount: itemCount,
-        };
-      }),
-    );
+    directoryData.directories = childDirs;
 
     // console.log(directoryData);
 
@@ -131,57 +100,7 @@ export const getDirectoryById = async (req, res) => {
         }
       });
 
-      const getDirectorySize = async (dirId) => {
-        const cachedMeta = await cacheHgetall("dir:meta:" + dirId);
-        if (cachedMeta) {
-          return {
-            size: Number(cachedMeta.size || 0),
-            count: Number(cachedMeta.itemCount || 0),
-          };
-        }
-
-        let totalSize = 0;
-        let totalFiles = 0;
-        const dirDirectories = await Directory.find({
-          parentDir: dirId,
-        })
-          .select("_id")
-          .lean();
-        const dirfiles = await File.find({ parentDir: dirId })
-          .select("size name")
-          .lean();
-        if (!dirfiles) return { size: 0, count: 0 };
-
-        for (const file of dirfiles) {
-          if (file) {
-            try {
-              totalSize += file.size;
-              totalFiles++;
-            } catch (e) {
-              console.error(`Error getting size for file ${file.name}:`, e);
-            }
-          }
-        }
-
-        for (const subDir of dirDirectories) {
-          if (subDir) {
-            const { size, count } = await getDirectorySize(
-              subDir._id.toString(),
-            );
-            totalSize += size;
-            totalFiles += count;
-          }
-        }
-
-        await cacheHset("dir:meta:" + dirId, {
-          size: totalSize,
-          itemCount: totalFiles,
-        }, 600);
-
-        return { size: totalSize, count: totalFiles };
-      };
-
-      const { size, count } = await getDirectorySize(directoryData.id);
+      const { size, count } = await getDirectorySize(directoryData._id);
 
       // Set headers before piping so headers are sent first
       res.setHeader("X-Total-Size", size);
@@ -226,7 +145,7 @@ export const getDirectoryById = async (req, res) => {
         }
       };
 
-      await addDirectory(directoryData.id, directoryData.name);
+      await addDirectory(directoryData._id, directoryData.name);
       await archive.finalize();
       return; // 🔥 CRITICAL
     }
@@ -301,7 +220,9 @@ export const renameDirectory = async (req, res) => {
       return res.status(404).send("Folder not found");
     }
 
-    const ownerId = directoryData.userId ? directoryData.userId.toString() : req.user.id;
+    const ownerId = directoryData.userId
+      ? directoryData.userId.toString()
+      : req.user.id;
     const canWrite = await hasWriteAccess(ownerId, req);
     if (!canWrite) {
       return res
@@ -309,7 +230,10 @@ export const renameDirectory = async (req, res) => {
         .send("You are not authorized to rename this directory");
     }
     const { newDirName } = req.body;
-    await Directory.updateOne({ _id: dirId }, { $set: { name: sanitize(newDirName) } });
+    await Directory.updateOne(
+      { _id: dirId },
+      { $set: { name: sanitize(newDirName) } },
+    );
     return res.status(200).send("Folder renamed successfully");
   } catch (error) {
     console.error("Rename Error:", error);
@@ -392,27 +316,37 @@ export const moveDirectory = async (req, res) => {
 
     let targetOwnerId = req.user.id;
     if (dirId !== rootDirId && dirId !== "undefined") {
-      const fullTargetDir = await Directory.findOne({ _id: dirId }).select("userId").lean();
+      const fullTargetDir = await Directory.findOne({ _id: dirId })
+        .select("userId")
+        .lean();
       if (fullTargetDir && fullTargetDir.userId) {
         targetOwnerId = fullTargetDir.userId.toString();
       }
     }
     const canWriteTarget = await hasWriteAccess(targetOwnerId, req);
     if (!canWriteTarget) {
-      return res.status(403).json({ message: "You are not authorized to move items to this folder" });
+      return res.status(403).json({
+        message: "You are not authorized to move items to this folder",
+      });
     }
 
-    const itemIds = transfers.map((t) => t.id);
+    const itemIds = transfers.map((t) => t._id || t.id);
 
     // Check write access for all items being moved
-    const sourceDirs = await Directory.find({ _id: { $in: itemIds } }).select("userId parentDir").lean();
-    const sourceFiles = await File.find({ _id: { $in: itemIds } }).select("userId parentDir").lean();
+    const sourceDirs = await Directory.find({ _id: { $in: itemIds } })
+      .select("userId parentDir")
+      .lean();
+    const sourceFiles = await File.find({ _id: { $in: itemIds } })
+      .select("userId parentDir")
+      .lean();
 
     for (const item of [...sourceDirs, ...sourceFiles]) {
       const itemOwnerId = item.userId ? item.userId.toString() : req.user.id;
       const canWriteItem = await hasWriteAccess(itemOwnerId, req);
       if (!canWriteItem) {
-        return res.status(403).json({ message: "You are not authorized to move some of these items" });
+        return res.status(403).json({
+          message: "You are not authorized to move some of these items",
+        });
       }
     }
 

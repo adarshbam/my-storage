@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { SERVER_URL } from "../../lib/api";
@@ -89,6 +90,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
     }
   };
 
+  // ── Feature Module Color Definitions ──
   const navItems = [
     {
       name: "Vault Chamber",
@@ -97,144 +99,272 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
       icon: VaultChamberIcon,
       accentClass: "text-vault-emerald",
       bgClass: "bg-vault-emerald/10",
-      borderClass: "border-vault-emerald",
-      shadowClass: "shadow-[inset_0_0_15px_rgba(0,212,165,0.2)]",
+      shadowClass: "shadow-[inset_0_0_20px_rgba(0,212,165,0.15)]",
+      barColor: "#00D4A5",
+      barGlow: "0 0 12px rgba(0, 212, 165, 0.6)",
     },
     {
       name: "Secure Relay",
       path: "/dashboard/shared",
       exact: false,
       icon: SecureRelayIcon,
-      accentClass: "text-team-accent",
-      bgClass: "bg-team-accent/10",
-      borderClass: "border-team-accent",
-      shadowClass: "shadow-[inset_0_0_15px_rgba(32,229,192,0.2)]",
+      accentClass: "text-relay-accent",
+      bgClass: "bg-relay-accent/10",
+      shadowClass: "shadow-[inset_0_0_20px_rgba(155,77,255,0.2)]",
+      barColor: "#C65CFF",
+      barGlow: "0 0 12px rgba(155, 77, 255, 0.6)",
     },
     {
       name: "Activity Pulse",
       path: "/dashboard/recent",
       exact: false,
       icon: ActivityPulseIcon,
-      accentClass: "text-document-accent",
-      bgClass: "bg-document-accent/10",
-      borderClass: "border-document-accent",
-      shadowClass: "shadow-[inset_0_0_15px_rgba(77,166,255,0.2)]",
+      accentClass: "text-pulse-accent",
+      bgClass: "bg-pulse-accent/10",
+      shadowClass: "shadow-[inset_0_0_20px_rgba(0,207,255,0.2)]",
+      barColor: "#00CFFF",
+      barGlow: "0 0 12px rgba(0, 207, 255, 0.6)",
     },
     {
       name: "Priority Beacon",
       path: "/dashboard/starred",
       exact: false,
       icon: PriorityBeaconIcon,
-      accentClass: "text-analytics-accent",
-      bgClass: "bg-analytics-accent/10",
-      borderClass: "border-analytics-accent",
-      shadowClass: "shadow-[inset_0_0_15px_rgba(255,209,102,0.2)]",
+      accentClass: "text-beacon-accent",
+      bgClass: "bg-beacon-accent/10",
+      shadowClass: "shadow-[inset_0_0_20px_rgba(255,209,102,0.2)]",
+      barColor: "#FFD166",
+      barGlow: "0 0 12px rgba(255, 209, 102, 0.6)",
     },
     {
       name: "Recycle Vault",
       path: "/dashboard/trash",
       exact: false,
       icon: RecycleVaultIcon,
-      accentClass: "text-danger-accent",
-      bgClass: "bg-danger-accent/10",
-      borderClass: "border-danger-accent",
-      shadowClass: "shadow-[inset_0_0_15px_rgba(255,90,122,0.2)]",
+      accentClass: "text-recycle-accent",
+      bgClass: "bg-recycle-accent/10",
+      shadowClass: "shadow-[inset_0_0_20px_rgba(255,90,122,0.2)]",
+      barColor: "#FF5A7A",
+      barGlow: "0 0 12px rgba(255, 90, 122, 0.6)",
     },
   ];
+
+  const driveConnected = user?.integrations?.googleDrive?.connected;
+  const githubConnected = user?.integrations?.github?.connected;
+
+  // Track hovered nav item for full-color hover effect
+  const [hoveredPath, setHoveredPath] = useState(null);
 
   return (
     <>
       {/* Mobile Overlay */}
       {isMobileOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
       {/* Navigation Rail */}
-      <aside className={`
+      <aside
+        className={`
         fixed md:sticky top-[64px] left-0 h-[calc(100vh-64px)] z-40
         w-[72px] md:hover:w-[240px] group transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
         bg-vault-black/95 backdrop-blur-3xl border-r border-white/5
         flex flex-col overflow-hidden shrink-0
-        ${isMobileOpen ? 'translate-x-0 !w-[240px]' : '-translate-x-full md:translate-x-0'}
-      `}>
-        
+        ${isMobileOpen ? "translate-x-0 !w-[240px]" : "-translate-x-full md:translate-x-0"}
+      `}
+      >
         {/* Main Nav Items */}
-        <div className="flex-1 py-6 flex flex-col gap-2 px-3 overflow-y-auto overflow-x-hidden scrollbar-none">
+        <div className="flex-1 py-6 flex flex-col gap-1.5 px-3 overflow-y-auto overflow-x-hidden scrollbar-none">
           {navItems.map((item) => {
             const active = isActive(item.path, item.exact);
+            const hovered = hoveredPath === item.path && !active;
+            const lit = active || hovered; // Item is "lit up" — either active or hovered
             const Icon = item.icon;
-            
+
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 onClick={() => setIsMobileOpen(false)}
+                onMouseEnter={() => setHoveredPath(item.path)}
+                onMouseLeave={() => setHoveredPath(null)}
                 className={`
-                  relative flex items-center h-12 rounded-xl transition-all duration-300 overflow-hidden
-                  ${active ? `${item.bgClass} ${item.shadowClass}` : 'hover:bg-white/5'}
+                  relative flex items-center h-12 rounded-xl overflow-hidden transition-all duration-300
+                  ${lit ? `${item.bgClass} ${item.shadowClass}` : ""}
                 `}
               >
-                {/* Active Indicator Line */}
+                {/* Active Indicator Bar — ONLY when active, not hovered */}
                 {active && (
-                  <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-current ${item.accentClass} shadow-[0_0_10px_currentColor]`} />
+                  <div
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full"
+                    style={{
+                      backgroundColor: item.barColor,
+                      boxShadow: item.barGlow,
+                    }}
+                  />
                 )}
-                
-                <div className={`w-12 shrink-0 flex items-center justify-center ${active ? item.accentClass : 'text-white/50 group-hover:text-white/80'}`}>
-                  <Icon size={22} className="transition-transform duration-300 group-hover:scale-110" />
+
+                {/* Icon — feature color when lit (hovered or active), neutral gray otherwise */}
+                <div
+                  className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
+                    lit ? item.accentClass : "text-white/30"
+                  }`}
+                  style={
+                    lit ? { filter: `drop-shadow(0 0 8px currentColor)` } : {}
+                  }
+                >
+                  <Icon
+                    size={22}
+                    className="transition-transform duration-300"
+                  />
                 </div>
-                
-                <span className={`whitespace-nowrap font-semibold text-sm tracking-wide transition-opacity duration-300 ${isMobileOpen ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100'} ${active ? 'text-white' : 'text-white/50 group-hover:text-white/90'}`}>
+
+                {/* Label */}
+                <span
+                  className={`whitespace-nowrap font-semibold text-sm tracking-wide transition-all duration-300 ${
+                    isMobileOpen
+                      ? "opacity-100"
+                      : "opacity-0 md:group-hover:opacity-100"
+                  } ${lit ? "text-white" : "text-white/40 group-hover:text-white/80"}`}
+                >
                   {item.name}
                 </span>
               </Link>
             );
           })}
 
+          {/* Divider */}
           <div className="my-4 h-px bg-white/5 mx-4 shrink-0" />
-          <div className={`px-4 mb-2 text-[10px] font-bold tracking-widest text-white/30 uppercase transition-opacity duration-300 ${isMobileOpen ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100'}`}>
+          <div
+            className={`px-4 mb-2 text-[10px] font-bold tracking-widest text-white/30 uppercase transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"}`}
+          >
             Integrations
           </div>
 
-          {/* Integrations */}
+          {/* Link Drive — Orange identity */}
           <button
-            onClick={() => user?.integrations?.googleDrive?.connected ? disconnectDrive() : connectDrive()}
-            className="relative flex items-center h-12 rounded-xl hover:bg-white/5 transition-all duration-300 overflow-hidden text-left"
+            onClick={() =>
+              driveConnected ? disconnectDrive() : connectDrive()
+            }
+            onMouseEnter={() => setHoveredPath("drive")}
+            onMouseLeave={() => setHoveredPath(null)}
+            className={`relative flex items-center h-12 rounded-xl overflow-hidden text-left transition-all duration-300 ${
+              hoveredPath === "drive"
+                ? "bg-linkdrive-accent/10 shadow-[inset_0_0_20px_rgba(255,122,61,0.2)]"
+                : ""
+            }`}
           >
-            <div className={`w-12 shrink-0 flex items-center justify-center ${user?.integrations?.googleDrive?.connected ? 'text-document-accent' : 'text-white/40'}`}>
+            <div
+              className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
+                driveConnected || hoveredPath === "drive"
+                  ? "text-linkdrive-accent"
+                  : "text-white/30"
+              }`}
+              style={
+                driveConnected || hoveredPath === "drive"
+                  ? { filter: "drop-shadow(0 0 6px rgba(255, 122, 61, 0.5))" }
+                  : {}
+              }
+            >
               <VaultDriveIcon size={20} />
             </div>
-            <span className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100'} text-white/70`}>
-              {user?.integrations?.googleDrive?.connected ? 'Drive (Linked)' : 'Link Drive'}
+            <span
+              className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
+                driveConnected ? "text-white/80" : "text-white/40"
+              }`}
+            >
+              {driveConnected ? "Drive (Linked)" : "Link Drive"}
             </span>
+            {driveConnected && (
+              <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkdrive-accent shadow-[0_0_6px_rgba(255,122,61,0.6)] opacity-0 md:group-hover:opacity-100 transition-opacity" />
+            )}
           </button>
 
+          {/* Link GitHub — Purple identity */}
           <button
-            onClick={() => user?.integrations?.github?.connected ? disconnectGithub() : connectGithub()}
-            className="relative flex items-center h-12 rounded-xl hover:bg-white/5 transition-all duration-300 overflow-hidden text-left"
+            onClick={() =>
+              githubConnected ? disconnectGithub() : connectGithub()
+            }
+            onMouseEnter={() => setHoveredPath("github")}
+            onMouseLeave={() => setHoveredPath(null)}
+            className={`relative flex items-center h-12 rounded-xl overflow-hidden text-left transition-all duration-300 ${
+              hoveredPath === "github"
+                ? "bg-linkgit-accent/10 shadow-[inset_0_0_20px_rgba(198,92,255,0.2)]"
+                : ""
+            }`}
           >
-            <div className={`w-12 shrink-0 flex items-center justify-center ${user?.integrations?.github?.connected ? 'text-creative-accent' : 'text-white/40'}`}>
+            <div
+              className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
+                githubConnected || hoveredPath === "github"
+                  ? "text-linkgit-accent"
+                  : "text-white/30"
+              }`}
+              style={
+                githubConnected || hoveredPath === "github"
+                  ? { filter: "drop-shadow(0 0 6px rgba(198, 92, 255, 0.5))" }
+                  : {}
+              }
+            >
               <VaultGitIcon size={20} />
             </div>
-            <span className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100'} text-white/70`}>
-              {user?.integrations?.github?.connected ? 'GitHub (Linked)' : 'Link GitHub'}
+            <span
+              className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
+                githubConnected ? "text-white/80" : "text-white/40"
+              }`}
+            >
+              {githubConnected ? "GitHub (Linked)" : "Link GitHub"}
             </span>
+            {githubConnected && (
+              <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkgit-accent shadow-[0_0_6px_rgba(198,92,255,0.6)] opacity-0 md:group-hover:opacity-100 transition-opacity" />
+            )}
           </button>
         </div>
 
-        {/* Bottom Actions */}
+        {/* Bottom Actions — System Core with Electric Blue */}
         <div className="p-3 border-t border-white/5 mt-auto bg-vault-black/50 backdrop-blur-xl">
           <Link
             to="/profile"
             onClick={() => setIsMobileOpen(false)}
-            className="relative flex items-center h-12 rounded-xl hover:bg-white/5 transition-all duration-300 overflow-hidden"
+            onMouseEnter={() => setHoveredPath("/profile")}
+            onMouseLeave={() => setHoveredPath(null)}
+            className={`relative flex items-center h-12 rounded-xl overflow-hidden transition-all duration-300 ${
+              isActive("/profile") || hoveredPath === "/profile"
+                ? "bg-core-accent/10 shadow-[inset_0_0_20px_rgba(77,166,255,0.15)]"
+                : ""
+            }`}
           >
-            <div className="w-12 shrink-0 flex items-center justify-center text-white/50 group-hover:text-white/90">
+            {isActive("/profile") && (
+              <div
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full"
+                style={{
+                  backgroundColor: "#4DA6FF",
+                  boxShadow: "0 0 12px rgba(77, 166, 255, 0.6)",
+                }}
+              />
+            )}
+            <div
+              className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
+                isActive("/profile") || hoveredPath === "/profile"
+                  ? "text-core-accent"
+                  : "text-white/30 group-hover:text-white/60"
+              }`}
+              style={
+                isActive("/profile") || hoveredPath === "/profile"
+                  ? { filter: "drop-shadow(0 0 8px currentColor)" }
+                  : {}
+              }
+            >
               <SystemCoreIcon size={20} />
             </div>
-            <span className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? 'opacity-100' : 'opacity-0 md:group-hover:opacity-100'} text-white/70 group-hover:text-white`}>
+            <span
+              className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
+                isActive("/profile")
+                  ? "text-white"
+                  : "text-white/40 group-hover:text-white/80"
+              }`}
+            >
               System Core
             </span>
           </Link>

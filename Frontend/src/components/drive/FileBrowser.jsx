@@ -47,6 +47,9 @@ import {
   Lock,
   Globe,
   GitBranch,
+  Share2,
+  Clock,
+  Star,
 } from "lucide-react";
 
 // Lazy load the preview modal since it contains heavy syntax highlighter dependencies
@@ -99,7 +102,11 @@ export default function FileBrowser({ specialView }) {
   const searchQuery = searchParams.get("q") || searchParams.get("search");
   const searchExt = searchParams.get("ext");
   const searchSize = searchParams.get("size");
-  const isSearch = location.pathname.endsWith("/search") || !!searchQuery || !!searchExt || !!searchSize;
+  const isSearch =
+    location.pathname.endsWith("/search") ||
+    !!searchQuery ||
+    !!searchExt ||
+    !!searchSize;
   const isReadOnly = specialView === "shared" || specialView === "admin";
   const ownerId = searchParams.get("ownerId");
 
@@ -194,7 +201,6 @@ export default function FileBrowser({ specialView }) {
               if (!owner) return null;
               return {
                 _id: owner.rootDirId,
-                id: owner.rootDirId,
                 name: `${owner.name}'s Drive`,
                 type: "directory",
                 ownerEmail: owner.email,
@@ -227,7 +233,7 @@ export default function FileBrowser({ specialView }) {
               dir.provider !== "google_drive" &&
               dir.provider !== "github" &&
               dir.name !== "Google Drive" &&
-              dir.name !== "GitHub"
+              dir.name !== "GitHub",
           );
         }
 
@@ -247,18 +253,20 @@ export default function FileBrowser({ specialView }) {
 
         // Cache folder names to resolve paths on the client
         try {
-          const cached = JSON.parse(sessionStorage.getItem("folder_paths") || "{}");
+          const cached = JSON.parse(
+            sessionStorage.getItem("folder_paths") || "{}",
+          );
           if (folderId && result.name) {
             cached[folderId] = {
               name: result.name,
-              parentId: result.parentId || null
+              parentId: result.parentId || null,
             };
           }
           // Cache all child directories in view as well
           directories.forEach((d) => {
-            cached[d.id] = {
+            cached[d._id] = {
               name: d.name,
-              parentId: d.parentDir || folderId || null
+              parentId: d.parentDir || folderId || null,
             };
           });
           sessionStorage.setItem("folder_paths", JSON.stringify(cached));
@@ -270,13 +278,13 @@ export default function FileBrowser({ specialView }) {
             (isSearch
               ? `Search: ${searchQuery}`
               : specialView === "shared"
-                ? "Shared with me"
+                ? "Secure Relay"
                 : specialView === "admin"
                   ? "Admin View"
                   : specialView === "recent"
-                    ? "Recent"
+                    ? "Activity Pulse"
                     : specialView === "starred"
-                      ? "Starred"
+                      ? "Priority Beacon"
                       : specialView === "google-drive"
                         ? "Google Drive"
                         : specialView === "github"
@@ -308,7 +316,7 @@ export default function FileBrowser({ specialView }) {
       const parts = githubPath.split("/");
       const repoPath = `${parts[0]}/${parts[1]}`;
       const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
-      
+
       const repoRes = await fetch(
         `${SERVER_URL}/github/repositories/${repoPath}${ownerParam}`,
         { credentials: "include" },
@@ -377,8 +385,8 @@ export default function FileBrowser({ specialView }) {
   const handleSelect = (item, e) => {
     if (e && e.shiftKey && lastSelectedId) {
       const allItems = [...data.directories, ...data.files];
-      const lastIndex = allItems.findIndex((i) => i.id === lastSelectedId);
-      const currentIndex = allItems.findIndex((i) => i.id === item.id);
+      const lastIndex = allItems.findIndex((i) => i._id === lastSelectedId);
+      const currentIndex = allItems.findIndex((i) => i._id === item._id);
 
       if (lastIndex !== -1 && currentIndex !== -1) {
         const start = Math.min(lastIndex, currentIndex);
@@ -386,17 +394,17 @@ export default function FileBrowser({ specialView }) {
         const range = allItems.slice(start, end + 1);
 
         setSelectedItems((prev) => {
-          const existingIds = new Set(prev.map((i) => i.id));
-          const newItems = range.filter((i) => !existingIds.has(i.id));
+          const existingIds = new Set(prev.map((i) => i._id));
+          const newItems = range.filter((i) => !existingIds.has(i._id));
           return [...prev, ...newItems];
         });
-        setLastSelectedId(item.id);
+        setLastSelectedId(item._id);
       }
     } else {
-      setLastSelectedId(item.id);
+      setLastSelectedId(item._id);
       setSelectedItems((prev) =>
-        prev.some((i) => i.id === item.id)
-          ? prev.filter((i) => i.id !== item.id)
+        prev.some((i) => i._id === item._id)
+          ? prev.filter((i) => i._id !== item._id)
           : [...prev, item],
       );
     }
@@ -453,7 +461,7 @@ export default function FileBrowser({ specialView }) {
 
       const items = [...data.directories, ...data.files];
       const newSelected = items.filter((item) => {
-        const element = document.getElementById(`file-card-${item.id}`);
+        const element = document.getElementById(`file-card-${item._id}`);
         if (!element) return false;
 
         const rect = element.getBoundingClientRect();
@@ -625,12 +633,12 @@ export default function FileBrowser({ specialView }) {
         }
         const typeEndpoint =
           modalItem.type === "directory" ||
-          data.directories.find((d) => d.id === modalItem.id)
+          data.directories.find((d) => d._id === modalItem._id)
             ? "directory"
             : "file";
         const bodyKey =
           typeEndpoint === "directory" ? "newDirName" : "newFileName";
-        url = `${SERVER_URL}/${typeEndpoint}/${modalItem.id}`;
+        url = `${SERVER_URL}/${typeEndpoint}/${modalItem._id}`;
         method = "PATCH";
         body = JSON.stringify({ [bodyKey]: modalInput });
       }
@@ -674,12 +682,12 @@ export default function FileBrowser({ specialView }) {
       if (
         (specialView === "google-drive" ||
           specialView === "google-drive-folder") &&
-        !isObjectId(dir.id)
+        !isObjectId(dir._id)
       ) {
-        // Already inside Drive — dir.id is a real Drive folder ID, navigate into it
-        navigate(`/dashboard/google-drive/${dir.id}${ownerParam}`);
+        // Already inside Drive — dir._id is a real Drive folder ID, navigate into it
+        navigate(`/dashboard/google-drive/${dir._id}${ownerParam}`);
       } else {
-        // Coming from the Vault root or a non-drive view — the dir.id might be a MongoDB ObjectId (mount-point).
+        // Coming from the Vault root or a non-drive view — the dir._id might be a MongoDB ObjectId (mount-point).
         // Always open Drive root listing unless we are sure it's a drive ID.
         navigate(`/dashboard/google-drive${ownerParam}`);
       }
@@ -690,25 +698,25 @@ export default function FileBrowser({ specialView }) {
         navigate(`/dashboard/github${ownerParam}`);
       }
     } else if (dir.provider === "shared_drive" || specialView === "shared") {
-      navigate(`/dashboard/shared/folder/${dir.id}${ownerParam}`);
+      navigate(`/dashboard/shared/folder/${dir._id}${ownerParam}`);
     } else if (specialView === "admin") {
-      navigate(`/dashboard/admin/folder/${dir.id}`);
+      navigate(`/dashboard/admin/folder/${dir._id}`);
     } else if (specialView === "owner") {
-      navigate(`/dashboard/owner/folder/${dir.id}`);
+      navigate(`/dashboard/owner/folder/${dir._id}`);
     } else {
-      navigate(`/dashboard/folder/${dir.id}`);
+      navigate(`/dashboard/folder/${dir._id}`);
     }
   };
 
   const handleDownload = (item) => {
-    if (!item.id) return;
+    if (!item._id) return;
 
     let url;
     if (item.provider === "google_drive") {
       if (item.type === "directory") {
-        url = `${SERVER_URL}/drive/folder/${item.id}/download`;
+        url = `${SERVER_URL}/drive/folder/${item._id}/download`;
       } else {
-        url = `${SERVER_URL}/drive/file/${item.id}?action=download`;
+        url = `${SERVER_URL}/drive/file/${item._id}?action=download`;
       }
     } else if (item.provider === "github") {
       if (item.type === "directory") {
@@ -732,8 +740,8 @@ export default function FileBrowser({ specialView }) {
     } else {
       url =
         item.type === "directory"
-          ? `${SERVER_URL}/directory/${item.id}?action=download`
-          : `${SERVER_URL}/file/${item.id}?action=download`;
+          ? `${SERVER_URL}/directory/${item._id}?action=download`
+          : `${SERVER_URL}/file/${item._id}?action=download`;
     }
 
     const name = item.type === "directory" ? `${item.name}.zip` : item.name;
@@ -754,12 +762,12 @@ export default function FileBrowser({ specialView }) {
 
       if (item.provider === "google_drive") {
         // Drive uses a single /drive/file/:id endpoint for both files and folders
-        url = `${SERVER_URL}/drive/file/${item.id}`;
+        url = `${SERVER_URL}/drive/file/${item._id}`;
       } else {
-        const typeEndpoint = data.directories.find((d) => d.id === item.id)
+        const typeEndpoint = data.directories.find((d) => d._id === item._id)
           ? "directory"
           : "file";
-        url = `${SERVER_URL}/${typeEndpoint}/${item.id}`;
+        url = `${SERVER_URL}/${typeEndpoint}/${item._id}`;
       }
 
       if (ownerId) {
@@ -793,7 +801,7 @@ export default function FileBrowser({ specialView }) {
       let url = isDirectory
         ? `${SERVER_URL}/github/repositories/${modalItem.githubPath}${selectedBranch ? `?ref=${selectedBranch}` : ""}`
         : `${SERVER_URL}/github/file/${modalItem.githubPath}`;
-      
+
       if (ownerId) {
         const separator = url.includes("?") ? "&" : "?";
         url = `${url}${separator}ownerId=${ownerId}`;
@@ -825,7 +833,7 @@ export default function FileBrowser({ specialView }) {
 
   const handleDragStart = (e, item) => {
     let itemsToDrag = [item];
-    if (selectedItems.some((i) => i.id === item.id)) {
+    if (selectedItems.some((i) => i._id === item._id)) {
       itemsToDrag = selectedItems;
     }
 
@@ -863,7 +871,8 @@ export default function FileBrowser({ specialView }) {
 
     if (itemsToMove.length > 0) {
       // Filter out if target is one of the moved items (can't move folder into itself)
-      if (targetItem && itemsToMove.some((i) => i.id === targetItem.id)) return;
+      if (targetItem && itemsToMove.some((i) => i._id === targetItem._id))
+        return;
 
       const sourceProviders = new Set(
         itemsToMove.map((i) => i.provider || "local"),
@@ -893,7 +902,7 @@ export default function FileBrowser({ specialView }) {
         }
 
         if (targetProvider === "google_drive") {
-          let targetId = targetItem.id;
+          let targetId = targetItem._id;
           if (isObjectId(targetId)) targetId = "root";
 
           try {
@@ -916,12 +925,15 @@ export default function FileBrowser({ specialView }) {
 
         if (targetProvider === "local") {
           try {
-            await fetch(`${SERVER_URL}/directory/${targetItem.id}/move${ownerParam}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(itemsToMove),
-              credentials: "include",
-            });
+            await fetch(
+              `${SERVER_URL}/directory/${targetItem._id}/move${ownerParam}`,
+              {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(itemsToMove),
+                credentials: "include",
+              },
+            );
             fetchFiles();
             setSelectedItems([]);
           } catch (err) {
@@ -935,7 +947,7 @@ export default function FileBrowser({ specialView }) {
 
       // Drive -> Vault
       if (sourceProviders.has("google_drive") && targetProvider === "local") {
-        let targetFolderId = targetItem.id;
+        let targetFolderId = targetItem._id;
         if (!targetFolderId || targetFolderId === "root")
           targetFolderId = user?.rootDirectoryId;
 
@@ -959,7 +971,7 @@ export default function FileBrowser({ specialView }) {
 
       // Vault -> Drive
       if (sourceProviders.has("local") && targetProvider === "google_drive") {
-        let targetDriveFolderId = targetItem.id;
+        let targetDriveFolderId = targetItem._id;
         if (!targetDriveFolderId || isObjectId(targetDriveFolderId))
           targetDriveFolderId = "root";
 
@@ -991,15 +1003,15 @@ export default function FileBrowser({ specialView }) {
       const files = Array.from(e.dataTransfer.files);
       let targetDirId = folderId; // default to current vault folder
 
-      if (targetItem && targetItem.id) {
+      if (targetItem && targetItem._id) {
         if (targetItem.provider === "github" && targetItem.githubPath) {
           targetDirId = `github:${targetItem.githubPath}`;
         } else if (targetItem.provider === "google_drive") {
-          targetDirId = isObjectId(targetItem.id)
+          targetDirId = isObjectId(targetItem._id)
             ? `drive:root`
-            : `drive:${targetItem.id}`;
+            : `drive:${targetItem._id}`;
         } else {
-          targetDirId = targetItem.id;
+          targetDirId = targetItem._id;
         }
       } else if (
         specialView === "google-drive" ||
@@ -1148,7 +1160,19 @@ export default function FileBrowser({ specialView }) {
               className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-xl transition-all border border-transparent hover:border-white/20 mr-2"
               title="Go Back"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M19 12H5" />
+                <path d="M12 19l-7-7 7-7" />
+              </svg>
             </button>
           )}
           <h2 className="text-2xl capitalize font-bold text-white flex items-center gap-2 drop-shadow-md tracking-wide">
@@ -1157,7 +1181,7 @@ export default function FileBrowser({ specialView }) {
               <button
                 onClick={() => {
                   setModalItem({
-                    id: folderId,
+                    _id: folderId,
                     name: dirName,
                     type: "directory",
                   });
@@ -1286,10 +1310,10 @@ export default function FileBrowser({ specialView }) {
 
           {data.directories.map((dir) => (
             <AssetCard
-              id={`file-card-${dir.id}`}
-              key={dir.id}
+              id={`file-card-${dir._id}`}
+              key={dir._id}
               item={dir}
-              selected={selectedItems.some((i) => i.id === dir.id)}
+              selected={selectedItems.some((i) => i._id === dir._id)}
               onSelect={(item, e) => handleSelect(item, e)}
               onNavigate={handleNavigate}
               onRename={handleRenameClick}
@@ -1312,10 +1336,10 @@ export default function FileBrowser({ specialView }) {
           ))}
           {data.files.map((file) => (
             <AssetCard
-              id={`file-card-${file.id}`}
-              key={file.id}
+              id={`file-card-${file._id}`}
+              key={file._id}
               item={file}
-              selected={selectedItems.some((i) => i.id === file.id)}
+              selected={selectedItems.some((i) => i._id === file._id)}
               onSelect={(item, e) => handleSelect(item, e)}
               onNavigate={() => {}} // Files don't navigate
               onRename={handleRenameClick}
@@ -1335,9 +1359,49 @@ export default function FileBrowser({ specialView }) {
             <div className="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
               {specialView ? (
                 <>
+                  <div
+                    className={cn(
+                      "p-6 rounded-full mb-4 shadow-lg text-white/40 border border-white/5 bg-white/[0.02]",
+                      specialView === "shared" &&
+                        "shadow-[0_0_30px_rgba(155,77,255,0.15)] text-relay-accent/80 border-relay-accent/20",
+                      specialView === "recent" &&
+                        "shadow-[0_0_30px_rgba(0,207,255,0.15)] text-pulse-accent/80 border-pulse-accent/20",
+                      specialView === "starred" &&
+                        "shadow-[0_0_30px_rgba(255,209,102,0.15)] text-beacon-accent/80 border-beacon-accent/20",
+                    )}
+                  >
+                    {specialView === "shared" ? (
+                      <Share2 size={40} />
+                    ) : specialView === "recent" ? (
+                      <Clock size={40} />
+                    ) : specialView === "starred" ? (
+                      <Star size={40} />
+                    ) : (
+                      <Upload size={40} />
+                    )}
+                  </div>
                   <p className="text-lg font-medium mb-2">
-                    {isSearch ? "No search results found" : "No files yet"}
+                    {isSearch
+                      ? "No search results found"
+                      : specialView === "shared"
+                        ? "No secure relays active"
+                        : specialView === "recent"
+                          ? "No recent activity pulse"
+                          : specialView === "starred"
+                            ? "No priority beacons found"
+                            : "No files yet"}
                   </p>
+                  {!isSearch && (
+                    <p className="text-sm text-white/40 max-w-sm text-center">
+                      {specialView === "shared"
+                        ? "Shared access vaults from other nodes will appear here once authenticated."
+                        : specialView === "recent"
+                          ? "Your recently accessed or modified vault assets will be indexed here."
+                          : specialView === "starred"
+                            ? "Star your critical assets or directories to beacon them to this control panel."
+                            : ""}
+                    </p>
+                  )}
                   {specialView === "github-repo" && !isSearch && (
                     <button
                       onClick={() => {
@@ -1393,23 +1457,31 @@ export default function FileBrowser({ specialView }) {
               const deletePromises = selectedItems.map((item) => {
                 const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
                 if (item.provider === "google_drive") {
-                  return fetch(`${SERVER_URL}/drive/file/${item.id}${ownerParam}`, {
-                    method: "DELETE",
-                    credentials: "include",
-                  });
+                  return fetch(
+                    `${SERVER_URL}/drive/file/${item._id}${ownerParam}`,
+                    {
+                      method: "DELETE",
+                      credentials: "include",
+                    },
+                  );
                 } else if (item.provider === "github") {
-                  return fetch(`${SERVER_URL}/github/file/${item.githubPath}${ownerParam}`, {
-                    method: "DELETE",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ sha: item.sha }),
-                    credentials: "include",
-                  });
+                  return fetch(
+                    `${SERVER_URL}/github/file/${item.githubPath}${ownerParam}`,
+                    {
+                      method: "DELETE",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ sha: item.sha }),
+                      credentials: "include",
+                    },
+                  );
                 } else {
-                  const typeEndpoint = data.directories.find((d) => d.id === item.id)
+                  const typeEndpoint = data.directories.find(
+                    (d) => d._id === item._id,
+                  )
                     ? "directory"
                     : "file";
                   return fetch(
-                    `${SERVER_URL}/${typeEndpoint}/${item.id}${ownerParam}`,
+                    `${SERVER_URL}/${typeEndpoint}/${item._id}${ownerParam}`,
                     {
                       method: "DELETE",
                       credentials: "include",
@@ -1708,12 +1780,12 @@ export default function FileBrowser({ specialView }) {
 
       {/* New Vault OS Details Modal */}
       {detailsItem && (
-        <FileDetailsModal 
-          item={detailsItem} 
-          onClose={() => setDetailsItem(null)} 
+        <FileDetailsModal
+          item={detailsItem}
+          onClose={() => setDetailsItem(null)}
         />
       )}
-      
+
       <Suspense fallback={null}>
         {!!previewFile && (
           <FilePreviewModal

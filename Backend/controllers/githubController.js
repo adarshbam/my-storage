@@ -9,7 +9,7 @@ import { invalidateUserSessions } from "../utils/redis.js";
 async function getAuthenticatedAccessToken(req, requireWrite = false) {
   try {
     const ownerId = await resolveIntegrationOwnerId(req);
-    
+
     // If accessing someone else's integration, check permissions
     if (ownerId !== req.user.id) {
       const sharedAccess = await SharedAccess.findOne({
@@ -22,19 +22,21 @@ async function getAuthenticatedAccessToken(req, requireWrite = false) {
         throw err;
       }
       if (requireWrite && !sharedAccess.permission.includes("owner")) {
-        const err = new Error("Integration modification requires 'owner' permission level");
+        const err = new Error(
+          "Integration modification requires 'owner' permission level",
+        );
         err.statusCode = 403;
         throw err;
       }
     }
-    
+
     const user = await User.findById(ownerId).select("integrations").lean();
     if (!user?.integrations?.github?.accessToken) {
       const err = new Error("Github not connected");
       err.statusCode = 403;
       throw err;
     }
-    
+
     return {
       githubAccessToken: user.integrations.github.accessToken,
       ownerId,
@@ -44,7 +46,8 @@ async function getAuthenticatedAccessToken(req, requireWrite = false) {
     if (!error.statusCode) {
       if (error.message === "FORBIDDEN_ADMIN_ACCESS") {
         error.statusCode = 403;
-        error.message = "Admins are not permitted to access other users' personal integrations.";
+        error.message =
+          "Admins are not permitted to access other users' personal integrations.";
       } else if (error.message === "UNAUTHORIZED_SHARE_ACCESS") {
         error.statusCode = 403;
         error.message = "You do not have shared access to this user's files.";
@@ -83,7 +86,11 @@ export const disconnectGithub = async (req, res) => {
 };
 
 export const createRepository = async (req, res) => {
-  const { name: rawName, description: rawDescription, private: isPrivate } = req.body;
+  const {
+    name: rawName,
+    description: rawDescription,
+    private: isPrivate,
+  } = req.body;
   const name = sanitize(rawName);
   const description = sanitize(rawDescription);
 
@@ -120,7 +127,9 @@ export const createRepository = async (req, res) => {
     });
   } catch (err) {
     console.error("createRepository error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to create repository" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to create repository" });
   }
 };
 
@@ -151,7 +160,6 @@ export const listRepositories = async (req, res) => {
 
     const githubRepositories = repos.map((repo) => ({
       _id: repo.id,
-      id: repo.id,
       name: repo.name,
       type: "directory",
       provider: "github",
@@ -166,7 +174,9 @@ export const listRepositories = async (req, res) => {
     });
   } catch (err) {
     console.error("listRepositories error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch repositories" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to fetch repositories" });
   }
 };
 
@@ -234,7 +244,9 @@ export const getRepositoryContents = async (req, res) => {
     });
   } catch (err) {
     console.error("getRepositoryContents error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch repository contents" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to fetch repository contents" });
   }
 };
 
@@ -325,7 +337,9 @@ export const getFiles = async (req, res) => {
     );
 
     if (!rawResponse.ok) {
-      return res.status(rawResponse.status).send("Failed to stream file content");
+      return res
+        .status(rawResponse.status)
+        .send("Failed to stream file content");
     }
 
     // 4. Pipe the stream directly to the response
@@ -338,7 +352,9 @@ export const getFiles = async (req, res) => {
   } catch (err) {
     console.error("getFiles error:", err);
     if (!res.headersSent) {
-      return res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch file" });
+      return res
+        .status(err.statusCode || 500)
+        .json({ error: err.message || "Failed to fetch file" });
     }
   }
 };
@@ -381,7 +397,9 @@ export const updateFiles = async (req, res) => {
     return res.status(200).json({ msg: "Edited!", content: data.content });
   } catch (err) {
     console.error("updateFiles error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to update file" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to update file" });
   }
 };
 
@@ -422,7 +440,9 @@ export const deleteFile = async (req, res) => {
     return res.status(200).json({ msg: "Deleted!" });
   } catch (err) {
     console.error("deleteFile error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to delete file" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to delete file" });
   }
 };
 
@@ -540,7 +560,9 @@ export const createFile = async (req, res) => {
     }
   } catch (err) {
     console.error("createFile error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to create file" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to create file" });
   }
 };
 
@@ -649,7 +671,9 @@ export const downloadRepository = async (req, res) => {
     }
   } catch (error) {
     console.error("Download Error:", error);
-    return res.status(error.statusCode || 500).json({ error: error.message || "Internal Server Error" });
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal Server Error" });
   }
 };
 
@@ -766,7 +790,9 @@ export const downloadFolder = async (req, res) => {
   } catch (err) {
     console.error("Folder download error:", err);
     if (!res.headersSent) {
-      res.status(err.statusCode || 500).json({ error: err.message || "Folder download failed" });
+      res
+        .status(err.statusCode || 500)
+        .json({ error: err.message || "Folder download failed" });
     }
   }
 };
@@ -789,7 +815,9 @@ export const listBranches = async (req, res) => {
     return res.status(200).json(data.map((b) => b.name));
   } catch (err) {
     console.error("Fetch branches error:", err);
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch branches" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to fetch branches" });
   }
 };
 
@@ -877,7 +905,9 @@ export const searchRepository = async (req, res) => {
     });
   } catch (error) {
     console.error("Search Repository Error:", error);
-    return res.status(error.statusCode || 500).json({ error: error.message || "Search failed" });
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Search failed" });
   }
 };
 
@@ -898,7 +928,9 @@ export const getRepositoryDetails = async (req, res) => {
     const data = await response.json();
     return res.status(200).json(data);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ error: err.message || "Failed to fetch repo details" });
+    return res
+      .status(err.statusCode || 500)
+      .json({ error: err.message || "Failed to fetch repo details" });
   }
 };
 
@@ -983,6 +1015,8 @@ export const moveGithubItems = async (req, res) => {
     return res.status(200).json({ msg: "Moved successfully!" });
   } catch (error) {
     console.error("Move error:", error);
-    return res.status(error.statusCode || 500).json({ error: error.message || "Failed to move files" });
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Failed to move files" });
   }
 };
