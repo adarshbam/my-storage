@@ -10,28 +10,6 @@ import SharedAccess from "../models/sharedAccessModel.js";
 import { hasWriteAccess } from "../utils/integrationHelper.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 
-const getDirectorySize = async (dirId) => {
-  let size = 0;
-  let count = 0;
-
-  const files = await File.find({ parentDir: dirId }).select("size").lean();
-  for (const file of files) {
-    size += file.size || 0;
-    count += 1;
-  }
-
-  const childDirs = await Directory.find({ parentDir: dirId })
-    .select("_id")
-    .lean();
-  for (const subDir of childDirs) {
-    const sub = await getDirectorySize(subDir._id.toString());
-    size += sub.size;
-    count += sub.count;
-  }
-
-  return { size, count };
-};
-
 export const getDirectoryById = async (req, res) => {
   const rootDirId = req.user.rootDirId.toString();
 
@@ -53,7 +31,7 @@ export const getDirectoryById = async (req, res) => {
 
     directoryData._id = directoryData._id.toString();
     const files = await File.find({ parentDir: dirId }).select("-__v").lean();
-    directoryData.files = files.map((f) => ({ ...f, id: f._id.toString() }));
+    directoryData.files = files.map((f) => ({ ...f, _id: f._id.toString() }));
 
     const childDirs = await Directory.find({ parentDir: dirId })
       .select("-__v")
@@ -80,9 +58,9 @@ export const getDirectoryById = async (req, res) => {
       }
     }
 
-    directoryData.directories = childDirs;
+    directoryData.directories = childDirsWithCounts;
 
-    // console.log(directoryData);
+    console.log("directoryData: ", directoryData);
 
     if (action === "download") {
       const archive = archiver("zip", { zlib: { level: 9 } });

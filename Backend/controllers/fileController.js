@@ -29,6 +29,14 @@ import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
+const updateDirectorySize = async (parentDirId, fileSize) => {
+  let size = 0;
+  let count = 0;
+  
+
+  return { size, count };
+};
+
 const getAllDescendantIds = (rootDirId, allDirs) => {
   const descendants = new Set();
   const stack = [rootDirId];
@@ -48,7 +56,8 @@ const getAllDescendantIds = (rootDirId, allDirs) => {
 export const search = async (req, res) => {
   try {
     const { q, parentId, ext, size } = req.query;
-    if (!q && !ext && !size) return res.status(400).send("Search query required");
+    if (!q && !ext && !size)
+      return res.status(400).send("Search query required");
 
     const query = q ? escapeRegExp(q.toLowerCase()) : "";
 
@@ -61,10 +70,10 @@ export const search = async (req, res) => {
     if (query) {
       searchFilter.name = { $regex: query, $options: "i" };
     }
-    
+
     // Process extensions
     if (ext) {
-      const extList = ext.split(",").map(e => {
+      const extList = ext.split(",").map((e) => {
         let eStr = e.trim().toLowerCase();
         return eStr.startsWith(".") ? eStr : "." + eStr;
       });
@@ -79,7 +88,9 @@ export const search = async (req, res) => {
 
     // Resolve target owner of search
     if (parentId && parentId !== "null" && parentId !== "undefined") {
-      const parentDir = await Directory.findById(parentId).select("userId").lean();
+      const parentDir = await Directory.findById(parentId)
+        .select("userId")
+        .lean();
       if (!parentDir) {
         return res.status(404).send("Search directory not found");
       }
@@ -99,7 +110,9 @@ export const search = async (req, res) => {
         }).lean();
 
         if (!hasAccess) {
-          return res.status(403).send("Unauthorized to access directory contents");
+          return res
+            .status(403)
+            .send("Unauthorized to access directory contents");
         }
       }
 
@@ -116,7 +129,9 @@ export const search = async (req, res) => {
       ) {
         const sharedWithMe = await SharedAccess.find({
           targetUserId: req.user.id,
-        }).select("userId").lean();
+        })
+          .select("userId")
+          .lean();
 
         const authorizedOwnerIds = [
           req.user.id,
@@ -138,9 +153,7 @@ export const search = async (req, res) => {
     // Filter DirectoryDB (Don't search directories if extension filter is used)
     let matchingDirs = [];
     if (!ext) {
-      matchingDirs = await Directory.find(searchFilter)
-        .select("-__v")
-        .lean();
+      matchingDirs = await Directory.find(searchFilter).select("-__v").lean();
     }
 
     const finalMatchingDirsRaw = validParentIds
@@ -167,10 +180,14 @@ export const search = async (req, res) => {
         });
         const itemCount = fileCount + dirCount;
 
-        await cacheHset("dir:meta:" + dirIdStr, {
-          size: dir.size || 0,
-          itemCount: itemCount || 0,
-        }, 600);
+        await cacheHset(
+          "dir:meta:" + dirIdStr,
+          {
+            size: dir.size || 0,
+            itemCount: itemCount || 0,
+          },
+          600,
+        );
 
         return {
           ...dir,
@@ -181,9 +198,7 @@ export const search = async (req, res) => {
     );
 
     // Filter FilesDB
-    const matchingFiles = await File.find(searchFilter)
-      .select("-__v")
-      .lean();
+    const matchingFiles = await File.find(searchFilter).select("-__v").lean();
 
     const finalMatchingFiles = validParentIds
       ? matchingFiles.filter((f) => validParentIds.has(f.parentDir))
@@ -205,7 +220,7 @@ export const search = async (req, res) => {
     console.error("Search error:", err);
     return res.status(500).send("Internal Server Error");
   }
-}
+};
 
 export const getThumbnail = async (req, res) => {
   try {
@@ -355,7 +370,7 @@ export const uploadFile = async (req, res) => {
     if (!parentDirId || parentDirId === "undefined") {
       parentDirId = rootDirId;
     }
-    
+
     let ownerId = req.user.id;
     // Verify parent directory ownership and check shared permissions
     if (parentDirId && parentDirId !== rootDirId) {
@@ -511,7 +526,10 @@ export const renameFile = async (req, res) => {
       return res.status(403).send("You are not authorized to rename this file");
     }
     const { newFileName } = req.body;
-    await File.updateOne({ _id: fileId }, { $set: { name: sanitize(newFileName) } });
+    await File.updateOne(
+      { _id: fileId },
+      { $set: { name: sanitize(newFileName) } },
+    );
     return res.status(200).send("File renamed successfully");
   } catch {
     return res.status(500).send("Internal Server Error");

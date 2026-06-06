@@ -1,6 +1,5 @@
 import { X, Calendar, HardDrive, Shield, FileType, User } from "lucide-react";
 import { formatSize, formatDate } from "../../lib/utils";
-import getFileImage from "../../lib/FileImages";
 import {
   VaultDriveIcon,
   VaultGitIcon,
@@ -148,7 +147,7 @@ export default function FileDetailsModal({ item, onClose }) {
                   Contents
                 </p>
                 <p className="text-sm text-white/80">
-                  {`${item?.files?.length || 0} files   ${item?.directories?.length || 0} directories`}
+                  {`${item?.filesCount || 0} files   ${item?.directoryCount || 0} directories`}
                 </p>
               </div>
             </div>
