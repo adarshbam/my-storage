@@ -115,6 +115,7 @@ const TransferManager = forwardRef((props, ref) => {
     xhr.open("POST", uploadUrl, true);
     xhr.withCredentials = true;
     xhr.setRequestHeader("filename", file.name);
+    xhr.setRequestHeader("filesize", file.size);
     xhr.setRequestHeader("x-file-id", _id);
     xhr.setRequestHeader("x-start-byte", startByte.toString());
 

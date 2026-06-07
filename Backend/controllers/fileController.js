@@ -24,17 +24,20 @@ import mongoose from "mongoose";
 import File from "../models/fileModel.js";
 import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
-import User from "../models/userModel.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
-const updateDirectorySize = async (parentDirId, fileSize) => {
-  let size = 0;
-  let count = 0;
-  
+export const updateParentDirectorySize = async (parentDirId, size) => {
+  while (parentDirId) {
+    const parentDir = await Directory.findOneAndUpdate(
+      { parentDir: parentDirId },
+      { $inc: { size } },
+    );
+    console.log(parentDir._id, size);
 
-  return { size, count };
+    parentDirId = parentDir?.parentDir;
+  }
 };
 
 const getAllDescendantIds = (rootDirId, allDirs) => {
@@ -366,6 +369,7 @@ export const uploadFile = async (req, res) => {
     // Robustly handle missing or "undefined" string param
     let parentDirId = req.params.parentDirId;
     const rootDirId = req.user.rootDirId.toString();
+    const fileSize = sanitize(req.headers.filesize);
 
     if (!parentDirId || parentDirId === "undefined") {
       parentDirId = rootDirId;
@@ -378,6 +382,7 @@ export const uploadFile = async (req, res) => {
         .select("userId")
         .lean();
       if (parentDir && parentDir.userId) {
+        updateParentDirectorySize(parentDir._id, fileSize);
         ownerId = parentDir.userId.toString();
         const canWrite = await hasWriteAccess(ownerId, req);
         if (!canWrite) {
@@ -566,6 +571,7 @@ export const deleteFile = async (req, res) => {
       }
 
       await session.commitTransaction();
+
       if (fileData && fileData.parentDir) {
         await cacheDel("dir:meta:" + fileData.parentDir.toString());
       }

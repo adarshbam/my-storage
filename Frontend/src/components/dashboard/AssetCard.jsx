@@ -524,7 +524,7 @@ export default function AssetCard({
         <div className="flex items-center justify-between text-[11px] font-mono text-white/40 gap-2">
           <span className="truncate min-w-0">
             {isDirectory
-              ? `${item.filesCount + item.directoryCount || 0} ITEMS`
+              ? `${item?.filesCount + item?.directoriesCount || 0} ITEMS`
               : formatSize(item.size)}
           </span>
           <span className="uppercase whitespace-nowrap shrink-0">

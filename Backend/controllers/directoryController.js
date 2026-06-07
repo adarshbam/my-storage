@@ -20,7 +20,7 @@ export const getDirectoryById = async (req, res) => {
     }
     const { action } = req.query;
 
-    const directoryData = await Directory.findOne({ _id: dirId })
+    let directoryData = await Directory.findOne({ _id: dirId })
       .select("-__v")
       .lean();
     // console.log(directoryData);
@@ -36,6 +36,31 @@ export const getDirectoryById = async (req, res) => {
     const childDirs = await Directory.find({ parentDir: dirId })
       .select("-__v")
       .lean();
+
+    const childDirsWithCounts = await Promise.all(
+      childDirs.map(async (dir) => {
+        const filesCount = await File.countDocuments({
+          parentDir: dir._id,
+        });
+
+        const directoriesCount = await Directory.countDocuments({
+          parentDir: dir._id,
+        });
+
+        const items = filesCount + directoriesCount;
+        console.log(filesCount, directoriesCount);
+
+        return {
+          ...dir,
+          filesCount,
+          directoriesCount,
+          items,
+        };
+      }),
+    );
+    directoryData.directories = childDirsWithCounts;
+
+    // console.log(childDirsWithCounts);
 
     if (
       directoryData.userId &&
@@ -57,8 +82,6 @@ export const getDirectoryById = async (req, res) => {
           .send("You are not authorized to access this directory");
       }
     }
-
-    directoryData.directories = childDirsWithCounts;
 
     console.log("directoryData: ", directoryData);
 

@@ -147,7 +147,7 @@ export default function FileDetailsModal({ item, onClose }) {
                   Contents
                 </p>
                 <p className="text-sm text-white/80">
-                  {`${item?.filesCount || 0} files   ${item?.directoryCount || 0} directories`}
+                  {`${item?.filesCount || 0} files   ${item?.directoriesCount || 0} directories`}
                 </p>
               </div>
             </div>
