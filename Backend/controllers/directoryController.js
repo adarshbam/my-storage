@@ -48,7 +48,6 @@ export const getDirectoryById = async (req, res) => {
         });
 
         const items = filesCount + directoriesCount;
-        console.log(filesCount, directoriesCount);
 
         return {
           ...dir,
@@ -189,9 +188,12 @@ export const createDirectory = async (req, res) => {
     // console.log(dirName);
     const dirId = new mongoose.Types.ObjectId();
 
+    const path = getDirectoryPath(dirName, parentDirId);
+
     await Directory.create({
       _id: dirId,
       name: dirName,
+      path,
       userId: ownerId,
       type: "directory",
       parentDir: parentDirId,

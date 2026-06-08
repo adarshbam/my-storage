@@ -31,13 +31,28 @@ ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 export const updateParentDirectorySize = async (parentDirId, size) => {
   while (parentDirId) {
     const parentDir = await Directory.findOneAndUpdate(
-      { parentDir: parentDirId },
+      { _id: parentDirId },
       { $inc: { size } },
-    );
-    console.log(parentDir._id, size);
+    )
+      .select("_id parentDir size")
+      .lean();
 
-    parentDirId = parentDir?.parentDir;
+    parentDirId = parentDir.parentDir;
   }
+};
+
+export const getDirectoryPath = async (name, parentDirId) => {
+  let path = [name];
+  while (parentDirId) {
+    const parentDir = await Directory.findById(parentDirId)
+      .select("_id parentDir")
+      .lean();
+
+    path.push(parentDir._id);
+    parentDirId = parentDir.parentDir;
+  }
+  console.log(path);
+  return path;
 };
 
 const getAllDescendantIds = (rootDirId, allDirs) => {
@@ -433,13 +448,6 @@ export const uploadFile = async (req, res) => {
       const exists = await File.findOne({ _id: id }).select("_id").lean();
 
       const stats = await stat(filePath);
-      const fileSize = stats.size;
-      const parentDir = await Directory.findOne({ _id: parentDirId }).select(
-        "size",
-      );
-      parentDir.size += fileSize;
-      await parentDir.save();
-      await cacheDel("dir:meta:" + parentDirId);
       let hasThumbnail = false;
 
       // Generate thumbnail if image or video
@@ -487,12 +495,15 @@ export const uploadFile = async (req, res) => {
         console.error("Failed to generate thumbnail", err);
       }
 
+      const path = getDirectoryPath(fileName, parentDirId);
+
       if (!exists) {
         await File.create({
           _id: id,
           extension: ext,
           type: "file",
           userId: ownerId,
+          path,
           size: fileSize,
           name: fileName,
           parentDir: parentDirId,
@@ -545,7 +556,7 @@ export const deleteFile = async (req, res) => {
   try {
     const { fileId } = req.params;
     const fileData = await File.findOne({ _id: fileId })
-      .select("userId parentDir")
+      .select("userId parentDir size")
       .lean();
 
     if (!fileData) {
@@ -561,6 +572,8 @@ export const deleteFile = async (req, res) => {
     session.startTransaction();
 
     try {
+      updateParentDirectorySize(fileData.parentDir, -fileData.size);
+
       const deletedFile = await File.findOne({ _id: fileId })
         .select("-__v")
         .session(session)
@@ -572,9 +585,6 @@ export const deleteFile = async (req, res) => {
 
       await session.commitTransaction();
 
-      if (fileData && fileData.parentDir) {
-        await cacheDel("dir:meta:" + fileData.parentDir.toString());
-      }
       return res.status(200).send("File deleted successfully");
     } catch (txError) {
       await session.abortTransaction();
