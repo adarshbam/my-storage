@@ -29,6 +29,7 @@ const userSchema = new Schema(
     resetPasswordTokenExpires: { type: Date, default: Date.now },
     profilepic: { type: Schema.Types.ObjectId, default: null, ref: "File" },
     rootDirId: { type: Schema.Types.ObjectId, required: true },
+    maxStorage: { type: Number, default: 1024 * 1024 * 1024 },
     recentlySearchedItems: { type: Array, default: [] },
     role: {
       type: String,

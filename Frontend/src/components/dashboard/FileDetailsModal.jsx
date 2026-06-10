@@ -134,7 +134,15 @@ export default function FileDetailsModal({ item, onClose }) {
               <p className="text-[10px] uppercase font-bold text-white/30 tracking-wider">
                 Path
               </p>
-              <p className="text-sm text-white/80">{item.path || "/"}</p>
+              <p className="text-sm text-white/80">
+                {Array.isArray(item.path) &&
+                  item.path.map(({ name }, index) => (
+                    <span key={index}>
+                      {name}
+                      {item.path.length - 1 != index ? "/" : ""}
+                    </span>
+                  ))}
+              </p>
             </div>
           </div>
           {isDirectory ? (

@@ -28,6 +28,8 @@ import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
+const maxFileSize = parseInt(process.env.MAX_FILE_SIZE || "104857600", 10);
+
 export const updateParentDirectorySize = async (parentDirId, size) => {
   while (parentDirId) {
     const parentDir = await Directory.findOneAndUpdate(
@@ -41,16 +43,9 @@ export const updateParentDirectorySize = async (parentDirId, size) => {
   }
 };
 
-export const getDirectoryPath = async (name, parentDirId) => {
-  let path = [name];
-  while (parentDirId) {
-    const parentDir = await Directory.findById(parentDirId)
-      .select("_id parentDir")
-      .lean();
-
-    path.push(parentDir._id);
-    parentDirId = parentDir.parentDir;
-  }
+export const getDirectoryPath = async (itemId, parentDirId) => {
+  const parentDir = await Directory.findById(parentDirId).select("path").lean();
+  const path = [...parentDir.path, itemId];
   console.log(path);
   return path;
 };
@@ -390,6 +385,10 @@ export const uploadFile = async (req, res) => {
       parentDirId = rootDirId;
     }
 
+    if (fileSize > maxFileSize) {
+      return res.status(413).send("File exceeds maximum allowed size");
+    }
+
     let ownerId = req.user.id;
     // Verify parent directory ownership and check shared permissions
     if (parentDirId && parentDirId !== rootDirId) {
@@ -397,7 +396,6 @@ export const uploadFile = async (req, res) => {
         .select("userId")
         .lean();
       if (parentDir && parentDir.userId) {
-        updateParentDirectorySize(parentDir._id, fileSize);
         ownerId = parentDir.userId.toString();
         const canWrite = await hasWriteAccess(ownerId, req);
         if (!canWrite) {
@@ -447,7 +445,8 @@ export const uploadFile = async (req, res) => {
     writeStream.on("finish", async () => {
       const exists = await File.findOne({ _id: id }).select("_id").lean();
 
-      const stats = await stat(filePath);
+      await updateParentDirectorySize(parentDirId, fileSize);
+
       let hasThumbnail = false;
 
       // Generate thumbnail if image or video
@@ -495,7 +494,9 @@ export const uploadFile = async (req, res) => {
         console.error("Failed to generate thumbnail", err);
       }
 
-      const path = getDirectoryPath(fileName, parentDirId);
+      console.log(parentDirId);
+
+      const dirPath = await getDirectoryPath(id, parentDirId);
 
       if (!exists) {
         await File.create({
@@ -503,7 +504,7 @@ export const uploadFile = async (req, res) => {
           extension: ext,
           type: "file",
           userId: ownerId,
-          path,
+          path: dirPath,
           size: fileSize,
           name: fileName,
           parentDir: parentDirId,

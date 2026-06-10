@@ -1,7 +1,5 @@
 import archiver from "archiver";
 import { sanitize } from "../utils/sanitize.js";
-import path from "path";
-import crypto from "crypto";
 import mongoose from "mongoose";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
@@ -9,6 +7,10 @@ import Trash from "../models/trashModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
 import { hasWriteAccess } from "../utils/integrationHelper.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
+import {
+  getDirectoryPath,
+  updateParentDirectorySize,
+} from "./fileController.js";
 
 export const getDirectoryById = async (req, res) => {
   const rootDirId = req.user.rootDirId.toString();
@@ -31,7 +33,23 @@ export const getDirectoryById = async (req, res) => {
 
     directoryData._id = directoryData._id.toString();
     const files = await File.find({ parentDir: dirId }).select("-__v").lean();
-    directoryData.files = files.map((f) => ({ ...f, _id: f._id.toString() }));
+    directoryData.files = await Promise.all(
+      files.map(async (file) => {
+        const path = await Directory.find({
+          _id: { $in: file.path },
+        })
+          .select("-_id name")
+          .lean();
+
+        path.push({ name: file.name });
+
+        return {
+          ...file,
+          _id: file._id.toString(),
+          path: path,
+        };
+      }),
+    );
 
     const childDirs = await Directory.find({ parentDir: dirId })
       .select("-__v")
@@ -48,17 +66,24 @@ export const getDirectoryById = async (req, res) => {
         });
 
         const items = filesCount + directoriesCount;
+        const path = await Directory.find({ _id: { $in: dir.path } })
+          .select("-_id name")
+          .lean();
 
         return {
           ...dir,
           filesCount,
+          path,
           directoriesCount,
           items,
         };
       }),
     );
     directoryData.directories = childDirsWithCounts;
-
+    const path = await Directory.find({ _id: { $in: directoryData.path } })
+      .select("name")
+      .lean();
+    directoryData.path = path;
     // console.log(childDirsWithCounts);
 
     if (
@@ -73,16 +98,12 @@ export const getDirectoryById = async (req, res) => {
         targetUserId: req.user.id,
       });
 
-      console.log(hasAccess);
-
       if (!hasAccess) {
         return res
           .status(403)
           .send("You are not authorized to access this directory");
       }
     }
-
-    console.log("directoryData: ", directoryData);
 
     if (action === "download") {
       const archive = archiver("zip", { zlib: { level: 9 } });
@@ -188,7 +209,7 @@ export const createDirectory = async (req, res) => {
     // console.log(dirName);
     const dirId = new mongoose.Types.ObjectId();
 
-    const path = getDirectoryPath(dirName, parentDirId);
+    const path = await getDirectoryPath(dirId, parentDirId);
 
     await Directory.create({
       _id: dirId,
@@ -267,6 +288,15 @@ export const deleteDirectory = async (req, res) => {
     session.startTransaction();
 
     try {
+      const directoryToBeDeleted = await Directory.findOne({ _id: dirId })
+        .select("parentDir size")
+        .lean();
+
+      await updateParentDirectorySize(
+        directoryToBeDeleted.parentDir,
+        -directoryToBeDeleted.size,
+      );
+
       const deletedDirectory = await Directory.findOne({ _id: dirId })
         .select("-__v")
         .session(session)

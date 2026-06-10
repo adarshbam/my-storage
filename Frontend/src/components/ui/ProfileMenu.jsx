@@ -13,9 +13,10 @@ import {
   Settings,
   ChevronRight,
   HardDrive,
-  Cloud
+  Cloud,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { formatSize } from "../../lib/utils";
 
 export default function ProfileMenu({
   user,
@@ -28,6 +29,10 @@ export default function ProfileMenu({
   const [isUploading, setIsUploading] = useState(false);
   const menuRef = useRef(null);
   const fileInputRef = useRef(null);
+  const [maxStorage, setmaxStorage] = useState(
+    user.maxStorage || 1024 * 1024 * 500,
+  );
+  const [usedStorage, setUsedStorage] = useState(user.usedStorage || 0);
   const navigate = useNavigate();
 
   // Close on click outside
@@ -53,9 +58,9 @@ export default function ProfileMenu({
   }, [isOpen]);
 
   // Simulated storage data (you can wire this to a real endpoint later)
-  const usedMB = 39.8;
-  const totalMB = 500;
-  const usedPercent = ((usedMB / totalMB) * 100).toFixed(1);
+  const usedPercent = ((usedStorage / maxStorage) * 100).toFixed(1);
+
+  console.log(user);
 
   const handleAvatarClick = (e) => {
     e.stopPropagation();
@@ -88,7 +93,7 @@ export default function ProfileMenu({
         setIsOpen(false);
         navigate("/profile");
       },
-      gradient: "from-blue-500 to-indigo-500"
+      gradient: "from-blue-500 to-indigo-500",
     },
     ...(user && user.role !== "User"
       ? [
@@ -100,7 +105,7 @@ export default function ProfileMenu({
               setIsOpen(false);
               navigate("/users");
             },
-            gradient: "from-emerald-500 to-teal-500"
+            gradient: "from-emerald-500 to-teal-500",
           },
         ]
       : []),
@@ -111,7 +116,7 @@ export default function ProfileMenu({
       onClick: () => {
         setIsOpen(false);
       },
-      gradient: "from-amber-500 to-orange-500"
+      gradient: "from-amber-500 to-orange-500",
     },
   ];
 
@@ -134,7 +139,9 @@ export default function ProfileMenu({
         id="profile-menu-trigger"
       >
         <div className="absolute inset-[-4px] bg-gradient-to-r from-[#14b8a6] via-[#3b82f6] to-[#8b5cf6] rounded-full blur-[6px] opacity-0 group-hover:opacity-60 transition-opacity duration-500" />
-        <div className={`relative flex items-center justify-center w-11 h-11 rounded-full p-[2px] transition-transform duration-300 ${isOpen ? "scale-95" : "hover:scale-105"}`}>
+        <div
+          className={`relative flex items-center justify-center w-11 h-11 rounded-full p-[2px] transition-transform duration-300 ${isOpen ? "scale-95" : "hover:scale-105"}`}
+        >
           <div className="absolute inset-0 bg-gradient-to-tr from-[#14b8a6] to-[#3b82f6] rounded-full [mask-image:linear-gradient(white,transparent)]" />
           <div className="w-full h-full rounded-full bg-white dark:bg-[#020b08] overflow-hidden flex items-center justify-center relative z-10 border-2 border-white/50 dark:border-white/10 shadow-sm">
             {profilePicUrl ? (
@@ -166,15 +173,17 @@ export default function ProfileMenu({
             style={{ zIndex: 9999 }}
           >
             <div className="relative rounded-[2rem] overflow-hidden bg-white/60 dark:bg-[#020b08]/80 backdrop-blur-3xl border border-white/40 dark:border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.05)]">
-              
               {/* Internal ambient glowing blobs */}
               <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#14b8a6]/20 dark:bg-[#14b8a6]/15 rounded-full blur-[50px] pointer-events-none" />
               <div className="absolute top-1/2 -left-24 w-48 h-48 bg-[#3b82f6]/15 dark:bg-[#3b82f6]/10 rounded-full blur-[50px] pointer-events-none" />
-              
+
               {/* Premium Header Profile Section */}
               <div className="relative p-6 pb-5">
                 <div className="flex items-center gap-5">
-                  <div className="relative group/avatar cursor-pointer shrink-0" onClick={handleAvatarClick}>
+                  <div
+                    className="relative group/avatar cursor-pointer shrink-0"
+                    onClick={handleAvatarClick}
+                  >
                     <div className="absolute inset-0 bg-gradient-to-br from-[#14b8a6] to-[#3b82f6] rounded-[1.25rem] blur-md opacity-40 group-hover/avatar:opacity-80 transition-opacity duration-300" />
                     <div className="relative w-16 h-16 rounded-[1.25rem] bg-gradient-to-br from-white to-slate-50 dark:from-[#0f172a] dark:to-[#020b08] p-[2px] shadow-xl">
                       <div className="w-full h-full rounded-[1.1rem] overflow-hidden bg-white dark:bg-[#020b08] flex items-center justify-center relative">
@@ -201,7 +210,7 @@ export default function ProfileMenu({
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <h3 className="text-lg font-black text-slate-900 dark:text-white truncate tracking-tight mb-1">
                       {user?.name || "User"}
@@ -244,13 +253,16 @@ export default function ProfileMenu({
                       <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.4)_50%,transparent_100%)] w-full h-full animate-[shimmer_2s_infinite]" />
                     </motion.div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between mt-2.5">
                     <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                      <span className="text-slate-800 dark:text-slate-200">{usedMB} MB</span> used
+                      <span className="text-slate-800 dark:text-slate-200">
+                        {formatSize(usedStorage)} MB
+                      </span>{" "}
+                      used
                     </p>
                     <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
-                      {totalMB} MB total
+                      {formatSize(maxStorage)}
                     </p>
                   </div>
                 </div>
@@ -268,7 +280,9 @@ export default function ProfileMenu({
                     className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-300 group"
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-[14px] flex items-center justify-center bg-gradient-to-br ${item.gradient} bg-opacity-10 dark:bg-opacity-20 shadow-sm relative overflow-hidden`}>
+                      <div
+                        className={`w-10 h-10 rounded-[14px] flex items-center justify-center bg-gradient-to-br ${item.gradient} bg-opacity-10 dark:bg-opacity-20 shadow-sm relative overflow-hidden`}
+                      >
                         <div className="absolute inset-0 bg-white/90 dark:bg-[#020b08]/80 m-[1px] rounded-[13px] z-0 transition-colors group-hover:bg-white/40 dark:group-hover:bg-[#020b08]/40" />
                         <item.icon
                           size={18}
@@ -285,7 +299,10 @@ export default function ProfileMenu({
                       </div>
                     </div>
                     <div className="w-6 h-6 rounded-full flex items-center justify-center bg-slate-100 dark:bg-white/5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                      <ChevronRight size={14} className="text-slate-600 dark:text-slate-300" />
+                      <ChevronRight
+                        size={14}
+                        className="text-slate-600 dark:text-slate-300"
+                      />
                     </div>
                   </motion.button>
                 ))}

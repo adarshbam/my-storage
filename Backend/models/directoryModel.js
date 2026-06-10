@@ -26,6 +26,7 @@ const directorySchema = new Schema(
     },
     path: {
       type: Schema.Types.Array,
+      default: [],
     },
     provider: {
       type: String,

@@ -28,14 +28,22 @@ import { loginSchema, registerSchema } from "../validators/authSchema.js";
 
 // ─── User Info ──────────────────────────────────────────────────────────────────
 
-export const getUser = (req, res) => {
+export const getUser = async (req, res) => {
   const user = req.user;
+  console.log(req.user);
+  const rootDir = await Directory.findOne({ _id: user.rootDirId })
+    .select("-_id size")
+    .lean();
+  console.log(rootDir.size);
+
   return res.status(200).json({
     name: user.name,
     email: user.email,
     role: user.role || "User",
     profilepic: user.profilepic,
+    maxStorage: user.maxStorage,
     rootDirectoryId: user.rootDirId,
+    usedStorage: rootDir.size,
     theme: user.theme || "dark",
     integrations: {
       googleDrive: { connected: !!user.integrations?.googleDrive?.connected },

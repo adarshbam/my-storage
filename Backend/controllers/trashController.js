@@ -108,7 +108,8 @@ export const restoreFile = async (req, res, next) => {
     session.startTransaction();
 
     try {
-      await File.create([trashfile], { session });
+      const { deleted_at, ...validFileData } = trashfile;
+      await File.create([validFileData], { session });
       await Trash.deleteOne({ _id: id }).session(session);
 
       await session.commitTransaction();
@@ -228,7 +229,7 @@ export const restoreDirectory = async (req, res, next) => {
     session.startTransaction();
 
     try {
-      const { extension, size, hasThumbnail, ...validDirData } = trashDir;
+      const { extension, size, hasThumbnail, deleted_at, ...validDirData } = trashDir;
       await Directory.create([validDirData], { session });
       await Trash.deleteOne({ _id: dirId }).session(session);
 

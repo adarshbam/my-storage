@@ -64,12 +64,14 @@ async function checkAuth(req, res, next) {
       id: user.id,
       name: user.name,
       email: user.email,
+      maxStorage: user.maxStorage,
+      
       role: user.role,
       rootDirId: user.rootDirId ? user.rootDirId.toString() : "",
       status: user.status,
       profilepic: user.profilepic,
       theme: user.theme,
-      integrations: user.integrations
+      integrations: user.integrations,
     };
 
     await cacheSet("session:" + sessionId, JSON.stringify(sessionUser), 900); // 15-minute TTL

@@ -81,6 +81,7 @@ export default function FileBrowser({ specialView }) {
   const [data, setData] = useState({ directories: [], files: [] });
   const [loading, setLoading] = useState(true);
   const [dirName, setDirName] = useState("Home");
+  const [dirPath, setDirPath] = useState("Vault");
   const [selectedItems, setSelectedItems] = useState([]);
   const [previewFile, setPreviewFile] = useState(null);
   const [lastSelectedId, setLastSelectedId] = useState(null);
@@ -273,6 +274,7 @@ export default function FileBrowser({ specialView }) {
         } catch (e) {
           console.error("Path cache error:", e);
         }
+        setDirPath(result.path);
         setDirName(
           result.name ||
             (isSearch
@@ -1176,7 +1178,15 @@ export default function FileBrowser({ specialView }) {
             </button>
           )}
           <h2 className="text-2xl capitalize font-bold text-white flex items-center gap-2 drop-shadow-md tracking-wide">
-            {dirName}
+            {Array.isArray(dirPath) &&
+              dirPath.map(({ _id, name }, index) => (
+                <button
+                  key={_id}
+                  onClick={() => navigate(`/dashboard/folder/${_id}`)}
+                >
+                  {name} {dirPath.length - 1 != index ? "/" : ""}
+                </button>
+              ))}
             {folderId && !isSearch && !isReadOnly && (
               <button
                 onClick={() => {
