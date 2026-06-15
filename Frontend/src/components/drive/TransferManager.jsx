@@ -20,7 +20,10 @@ import { formatSpeed, formatTime, cn } from "../../lib/utils";
 import getFileImage from "../../lib/FileImages";
 import Card from "../ui/Card";
 
-const MAX_FILE_SIZE = parseInt(import.meta.env.VITE_MAX_FILE_SIZE || "104857600", 10);
+const MAX_FILE_SIZE = parseInt(
+  import.meta.env.VITE_MAX_FILE_SIZE || "104857600",
+  10,
+);
 
 // Custom helper to generate 24 character hex strings for MongoDB ObjectId compatibility
 const generateObjectId = () => {
@@ -253,8 +256,8 @@ const TransferManager = forwardRef((props, ref) => {
       progress: 0,
       loaded: 0,
       total: file.size,
-      status: file.size > MAX_FILE_SIZE ? "error" : "queued",
-      errorMessage: file.size > MAX_FILE_SIZE ? "File too large" : undefined,
+      status: "queued", // BYPASSED: file.size > MAX_FILE_SIZE ? "error" : "queued",
+      errorMessage: undefined, // BYPASSED: file.size > MAX_FILE_SIZE ? "File too large" : undefined,
       speed: 0,
       timeRemaining: 0,
       file: file,
@@ -638,7 +641,8 @@ const TransferManager = forwardRef((props, ref) => {
                         {transfer.status === "queued" && "Queued"}
                         {transfer.status === "paused" && "Paused"}
                         {transfer.status === "completed" && "Completed"}
-                        {transfer.status === "error" && (transfer.errorMessage || "Error")}
+                        {transfer.status === "error" &&
+                          (transfer.errorMessage || "Error")}
                       </span>
                       <span>
                         {transfer.status === "completed"

@@ -8,6 +8,8 @@ import {
   ExternalLink,
   Info,
   RotateCcw,
+  Copy,
+  Scissors,
 } from "lucide-react";
 import getFileImage from "../../lib/FileImages";
 import { formatSize } from "../../lib/utils";
@@ -34,6 +36,9 @@ export default function AssetCard({
   onDeleteForever,
   onDetails,
   readOnly = false,
+  isCut = false,
+  onCopy = null,
+  onCut = null,
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -97,6 +102,7 @@ export default function AssetCard({
         className={`
           group relative flex items-center p-3 rounded-xl border border-white/5 transition-all duration-300
           ${selected ? "bg-white/10 shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]" : "hover:bg-white/[0.03]"}
+          ${isCut ? "opacity-35" : ""}
         `}
       >
         <div
@@ -257,6 +263,7 @@ export default function AssetCard({
         group relative flex flex-col rounded-2xl transition-all duration-300 asset-card-hover select-none
         ${selected ? `bg-white/[0.08] ${envClass}` : "bg-vault-surface/60 border border-white/5"}
         ${isHovered && !selected ? `border-white/20 ${envClass}` : ""}
+        ${isCut ? "opacity-35" : ""}
       `}
     >
       {/* ── Thumbnail ── (overflow-hidden stays, but menu is outside this div) */}
@@ -453,6 +460,30 @@ export default function AssetCard({
               >
                 <Edit2 size={14} className="shrink-0" />
                 Rename
+              </button>
+            )}
+            {!isTrash && !readOnly && onCopy && (
+              <button
+                onClick={() => {
+                  closeMenu();
+                  onCopy(item);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-white/80 hover:text-white hover:bg-white/[0.07] transition-colors"
+              >
+                <Copy size={14} className="shrink-0" />
+                Copy
+              </button>
+            )}
+            {!isTrash && !readOnly && onCut && (
+              <button
+                onClick={() => {
+                  closeMenu();
+                  onCut(item);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-white/80 hover:text-white hover:bg-white/[0.07] transition-colors"
+              >
+                <Scissors size={14} className="shrink-0" />
+                Cut
               </button>
             )}
             {!isTrash && onDownload && (

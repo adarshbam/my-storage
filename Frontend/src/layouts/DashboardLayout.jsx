@@ -280,7 +280,7 @@ export default function DashboardLayout() {
         }}
       />
 
-      <TransferManager ref={transferRef} />
+      <TransferManager ref={transferRef} onUploadComplete={() => setRefreshTrigger(prev => prev + 1)} />
     </div>
   );
 }

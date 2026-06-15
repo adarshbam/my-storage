@@ -257,7 +257,7 @@ export default function ProfileMenu({
                   <div className="flex items-center justify-between mt-2.5">
                     <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                       <span className="text-slate-800 dark:text-slate-200">
-                        {formatSize(usedStorage)} MB
+                        {formatSize(usedStorage)}
                       </span>{" "}
                       used
                     </p>

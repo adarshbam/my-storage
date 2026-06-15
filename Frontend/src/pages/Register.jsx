@@ -26,7 +26,7 @@ export default function Register() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(true); // BYPASSED
+  const [otpVerified, setOtpVerified] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const navigate = useNavigate();
@@ -372,14 +372,14 @@ export default function Register() {
           <div className="w-full relative group">
             <Button 
               type="submit" 
-              disabled={false} // BYPASSED: !otpVerified
+              disabled={!otpVerified}
               className={`w-full py-3.5 text-[15px]`}
             >
               Create Account
             </Button>
-            {/* BYPASSED: {!otpVerified && (
+            {!otpVerified && (
               <div className="absolute inset-0 z-10 cursor-not-allowed" title="Verify email first" />
-            )} */}
+            )}
           </div>
         </form>
 

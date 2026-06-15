@@ -5,8 +5,9 @@ import {
   createDirectory,
   deleteDirectory,
   getDirectoryById,
-  moveDirectory,
+  moveItems,
   renameDirectory,
+  copyItems,
 } from "../controllers/directoryController.js";
 import { validate } from "../middlewares/validationMiddleware.js";
 import {
@@ -15,6 +16,7 @@ import {
   renameDirectorySchema,
   deleteDirectorySchema,
   moveDirectorySchema,
+  copyDirectorySchema,
 } from "../validators/directorySchema.js";
 import { standardWriteLimiter } from "../middlewares/rateLimiter.js";
 import throttle from "../utils/throttle.js";
@@ -32,6 +34,8 @@ router.patch("/:dirId", checkAuth, standardWriteLimiter, throttle(100, 15, "dir-
 
 router.delete("/:dirId", checkAuth, standardWriteLimiter, throttle(100, 12, "dir-delete"), validate(deleteDirectorySchema), deleteDirectory);
 
-router.patch("/:dirId/move", checkAuth, standardWriteLimiter, throttle(100, 12, "dir-move"), validate(moveDirectorySchema), moveDirectory);
+router.patch("/:dirId/move", checkAuth, standardWriteLimiter, throttle(100, 12, "dir-move"), validate(moveDirectorySchema), moveItems);
+
+router.post("/:dirId/copy", checkAuth, standardWriteLimiter, throttle(100, 12, "dir-copy"), validate(copyDirectorySchema), copyItems);
 
 export default router;

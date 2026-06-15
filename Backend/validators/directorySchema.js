@@ -45,3 +45,5 @@ export const moveDirectorySchema = {
     })
   ),
 };
+
+export const copyDirectorySchema = moveDirectorySchema;

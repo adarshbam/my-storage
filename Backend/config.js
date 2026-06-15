@@ -17,7 +17,7 @@ export const MAX_DEVICES_LIMIT =
 
 export const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: true,
+  secure: false,
   signed: true,
   sameSite: "lax",
   maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -25,7 +25,7 @@ export const SESSION_COOKIE_OPTIONS = {
 
 export const ROOT_DIR_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: true,
+  secure: false,
   sameSite: "lax",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };

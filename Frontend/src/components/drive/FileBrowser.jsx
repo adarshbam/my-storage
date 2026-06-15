@@ -50,6 +50,9 @@ import {
   Share2,
   Clock,
   Star,
+  Scissors,
+  Copy,
+  Clipboard,
 } from "lucide-react";
 
 // Lazy load the preview modal since it contains heavy syntax highlighter dependencies
@@ -91,6 +94,22 @@ export default function FileBrowser({ specialView }) {
   const [error, setError] = useState(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const [detailsItem, setDetailsItem] = useState(null);
+  const [clipboard, setClipboard] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("vault_clipboard")) || null;
+    } catch {
+      return null;
+    }
+  });
+
+  const updateClipboard = (data) => {
+    if (data) {
+      sessionStorage.setItem("vault_clipboard", JSON.stringify(data));
+    } else {
+      sessionStorage.removeItem("vault_clipboard");
+    }
+    setClipboard(data);
+  };
 
   // --- DRAG SELECTION STATE ---
   const [isDragging, setIsDragging] = useState(false);
@@ -382,6 +401,147 @@ export default function FileBrowser({ specialView }) {
     selectedBranch,
   ]);
 
+  const handleCopyItem = (item) => {
+    if (isReadOnly) return;
+    const prepared = {
+      action: "copy",
+      items: [{ _id: item._id, name: item.name, type: item.type || (item.extension ? "file" : "directory"), provider: item.provider || "local" }]
+    };
+    updateClipboard(prepared);
+  };
+
+  const handleCutItem = (item) => {
+    if (isReadOnly) return;
+    const prepared = {
+      action: "cut",
+      items: [{ _id: item._id, name: item.name, type: item.type || (item.extension ? "file" : "directory"), provider: item.provider || "local" }]
+    };
+    updateClipboard(prepared);
+  };
+
+  const handleCopySelected = () => {
+    if (isReadOnly || selectedItems.length === 0) return;
+    const prepared = {
+      action: "copy",
+      items: selectedItems.map(item => ({
+        _id: item._id,
+        name: item.name,
+        type: item.type || (item.extension ? "file" : "directory"),
+        provider: item.provider || "local"
+      }))
+    };
+    updateClipboard(prepared);
+    setSelectedItems([]);
+  };
+
+  const handleCutSelected = () => {
+    if (isReadOnly || selectedItems.length === 0) return;
+    const prepared = {
+      action: "cut",
+      items: selectedItems.map(item => ({
+        _id: item._id,
+        name: item.name,
+        type: item.type || (item.extension ? "file" : "directory"),
+        provider: item.provider || "local"
+      }))
+    };
+    updateClipboard(prepared);
+    setSelectedItems([]);
+  };
+
+  const handlePaste = async () => {
+    if (isReadOnly || !clipboard || clipboard.items.length === 0) return;
+
+    const targetFolderId = folderId || ""; // empty if root
+    const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
+    
+    // Check provider (only Vault local support)
+    const targetProvider = specialView === "google-drive" || specialView === "google-drive-folder" ? "google_drive" : (specialView === "github" || specialView === "github-repo" ? "github" : "local");
+    
+    if (targetProvider !== "local") {
+      alert("Copy/Paste is only supported in the local Vault.");
+      return;
+    }
+
+    try {
+      const method = clipboard.action === "cut" ? "PATCH" : "POST";
+      const endpoint = clipboard.action === "cut" ? "move" : "copy";
+      
+      const url = `${SERVER_URL}/directory/${targetFolderId}/${endpoint}${ownerParam}`;
+      
+      const requestBody = clipboard.items.map(item => ({
+        id: item._id,
+        type: item.type
+      }));
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const result = await res.json().catch(() => ({}));
+        throw new Error(result.message || result.error || "Paste operation failed");
+      }
+
+      fetchFiles();
+      
+      if (clipboard.action === "cut") {
+        updateClipboard(null);
+      }
+      
+      setSelectedItems([]);
+    } catch (err) {
+      console.error("Paste failed:", err);
+      alert(err.message || "Failed to paste items");
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          activeEl.isContentEditable)
+      ) {
+        return;
+      }
+
+      // Ctrl + C
+      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+        if (selectedItems.length > 0) {
+          e.preventDefault();
+          handleCopySelected();
+        }
+      }
+
+      // Ctrl + X
+      if ((e.ctrlKey || e.metaKey) && e.key === "x") {
+        if (selectedItems.length > 0) {
+          e.preventDefault();
+          handleCutSelected();
+        }
+      }
+
+      // Ctrl + V
+      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+        if (clipboard) {
+          e.preventDefault();
+          handlePaste();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedItems, clipboard, folderId, specialView, ownerId]);
+
   // --- HANDLERS ---
 
   const handleSelect = (item, e) => {
@@ -626,6 +786,7 @@ export default function FileBrowser({ specialView }) {
             ? `${SERVER_URL}/file/${folderId}`
             : `${SERVER_URL}/file/`;
           headers["filename"] = fullName;
+          headers["filesize"] = new Blob([newFileContent]).size.toString();
           body = JSON.stringify({ content: newFileContent });
         }
       } else if (modalType === "rename" && modalItem) {
@@ -1336,6 +1497,9 @@ export default function FileBrowser({ specialView }) {
               onDrop={handleDrop}
               viewMode={viewMode}
               readOnly={isReadOnly}
+              onCopy={handleCopyItem}
+              onCut={handleCutItem}
+              isCut={clipboard && clipboard.action === "cut" && clipboard.items.some((i) => i._id === dir._id)}
               isIntegrationRoot={
                 (!specialView &&
                   (dir.provider === "google_drive" ||
@@ -1362,6 +1526,9 @@ export default function FileBrowser({ specialView }) {
               onDrop={handleDrop}
               viewMode={viewMode}
               readOnly={isReadOnly}
+              onCopy={handleCopyItem}
+              onCut={handleCutItem}
+              isCut={clipboard && clipboard.action === "cut" && clipboard.items.some((i) => i._id === file._id)}
             />
           ))}
 
@@ -1806,6 +1973,28 @@ export default function FileBrowser({ specialView }) {
           />
         )}
       </Suspense>
+
+      {/* Floating Clipboard Bar */}
+      {clipboard && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-4 py-2.5 bg-[#111113]/90 border border-vault-emerald/30 shadow-[0_8px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(0,212,165,0.1)] rounded-full text-sm backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
+          <span className="text-white/60 font-medium whitespace-nowrap">
+            {clipboard.action === "cut" ? "Cut" : "Copied"} <strong className="text-white">{clipboard.items.length}</strong> {clipboard.items.length === 1 ? "item" : "items"}
+          </span>
+          <div className="h-4 w-[1px] bg-white/10" />
+          <button
+            onClick={handlePaste}
+            className="text-vault-emerald hover:text-vault-emerald/80 font-bold transition-all px-2.5 py-1 rounded-lg hover:bg-vault-emerald/10 flex items-center gap-1.5"
+          >
+            <Clipboard size={14} /> Paste
+          </button>
+          <button
+            onClick={() => updateClipboard(null)}
+            className="text-white/40 hover:text-white/80 text-xs font-semibold px-2 py-1 rounded-lg hover:bg-white/5 transition-all"
+          >
+            Clear
+          </button>
+        </div>
+      )}
     </div>
   );
 }

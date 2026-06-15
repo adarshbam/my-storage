@@ -1,4 +1,5 @@
 import { createReadStream, createWriteStream } from "fs";
+import { Transform } from "stream";
 import { sanitize } from "../utils/sanitize.js";
 import path from "path";
 import { stat, unlink, mkdir } from "fs/promises";
@@ -28,17 +29,20 @@ import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
-const maxFileSize = parseInt(process.env.MAX_FILE_SIZE || "104857600", 10);
+const maxFileSize = parseInt(false || "104857", 10);
 
-export const updateParentDirectorySize = async (parentDirId, size) => {
+export const updateParentDirectorySize = async (parentDirId, size, session = null) => {
   while (parentDirId) {
-    const parentDir = await Directory.findOneAndUpdate(
+    const query = Directory.findOneAndUpdate(
       { _id: parentDirId },
       { $inc: { size } },
-    )
-      .select("_id parentDir size")
-      .lean();
-
+      { new: true }
+    );
+    if (session) {
+      query.session(session);
+    }
+    const parentDir = await query.select("_id parentDir size").lean();
+    if (!parentDir) break;
     parentDirId = parentDir.parentDir;
   }
 };
@@ -379,15 +383,31 @@ export const uploadFile = async (req, res) => {
     // Robustly handle missing or "undefined" string param
     let parentDirId = req.params.parentDirId;
     const rootDirId = req.user.rootDirId.toString();
-    const fileSize = sanitize(req.headers.filesize);
+    const fileSize = parseInt(sanitize(req.headers.filesize), 10);
 
     if (!parentDirId || parentDirId === "undefined") {
       parentDirId = rootDirId;
     }
 
-    if (fileSize > maxFileSize) {
-      return res.status(413).send("File exceeds maximum allowed size");
+    if (fileSize > 50 * 1024 * 1024) {
+      return req.destroy();
     }
+
+    let recievedBytes = 0;
+    const sizeValidator = new Transform({
+      transform(chunk, encoding, callback) {
+        recievedBytes += chunk.length;
+        console.log(recievedBytes);
+        if (recievedBytes > fileSize) {
+          // Cleanup: delete partial file on disk, thumbnail, and any DB record
+          unlink(filePath).catch(() => {});
+          unlink(path.join(THUMBNAILS_DIR, `${id}.jpg`)).catch(() => {});
+          File.deleteOne({ _id: id }).catch(() => {});
+          req.destroy(new Error("File exceeds maximum allowed size"));
+        }
+        callback(null, chunk);
+      },
+    });
 
     let ownerId = req.user.id;
     // Verify parent directory ownership and check shared permissions
@@ -521,7 +541,7 @@ export const uploadFile = async (req, res) => {
       writeStream.end();
     } else {
       // Otherwise pipe the binary stream (from TransferManager)
-      req.pipe(writeStream);
+      req.pipe(sizeValidator).pipe(writeStream);
     }
   } catch (err) {
     console.error(err);

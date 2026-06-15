@@ -1,4 +1,7 @@
 import archiver from "archiver";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs/promises";
 import { sanitize } from "../utils/sanitize.js";
 import mongoose from "mongoose";
 import Directory from "../models/directoryModel.js";
@@ -11,6 +14,11 @@ import {
   getDirectoryPath,
   updateParentDirectorySize,
 } from "./fileController.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const STORAGE_DIR = path.join(__dirname, "../storage");
+const THUMBNAILS_DIR = path.join(STORAGE_DIR, "thumbnails");
 
 export const getDirectoryById = async (req, res) => {
   const rootDirId = req.user.rootDirId.toString();
@@ -326,36 +334,145 @@ export const deleteDirectory = async (req, res) => {
   }
 };
 
-export const moveDirectory = async (req, res) => {
+const updateDirectoryPathAndDescendants = async (dirId, newParentDirId, session) => {
+  const dir = await Directory.findById(dirId).session(session);
+  if (!dir) return;
+
+  const parentDir = await Directory.findById(newParentDirId).session(session);
+  const newParentPath = parentDir ? parentDir.path : [];
+
+  const newDirPath = [...newParentPath, dirId];
+  dir.parentDir = newParentDirId;
+  dir.path = newDirPath;
+  await dir.save({ session });
+
+  // Update direct child files
+  const files = await File.find({ parentDir: dirId }).session(session);
+  for (const file of files) {
+    file.path = [...newDirPath, file._id];
+    await file.save({ session });
+  }
+
+  // Recursively update direct child directories
+  const childDirs = await Directory.find({ parentDir: dirId }).session(session);
+  for (const childDir of childDirs) {
+    await updateDirectoryPathAndDescendants(childDir._id, dirId, session);
+  }
+};
+
+const getAvailableName = async (parentDirId, originalName, isDirectory, session = null) => {
+  let name = originalName;
+  let ext = "";
+  let base = originalName;
+
+  if (!isDirectory) {
+    ext = path.extname(originalName);
+    base = path.basename(originalName, ext);
+  }
+
+  let counter = 0;
+  let exists = true;
+
+  while (exists) {
+    const checkName = counter === 0 ? name : `${base} - Copy${counter > 1 ? ` (${counter})` : ""}${ext}`;
+    
+    let match;
+    if (isDirectory) {
+      const query = Directory.findOne({ parentDir: parentDirId, name: checkName }).select("_id").lean();
+      if (session) query.session(session);
+      match = await query;
+    } else {
+      const query = File.findOne({ parentDir: parentDirId, name: checkName }).select("_id").lean();
+      if (session) query.session(session);
+      match = await query;
+    }
+    
+    if (!match) {
+      return checkName;
+    }
+    counter++;
+  }
+};
+
+const copyDirectoryRecursive = async (sourceDirId, newDirId, targetParentDirId, targetOwnerId, parentPath, session) => {
+  const sourceDir = await Directory.findById(sourceDirId).session(session).lean();
+  if (!sourceDir) return;
+
+  const newDirPath = [...parentPath, newDirId];
+  const resolvedName = sourceDir.name; 
+
+  await Directory.create([{
+    _id: newDirId,
+    name: resolvedName,
+    userId: targetOwnerId,
+    parentDir: targetParentDirId,
+    path: newDirPath,
+    size: sourceDir.size,
+    provider: sourceDir.provider || "local",
+  }], { session });
+
+  // 1. Copy all direct files in this subdirectory
+  const files = await File.find({ parentDir: sourceDirId }).session(session).lean();
+  for (const file of files) {
+    const newFileId = new mongoose.Types.ObjectId();
+    const oldFilePath = path.join(STORAGE_DIR, `${file._id.toString()}${file.extension}`);
+    const newFilePath = path.join(STORAGE_DIR, `${newFileId.toString()}${file.extension}`);
+
+    try {
+      await fs.copyFile(oldFilePath, newFilePath);
+    } catch (copyErr) {
+      console.error(`Failed to copy physical file ${file._id}:`, copyErr);
+      throw new Error(`Physical file copying failed for "${file.name}"`);
+    }
+
+    if (file.hasThumbnail) {
+      const oldThumbPath = path.join(THUMBNAILS_DIR, `${file._id.toString()}.jpg`);
+      const newThumbPath = path.join(THUMBNAILS_DIR, `${newFileId.toString()}.jpg`);
+      try {
+        await fs.copyFile(oldThumbPath, newThumbPath);
+      } catch (thumbErr) {
+        console.warn(`Failed to copy thumbnail for ${file._id}:`, thumbErr);
+      }
+    }
+
+    await File.create([{
+      _id: newFileId,
+      name: file.name,
+      extension: file.extension,
+      type: "file",
+      userId: targetOwnerId,
+      parentDir: newDirId,
+      path: [...newDirPath, newFileId],
+      size: file.size,
+      hasThumbnail: file.hasThumbnail,
+      externalUrl: file.externalUrl,
+    }], { session });
+  }
+
+  // 2. Recursively copy all subdirectories
+  const subDirs = await Directory.find({ parentDir: sourceDirId }).session(session).lean();
+  for (const subDir of subDirs) {
+    const newSubDirId = new mongoose.Types.ObjectId();
+    await copyDirectoryRecursive(subDir._id, newSubDirId, newDirId, targetOwnerId, newDirPath, session);
+  }
+};
+
+export const moveItems = async (req, res) => {
   try {
-    const { dirId } = req.params;
+    let { dirId } = req.params;
     const transfers = req.body;
 
     const rootDirId = req.user.rootDirId.toString();
-    let targetDir = null;
-
-    if (
-      dirId === rootDirId ||
-      (dirId === "undefined" && req.user.role !== "Owner")
-    ) {
-      targetDir = { _id: rootDirId };
-    } else {
-      targetDir = await Directory.findOne({ _id: dirId }).select("_id").lean();
+    if (!dirId || dirId === "undefined" || dirId === "null") {
+      dirId = rootDirId;
     }
 
+    const targetDir = await Directory.findOne({ _id: dirId }).lean();
     if (!targetDir) {
       return res.status(404).json({ message: "Target folder not found" });
     }
 
-    let targetOwnerId = req.user.id;
-    if (dirId !== rootDirId && dirId !== "undefined") {
-      const fullTargetDir = await Directory.findOne({ _id: dirId })
-        .select("userId")
-        .lean();
-      if (fullTargetDir && fullTargetDir.userId) {
-        targetOwnerId = fullTargetDir.userId.toString();
-      }
-    }
+    let targetOwnerId = targetDir.userId ? targetDir.userId.toString() : req.user.id;
     const canWriteTarget = await hasWriteAccess(targetOwnerId, req);
     if (!canWriteTarget) {
       return res.status(403).json({
@@ -364,15 +481,10 @@ export const moveDirectory = async (req, res) => {
     }
 
     const itemIds = transfers.map((t) => t._id || t.id);
+    const sourceDirs = await Directory.find({ _id: { $in: itemIds } }).lean();
+    const sourceFiles = await File.find({ _id: { $in: itemIds } }).lean();
 
     // Check write access for all items being moved
-    const sourceDirs = await Directory.find({ _id: { $in: itemIds } })
-      .select("userId parentDir")
-      .lean();
-    const sourceFiles = await File.find({ _id: { $in: itemIds } })
-      .select("userId parentDir")
-      .lean();
-
     for (const item of [...sourceDirs, ...sourceFiles]) {
       const itemOwnerId = item.userId ? item.userId.toString() : req.user.id;
       const canWriteItem = await hasWriteAccess(itemOwnerId, req);
@@ -381,24 +493,59 @@ export const moveDirectory = async (req, res) => {
           message: "You are not authorized to move some of these items",
         });
       }
+      
+      // Also prevent moving a directory into itself or its own subdirectories
+      if (item.type === "directory" && dirId !== rootDirId) {
+        if (dirId === item._id.toString() || targetDir.path.includes(item._id.toString())) {
+          return res.status(400).json({
+            message: `Cannot move folder "${item.name}" into itself or its own subfolders`,
+          });
+        }
+      }
     }
 
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-      await Directory.updateMany(
-        { _id: { $in: itemIds } },
-        { $set: { parentDir: dirId } },
-      ).session(session);
+      // 1. Move Directories
+      for (const dir of sourceDirs) {
+        const oldParentDirId = dir.parentDir;
+        if (oldParentDirId && oldParentDirId.toString() === dirId) {
+          continue; // Already in target directory
+        }
 
-      await File.updateMany(
-        { _id: { $in: itemIds } },
-        { $set: { parentDir: dirId } },
-      ).session(session);
+        // Recursively update this directory and all its descendants' paths
+        await updateDirectoryPathAndDescendants(dir._id, dirId, session);
+
+        // Update sizes: decrement old parent path sizes and increment new parent path sizes
+        if (oldParentDirId) {
+          await updateParentDirectorySize(oldParentDirId, -dir.size, session);
+        }
+        await updateParentDirectorySize(dirId, dir.size, session);
+      }
+
+      // 2. Move Files
+      for (const file of sourceFiles) {
+        const oldParentDirId = file.parentDir;
+        if (oldParentDirId && oldParentDirId.toString() === dirId) {
+          continue; // Already in target directory
+        }
+
+        file.parentDir = dirId;
+        file.path = [...targetDir.path, file._id];
+        await File.updateOne({ _id: file._id }, { $set: { parentDir: dirId, path: file.path } }).session(session);
+
+        // Update sizes
+        if (oldParentDirId) {
+          await updateParentDirectorySize(oldParentDirId, -file.size, session);
+        }
+        await updateParentDirectorySize(dirId, file.size, session);
+      }
 
       await session.commitTransaction();
 
+      // Clear caches
       const oldParentDirs = new Set();
       for (const item of [...sourceDirs, ...sourceFiles]) {
         if (item.parentDir) {
@@ -418,7 +565,130 @@ export const moveDirectory = async (req, res) => {
       session.endSession();
     }
   } catch (err) {
-    console.error(err);
+    console.error("Move failed:", err);
     return res.status(500).json({ message: "Move failed" });
+  }
+};
+
+export const copyItems = async (req, res) => {
+  try {
+    let { dirId } = req.params;
+    const transfers = req.body; // Array of { id, type }
+
+    const rootDirId = req.user.rootDirId.toString();
+    if (!dirId || dirId === "undefined" || dirId === "null") {
+      dirId = rootDirId;
+    }
+
+    const targetDir = await Directory.findOne({ _id: dirId }).lean();
+    if (!targetDir) {
+      return res.status(404).json({ message: "Target folder not found" });
+    }
+
+    let targetOwnerId = targetDir.userId ? targetDir.userId.toString() : req.user.id;
+    const canWriteTarget = await hasWriteAccess(targetOwnerId, req);
+    if (!canWriteTarget) {
+      return res.status(403).json({
+        message: "You are not authorized to copy items to this folder",
+      });
+    }
+
+    const itemIds = transfers.map((t) => t.id || t._id);
+    const sourceDirs = await Directory.find({ _id: { $in: itemIds } }).lean();
+    const sourceFiles = await File.find({ _id: { $in: itemIds } }).lean();
+
+    // Check read access for all items being copied
+    for (const item of [...sourceDirs, ...sourceFiles]) {
+      const itemOwnerId = item.userId ? item.userId.toString() : req.user.id;
+      const canReadItem = await hasWriteAccess(itemOwnerId, req);
+      if (!canReadItem) {
+        return res.status(403).json({
+          message: "You are not authorized to copy some of these items",
+        });
+      }
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // 1. Copy Files
+      for (const file of sourceFiles) {
+        const newFileId = new mongoose.Types.ObjectId();
+        const resolvedName = await getAvailableName(dirId, file.name, false, session);
+
+        // Copy physical storage files
+        const oldFilePath = path.join(STORAGE_DIR, `${file._id.toString()}${file.extension}`);
+        const newFilePath = path.join(STORAGE_DIR, `${newFileId.toString()}${file.extension}`);
+        
+        try {
+          await fs.copyFile(oldFilePath, newFilePath);
+        } catch (copyErr) {
+          console.error(`Failed to copy physical file ${file._id}:`, copyErr);
+          throw new Error(`Physical file copying failed for "${file.name}"`);
+        }
+
+        // Copy thumbnail if it exists
+        if (file.hasThumbnail) {
+          const oldThumbPath = path.join(THUMBNAILS_DIR, `${file._id.toString()}.jpg`);
+          const newThumbPath = path.join(THUMBNAILS_DIR, `${newFileId.toString()}.jpg`);
+          try {
+            await fs.copyFile(oldThumbPath, newThumbPath);
+          } catch (thumbErr) {
+            console.warn(`Failed to copy thumbnail for ${file._id}:`, thumbErr);
+          }
+        }
+
+        await File.create([{
+          _id: newFileId,
+          name: resolvedName,
+          extension: file.extension,
+          type: "file",
+          userId: targetOwnerId,
+          parentDir: dirId,
+          path: [...targetDir.path, newFileId],
+          size: file.size,
+          hasThumbnail: file.hasThumbnail,
+          externalUrl: file.externalUrl,
+        }], { session });
+
+        // Update sizes
+        await updateParentDirectorySize(dirId, file.size, session);
+      }
+
+      // 2. Copy Directories
+      for (const dir of sourceDirs) {
+        // Prevent copying directory inside itself or its children
+        if (dirId === dir._id.toString() || targetDir.path.includes(dir._id.toString())) {
+          return res.status(400).json({
+            message: `Cannot copy folder "${dir.name}" into itself or its own subfolders`,
+          });
+        }
+
+        const newDirId = new mongoose.Types.ObjectId();
+        const resolvedName = await getAvailableName(dirId, dir.name, true, session);
+
+        // Recursively copy contents
+        await copyDirectoryRecursive(dir._id, newDirId, dirId, targetOwnerId, targetDir.path, session);
+
+        // Update target directory size (the directory itself + all its contents size)
+        await updateParentDirectorySize(dirId, dir.size, session);
+      }
+
+      await session.commitTransaction();
+
+      // Clear caches
+      await cacheDel("dir:meta:" + dirId);
+
+      return res.status(201).json({ message: "Items copied successfully" });
+    } catch (txError) {
+      await session.abortTransaction();
+      throw txError;
+    } finally {
+      session.endSession();
+    }
+  } catch (err) {
+    console.error("Copy failed:", err);
+    return res.status(500).json({ message: err.message || "Copy failed" });
   }
 };
