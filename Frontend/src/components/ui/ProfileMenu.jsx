@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   LogOut,
@@ -14,9 +15,12 @@ import {
   ChevronRight,
   HardDrive,
   Cloud,
+  X,
+  Sliders,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatSize } from "../../lib/utils";
+import { SERVER_URL } from "../../lib/api";
 
 export default function ProfileMenu({
   user,
@@ -29,11 +33,19 @@ export default function ProfileMenu({
   const [isUploading, setIsUploading] = useState(false);
   const menuRef = useRef(null);
   const fileInputRef = useRef(null);
-  const [maxStorage, setmaxStorage] = useState(
-    user.maxStorage || 1024 * 1024 * 500,
-  );
-  const [usedStorage, setUsedStorage] = useState(user.usedStorage || 0);
+  const maxStorage = user.maxStorage || 1024 * 1024 * 500;
+  const usedStorage = user.usedStorage || 0;
   const navigate = useNavigate();
+
+  // Owner settings state
+  const [ownerSettingsOpen, setOwnerSettingsOpen] = useState(false);
+  const [loadingConfig, setLoadingConfig] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [devicesLimit, setDevicesLimit] = useState(3);
+  const [fileSizeVal, setFileSizeVal] = useState(50);
+  const [fileSizeUnit, setFileSizeUnit] = useState("MB");
+  const [configError, setConfigError] = useState(null);
+  const [configSuccess, setConfigSuccess] = useState(null);
 
   // Close on click outside
   useEffect(() => {
@@ -84,6 +96,83 @@ export default function ProfileMenu({
     }
   };
 
+  useEffect(() => {
+    if (ownerSettingsOpen) {
+      fetchConfig();
+    }
+  }, [ownerSettingsOpen]);
+
+  const fetchConfig = async () => {
+    setLoadingConfig(true);
+    setConfigError(null);
+    try {
+      const res = await fetch(`${SERVER_URL}/system-config`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDevicesLimit(data.maxDevicesLimit);
+        
+        const bytes = data.maxFileSizeLimit || 0;
+        if (bytes === 0) {
+          setFileSizeVal(0);
+          setFileSizeUnit("B");
+        } else {
+          const k = 1024;
+          const units = ["B", "KB", "MB", "GB", "TB"];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          const val = parseFloat((bytes / Math.pow(k, i)).toFixed(2));
+          setFileSizeVal(val);
+          setFileSizeUnit(units[i]);
+        }
+      } else {
+        setConfigError("Failed to fetch system configuration.");
+      }
+    } catch (err) {
+      setConfigError("Network error occurred.");
+    } finally {
+      setLoadingConfig(false);
+    }
+  };
+
+  const handleSaveConfig = async (e) => {
+    e.preventDefault();
+    setSavingConfig(true);
+    setConfigError(null);
+    setConfigSuccess(null);
+
+    const k = 1024;
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    const unitIndex = units.indexOf(fileSizeUnit);
+    const bytes = Math.round(fileSizeVal * Math.pow(k, unitIndex));
+
+    try {
+      const res = await fetch(`${SERVER_URL}/system-config`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maxDevicesLimit: devicesLimit,
+          maxFileSizeLimit: bytes,
+        }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConfigSuccess("System settings updated successfully!");
+        setTimeout(() => {
+          setOwnerSettingsOpen(false);
+          setConfigSuccess(null);
+        }, 1500);
+      } else {
+        setConfigError(data.error || "Failed to update system settings.");
+      }
+    } catch (err) {
+      setConfigError("Network error occurred.");
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
   const menuItems = [
     {
       icon: User,
@@ -95,7 +184,21 @@ export default function ProfileMenu({
       },
       gradient: "from-blue-500 to-indigo-500",
     },
-    ...(user && user.role !== "User"
+    ...(user && user.role?.toLowerCase() === "owner"
+      ? [
+          {
+            icon: Sliders,
+            label: "Owner Settings",
+            desc: "Global limits & config",
+            onClick: () => {
+              setIsOpen(false);
+              setOwnerSettingsOpen(true);
+            },
+            gradient: "from-purple-500 to-indigo-500",
+          },
+        ]
+      : []),
+    ...(user && user.role?.toLowerCase() !== "user"
       ? [
           {
             icon: Shield,
@@ -354,6 +457,144 @@ export default function ProfileMenu({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Owner Settings Modal */}
+      {createPortal(
+        <AnimatePresence>
+          {ownerSettingsOpen && (
+            <div className="fixed inset-0 z-[10000] flex items-center justify-center px-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                onClick={() => setOwnerSettingsOpen(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative w-full max-w-lg bg-[#0a0a0f] border border-purple-500/20 rounded-[2rem] shadow-[0_25px_60px_-15px_rgba(139,92,246,0.3)] overflow-hidden z-[10001] p-8"
+              >
+                {/* Glow effects */}
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-purple-500/10 rounded-full blur-[50px] pointer-events-none" />
+                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-[50px] pointer-events-none" />
+
+                <div className="flex items-center justify-between mb-6 relative z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400">
+                      <Sliders size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-white tracking-tight">System Limits</h3>
+                      <p className="text-xs text-gray-400">Configure global parameters (Owner Only)</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setOwnerSettingsOpen(false)}
+                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {loadingConfig ? (
+                  <div className="py-12 flex justify-center items-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSaveConfig} className="space-y-6 relative z-10">
+                    {configError && (
+                      <div className="text-sm px-4 py-3 rounded-xl font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                        {configError}
+                      </div>
+                    )}
+                    {configSuccess && (
+                      <div className="text-sm px-4 py-3 rounded-xl font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        {configSuccess}
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      {/* Devices Limit */}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                          Max Connected Devices Limit
+                        </label>
+                        <input
+                          type="number"
+                          value={devicesLimit}
+                          onChange={(e) => setDevicesLimit(e.target.value)}
+                          required
+                          min="1"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all font-semibold"
+                          placeholder="e.g. 3"
+                        />
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          The maximum number of concurrent device sessions allowed per user.
+                        </p>
+                      </div>
+
+                      {/* Max File Size Limit */}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                          Max Upload File Size
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            value={fileSizeVal}
+                            onChange={(e) => setFileSizeVal(e.target.value)}
+                            required
+                            min="1"
+                            step="any"
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all font-semibold"
+                            placeholder="e.g. 50"
+                          />
+                          <select
+                            value={fileSizeUnit}
+                            onChange={(e) => setFileSizeUnit(e.target.value)}
+                            className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
+                          >
+                            <option value="B">Bytes (B)</option>
+                            <option value="KB">Kilobytes (KB)</option>
+                            <option value="MB">Megabytes (MB)</option>
+                            <option value="GB">Gigabytes (GB)</option>
+                            <option value="TB">Terabytes (TB)</option>
+                          </select>
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          Maximum file size allowed for uploading. Stored on backend in bytes.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => setOwnerSettingsOpen(false)}
+                        className="px-6 py-3 rounded-xl text-sm font-bold text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={savingConfig}
+                        className="px-6 py-3 rounded-xl text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] disabled:opacity-50"
+                      >
+                        {savingConfig ? "Saving..." : "Save Settings"}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
       <style>{`
         @keyframes shimmer {
           0% { transform: translateX(-100%); }

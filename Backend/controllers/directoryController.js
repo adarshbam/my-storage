@@ -8,17 +8,38 @@ import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import Trash from "../models/trashModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
-import { hasWriteAccess } from "../utils/integrationHelper.js";
-import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
+import { hasWriteAccess, verifyItemAccess } from "../utils/integrationHelper.js";
+import { cacheDel, cacheHgetall, cacheHset, cacheGet, cacheSet } from "../utils/redis.js";
 import {
   getDirectoryPath,
   updateParentDirectorySize,
 } from "./fileController.js";
+import { deleteByParentChain } from "./trashController.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STORAGE_DIR = path.join(__dirname, "../storage");
 const THUMBNAILS_DIR = path.join(STORAGE_DIR, "thumbnails");
+
+const getDirectorySize = async (dirId) => {
+  let size = 0;
+  let count = 0;
+
+  const files = await File.find({ parentDir: dirId }).select("size").lean();
+  for (const file of files) {
+    size += file.size || 0;
+    count++;
+  }
+
+  const childDirs = await Directory.find({ parentDir: dirId }).select("_id").lean();
+  for (const child of childDirs) {
+    const childSize = await getDirectorySize(child._id.toString());
+    size += childSize.size;
+    count += childSize.count;
+  }
+
+  return { size, count };
+};
 
 export const getDirectoryById = async (req, res) => {
   const rootDirId = req.user.rootDirId.toString();
@@ -30,81 +51,124 @@ export const getDirectoryById = async (req, res) => {
     }
     const { action } = req.query;
 
-    let directoryData = await Directory.findOne({ _id: dirId })
-      .select("-__v")
-      .lean();
-    // console.log(directoryData);
+    const cacheKey = `dir:contents:${dirId}`;
 
-    if (!directoryData) {
+    // 1. Try Cache-Aside from Redis first
+    if (action !== "download") {
+      const cachedVal = await cacheGet(cacheKey);
+      if (cachedVal) {
+        try {
+          const cachedData = JSON.parse(cachedVal);
+          // Perform security/authorization validation on cached owner ID
+          if (
+            cachedData.userId &&
+            cachedData.userId.toString() !== req.user.id
+          ) {
+            const hasAccess = await verifyItemAccess(cachedData.userId, req, dirId, "directory", "read", cachedData.path);
+
+            if (!hasAccess) {
+              return res
+                .status(403)
+                .send("You are not authorized to access this directory");
+            }
+          }
+          return res.status(200).json(cachedData);
+        } catch (jsonErr) {
+          console.error("Failed to parse cached folder content:", jsonErr);
+        }
+      }
+    }
+
+    // 2. Parallelize initial fetching of directory, files, and childDirs on cache miss
+    const [directoryDataRaw, files, childDirs] = await Promise.all([
+      Directory.findOne({ _id: dirId }).select("-__v").lean(),
+      File.find({ parentDir: dirId }).select("-__v").lean(),
+      Directory.find({ parentDir: dirId }).select("-__v").lean(),
+    ]);
+
+    if (!directoryDataRaw) {
       return res.status(404).json({ error: "Directory not found" });
     }
 
+    const directoryData = { ...directoryDataRaw };
     directoryData._id = directoryData._id.toString();
-    const files = await File.find({ parentDir: dirId }).select("-__v").lean();
-    directoryData.files = await Promise.all(
-      files.map(async (file) => {
-        const path = await Directory.find({
-          _id: { $in: file.path },
-        })
-          .select("-_id name")
-          .lean();
 
-        path.push({ name: file.name });
-
-        return {
-          ...file,
-          _id: file._id.toString(),
-          path: path,
-        };
-      }),
-    );
-
-    const childDirs = await Directory.find({ parentDir: dirId })
-      .select("-__v")
-      .lean();
-
-    const childDirsWithCounts = await Promise.all(
-      childDirs.map(async (dir) => {
-        const filesCount = await File.countDocuments({
-          parentDir: dir._id,
-        });
-
-        const directoriesCount = await Directory.countDocuments({
-          parentDir: dir._id,
-        });
-
-        const items = filesCount + directoriesCount;
-        const path = await Directory.find({ _id: { $in: dir.path } })
-          .select("-_id name")
-          .lean();
-
-        return {
-          ...dir,
-          filesCount,
-          path,
-          directoriesCount,
-          items,
-        };
-      }),
-    );
-    directoryData.directories = childDirsWithCounts;
-    const path = await Directory.find({ _id: { $in: directoryData.path } })
+    // 3. Optimized Current-Folder-Only Path Resolution
+    const pathDocs = await Directory.find({ _id: { $in: directoryData.path || [] } })
       .select("name")
       .lean();
-    directoryData.path = path;
-    // console.log(childDirsWithCounts);
 
+    const dirMap = new Map(pathDocs.map((d) => [d._id.toString(), d.name]));
+
+    const mappedCurrentPath = (directoryData.path || [])
+      .map((id) => {
+        if (!id) return null;
+        const idStr = id.toString();
+        const name = dirMap.get(idStr);
+        return name ? { _id: idStr, name } : null;
+      })
+      .filter(Boolean);
+
+    directoryData.path = mappedCurrentPath;
+
+    const parentPathNames = mappedCurrentPath.map(p => ({ name: p.name }));
+    const baseSharedPathNames = [...parentPathNames, { name: directoryData.name }];
+
+    directoryData.files = files.map((file) => {
+      return {
+        ...file,
+        _id: file._id.toString(),
+        path: [...baseSharedPathNames, { name: file.name }],
+      };
+    });
+
+    // 4. Skip aggregates if there are no subdirectories
+    let filesCountMap = new Map();
+    let dirsCountMap = new Map();
+
+    if (childDirs.length > 0) {
+      const childDirIds = childDirs.map((dir) => dir._id);
+      const [filesCounts, dirsCounts] = await Promise.all([
+        File.aggregate([
+          { $match: { parentDir: { $in: childDirIds } } },
+          { $group: { _id: "$parentDir", count: { $sum: 1 } } },
+        ]),
+        Directory.aggregate([
+          { $match: { parentDir: { $in: childDirIds } } },
+          { $group: { _id: "$parentDir", count: { $sum: 1 } } },
+        ]),
+      ]);
+
+      filesCountMap = new Map(filesCounts.map((c) => [c._id.toString(), c.count]));
+      dirsCountMap = new Map(dirsCounts.map((c) => [c._id.toString(), c.count]));
+    }
+
+    directoryData.directories = childDirs.map((dir) => {
+      const dirIdStr = dir._id.toString();
+      const filesCount = filesCountMap.get(dirIdStr) || 0;
+      const directoriesCount = dirsCountMap.get(dirIdStr) || 0;
+      const items = filesCount + directoriesCount;
+
+      return {
+        ...dir,
+        filesCount,
+        path: [...baseSharedPathNames, { name: dir.name }],
+        directoriesCount,
+        items,
+      };
+    });
+
+    // 5. Store completed response in Cache-Aside Redis key
+    if (action !== "download") {
+      await cacheSet(cacheKey, JSON.stringify(directoryData), 600);
+    }
+
+    // 6. Security authorization checks
     if (
       directoryData.userId &&
-      directoryData.userId.toString() !== req.user.id &&
-      req.user.role !== "Owner" &&
-      req.user.role !== "Admin" &&
-      req.user.role !== "Manager"
+      directoryData.userId.toString() !== req.user.id
     ) {
-      const hasAccess = await SharedAccess.findOne({
-        userId: directoryData.userId,
-        targetUserId: req.user.id,
-      });
+      const hasAccess = await verifyItemAccess(directoryData.userId, req, dirId, "directory", "read", directoryDataRaw.path);
 
       if (!hasAccess) {
         return res
@@ -131,11 +195,9 @@ export const getDirectoryById = async (req, res) => {
 
       const { size, count } = await getDirectorySize(directoryData._id);
 
-      // Set headers before piping so headers are sent first
       res.setHeader("X-Total-Size", size);
       res.setHeader("X-Total-Files", count);
 
-      // Now we can pipe
       archive.pipe(res);
 
       const addDirectory = async (dirId, zipPath) => {
@@ -176,11 +238,12 @@ export const getDirectoryById = async (req, res) => {
 
       await addDirectory(directoryData._id, directoryData.name);
       await archive.finalize();
-      return; // 🔥 CRITICAL
+      return;
     }
 
     return res.status(200).json(directoryData);
   } catch (err) {
+    console.error("getDirectoryById Error:", err);
     if (!res.headersSent) {
       return res.status(500).send("Internal Server Error");
     }
@@ -199,11 +262,11 @@ export const createDirectory = async (req, res) => {
     // Verify parent directory ownership and check shared permissions
     if (parentDirId && parentDirId !== rootDirId) {
       const parentDir = await Directory.findOne({ _id: parentDirId })
-        .select("userId")
+        .select("userId path")
         .lean();
       if (parentDir && parentDir.userId) {
         ownerId = parentDir.userId.toString();
-        const canWrite = await hasWriteAccess(ownerId, req);
+        const canWrite = await verifyItemAccess(ownerId, req, parentDirId, "directory", "write", parentDir.path);
         if (!canWrite) {
           return res
             .status(403)
@@ -229,6 +292,7 @@ export const createDirectory = async (req, res) => {
     });
 
     await cacheDel("dir:meta:" + parentDirId);
+    await cacheDel("dir:contents:" + parentDirId);
 
     return res.status(201).send("Folder created successfully");
   } catch (err) {
@@ -244,7 +308,7 @@ export const renameDirectory = async (req, res) => {
   try {
     const { dirId } = req.params;
     const directoryData = await Directory.findOne({ _id: dirId })
-      .select("userId")
+      .select("userId parentDir path")
       .lean();
     console.log(directoryData);
 
@@ -255,7 +319,7 @@ export const renameDirectory = async (req, res) => {
     const ownerId = directoryData.userId
       ? directoryData.userId.toString()
       : req.user.id;
-    const canWrite = await hasWriteAccess(ownerId, req);
+    const canWrite = await verifyItemAccess(ownerId, req, dirId, "directory", "write", directoryData.path);
     if (!canWrite) {
       return res
         .status(403)
@@ -266,6 +330,12 @@ export const renameDirectory = async (req, res) => {
       { _id: dirId },
       { $set: { name: sanitize(newDirName) } },
     );
+    
+    await cacheDel("dir:contents:" + dirId);
+    if (directoryData && directoryData.parentDir) {
+      await cacheDel("dir:contents:" + directoryData.parentDir.toString());
+    }
+
     return res.status(200).send("Folder renamed successfully");
   } catch (error) {
     console.error("Rename Error:", error);
@@ -277,7 +347,7 @@ export const deleteDirectory = async (req, res) => {
   try {
     const { dirId } = req.params;
     const dirData = await Directory.findOne({ _id: dirId })
-      .select("userId parentDir")
+      .select("userId parentDir path")
       .lean();
 
     if (!dirData) {
@@ -285,7 +355,7 @@ export const deleteDirectory = async (req, res) => {
     }
 
     const ownerId = dirData.userId ? dirData.userId.toString() : req.user.id;
-    const canWrite = await hasWriteAccess(ownerId, req);
+    const canWrite = await verifyItemAccess(ownerId, req, dirId, "directory", "write", dirData.path);
     if (!canWrite) {
       return res
         .status(403)
@@ -296,29 +366,40 @@ export const deleteDirectory = async (req, res) => {
     session.startTransaction();
 
     try {
+      const isPermanent = req.query.permanent === "true";
+
       const directoryToBeDeleted = await Directory.findOne({ _id: dirId })
-        .select("parentDir size")
+        .select("parentDir size path")
         .lean();
 
       await updateParentDirectorySize(
-        directoryToBeDeleted.parentDir,
+        (directoryToBeDeleted.path || []).slice(0, -1),
         -directoryToBeDeleted.size,
+        session
       );
 
-      const deletedDirectory = await Directory.findOne({ _id: dirId })
-        .select("-__v")
-        .session(session)
-        .lean();
-      if (deletedDirectory) {
+      if (isPermanent) {
+        // Recursively delete all files and directories completely
+        await deleteByParentChain(dirId);
         await Directory.deleteOne({ _id: dirId }).session(session);
-        await Trash.create([deletedDirectory], { session });
+      } else {
+        const deletedDirectory = await Directory.findOne({ _id: dirId })
+          .select("-__v")
+          .session(session)
+          .lean();
+        if (deletedDirectory) {
+          await Directory.deleteOne({ _id: dirId }).session(session);
+          await Trash.create([deletedDirectory], { session });
+        }
       }
 
       await session.commitTransaction();
 
       await cacheDel("dir:meta:" + dirId);
+      await cacheDel("dir:contents:" + dirId);
       if (dirData && dirData.parentDir) {
         await cacheDel("dir:meta:" + dirData.parentDir.toString());
+        await cacheDel("dir:contents:" + dirData.parentDir.toString());
       }
 
       return res.status(200).send("Folder deleted successfully");
@@ -473,7 +554,7 @@ export const moveItems = async (req, res) => {
     }
 
     let targetOwnerId = targetDir.userId ? targetDir.userId.toString() : req.user.id;
-    const canWriteTarget = await hasWriteAccess(targetOwnerId, req);
+    const canWriteTarget = await verifyItemAccess(targetOwnerId, req, dirId, "directory", "write", targetDir.path);
     if (!canWriteTarget) {
       return res.status(403).json({
         message: "You are not authorized to move items to this folder",
@@ -487,7 +568,7 @@ export const moveItems = async (req, res) => {
     // Check write access for all items being moved
     for (const item of [...sourceDirs, ...sourceFiles]) {
       const itemOwnerId = item.userId ? item.userId.toString() : req.user.id;
-      const canWriteItem = await hasWriteAccess(itemOwnerId, req);
+      const canWriteItem = await verifyItemAccess(itemOwnerId, req, item._id, item.type, "write", item.path);
       if (!canWriteItem) {
         return res.status(403).json({
           message: "You are not authorized to move some of these items",
@@ -505,65 +586,80 @@ export const moveItems = async (req, res) => {
     }
 
     const session = await mongoose.startSession();
-    session.startTransaction();
 
-    try {
-      // 1. Move Directories
-      for (const dir of sourceDirs) {
-        const oldParentDirId = dir.parentDir;
-        if (oldParentDirId && oldParentDirId.toString() === dirId) {
-          continue; // Already in target directory
+    let retries = 3;
+    while (retries > 0) {
+      session.startTransaction();
+      try {
+        // 1. Move Directories
+        for (const dir of sourceDirs) {
+          const oldParentDirId = dir.parentDir;
+          if (oldParentDirId && oldParentDirId.toString() === dirId) {
+            continue; // Already in target directory
+          }
+
+          // Recursively update this directory and all its descendants' paths
+          await updateDirectoryPathAndDescendants(dir._id, dirId, session);
+
+          // Update sizes: decrement old parent path sizes and increment new parent path sizes
+          if (oldParentDirId) {
+            await updateParentDirectorySize(oldParentDirId, -dir.size, session);
+          }
+          await updateParentDirectorySize(dirId, dir.size, session);
         }
 
-        // Recursively update this directory and all its descendants' paths
-        await updateDirectoryPathAndDescendants(dir._id, dirId, session);
+        // 2. Move Files
+        for (const file of sourceFiles) {
+          const oldParentDirId = file.parentDir;
+          if (oldParentDirId && oldParentDirId.toString() === dirId) {
+            continue; // Already in target directory
+          }
 
-        // Update sizes: decrement old parent path sizes and increment new parent path sizes
-        if (oldParentDirId) {
-          await updateParentDirectorySize(oldParentDirId, -dir.size, session);
+          file.parentDir = dirId;
+          file.path = [...targetDir.path, file._id];
+          await File.updateOne({ _id: file._id }, { $set: { parentDir: dirId, path: file.path } }).session(session);
+
+          // Update sizes
+          if (oldParentDirId) {
+            await updateParentDirectorySize(oldParentDirId, -file.size, session);
+          }
+          await updateParentDirectorySize(dirId, file.size, session);
         }
-        await updateParentDirectorySize(dirId, dir.size, session);
+
+        await session.commitTransaction();
+        break; // Success!
+      } catch (txError) {
+        await session.abortTransaction();
+
+        const isTransient = txError.errorLabels && txError.errorLabels.includes("TransientTransactionError");
+        const isWriteConflict = txError.code === 112;
+
+        if ((isTransient || isWriteConflict) && retries > 1) {
+          retries--;
+          console.warn(`Transient write conflict encountered in moveItems. Retrying transaction... (${retries} retries left)`);
+          await new Promise((resolve) => setTimeout(resolve, Math.random() * 200 + 50));
+          continue;
+        }
+        throw txError;
       }
-
-      // 2. Move Files
-      for (const file of sourceFiles) {
-        const oldParentDirId = file.parentDir;
-        if (oldParentDirId && oldParentDirId.toString() === dirId) {
-          continue; // Already in target directory
-        }
-
-        file.parentDir = dirId;
-        file.path = [...targetDir.path, file._id];
-        await File.updateOne({ _id: file._id }, { $set: { parentDir: dirId, path: file.path } }).session(session);
-
-        // Update sizes
-        if (oldParentDirId) {
-          await updateParentDirectorySize(oldParentDirId, -file.size, session);
-        }
-        await updateParentDirectorySize(dirId, file.size, session);
-      }
-
-      await session.commitTransaction();
-
-      // Clear caches
-      const oldParentDirs = new Set();
-      for (const item of [...sourceDirs, ...sourceFiles]) {
-        if (item.parentDir) {
-          oldParentDirs.add(item.parentDir.toString());
-        }
-      }
-      for (const oldPid of oldParentDirs) {
-        await cacheDel("dir:meta:" + oldPid);
-      }
-      await cacheDel("dir:meta:" + dirId);
-
-      return res.status(200).json({ message: "Items moved successfully" });
-    } catch (txError) {
-      await session.abortTransaction();
-      throw txError;
-    } finally {
-      session.endSession();
     }
+    session.endSession();
+
+    // Clear caches
+    const oldParentDirs = new Set();
+    for (const item of [...sourceDirs, ...sourceFiles]) {
+      if (item.parentDir) {
+        oldParentDirs.add(item.parentDir.toString());
+      }
+    }
+    for (const oldPid of oldParentDirs) {
+      await cacheDel("dir:meta:" + oldPid);
+      await cacheDel("dir:contents:" + oldPid);
+    }
+    await cacheDel("dir:meta:" + dirId);
+    await cacheDel("dir:contents:" + dirId);
+
+    return res.status(200).json({ message: "Items moved successfully" });
   } catch (err) {
     console.error("Move failed:", err);
     return res.status(500).json({ message: "Move failed" });
@@ -586,7 +682,7 @@ export const copyItems = async (req, res) => {
     }
 
     let targetOwnerId = targetDir.userId ? targetDir.userId.toString() : req.user.id;
-    const canWriteTarget = await hasWriteAccess(targetOwnerId, req);
+    const canWriteTarget = await verifyItemAccess(targetOwnerId, req, dirId, "directory", "write", targetDir.path);
     if (!canWriteTarget) {
       return res.status(403).json({
         message: "You are not authorized to copy items to this folder",
@@ -600,7 +696,7 @@ export const copyItems = async (req, res) => {
     // Check read access for all items being copied
     for (const item of [...sourceDirs, ...sourceFiles]) {
       const itemOwnerId = item.userId ? item.userId.toString() : req.user.id;
-      const canReadItem = await hasWriteAccess(itemOwnerId, req);
+      const canReadItem = await verifyItemAccess(itemOwnerId, req, item._id, item.type, "read", item.path);
       if (!canReadItem) {
         return res.status(403).json({
           message: "You are not authorized to copy some of these items",
@@ -609,86 +705,199 @@ export const copyItems = async (req, res) => {
     }
 
     const session = await mongoose.startSession();
+
+    let retries = 3;
+    while (retries > 0) {
+      session.startTransaction();
+      try {
+        // 1. Copy Files
+        for (const file of sourceFiles) {
+          const newFileId = new mongoose.Types.ObjectId();
+          const resolvedName = await getAvailableName(dirId, file.name, false, session);
+
+          // Copy physical storage files
+          const oldFilePath = path.join(STORAGE_DIR, `${file._id.toString()}${file.extension}`);
+          const newFilePath = path.join(STORAGE_DIR, `${newFileId.toString()}${file.extension}`);
+          
+          try {
+            await fs.copyFile(oldFilePath, newFilePath);
+          } catch (copyErr) {
+            console.error(`Failed to copy physical file ${file._id}:`, copyErr);
+            throw new Error(`Physical file copying failed for "${file.name}"`);
+          }
+
+          // Copy thumbnail if it exists
+          if (file.hasThumbnail) {
+            const oldThumbPath = path.join(THUMBNAILS_DIR, `${file._id.toString()}.jpg`);
+            const newThumbPath = path.join(THUMBNAILS_DIR, `${newFileId.toString()}.jpg`);
+            try {
+              await fs.copyFile(oldThumbPath, newThumbPath);
+            } catch (thumbErr) {
+              console.warn(`Failed to copy thumbnail for ${file._id}:`, thumbErr);
+            }
+          }
+
+          await File.create([{
+            _id: newFileId,
+            name: resolvedName,
+            extension: file.extension,
+            type: "file",
+            userId: targetOwnerId,
+            parentDir: dirId,
+            path: [...targetDir.path, newFileId],
+            size: file.size,
+            hasThumbnail: file.hasThumbnail,
+            externalUrl: file.externalUrl,
+          }], { session });
+
+          // Update sizes
+          await updateParentDirectorySize(dirId, file.size, session);
+        }
+
+        // 2. Copy Directories
+        for (const dir of sourceDirs) {
+          // Prevent copying directory inside itself or its children
+          if (dirId === dir._id.toString() || targetDir.path.includes(dir._id.toString())) {
+            return res.status(400).json({
+              message: `Cannot copy folder "${dir.name}" into itself or its own subfolders`,
+            });
+          }
+
+          const newDirId = new mongoose.Types.ObjectId();
+          const resolvedName = await getAvailableName(dirId, dir.name, true, session);
+
+          // Recursively copy contents
+          await copyDirectoryRecursive(dir._id, newDirId, dirId, targetOwnerId, targetDir.path, session);
+
+          // Update target directory size (the directory itself + all its contents size)
+          await updateParentDirectorySize(dirId, dir.size, session);
+        }
+
+        await session.commitTransaction();
+        break; // Success!
+      } catch (txError) {
+        await session.abortTransaction();
+
+        const isTransient = txError.errorLabels && txError.errorLabels.includes("TransientTransactionError");
+        const isWriteConflict = txError.code === 112;
+
+        if ((isTransient || isWriteConflict) && retries > 1) {
+          retries--;
+          console.warn(`Transient write conflict encountered in copyItems. Retrying transaction... (${retries} retries left)`);
+          await new Promise((resolve) => setTimeout(resolve, Math.random() * 200 + 50));
+          continue;
+        }
+        throw txError;
+      }
+    }
+    session.endSession();
+
+    // Clear caches
+    await cacheDel("dir:meta:" + dirId);
+    await cacheDel("dir:contents:" + dirId);
+
+    return res.status(201).json({ message: "Items copied successfully" });
+  } catch (err) {
+    console.error("Copy failed:", err);
+    return res.status(500).json({ message: err.message || "Copy failed" });
+  }
+};
+
+export const deleteItemsBatch = async (req, res) => {
+  try {
+    const items = req.body;
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ error: "Invalid items array" });
+    }
+
+    const fileIds = items.filter(i => i.type === "file").map(i => i.id);
+    const dirIds = items.filter(i => i.type === "directory").map(i => i.id);
+
+    const [files, dirs] = await Promise.all([
+      File.find({ _id: { $in: fileIds } }).select("-__v").lean(),
+      Directory.find({ _id: { $in: dirIds } }).select("-__v").lean()
+    ]);
+
+    for (const file of files) {
+      const ownerId = file.userId ? file.userId.toString() : req.user.id;
+      const canWrite = await verifyItemAccess(ownerId, req, file._id, "file", "write", file.path);
+      if (!canWrite) {
+        return res.status(403).json({ error: `You are not authorized to delete file: ${file.name}` });
+      }
+    }
+
+    for (const dir of dirs) {
+      const ownerId = dir.userId ? dir.userId.toString() : req.user.id;
+      const canWrite = await verifyItemAccess(ownerId, req, dir._id, "directory", "write", dir.path);
+      if (!canWrite) {
+        return res.status(403).json({ error: `You are not authorized to delete folder: ${dir.name}` });
+      }
+    }
+
+    const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-      // 1. Copy Files
-      for (const file of sourceFiles) {
-        const newFileId = new mongoose.Types.ObjectId();
-        const resolvedName = await getAvailableName(dirId, file.name, false, session);
-
-        // Copy physical storage files
-        const oldFilePath = path.join(STORAGE_DIR, `${file._id.toString()}${file.extension}`);
-        const newFilePath = path.join(STORAGE_DIR, `${newFileId.toString()}${file.extension}`);
-        
-        try {
-          await fs.copyFile(oldFilePath, newFilePath);
-        } catch (copyErr) {
-          console.error(`Failed to copy physical file ${file._id}:`, copyErr);
-          throw new Error(`Physical file copying failed for "${file.name}"`);
+      const sizeUpdates = new Map();
+      
+      for (const file of files) {
+        if (file.parentDir) {
+          const pid = file.parentDir.toString();
+          sizeUpdates.set(pid, (sizeUpdates.get(pid) || 0) - file.size);
         }
-
-        // Copy thumbnail if it exists
-        if (file.hasThumbnail) {
-          const oldThumbPath = path.join(THUMBNAILS_DIR, `${file._id.toString()}.jpg`);
-          const newThumbPath = path.join(THUMBNAILS_DIR, `${newFileId.toString()}.jpg`);
-          try {
-            await fs.copyFile(oldThumbPath, newThumbPath);
-          } catch (thumbErr) {
-            console.warn(`Failed to copy thumbnail for ${file._id}:`, thumbErr);
-          }
-        }
-
-        await File.create([{
-          _id: newFileId,
-          name: resolvedName,
-          extension: file.extension,
-          type: "file",
-          userId: targetOwnerId,
-          parentDir: dirId,
-          path: [...targetDir.path, newFileId],
-          size: file.size,
-          hasThumbnail: file.hasThumbnail,
-          externalUrl: file.externalUrl,
-        }], { session });
-
-        // Update sizes
-        await updateParentDirectorySize(dirId, file.size, session);
       }
 
-      // 2. Copy Directories
-      for (const dir of sourceDirs) {
-        // Prevent copying directory inside itself or its children
-        if (dirId === dir._id.toString() || targetDir.path.includes(dir._id.toString())) {
-          return res.status(400).json({
-            message: `Cannot copy folder "${dir.name}" into itself or its own subfolders`,
-          });
+      for (const dir of dirs) {
+        if (dir.parentDir) {
+          const pid = dir.parentDir.toString();
+          sizeUpdates.set(pid, (sizeUpdates.get(pid) || 0) - dir.size);
         }
+      }
 
-        const newDirId = new mongoose.Types.ObjectId();
-        const resolvedName = await getAvailableName(dirId, dir.name, true, session);
+      for (const [parentDirId, sizeChange] of sizeUpdates.entries()) {
+        await updateParentDirectorySize(parentDirId, sizeChange, session);
+      }
 
-        // Recursively copy contents
-        await copyDirectoryRecursive(dir._id, newDirId, dirId, targetOwnerId, targetDir.path, session);
+      const trashingFiles = files.map(f => ({ ...f, deleted_at: new Date() }));
+      const trashingDirs = dirs.map(d => ({ ...d, deleted_at: new Date() }));
 
-        // Update target directory size (the directory itself + all its contents size)
-        await updateParentDirectorySize(dirId, dir.size, session);
+      if (trashingFiles.length > 0) {
+        await Trash.insertMany(trashingFiles, { session });
+        await File.deleteMany({ _id: { $in: fileIds } }).session(session);
+      }
+
+      if (trashingDirs.length > 0) {
+        await Trash.insertMany(trashingDirs, { session });
+        await Directory.deleteMany({ _id: { $in: dirIds } }).session(session);
       }
 
       await session.commitTransaction();
 
-      // Clear caches
-      await cacheDel("dir:meta:" + dirId);
+      const keysToInvalidate = new Set();
+      for (const dirId of dirIds) {
+        keysToInvalidate.add("dir:meta:" + dirId);
+        keysToInvalidate.add("dir:contents:" + dirId);
+      }
+      for (const file of files) {
+        if (file.parentDir) keysToInvalidate.add("dir:meta:" + file.parentDir.toString());
+        if (file.parentDir) keysToInvalidate.add("dir:contents:" + file.parentDir.toString());
+      }
+      for (const dir of dirs) {
+        if (dir.parentDir) keysToInvalidate.add("dir:meta:" + dir.parentDir.toString());
+        if (dir.parentDir) keysToInvalidate.add("dir:contents:" + dir.parentDir.toString());
+      }
 
-      return res.status(201).json({ message: "Items copied successfully" });
+      await Promise.all(Array.from(keysToInvalidate).map(key => cacheDel(key)));
+
+      return res.status(200).send("Items deleted successfully");
     } catch (txError) {
       await session.abortTransaction();
       throw txError;
     } finally {
       session.endSession();
     }
-  } catch (err) {
-    console.error("Copy failed:", err);
-    return res.status(500).json({ message: err.message || "Copy failed" });
+  } catch (error) {
+    console.error("Batch Delete Error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };

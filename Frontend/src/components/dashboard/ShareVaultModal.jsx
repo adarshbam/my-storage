@@ -3,7 +3,7 @@ import { X, Copy, Info, AlertTriangle, ShieldAlert, Calendar, Share2, Trash2 } f
 import { SERVER_URL } from "../../lib/api";
 import Button from "../ui/Button";
 
-export default function ShareVaultModal({ isOpen, onClose }) {
+export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
   const [shareLinks, setShareLinks] = useState([]);
   const [loadingLinks, setLoadingLinks] = useState(false);
   const [generatedLink, setGeneratedLink] = useState("");
@@ -54,6 +54,12 @@ export default function ShareVaultModal({ isOpen, onClose }) {
         body: JSON.stringify({
           expiresAt: expiryDate || null,
           permission: [selectedPermission],
+          items: items.map(item => ({
+            id: item._id || item.id,
+            type: item.type,
+            provider: item.provider || "local",
+            name: item.name
+          })),
         }),
         credentials: "include",
       });
@@ -124,14 +130,37 @@ export default function ShareVaultModal({ isOpen, onClose }) {
           </div>
           <div>
             <h2 className="text-xl font-bold tracking-wider text-white uppercase">
-              Share Vault
+              {items.length > 0 ? "Share Items" : "Share Vault"}
             </h2>
           </div>
         </div>
         
-        <p className="text-sm text-white/50 mb-8 ml-[52px]">
-          Create a secure link to grant external users access to your Vault node.
+        <p className="text-sm text-white/50 mb-4 ml-[52px]">
+          Create a secure link to grant external users access to {items.length > 0 ? "the selected items" : "your Vault node"}.
         </p>
+
+        {items.length > 0 && (
+          <div className="mb-6 ml-[52px] bg-white/[0.02] border border-white/5 rounded-xl p-3">
+            <span className="text-[10px] font-bold tracking-wider uppercase text-white/40 block mb-2">
+              Selected items ({items.length}):
+            </span>
+            <div className="flex flex-wrap gap-2 max-h-[100px] overflow-y-auto custom-scrollbar">
+              {items.map((item) => (
+                <div
+                  key={item._id || item.id}
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-black/40 border border-white/10 rounded-lg text-xs"
+                >
+                  <span className={item.type === "directory" ? "text-vault-emerald" : "text-white/70"}>
+                    {item.type === "directory" ? "📁" : "📄"}
+                  </span>
+                  <span className="text-white truncate max-w-[120px]" title={item.name}>
+                    {item.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           
@@ -260,9 +289,24 @@ export default function ShareVaultModal({ isOpen, onClose }) {
           {/* Right Column: Manage Links */}
           <div className="space-y-5">
             <div className="flex items-center justify-between border-b border-white/10 pb-2">
-              <h3 className="font-bold text-white/50 text-xs uppercase tracking-widest">
-                Active Nodes ({shareLinks.length})
-              </h3>
+              {(() => {
+                const selectedIds = items.map(i => (i._id || i.id).toString()).sort();
+                const filteredLinks = shareLinks.filter(link => {
+                  const linkItemIds = (link.items || []).map(i => i.id.toString()).sort();
+                  if (items.length === 0) {
+                    return linkItemIds.length === 0;
+                  } else {
+                    return linkItemIds.length === selectedIds.length && linkItemIds.every((id, idx) => id === selectedIds[idx]);
+                  }
+                });
+                return (
+                  <>
+                    <h3 className="font-bold text-white/50 text-xs uppercase tracking-widest">
+                      Active Nodes ({filteredLinks.length})
+                    </h3>
+                  </>
+                );
+              })()}
             </div>
 
             <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 scrollbar-none">
@@ -270,12 +314,24 @@ export default function ShareVaultModal({ isOpen, onClose }) {
                 <div className="text-center py-8 text-white/30 text-sm font-mono animate-pulse">
                   Scanning active nodes...
                 </div>
-              ) : shareLinks.length === 0 ? (
-                <div className="text-center py-8 bg-black/20 border border-dashed border-white/10 rounded-xl text-white/30 text-xs font-mono uppercase tracking-widest">
-                  No active share links.
-                </div>
-              ) : (
-                shareLinks.map((link) => (
+              ) : (() => {
+                const selectedIds = items.map(i => (i._id || i.id).toString()).sort();
+                const filteredLinks = shareLinks.filter(link => {
+                  const linkItemIds = (link.items || []).map(i => i.id.toString()).sort();
+                  if (items.length === 0) {
+                    return linkItemIds.length === 0;
+                  } else {
+                    return linkItemIds.length === selectedIds.length && linkItemIds.every((id, idx) => id === selectedIds[idx]);
+                  }
+                });
+                if (filteredLinks.length === 0) {
+                  return (
+                    <div className="text-center py-8 bg-black/20 border border-dashed border-white/10 rounded-xl text-white/30 text-xs font-mono uppercase tracking-widest">
+                      No active share links.
+                    </div>
+                  );
+                }
+                return filteredLinks.map((link) => (
                   <div
                     key={link._id}
                     className="flex items-center justify-between p-3 bg-black/40 border border-white/5 rounded-xl hover:border-white/20 transition-all group"
@@ -316,8 +372,8 @@ export default function ShareVaultModal({ isOpen, onClose }) {
                       <Trash2 size={16} />
                     </button>
                   </div>
-                ))
-              )}
+                ));
+              })()}
             </div>
           </div>
           

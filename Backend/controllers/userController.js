@@ -227,12 +227,14 @@ export const authGoogle = async (req, res) => {
 
     // ── New user → register + log them in ────────────────────────────────────
 
+    const newUserId = new mongoose.Types.ObjectId();
+
     // Create a File document for the Google profile pic (external URL)
     let profilepicId = null;
     if (picture) {
       const profilePicFile = await File.create({
         name: "google-profile-pic",
-        userId: null, // will be updated after user creation
+        userId: newUserId,
         parentDir: null,
         type: "file",
         extension: "",
@@ -247,12 +249,8 @@ export const authGoogle = async (req, res) => {
       password: null,
       profilepicId,
       isVerified: true, // Google already verified their email
+      userId: newUserId,
     });
-
-    // Link the profile pic File document to the newly created user
-    if (profilepicId) {
-      await File.updateOne({ _id: profilepicId }, { $set: { userId } });
-    }
 
     await createSessionAndSetCookies(userId, rootDirId, req, res);
 
@@ -362,11 +360,14 @@ export const authGithub = async (req, res) => {
         provider: "github",
       });
       if (!existingDir) {
+        const newDirId = new mongoose.Types.ObjectId();
         await Directory.create({
+          _id: newDirId,
           name: "Github",
           userId: user._id,
           type: "directory",
           parentDir: user.rootDirId,
+          path: [user.rootDirId, newDirId],
           provider: "github", // This links it to the frontend specialView
         });
       }
@@ -404,11 +405,13 @@ export const authGithub = async (req, res) => {
 
     // ── New user → register + log them in ────────────────────────────────────
 
+    const newUserId = new mongoose.Types.ObjectId();
+
     let profilepicId = null;
     if (userData.avatar_url) {
       const profilePicFile = await File.create({
         name: "github-profile-pic",
-        userId: null,
+        userId: newUserId,
         parentDir: null,
         type: "file",
         extension: "",
@@ -423,11 +426,8 @@ export const authGithub = async (req, res) => {
       password: null,
       profilepicId,
       isVerified: true,
+      userId: newUserId,
     });
-
-    if (profilepicId) {
-      await File.updateOne({ _id: profilepicId }, { $set: { userId } });
-    }
 
     await createSessionAndSetCookies(userId, rootDirId, req, res);
     return res.redirect(`${CLIENT_URL}/dashboard`);

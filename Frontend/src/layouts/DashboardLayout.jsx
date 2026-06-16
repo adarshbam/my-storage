@@ -17,6 +17,7 @@ export default function DashboardLayout() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareItems, setShareItems] = useState([]);
   const [currentFolderId, setCurrentFolderId] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
@@ -157,6 +158,10 @@ export default function DashboardLayout() {
   };
 
   const handleUpload = (files, targetId) => {
+    if (user && user.usedStorage >= user.maxStorage) {
+      alert("Not enough storage");
+      return;
+    }
     const destination = targetId || currentFolderId;
     if (transferRef.current) {
       const fileArray = Array.isArray(files) ? files : Array.from(files);
@@ -201,8 +206,17 @@ export default function DashboardLayout() {
     : null;
 
   const contextValue = {
-    openUploadModal: () => setShowUploadModal(true),
-    openShareModal: () => setIsShareModalOpen(true),
+    openUploadModal: () => {
+      if (user && user.usedStorage >= user.maxStorage) {
+        alert("Not enough storage");
+        return;
+      }
+      setShowUploadModal(true);
+    },
+    openShareModal: (items = []) => {
+      setShareItems(items ? (Array.isArray(items) ? items : [items]) : []);
+      setIsShareModalOpen(true);
+    },
     uploadFile: handleUpload,
     downloadFile: handleDownload,
     currentFolderId,
@@ -232,7 +246,13 @@ export default function DashboardLayout() {
         globalSearchQuery={globalSearchQuery}
         setGlobalSearchQuery={setGlobalSearchQuery}
         handleSearchSubmit={(term, filters) => handleSearch(term, filters)}
-        openUploadModal={() => setShowUploadModal(true)}
+        openUploadModal={() => {
+          if (user && user.usedStorage >= user.maxStorage) {
+            alert("Not enough storage");
+            return;
+          }
+          setShowUploadModal(true);
+        }}
         openShareModal={() => setIsShareModalOpen(true)}
         isMobileOpen={isMobileOpen}
         setIsMobileOpen={setIsMobileOpen}
@@ -262,7 +282,11 @@ export default function DashboardLayout() {
           </div>
           <ShareVaultModal
             isOpen={isShareModalOpen}
-            onClose={() => setIsShareModalOpen(false)}
+            onClose={() => {
+              setIsShareModalOpen(false);
+              setShareItems([]);
+            }}
+            items={shareItems}
           />
         </main>
       </div>

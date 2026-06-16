@@ -8,6 +8,7 @@ import {
   moveItems,
   renameDirectory,
   copyItems,
+  deleteItemsBatch,
 } from "../controllers/directoryController.js";
 import { validate } from "../middlewares/validationMiddleware.js";
 import {
@@ -17,6 +18,7 @@ import {
   deleteDirectorySchema,
   moveDirectorySchema,
   copyDirectorySchema,
+  deleteDirectoryBatchSchema,
 } from "../validators/directorySchema.js";
 import { standardWriteLimiter } from "../middlewares/rateLimiter.js";
 import throttle from "../utils/throttle.js";
@@ -25,6 +27,8 @@ const router = express.Router();
 
 router.param("parentDirId", validateIdMiddleware);
 router.param("dirId", validateIdMiddleware);
+
+router.post("/delete-batch", checkAuth, standardWriteLimiter, throttle(100, 12, "dir-delete-batch"), validate(deleteDirectoryBatchSchema), deleteItemsBatch);
 
 router.get(["/", "/:dirId"], checkAuth, standardWriteLimiter, throttle(100, 15, "dir-get"), validate(getDirectoryByIdSchema), getDirectoryById);
 

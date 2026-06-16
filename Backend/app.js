@@ -9,6 +9,7 @@ import driveRouter from "./routes/driveRoutes.js";
 import githubRouter from "./routes/githubRoutes.js";
 import systemUsersRouter from "./routes/systemUsersRoutes.js";
 import shareRouter from "./routes/shareRoutes.js";
+import systemConfigRouter from "./routes/systemConfigRoutes.js";
 import cors from "cors";
 import checkAuth from "./middlewares/authMiddleware.js";
 import https from "https";
@@ -20,6 +21,7 @@ import Trash from "./models/trashModel.js";
 import File from "./models/fileModel.js";
 import Directory from "./models/directoryModel.js";
 import User from "./models/userModel.js";
+import { reconcileDirectoryPathsAndSizes } from "./utils/reconcile.js";
 import helmet from "helmet";
 
 import { PORT, REDIS_URL, CLIENT_URL, SESSION_SECRET } from "./config.js";
@@ -137,6 +139,7 @@ app.use("/drive", driveRouter);
 app.use("/github", githubRouter);
 app.use("/users", systemUsersRouter);
 app.use("/share", shareRouter);
+app.use("/system-config", systemConfigRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);
@@ -384,6 +387,8 @@ console.log();
 //   console.log(`HTTPS Server running on port ${PORT}`);
 // });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+reconcileDirectoryPathsAndSizes().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 });

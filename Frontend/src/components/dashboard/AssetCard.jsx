@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Copy,
   Scissors,
+  Share2,
 } from "lucide-react";
 import getFileImage from "../../lib/FileImages";
 import { formatSize } from "../../lib/utils";
@@ -39,6 +40,12 @@ export default function AssetCard({
   isCut = false,
   onCopy = null,
   onCut = null,
+  onDragStart = null,
+  onDragOver = null,
+  onDragLeave = null,
+  onDrop = null,
+  isDragOver = false,
+  onShare = null,
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -99,9 +106,15 @@ export default function AssetCard({
         onDoubleClick={handleDoubleClick}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        draggable={!readOnly && !isTrash}
+        onDragStart={(e) => onDragStart && onDragStart(e, item)}
+        onDragOver={(e) => onDragOver && onDragOver(e)}
+        onDragLeave={(e) => onDragLeave && onDragLeave(e)}
+        onDrop={(e) => onDrop && onDrop(e, item)}
         className={`
-          group relative flex items-center p-3 rounded-xl border border-white/5 transition-all duration-300
-          ${selected ? "bg-white/10 shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]" : "hover:bg-white/[0.03]"}
+          group relative flex items-center p-3 rounded-xl border transition-all duration-300
+          ${isDragOver ? "border-orange-400 bg-orange-500/10 shadow-[0_0_20px_rgba(249,115,22,0.25)]" : "border-white/5"}
+          ${selected && !isDragOver ? "bg-white/10 shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]" : !isDragOver ? "hover:bg-white/[0.03]" : ""}
           ${isCut ? "opacity-35" : ""}
         `}
       >
@@ -127,6 +140,7 @@ export default function AssetCard({
               src={getFileImage(ext)}
               alt="icon"
               className="w-6 h-6 object-contain drop-shadow-lg"
+              draggable={false}
             />
           )}
         </div>
@@ -137,7 +151,7 @@ export default function AssetCard({
           </p>
           <p className="text-white/40 text-xs mt-0.5 truncate flex items-center gap-2">
             {!isDirectory && <span>{formatSize(item.size)}</span>}
-            {isDirectory && <span>{item.itemCount || 0} Assets</span>}
+            {isDirectory && <span>{item.itemCount !== undefined ? item.itemCount : item.items !== undefined ? item.items : ((item.filesCount || 0) + (item.directoriesCount || 0))} Assets</span>}
             {provider !== "local" && (
               <span className="opacity-70">
                 • {provider.replace("_", " ").toUpperCase()}
@@ -259,10 +273,16 @@ export default function AssetCard({
       onDoubleClick={handleDoubleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      draggable={!readOnly && !isTrash}
+      onDragStart={(e) => onDragStart && onDragStart(e, item)}
+      onDragOver={(e) => onDragOver && onDragOver(e)}
+      onDragLeave={(e) => onDragLeave && onDragLeave(e)}
+      onDrop={(e) => onDrop && onDrop(e, item)}
       className={`
         group relative flex flex-col rounded-2xl transition-all duration-300 asset-card-hover select-none
-        ${selected ? `bg-white/[0.08] ${envClass}` : "bg-vault-surface/60 border border-white/5"}
-        ${isHovered && !selected ? `border-white/20 ${envClass}` : ""}
+        ${isDragOver ? "bg-orange-500/10 border-2 border-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.3)] scale-[1.02]" : ""}
+        ${selected && !isDragOver ? `bg-white/[0.08] ${envClass}` : !isDragOver ? "bg-vault-surface/60 border border-white/5" : ""}
+        ${isHovered && !selected && !isDragOver ? `border-white/20 ${envClass}` : ""}
         ${isCut ? "opacity-35" : ""}
       `}
     >
@@ -307,6 +327,7 @@ export default function AssetCard({
               onError={() => setImageError(true)}
               crossOrigin="use-credentials"
               loading="lazy"
+              draggable={false}
             />
           ) : (
             <img
@@ -462,6 +483,18 @@ export default function AssetCard({
                 Rename
               </button>
             )}
+            {!isTrash && !readOnly && onShare && (
+              <button
+                onClick={() => {
+                  closeMenu();
+                  onShare(item);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-white/80 hover:text-white hover:bg-white/[0.07] transition-colors"
+              >
+                <Share2 size={14} className="shrink-0 text-purple-400" />
+                Share
+              </button>
+            )}
             {!isTrash && !readOnly && onCopy && (
               <button
                 onClick={() => {
@@ -555,7 +588,7 @@ export default function AssetCard({
         <div className="flex items-center justify-between text-[11px] font-mono text-white/40 gap-2">
           <span className="truncate min-w-0">
             {isDirectory
-              ? `${item?.filesCount + item?.directoriesCount || 0} ITEMS`
+              ? `${item.itemCount !== undefined ? item.itemCount : item.items !== undefined ? item.items : ((item.filesCount || 0) + (item.directoriesCount || 0))} ITEMS`
               : formatSize(item.size)}
           </span>
           <span className="uppercase whitespace-nowrap shrink-0">

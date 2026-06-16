@@ -4,10 +4,10 @@ import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import Session from "../models/sessionModel.js";
 import {
-  MAX_DEVICES_LIMIT,
   SESSION_COOKIE_OPTIONS,
   ROOT_DIR_COOKIE_OPTIONS,
 } from "../config.js";
+import { getSystemConfigHelper } from "../controllers/systemConfigController.js";
 
 /**
  * Creates (or upserts) a session for the user, enforces the device limit,
@@ -37,8 +37,9 @@ export async function createSessionAndSetCookies(userId, rootDirId, req, res) {
 
   const sessionId = session._id;
 
+  const systemConfig = await getSystemConfigHelper();
   const existingDevice = session.devices.find((d) => d.deviceId === deviceId);
-  if (!existingDevice && session.devices.length >= MAX_DEVICES_LIMIT) {
+  if (!existingDevice && session.devices.length >= systemConfig.maxDevicesLimit) {
     await Session.findByIdAndDelete(sessionId);
   }
 
@@ -67,9 +68,9 @@ export async function createUserWithRootDir({
   password,
   profilepicId = null,
   isVerified = false,
+  userId = new mongoose.Types.ObjectId(),
 }) {
   const rootDirId = new mongoose.Types.ObjectId();
-  const userId = new mongoose.Types.ObjectId();
 
   const newUser = {
     _id: userId,
@@ -87,6 +88,7 @@ export async function createUserWithRootDir({
     userId,
     type: "directory",
     parentDir: null,
+    path: [rootDirId],
   };
 
   const session = await mongoose.startSession();

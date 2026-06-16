@@ -6,7 +6,7 @@ import { cacheDel } from "../utils/redis.js";
 import { BACKEND_URL } from "../config.js";
 
 export const generateShareLink = async (req, res) => {
-  const { expiresAt, permission } = req.body;
+  const { expiresAt, permission, items } = req.body;
 
   // Ensure permission is valid, default to ["read"]
   let cleanPermission = ["read"];
@@ -16,6 +16,25 @@ export const generateShareLink = async (req, res) => {
     if (filtered.length > 0) {
       cleanPermission = filtered;
     }
+  }
+
+  let cleanItems = [];
+  if (Array.isArray(items)) {
+    cleanItems = items
+      .map((item) => ({
+        id: String(item.id),
+        type: String(item.type),
+        provider: String(item.provider),
+        name: String(item.name),
+      }))
+      .filter(
+        (item) =>
+          item.id &&
+          item.type &&
+          item.provider &&
+          item.name &&
+          ["file", "directory"].includes(item.type)
+      );
   }
 
   const shareToken = crypto.randomBytes(32).toString("hex");
@@ -28,6 +47,7 @@ export const generateShareLink = async (req, res) => {
     userId: req.user.id,
     token: hashedToken,
     permission: cleanPermission,
+    items: cleanItems,
     expiresAt: expiresAt
       ? new Date(expiresAt)
       : Date.now() + 24 * 60 * 60 * 1000,
@@ -94,6 +114,7 @@ export const getShareLinkByToken = async (req, res) => {
         : null,
     },
     permission: shareLink ? shareLink.permission : ["read"],
+    items: shareLink ? shareLink.items : [],
     expiresAt: shareLink
       ? shareLink.expiresAt
       : new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -130,6 +151,7 @@ export const claimShareAccess = async (req, res) => {
         expiresAt: shareLink.expiresAt
           ? shareLink.expiresAt
           : new Date(Date.now() + 24 * 60 * 60 * 1000),
+        items: shareLink.items || [],
       },
     },
     {

@@ -13,6 +13,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { SERVER_URL } from "../lib/api";
+import { formatSize } from "../lib/utils";
 
 const Profile = () => {
   const { user } = useAuth();
@@ -26,6 +27,10 @@ const Profile = () => {
   const profilePicUrl = user?.profilepic
     ? `${SERVER_URL}/user/profilepic?id=${user.profilepic}`
     : null;
+
+  const maxStorage = user?.maxStorage || 1024 * 1024 * 500;
+  const usedStorage = user?.usedStorage || 0;
+  const usedPercent = ((usedStorage / maxStorage) * 100).toFixed(1);
 
   const roleDescriptions = {
     OWNER: [
@@ -223,14 +228,14 @@ const Profile = () => {
                   <Zap className="text-blue-400" size={20} /> Storage Quota
                 </h3>
                 <span className="text-sm font-bold text-blue-400 bg-blue-400/10 px-3 py-1 rounded-full border border-blue-400/20">
-                  8.0% Used
+                  {usedPercent}% Used
                 </span>
               </div>
               <div className="relative z-10">
                 <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden mb-3 shadow-inner">
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: "8%" }}
+                    animate={{ width: `${usedPercent}%` }}
                     transition={{ duration: 1, ease: "easeOut" }}
                     className="h-full bg-gradient-to-r from-blue-500 to-teal-400 rounded-full relative"
                   >
@@ -238,8 +243,8 @@ const Profile = () => {
                   </motion.div>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400 font-medium">39.8 MB used</span>
-                  <span className="text-gray-500 font-medium">500 MB total</span>
+                  <span className="text-gray-400 font-medium">{formatSize(usedStorage)} used</span>
+                  <span className="text-gray-500 font-medium">{formatSize(maxStorage)} total</span>
                 </div>
               </div>
             </div>

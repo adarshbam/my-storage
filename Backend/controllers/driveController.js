@@ -20,9 +20,11 @@ const STORAGE_DIR = path.join(__dirname, "../storage");
 import {
   resolveIntegrationOwnerId,
   hasWriteAccess,
+  verifyItemAccess,
 } from "../utils/integrationHelper.js";
 import SharedAccess from "../models/sharedAccessModel.js";
 import { invalidateUserSessions } from "../utils/redis.js";
+import { updateParentDirectorySize } from "./fileController.js";
 
 // ─── Shared Helper: Build an authenticated Drive client ───────────────────────
 async function getDriveClient(userId) {
@@ -156,11 +158,14 @@ export const connectGoogleDrive = async (req, res) => {
       provider: "google_drive",
     });
     if (!existingDir) {
+      const newDirId = new mongoose.Types.ObjectId();
       await Directory.create({
+        _id: newDirId,
         name: "Google Drive",
         userId: req.user.id,
         type: "directory",
         parentDir: rootDirId,
+        path: [rootDirId, newDirId],
         provider: "google_drive",
       });
     }
@@ -711,24 +716,30 @@ export const transferToVault = async (req, res) => {
     // Check if the user has write access to the target local folder
     const targetDir = await Directory.findById(targetFolderId).lean();
     const localOwnerId = targetDir ? targetDir.userId.toString() : ownerId;
-    const hasLocalWrite = await hasWriteAccess(localOwnerId, req);
+    const hasLocalWrite = await verifyItemAccess(localOwnerId, req, targetFolderId, "directory", "write", targetDir ? targetDir.path : []);
     if (!hasLocalWrite) {
       return res
         .status(403)
         .json({ error: "No write access to target local folder" });
     }
 
+    const initialParentPath = targetDir ? targetDir.path : [];
+
     const results = [];
 
     // Recursive helper to import Drive folder structure into local DB
-    const importItem = async (driveItem, localParentId) => {
+    const importItem = async (driveItem, localParentId, parentPath) => {
       const driveItemId = driveItem._id || driveItem.id;
       if (driveItem.type === "directory") {
         // 1. Create local directory
+        const newDirId = new mongoose.Types.ObjectId();
+        const currentPath = [...parentPath, newDirId];
         const newDir = await Directory.create({
+          _id: newDirId,
           name: driveItem.name,
           parentDir: localParentId,
           userId: ownerId, // New folders belong to the actual folder owner
+          path: currentPath,
           size: 0,
         });
 
@@ -741,7 +752,7 @@ export const transferToVault = async (req, res) => {
         const children = response.data.files || [];
         for (const child of children) {
           const mappedChild = mapDriveItem(child);
-          await importItem(mappedChild, newDir._id.toString());
+          await importItem(mappedChild, newDir._id.toString(), currentPath);
         }
         return newDir;
       } else {
@@ -773,13 +784,15 @@ export const transferToVault = async (req, res) => {
           type: "file",
         });
 
+        await updateParentDirectorySize(parentPath, stats.size);
+
         return newFile;
       }
     };
 
     for (const item of items) {
       const itemId = item._id || item.id;
-      await importItem(item, targetFolderId);
+      await importItem(item, targetFolderId, initialParentPath);
       // Delete from Drive after successful transfer
       await drive.files.delete({ fileId: itemId });
     }
@@ -805,11 +818,13 @@ export const transferFromVault = async (req, res) => {
     const { drive, ownerId } = client;
 
     // Check if the user has write/delete access to the local items
-    const hasLocalWrite = await hasWriteAccess(ownerId, req);
-    if (!hasLocalWrite) {
-      return res
-        .status(403)
-        .json({ error: "No permission to delete local items for transfer" });
+    for (const item of items) {
+      const isAllowed = await verifyItemAccess(ownerId, req, item.id || item._id, item.type, "write");
+      if (!isAllowed) {
+        return res
+          .status(403)
+          .json({ error: `No permission to transfer local item: ${item.name || item.id}` });
+      }
     }
 
     const results = [];

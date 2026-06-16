@@ -5,7 +5,10 @@ import path from "path";
 import { stat, unlink, mkdir } from "fs/promises";
 import { fileURLToPath } from "url";
 import SharedAccess from "../models/sharedAccessModel.js";
-import { hasWriteAccess } from "../utils/integrationHelper.js";
+import {
+  hasWriteAccess,
+  verifyItemAccess,
+} from "../utils/integrationHelper.js";
 import { escapeRegExp } from "../utils/escapeRegExp.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,24 +29,70 @@ import File from "../models/fileModel.js";
 import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
+import { getSystemConfigHelper } from "./systemConfigController.js";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 const maxFileSize = parseInt(false || "104857", 10);
 
-export const updateParentDirectorySize = async (parentDirId, size, session = null) => {
-  while (parentDirId) {
-    const query = Directory.findOneAndUpdate(
-      { _id: parentDirId },
-      { $inc: { size } },
-      { new: true }
-    );
+export const updateParentDirectorySize = async (
+  parentDirIdOrPath,
+  size,
+  session = null,
+) => {
+  const sizeChange = Number(size) || 0;
+  if (!parentDirIdOrPath || sizeChange === 0) return;
+
+  let path = [];
+  if (Array.isArray(parentDirIdOrPath)) {
+    path = parentDirIdOrPath;
+  } else {
+    const query = Directory.findById(parentDirIdOrPath).select("path");
     if (session) {
       query.session(session);
     }
-    const parentDir = await query.select("_id parentDir size").lean();
-    if (!parentDir) break;
-    parentDirId = parentDir.parentDir;
+    const parentDir = await query.lean();
+    if (parentDir) {
+      path = parentDir.path || [];
+    }
+  }
+
+  if (path.length > 0) {
+    const updateQuery = Directory.updateMany(
+      { _id: { $in: path } },
+      { $inc: { size: sizeChange } },
+    );
+    if (session) {
+      updateQuery.session(session);
+    }
+    await updateQuery;
+
+    // Clear Redis cache for all updated directories and their parent directories
+    try {
+      const idsToClear = [...path];
+
+      const firstDirId = path[0];
+      if (firstDirId) {
+        const firstDirQuery =
+          Directory.findById(firstDirId).select("parentDir");
+        if (session) {
+          firstDirQuery.session(session);
+        }
+        const firstDir = await firstDirQuery.lean();
+        if (firstDir && firstDir.parentDir) {
+          idsToClear.push(firstDir.parentDir);
+        }
+      }
+
+      await Promise.all(
+        idsToClear.flatMap((id) => [
+          cacheDel("dir:contents:" + id.toString()),
+          cacheDel("dir:meta:" + id.toString()),
+        ]),
+      );
+    } catch (cacheErr) {
+      console.error("Failed to clear directory size caches:", cacheErr);
+    }
   }
 };
 
@@ -115,16 +164,15 @@ export const search = async (req, res) => {
       const targetOwnerId = parentDir.userId.toString();
 
       // Check if current user is authorized to access target owner's files
-      if (
-        targetOwnerId !== req.user.id &&
-        req.user.role !== "Owner" &&
-        req.user.role !== "Admin" &&
-        req.user.role !== "Manager"
-      ) {
-        const hasAccess = await SharedAccess.findOne({
-          userId: targetOwnerId,
-          targetUserId: req.user.id,
-        }).lean();
+      if (targetOwnerId !== req.user.id) {
+        const hasAccess = await verifyItemAccess(
+          targetOwnerId,
+          req,
+          parentId,
+          "directory",
+          "read",
+          parentDir.path,
+        );
 
         if (!hasAccess) {
           return res
@@ -146,15 +194,32 @@ export const search = async (req, res) => {
       ) {
         const sharedWithMe = await SharedAccess.find({
           targetUserId: req.user.id,
-        })
-          .select("userId")
-          .lean();
+        }).lean();
 
-        const authorizedOwnerIds = [
-          req.user.id,
-          ...sharedWithMe.map((s) => s.userId.toString()),
-        ];
-        searchFilter.userId = { $in: authorizedOwnerIds };
+        const filters = [{ userId: req.user.id }];
+
+        for (const sa of sharedWithMe) {
+          const ownerId = sa.userId.toString();
+          if (!sa.items || sa.items.length === 0) {
+            filters.push({ userId: ownerId });
+          } else {
+            const fileIds = sa.items
+              .filter((i) => i.type === "file")
+              .map((i) => i.id);
+            const dirIds = sa.items
+              .filter((i) => i.type === "directory")
+              .map((i) => i.id);
+
+            filters.push({
+              userId: ownerId,
+              $or: [
+                { _id: { $in: [...fileIds, ...dirIds] } },
+                { path: { $in: dirIds } },
+              ],
+            });
+          }
+        }
+        searchFilter.$or = filters;
       }
     }
 
@@ -177,43 +242,6 @@ export const search = async (req, res) => {
       ? matchingDirs.filter((d) => validParentIds.has(d._id.toString()))
       : matchingDirs;
 
-    const finalMatchingDirs = await Promise.all(
-      finalMatchingDirsRaw.map(async (dir) => {
-        const dirIdStr = dir._id.toString();
-        const cachedMeta = await cacheHgetall("dir:meta:" + dirIdStr);
-        if (cachedMeta) {
-          return {
-            ...dir,
-            id: dirIdStr,
-            itemCount: Number(cachedMeta.itemCount || 0),
-          };
-        }
-
-        const fileCount = await File.countDocuments({
-          parentDir: dirIdStr,
-        });
-        const dirCount = await Directory.countDocuments({
-          parentDir: dirIdStr,
-        });
-        const itemCount = fileCount + dirCount;
-
-        await cacheHset(
-          "dir:meta:" + dirIdStr,
-          {
-            size: dir.size || 0,
-            itemCount: itemCount || 0,
-          },
-          600,
-        );
-
-        return {
-          ...dir,
-          id: dirIdStr,
-          itemCount: itemCount,
-        };
-      }),
-    );
-
     // Filter FilesDB
     const matchingFiles = await File.find(searchFilter).select("-__v").lean();
 
@@ -221,10 +249,133 @@ export const search = async (req, res) => {
       ? matchingFiles.filter((f) => validParentIds.has(f.parentDir))
       : matchingFiles;
 
-    const finalMatchingFilesProcessed = finalMatchingFiles.map((f) => ({
-      ...f,
-      id: f._id.toString(),
-    }));
+    // 1. Gather all unique folder IDs in paths across matching dirs and files
+    const allDirIdsSet = new Set();
+    finalMatchingDirsRaw.forEach((dir) => {
+      if (dir.path) {
+        dir.path.forEach((id) => {
+          if (id) allDirIdsSet.add(id.toString());
+        });
+      }
+    });
+    finalMatchingFiles.forEach((f) => {
+      if (f.path) {
+        f.path.forEach((id) => {
+          if (id) allDirIdsSet.add(id.toString());
+        });
+      }
+    });
+
+    // Bulk query all path directory names
+    const pathDocs = await Directory.find({
+      _id: { $in: Array.from(allDirIdsSet) },
+    })
+      .select("name")
+      .lean();
+
+    const dirMap = new Map(pathDocs.map((d) => [d._id.toString(), d.name]));
+
+    // 2. Fetch cache in parallel for matching dirs
+    const cachedMetas = await Promise.all(
+      finalMatchingDirsRaw.map((dir) =>
+        cacheHgetall("dir:meta:" + dir._id.toString()),
+      ),
+    );
+
+    // 3. For directories that missed the cache, count files/dirs in bulk
+    const cacheMissDirIds = [];
+    finalMatchingDirsRaw.forEach((dir, idx) => {
+      if (!cachedMetas[idx]) {
+        cacheMissDirIds.push(dir._id);
+      }
+    });
+
+    let filesCountMap = new Map();
+    let dirsCountMap = new Map();
+
+    if (cacheMissDirIds.length > 0) {
+      const [filesCounts, dirsCounts] = await Promise.all([
+        File.aggregate([
+          { $match: { parentDir: { $in: cacheMissDirIds } } },
+          { $group: { _id: "$parentDir", count: { $sum: 1 } } },
+        ]),
+        Directory.aggregate([
+          { $match: { parentDir: { $in: cacheMissDirIds } } },
+          { $group: { _id: "$parentDir", count: { $sum: 1 } } },
+        ]),
+      ]);
+
+      filesCountMap = new Map(
+        filesCounts.map((c) => [c._id.toString(), c.count]),
+      );
+      dirsCountMap = new Map(
+        dirsCounts.map((c) => [c._id.toString(), c.count]),
+      );
+    }
+
+    // 4. Map final matching directories
+    const finalMatchingDirs = await Promise.all(
+      finalMatchingDirsRaw.map(async (dir, idx) => {
+        const dirIdStr = dir._id.toString();
+        const sortedPath = (dir.path || [])
+          .map((id) => {
+            if (!id) return null;
+            const name = dirMap.get(id.toString());
+            return name ? { name } : null;
+          })
+          .filter(Boolean);
+
+        const cachedMeta = cachedMetas[idx];
+        if (cachedMeta) {
+          return {
+            ...dir,
+            id: dirIdStr,
+            path: sortedPath,
+            itemCount: Number(cachedMeta.itemCount || 0),
+          };
+        }
+
+        const fileCount = filesCountMap.get(dirIdStr) || 0;
+        const dirCount = dirsCountMap.get(dirIdStr) || 0;
+        const itemCount = fileCount + dirCount;
+
+        // Populate cache asynchronously
+        cacheHset(
+          "dir:meta:" + dirIdStr,
+          {
+            size: dir.size || 0,
+            itemCount: itemCount || 0,
+          },
+          600,
+        ).catch((err) => console.error("Cache populate error in search:", err));
+
+        return {
+          ...dir,
+          id: dirIdStr,
+          path: sortedPath,
+          itemCount: itemCount,
+        };
+      }),
+    );
+
+    // 5. Map final matching files
+    const finalMatchingFilesProcessed = finalMatchingFiles.map((f) => {
+      const sortedPath = (f.path || [])
+        .map((id) => {
+          if (!id) return null;
+          const name = dirMap.get(id.toString());
+          return name ? { name } : null;
+        })
+        .filter(Boolean);
+
+      sortedPath.push({ name: f.name });
+
+      return {
+        ...f,
+        id: f._id.toString(),
+        path: sortedPath,
+      };
+    });
 
     // Structure result similar to directory content response
     return res.status(200).json({
@@ -242,24 +393,23 @@ export const search = async (req, res) => {
 export const getThumbnail = async (req, res) => {
   try {
     const { fileId } = req.params;
-    let file = await File.findOne({ _id: fileId }).select("userId").lean();
+    let file = await File.findOne({ _id: fileId }).select("userId path").lean();
 
     // If not found in File collection, check Trash collection
     if (!file) {
-      file = await Trash.findOne({ _id: fileId }).select("userId").lean();
+      file = await Trash.findOne({ _id: fileId }).select("userId path").lean();
     }
 
     if (!file) return res.status(404).send("File not found");
-    if (
-      file.userId.toString() !== req.user.id &&
-      req.user.role !== "Owner" &&
-      req.user.role !== "Admin" &&
-      req.user.role !== "Manager"
-    ) {
-      const hasAccess = await SharedAccess.findOne({
-        userId: file.userId,
-        targetUserId: req.user.id,
-      });
+    if (file.userId.toString() !== req.user.id) {
+      const hasAccess = await verifyItemAccess(
+        file.userId,
+        req,
+        fileId,
+        "file",
+        "read",
+        file.path,
+      );
       if (!hasAccess) {
         return res.status(403).send("Unauthorized");
       }
@@ -285,22 +435,21 @@ export const getFileById = async (req, res) => {
     const { fileId } = req.params;
     const { action } = req.query;
     const file = await File.findOne({ _id: fileId })
-      .select("userId name extension")
+      .select("userId name extension path")
       .lean();
 
     // Check if file exists first
     if (!file) return res.status(404).send("File not found");
 
-    if (
-      file.userId.toString() !== req.user.id &&
-      req.user.role !== "Owner" &&
-      req.user.role !== "Admin" &&
-      req.user.role !== "Manager"
-    ) {
-      const hasAccess = await SharedAccess.findOne({
-        userId: file.userId,
-        targetUserId: req.user.id,
-      });
+    if (file.userId.toString() !== req.user.id) {
+      const hasAccess = await verifyItemAccess(
+        file.userId,
+        req,
+        fileId,
+        "file",
+        "read",
+        file.path,
+      );
       if (!hasAccess) {
         return res
           .status(403)
@@ -380,25 +529,48 @@ export const getFileById = async (req, res) => {
 
 export const uploadFile = async (req, res) => {
   try {
+    const systemConfig = await getSystemConfigHelper();
+
     // Robustly handle missing or "undefined" string param
     let parentDirId = req.params.parentDirId;
     const rootDirId = req.user.rootDirId.toString();
-    const fileSize = parseInt(sanitize(req.headers.filesize), 10);
+    const parsedSize = parseInt(sanitize(req.headers.filesize), 10);
+    const fileSize = Number.isNaN(parsedSize) ? 0 : parsedSize;
 
     if (!parentDirId || parentDirId === "undefined") {
       parentDirId = rootDirId;
     }
 
-    if (fileSize > 50 * 1024 * 1024) {
+    if (fileSize > systemConfig.maxFileSizeLimit) {
       return req.destroy();
+    }
+
+    const rootDir = await Directory.findOne({ _id: req.user.rootDirId })
+      .select("size")
+      .lean();
+    const usedStorage = rootDir ? rootDir.size : 0;
+    const maxStorage = req.user.maxStorage || (1024 * 1024 * 1024);
+
+    if (usedStorage + fileSize > maxStorage) {
+      if (!res.headersSent) {
+        res.setHeader("Connection", "close");
+        res.status(400).json({ error: "Not enough storage left" });
+      }
+      setTimeout(() => {
+        req.destroy();
+      }, 0);
+      return;
     }
 
     let recievedBytes = 0;
     const sizeValidator = new Transform({
       transform(chunk, encoding, callback) {
         recievedBytes += chunk.length;
-        console.log(recievedBytes);
-        if (recievedBytes > fileSize) {
+
+        if (
+          recievedBytes > fileSize ||
+          recievedBytes > systemConfig.maxFileSizeLimit
+        ) {
           // Cleanup: delete partial file on disk, thumbnail, and any DB record
           unlink(filePath).catch(() => {});
           unlink(path.join(THUMBNAILS_DIR, `${id}.jpg`)).catch(() => {});
@@ -413,11 +585,18 @@ export const uploadFile = async (req, res) => {
     // Verify parent directory ownership and check shared permissions
     if (parentDirId && parentDirId !== rootDirId) {
       const parentDir = await Directory.findOne({ _id: parentDirId })
-        .select("userId")
+        .select("userId path")
         .lean();
       if (parentDir && parentDir.userId) {
         ownerId = parentDir.userId.toString();
-        const canWrite = await hasWriteAccess(ownerId, req);
+        const canWrite = await verifyItemAccess(
+          ownerId,
+          req,
+          parentDirId,
+          "directory",
+          "write",
+          parentDir.path,
+        );
         if (!canWrite) {
           return res
             .status(403)
@@ -532,6 +711,9 @@ export const uploadFile = async (req, res) => {
         });
       }
 
+      await cacheDel("dir:contents:" + parentDirId);
+      await cacheDel("dir:meta:" + parentDirId);
+
       if (!res.writableEnded) return res.status(201).send("File uploaded");
     });
 
@@ -552,13 +734,22 @@ export const uploadFile = async (req, res) => {
 export const renameFile = async (req, res) => {
   try {
     const { fileId } = req.params;
-    const file = await File.findOne({ _id: fileId }).select("userId").lean();
+    const file = await File.findOne({ _id: fileId })
+      .select("userId parentDir path")
+      .lean();
 
     if (!file) {
       return res.status(404).send("File not found");
     }
     const ownerId = file.userId ? file.userId.toString() : req.user.id;
-    const canWrite = await hasWriteAccess(ownerId, req);
+    const canWrite = await verifyItemAccess(
+      ownerId,
+      req,
+      fileId,
+      "file",
+      "write",
+      file.path,
+    );
     if (!canWrite) {
       return res.status(403).send("You are not authorized to rename this file");
     }
@@ -567,6 +758,9 @@ export const renameFile = async (req, res) => {
       { _id: fileId },
       { $set: { name: sanitize(newFileName) } },
     );
+    if (file && file.parentDir) {
+      await cacheDel("dir:contents:" + file.parentDir.toString());
+    }
     return res.status(200).send("File renamed successfully");
   } catch {
     return res.status(500).send("Internal Server Error");
@@ -577,14 +771,21 @@ export const deleteFile = async (req, res) => {
   try {
     const { fileId } = req.params;
     const fileData = await File.findOne({ _id: fileId })
-      .select("userId parentDir size")
+      .select("userId parentDir size path")
       .lean();
 
     if (!fileData) {
       return res.status(404).send("File not found");
     }
     const ownerId = fileData.userId ? fileData.userId.toString() : req.user.id;
-    const canWrite = await hasWriteAccess(ownerId, req);
+    const canWrite = await verifyItemAccess(
+      ownerId,
+      req,
+      fileId,
+      "file",
+      "write",
+      fileData.path,
+    );
     if (!canWrite) {
       return res.status(403).send("You are not authorized to delete this file");
     }
@@ -593,7 +794,13 @@ export const deleteFile = async (req, res) => {
     session.startTransaction();
 
     try {
-      updateParentDirectorySize(fileData.parentDir, -fileData.size);
+      const isPermanent = req.query.permanent === "true";
+
+      await updateParentDirectorySize(
+        (fileData.path || []).slice(0, -1),
+        -fileData.size,
+        session,
+      );
 
       const deletedFile = await File.findOne({ _id: fileId })
         .select("-__v")
@@ -601,10 +808,26 @@ export const deleteFile = async (req, res) => {
         .lean();
       if (deletedFile) {
         await File.deleteOne({ _id: fileId }).session(session);
-        await Trash.create([deletedFile], { session });
+        if (!isPermanent) {
+          await Trash.create([deletedFile], { session });
+        } else {
+          // Physically delete the file and thumbnail
+          const filePath = path.join(
+            STORAGE_DIR,
+            `${fileId}${fileData.extension}`,
+          );
+          const thumbnailPath = path.join(THUMBNAILS_DIR, `${fileId}.jpg`);
+          unlink(filePath).catch(() => {});
+          unlink(thumbnailPath).catch(() => {});
+        }
       }
 
       await session.commitTransaction();
+
+      if (fileData.parentDir) {
+        await cacheDel("dir:contents:" + fileData.parentDir.toString());
+        await cacheDel("dir:meta:" + fileData.parentDir.toString());
+      }
 
       return res.status(200).send("File deleted successfully");
     } catch (txError) {
@@ -624,12 +847,19 @@ export const saveFile = async (req, res) => {
     const { fileId } = req.params;
     const { content } = req.body;
     const file = await File.findOne({ _id: fileId })
-      .select("userId extension parentDir")
+      .select("userId extension parentDir size path")
       .lean();
 
     if (!file) return res.status(404).send("File not found");
     const ownerId = file.userId ? file.userId.toString() : req.user.id;
-    const canWrite = await hasWriteAccess(ownerId, req);
+    const canWrite = await verifyItemAccess(
+      ownerId,
+      req,
+      fileId,
+      "file",
+      "write",
+      file.path,
+    );
     if (!canWrite) {
       return res.status(403).send("Unauthorized");
     }
@@ -641,9 +871,14 @@ export const saveFile = async (req, res) => {
 
     writeStream.on("finish", async () => {
       const stats = await stat(filePath);
+      const sizeDiff = stats.size - (file.size || 0);
       await File.updateOne({ _id: fileId }, { size: stats.size });
+      if (sizeDiff !== 0) {
+        await updateParentDirectorySize(file.parentDir, sizeDiff);
+      }
       if (file && file.parentDir) {
         await cacheDel("dir:meta:" + file.parentDir.toString());
+        await cacheDel("dir:contents:" + file.parentDir.toString());
       }
       return res.status(200).send("File saved");
     });

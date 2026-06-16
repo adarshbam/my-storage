@@ -21,14 +21,22 @@ const Users = () => {
   const [editRoleModalOpen, setEditRoleModalOpen] = useState(false);
   const [userToEditRole, setUserToEditRole] = useState(null);
 
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, loading: authLoading } = useAuth();
   const profilePicUrl = currentUser?.profilepic
     ? `${SERVER_URL}/user/profilepic?id=${currentUser.profilepic}`
     : null;
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (!authLoading) {
+      if (!currentUser) {
+        navigate("/login");
+      } else if (currentUser.role?.toUpperCase() === "USER") {
+        navigate("/dashboard");
+      } else {
+        fetchUsers();
+      }
+    }
+  }, [currentUser, authLoading, navigate]);
   console.log(users);
 
   const fetchUsers = async () => {

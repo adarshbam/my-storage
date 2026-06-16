@@ -13,6 +13,17 @@ const shareAccessSchema = new Schema(
         expires: 0,
       },
     },
+    items: {
+      type: [
+        {
+          id: { type: String, required: true },
+          type: { type: String, enum: ["file", "directory"], required: true },
+          provider: { type: String, required: true },
+          name: { type: String, required: true },
+        },
+      ],
+      default: [],
+    },
   },
   { strict: "throw" },
 );

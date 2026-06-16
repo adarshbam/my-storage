@@ -8,7 +8,7 @@ import {
 } from "react-router-dom";
 import { SERVER_URL } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
-import { joinUrl, cn, formatSize } from "../../lib/utils";
+import { joinUrl, cn, formatSize, getUser } from "../../lib/utils";
 import getFileImage from "../../lib/FileImages";
 import Button from "../ui/Button";
 import Editor from "react-simple-code-editor";
@@ -64,9 +64,10 @@ export default function FileBrowser({ specialView }) {
   const githubPath = params["*"];
   const driveFolderId = params.driveFolderId;
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const {
     openUploadModal,
+    openShareModal,
     uploadFile,
     downloadFile,
     setCurrentFolderId,
@@ -130,6 +131,125 @@ export default function FileBrowser({ specialView }) {
   const isReadOnly = specialView === "shared" || specialView === "admin";
   const ownerId = searchParams.get("ownerId");
 
+  const getBreadcrumbs = () => {
+    const list = [];
+    const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
+
+    // 1. Root Segment
+    if (specialView === "google-drive" || specialView === "google-drive-folder") {
+      list.push({
+        label: "Google Drive",
+        path: `/dashboard/google-drive${ownerParam}`,
+      });
+    } else if (specialView === "github" || specialView === "github-repo") {
+      list.push({
+        label: "GitHub",
+        path: `/dashboard/github${ownerParam}`,
+      });
+    } else if (specialView === "shared") {
+      list.push({
+        label: "Secure Relay",
+        path: `/dashboard/shared${ownerParam}`,
+      });
+    } else if (specialView === "recent") {
+      list.push({
+        label: "Activity Pulse",
+        path: `/dashboard/recent${ownerParam}`,
+      });
+    } else if (specialView === "starred") {
+      list.push({
+        label: "Priority Beacon",
+        path: `/dashboard/starred${ownerParam}`,
+      });
+    } else if (specialView === "admin") {
+      list.push({
+        label: "Admin View",
+        path: `/dashboard/admin${ownerParam}`,
+      });
+    } else {
+      // Local vault
+      list.push({
+        label: "Vault Chamber",
+        path: `/dashboard${ownerParam}`,
+      });
+    }
+
+    // 2. Middle & End Segments
+    if (specialView === "google-drive-folder" && driveFolderId) {
+      try {
+        const cached = JSON.parse(sessionStorage.getItem("folder_paths") || "{}");
+        const drivePath = [];
+        let currentId = driveFolderId;
+        
+        while (currentId && currentId !== "root" && cached[currentId]) {
+          drivePath.unshift({
+            label: cached[currentId].name,
+            path: `/dashboard/google-drive/${currentId}${ownerParam}`,
+          });
+          currentId = cached[currentId].parentId;
+        }
+
+        list.push(...drivePath);
+      } catch (e) {
+        console.error("Error building Drive path:", e);
+        if (dirName && dirName !== "Google Drive") {
+          list.push({
+            label: dirName,
+            path: `/dashboard/google-drive/${driveFolderId}${ownerParam}`,
+          });
+        }
+      }
+    } else if (specialView === "github-repo" && githubPath) {
+      const parts = githubPath.split("/").filter(Boolean);
+      if (parts.length > 0) {
+        const ownerRepo = parts.slice(0, 2).join("/");
+        list.push({
+          label: ownerRepo,
+          path: `/dashboard/github/${ownerRepo}${ownerParam}`,
+        });
+
+        let currentPath = ownerRepo;
+        for (let i = 2; i < parts.length; i++) {
+          currentPath += `/${parts[i]}`;
+          list.push({
+            label: parts[i],
+            path: `/dashboard/github/${currentPath}${ownerParam}`,
+          });
+        }
+      }
+    } else if (Array.isArray(dirPath) && dirPath.length > 0) {
+      dirPath.forEach(({ _id, name }) => {
+        if (_id === user?.rootDirId || _id === user?.rootDirectoryId) return;
+
+        let pathUrl = `/dashboard/folder/${_id}${ownerParam}`;
+        if (specialView === "shared") {
+          pathUrl = `/dashboard/shared/folder/${_id}${ownerParam}`;
+        } else if (specialView === "admin") {
+          pathUrl = `/dashboard/admin/folder/${_id}${ownerParam}`;
+        }
+
+        list.push({
+          label: name,
+          path: pathUrl,
+        });
+      });
+    } else if (folderId && dirName) {
+      let pathUrl = `/dashboard/folder/${folderId}${ownerParam}`;
+      if (specialView === "shared") {
+        pathUrl = `/dashboard/shared/folder/${folderId}${ownerParam}`;
+      } else if (specialView === "admin") {
+        pathUrl = `/dashboard/admin/folder/${folderId}${ownerParam}`;
+      }
+      
+      list.push({
+        label: dirName,
+        path: pathUrl,
+      });
+    }
+
+    return list;
+  };
+
   const handlePreview = (file) => {
     setPreviewFile(file);
   };
@@ -154,6 +274,9 @@ export default function FileBrowser({ specialView }) {
     setError(null);
     try {
       let url = joinUrl(SERVER_URL, "directory", folderId || "");
+
+      // Refresh user storage info
+      await getUser(setUser);
 
       if (specialView === "shared") {
         url = folderId
@@ -215,25 +338,50 @@ export default function FileBrowser({ specialView }) {
       if (response.ok) {
         if (specialView === "shared" && !folderId) {
           const result = await response.json();
-          const sharedDrives = (result.sharedAccesses || [])
-            .map((access) => {
-              const owner = access.userId;
-              if (!owner) return null;
-              return {
+          const dirs = [];
+          const files = [];
+
+          (result.sharedAccesses || []).forEach((access) => {
+            const owner = access.userId;
+            if (!owner) return;
+
+            if (!access.items || access.items.length === 0) {
+              // Full vault access
+              dirs.push({
                 _id: owner.rootDirId,
                 name: `${owner.name}'s Drive`,
                 type: "directory",
                 ownerEmail: owner.email,
                 provider: "shared_drive",
+                userId: owner._id,
                 itemCount: 0,
                 size: 0,
-              };
-            })
-            .filter(Boolean);
+              });
+            } else {
+              // Granular item-level access
+              access.items.forEach((item) => {
+                const mapped = {
+                  _id: item.id,
+                  name: item.name,
+                  type: item.type,
+                  userId: owner._id,
+                  provider: item.provider || "local",
+                  isShared: true,
+                  ownerEmail: owner.email,
+                  size: 0,
+                };
+                if (item.type === "directory") {
+                  dirs.push(mapped);
+                } else {
+                  files.push(mapped);
+                }
+              });
+            }
+          });
 
           setData({
-            directories: sharedDrives,
-            files: [],
+            directories: dirs,
+            files: files,
             parentDir: null,
             parentId: null,
           });
@@ -655,11 +803,12 @@ export default function FileBrowser({ specialView }) {
   }, [isDragging, startPoint, data]);
 
   // --- MODAL STATE ---
-  const [modalType, setModalType] = useState(null); // 'create' | 'create-file' | 'rename' | 'delete-github' | null
+  const [modalType, setModalType] = useState(null); // 'create' | 'create-file' | 'rename' | 'delete-github' | 'delete' | null
   const [modalItem, setModalItem] = useState(null);
   const [modalInput, setModalInput] = useState("");
   const [selectedExt, setSelectedExt] = useState(".txt");
   const [newFileContent, setNewFileContent] = useState("");
+  const [isPermanentDelete, setIsPermanentDelete] = useState(false);
   const [isCreateFullscreen, setIsCreateFullscreen] = useState(false);
   const createModalRef = useRef(null);
 
@@ -911,20 +1060,26 @@ export default function FileBrowser({ specialView }) {
     downloadFile(url, name);
   };
 
-  const handleDelete = async (item) => {
+  const handleDelete = (item) => {
     if (item.provider === "github") {
       setModalItem(item);
       setModalType("delete-github");
       return;
     }
+    
+    setModalItem(item);
+    setModalType("delete");
+    setIsPermanentDelete(false);
+  };
 
-    if (!confirm(`Are you sure you want to delete "${item.name}"?`)) return;
+  const handleDeleteConfirm = async () => {
+    const item = modalItem;
+    if (!item) return;
 
     try {
       let url;
 
       if (item.provider === "google_drive") {
-        // Drive uses a single /drive/file/:id endpoint for both files and folders
         url = `${SERVER_URL}/drive/file/${item._id}`;
       } else {
         const typeEndpoint = data.directories.find((d) => d._id === item._id)
@@ -933,9 +1088,11 @@ export default function FileBrowser({ specialView }) {
         url = `${SERVER_URL}/${typeEndpoint}/${item._id}`;
       }
 
-      if (ownerId) {
-        const separator = url.includes("?") ? "&" : "?";
-        url = `${url}${separator}ownerId=${ownerId}`;
+      if (ownerId || isPermanentDelete) {
+        const params = new URLSearchParams();
+        if (ownerId) params.append("ownerId", ownerId);
+        if (isPermanentDelete) params.append("permanent", "true");
+        url = `${url}?${params.toString()}`;
       }
 
       const res = await fetch(url, {
@@ -950,6 +1107,8 @@ export default function FileBrowser({ specialView }) {
       }
 
       fetchFiles();
+      setModalType(null);
+      setModalItem(null);
     } catch (err) {
       console.error("Delete failed", err);
       alert(err.message || "Failed to delete item");
@@ -1010,8 +1169,22 @@ export default function FileBrowser({ specialView }) {
     e.dataTransfer.setData("draggedItem", JSON.stringify(preparedItems[0]));
   };
 
-  const handleDragOver = (e) => {
+  const [dragOverTargetId, setDragOverTargetId] = useState(null);
+
+  const handleDragOver = (e, targetItem) => {
     e.preventDefault();
+    if (targetItem && targetItem.type === "directory") {
+      setDragOverTargetId(targetItem._id);
+    } else {
+      setDragOverTargetId(null);
+    }
+  };
+
+  const handleDragLeave = (e, targetItem) => {
+    // Only clear if we're leaving the actual card (not entering a child)
+    if (targetItem && !e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverTargetId(null);
+    }
   };
 
   const isObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
@@ -1019,6 +1192,7 @@ export default function FileBrowser({ specialView }) {
   const handleDrop = async (e, targetItem) => {
     e.preventDefault();
     e.stopPropagation();
+    setDragOverTargetId(null);
     if (isReadOnly) return;
 
     // Handle internal DnD FIRST
@@ -1033,26 +1207,56 @@ export default function FileBrowser({ specialView }) {
     }
 
     if (itemsToMove.length > 0) {
+      // Normalize targetItem: if it's a file, treat it as dropped into its parent directory
+      let finalTargetItem = targetItem;
+      if (targetItem && (targetItem.type === "file" || targetItem.extension)) {
+        const targetParentDir = targetItem.parentDir?._id || targetItem.parentDir;
+        finalTargetItem = {
+          _id: targetParentDir || folderId || user?.rootDirectoryId,
+          provider: targetItem.provider || "local",
+        };
+      }
+
+      const targetId = finalTargetItem?._id || finalTargetItem?.id;
+      const targetProvider = finalTargetItem?.provider || "local";
+
+      // Filter out same-directory moves
+      const isSameDirectory = itemsToMove.every((item) => {
+        const itemParentId = item.parentDir?._id || item.parentDir;
+        // Normalize comparison
+        const itemParentStr = itemParentId ? itemParentId.toString() : null;
+        const targetStr = targetId ? targetId.toString() : null;
+        
+        return (
+          itemParentStr === targetStr ||
+          (!targetStr && !itemParentStr) ||
+          (targetStr === (user?.rootDirectoryId || user?.rootDirId)?.toString() && !itemParentStr)
+        );
+      });
+
+      if (isSameDirectory) {
+        return;
+      }
+
       // Filter out if target is one of the moved items (can't move folder into itself)
-      if (targetItem && itemsToMove.some((i) => i._id === targetItem._id))
+      if (targetId && itemsToMove.some((i) => i._id === targetId))
         return;
 
       const sourceProviders = new Set(
         itemsToMove.map((i) => i.provider || "local"),
       );
-      const targetProvider = targetItem?.provider || "local";
       const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
 
       // 1. Internal Moves (Same Provider)
       if (sourceProviders.size === 1 && sourceProviders.has(targetProvider)) {
-        if (targetProvider === "github" && targetItem.githubPath) {
+        if (targetProvider === "github" && finalTargetItem.githubPath) {
           try {
             await fetch(`${SERVER_URL}/github/move${ownerParam}`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 items: itemsToMove,
-                targetPath: targetItem.githubPath,
+                targetPath: finalTargetItem.githubPath,
               }),
               credentials: "include",
             });
@@ -1065,8 +1269,8 @@ export default function FileBrowser({ specialView }) {
         }
 
         if (targetProvider === "google_drive") {
-          let targetId = targetItem._id;
-          if (isObjectId(targetId)) targetId = "root";
+          let driveTargetId = targetId;
+          if (isObjectId(driveTargetId)) driveTargetId = "root";
 
           try {
             await fetch(`${SERVER_URL}/drive/move${ownerParam}`, {
@@ -1074,7 +1278,7 @@ export default function FileBrowser({ specialView }) {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 items: itemsToMove,
-                targetId: targetId,
+                targetId: driveTargetId,
               }),
               credentials: "include",
             });
@@ -1088,12 +1292,13 @@ export default function FileBrowser({ specialView }) {
 
         if (targetProvider === "local") {
           try {
+            const payload = itemsToMove.map(item => ({ id: item._id || item.id, type: item.type }));
             await fetch(
-              `${SERVER_URL}/directory/${targetItem._id}/move${ownerParam}`,
+              `${SERVER_URL}/directory/${targetId}/move${ownerParam}`,
               {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(itemsToMove),
+                body: JSON.stringify(payload),
                 credentials: "include",
               },
             );
@@ -1110,7 +1315,7 @@ export default function FileBrowser({ specialView }) {
 
       // Drive -> Vault
       if (sourceProviders.has("google_drive") && targetProvider === "local") {
-        let targetFolderId = targetItem._id;
+        let targetFolderId = targetId;
         if (!targetFolderId || targetFolderId === "root")
           targetFolderId = user?.rootDirectoryId;
 
@@ -1134,7 +1339,7 @@ export default function FileBrowser({ specialView }) {
 
       // Vault -> Drive
       if (sourceProviders.has("local") && targetProvider === "google_drive") {
-        let targetDriveFolderId = targetItem._id;
+        let targetDriveFolderId = targetId;
         if (!targetDriveFolderId || isObjectId(targetDriveFolderId))
           targetDriveFolderId = "root";
 
@@ -1166,15 +1371,17 @@ export default function FileBrowser({ specialView }) {
       const files = Array.from(e.dataTransfer.files);
       let targetDirId = folderId; // default to current vault folder
 
-      if (targetItem && targetItem._id) {
-        if (targetItem.provider === "github" && targetItem.githubPath) {
+      const targetId = targetItem?._id || targetItem?.id;
+      if (targetId) {
+        const itemProvider = targetItem?.provider || "local";
+        if (itemProvider === "github" && targetItem.githubPath) {
           targetDirId = `github:${targetItem.githubPath}`;
-        } else if (targetItem.provider === "google_drive") {
-          targetDirId = isObjectId(targetItem._id)
+        } else if (itemProvider === "google_drive") {
+          targetDirId = isObjectId(targetId)
             ? `drive:root`
-            : `drive:${targetItem._id}`;
+            : `drive:${targetId}`;
         } else {
-          targetDirId = targetItem._id;
+          targetDirId = targetId;
         }
       } else if (
         specialView === "google-drive" ||
@@ -1209,11 +1416,11 @@ export default function FileBrowser({ specialView }) {
         specialView === "google-drive" ||
         specialView === "google-drive-folder"
       ) {
-        target = { id: driveFolderId || "root", provider: "google_drive" };
+        target = { _id: driveFolderId || "root", provider: "google_drive" };
       } else if (specialView === "github-repo") {
         target = { githubPath: githubPath, provider: "github" };
       } else {
-        target = { id: folderId || user?.rootDirectoryId };
+        target = { _id: folderId || user?.rootDirectoryId };
       }
       handleDrop(e, target);
       return;
@@ -1232,6 +1439,8 @@ export default function FileBrowser({ specialView }) {
       uploadFile(files, targetDirId);
     }
   };
+
+  const breadcrumbs = getBreadcrumbs();
 
   return (
     <div
@@ -1338,16 +1547,29 @@ export default function FileBrowser({ specialView }) {
               </svg>
             </button>
           )}
-          <h2 className="text-2xl capitalize font-bold text-white flex items-center gap-2 drop-shadow-md tracking-wide">
-            {Array.isArray(dirPath) &&
-              dirPath.map(({ _id, name }, index) => (
-                <button
-                  key={_id}
-                  onClick={() => navigate(`/dashboard/folder/${_id}`)}
-                >
-                  {name} {dirPath.length - 1 != index ? "/" : ""}
-                </button>
-              ))}
+          <div className="flex items-center flex-wrap gap-1 text-xl md:text-2xl font-bold text-white drop-shadow-md tracking-wide">
+            {breadcrumbs.map((crumb, idx) => {
+              const isLast = idx === breadcrumbs.length - 1;
+              return (
+                <div key={idx} className="flex items-center gap-1">
+                  {idx > 0 && (
+                    <span className="text-white/20 select-none font-light mx-0.5">/</span>
+                  )}
+                  {isLast ? (
+                    <span className="text-white font-extrabold capitalize truncate max-w-[240px] select-none">
+                      {crumb.label}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => navigate(crumb.path)}
+                      className="text-white/40 hover:text-white capitalize transition-all duration-200 select-none hover:translate-y-[-0.5px]"
+                    >
+                      {crumb.label}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
             {folderId && !isSearch && !isReadOnly && (
               <button
                 onClick={() => {
@@ -1359,13 +1581,13 @@ export default function FileBrowser({ specialView }) {
                   setModalInput(dirName);
                   setModalType("rename");
                 }}
-                className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-md transition-all ml-2"
+                className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-md transition-all ml-1 shrink-0"
                 title="Rename Folder"
               >
                 <Edit2 size={16} />
               </button>
             )}
-          </h2>
+          </div>
 
           {specialView === "github-repo" && branches.length > 0 && (
             <div className="flex items-center gap-1.5 px-2 py-1 bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm border border-black/10 dark:border-white/10 rounded-lg shadow-sm">
@@ -1493,19 +1715,22 @@ export default function FileBrowser({ specialView }) {
               onPreview={handlePreview}
               onDetails={(item) => setDetailsItem(item)}
               onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
+              onDragOver={(e) => handleDragOver(e, dir)}
+              onDragLeave={(e) => handleDragLeave(e, dir)}
               onDrop={handleDrop}
               viewMode={viewMode}
               readOnly={isReadOnly}
               onCopy={handleCopyItem}
               onCut={handleCutItem}
               isCut={clipboard && clipboard.action === "cut" && clipboard.items.some((i) => i._id === dir._id)}
+              isDragOver={dragOverTargetId === dir._id}
               isIntegrationRoot={
                 (!specialView &&
                   (dir.provider === "google_drive" ||
                     dir.provider === "github")) ||
                 (specialView === "github" && dir.provider === "github")
               }
+              onShare={openShareModal}
             />
           ))}
           {data.files.map((file) => (
@@ -1522,13 +1747,14 @@ export default function FileBrowser({ specialView }) {
               onPreview={handlePreview}
               onDetails={(item) => setDetailsItem(item)}
               onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
+              onDragOver={(e) => handleDragOver(e, file)}
               onDrop={handleDrop}
               viewMode={viewMode}
               readOnly={isReadOnly}
               onCopy={handleCopyItem}
               onCut={handleCutItem}
               isCut={clipboard && clipboard.action === "cut" && clipboard.items.some((i) => i._id === file._id)}
+              onShare={openShareModal}
             />
           ))}
 
@@ -1629,46 +1855,95 @@ export default function FileBrowser({ specialView }) {
           </span>
           <div className="h-4 w-px bg-slate-700"></div>
           <button
+            onClick={handleCopySelected}
+            className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm"
+            title="Bulk Copy"
+          >
+            <Copy size={16} /> Copy
+          </button>
+          <button
+            onClick={handleCutSelected}
+            className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm"
+            title="Bulk Move"
+          >
+            <Scissors size={16} /> Move
+          </button>
+          <button
+            onClick={() => {
+              openShareModal(selectedItems);
+              setSelectedItems([]);
+            }}
+            className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm"
+            title="Bulk Share"
+          >
+            <Share2 size={16} className="text-purple-400" /> Share
+          </button>
+          <div className="h-4 w-px bg-slate-700"></div>
+          <button
             onClick={async () => {
               if (!confirm(`Delete ${selectedItems.length} items?`)) return;
-              const deletePromises = selectedItems.map((item) => {
-                const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
-                if (item.provider === "google_drive") {
-                  return fetch(
-                    `${SERVER_URL}/drive/file/${item._id}${ownerParam}`,
-                    {
-                      method: "DELETE",
-                      credentials: "include",
-                    },
-                  );
-                } else if (item.provider === "github") {
-                  return fetch(
-                    `${SERVER_URL}/github/file/${item.githubPath}${ownerParam}`,
-                    {
-                      method: "DELETE",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ sha: item.sha }),
-                      credentials: "include",
-                    },
-                  );
-                } else {
-                  const typeEndpoint = data.directories.find(
-                    (d) => d._id === item._id,
-                  )
-                    ? "directory"
-                    : "file";
-                  return fetch(
-                    `${SERVER_URL}/${typeEndpoint}/${item._id}${ownerParam}`,
-                    {
-                      method: "DELETE",
-                      credentials: "include",
-                    },
-                  );
+              try {
+                const localItems = selectedItems.filter(
+                  (item) => item.provider !== "google_drive" && item.provider !== "github"
+                );
+                const externalItems = selectedItems.filter(
+                  (item) => item.provider === "google_drive" || item.provider === "github"
+                );
+
+                if (localItems.length > 0) {
+                  const requestBody = localItems.map((item) => {
+                    const type = data.directories.some((d) => d._id === item._id)
+                      ? "directory"
+                      : "file";
+                    return { id: item._id, type };
+                  });
+
+                  const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
+                  const res = await fetch(`${SERVER_URL}/directory/delete-batch${ownerParam}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(requestBody),
+                    credentials: "include",
+                  });
+
+                  if (!res.ok) {
+                    const errResult = await res.json().catch(() => ({}));
+                    throw new Error(errResult.error || "Batch delete failed");
+                  }
                 }
-              });
-              await Promise.all(deletePromises);
-              fetchFiles();
-              setSelectedItems([]);
+
+                if (externalItems.length > 0) {
+                  const deletePromises = externalItems.map((item) => {
+                    const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
+                    if (item.provider === "google_drive") {
+                      return fetch(
+                        `${SERVER_URL}/drive/file/${item._id}${ownerParam}`,
+                        {
+                          method: "DELETE",
+                          credentials: "include",
+                        },
+                      );
+                    } else {
+                      return fetch(
+                        `${SERVER_URL}/github/file/${item.githubPath}${ownerParam}`,
+                        {
+                          method: "DELETE",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ sha: item.sha }),
+                          credentials: "include",
+                        },
+                      );
+                    }
+                  });
+                  await Promise.all(deletePromises);
+                }
+
+                fetchFiles();
+                setSelectedItems([]);
+              } catch (err) {
+                console.error("Batch delete error:", err);
+                alert(err.message || "Failed to delete some items");
+              }
             }}
             className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors font-medium text-sm"
           >
@@ -1714,7 +1989,9 @@ export default function FileBrowser({ specialView }) {
                 ? "Create New GitHub Repository"
                 : modalType === "rename"
                   ? "Rename Item"
-                  : "Danger: Permanent Deletion"
+                  : modalType === "delete"
+                    ? "Confirm Deletion"
+                    : "Danger: Permanent Deletion"
         }
       >
         <div
@@ -1724,7 +2001,64 @@ export default function FileBrowser({ specialView }) {
             isCreateFullscreen && "h-full flex flex-col p-4",
           )}
         >
-          {modalType === "delete-github" ? (
+          {modalType === "delete" ? (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                <div>
+                  <div className="font-medium text-slate-700 dark:text-slate-300">
+                    Permanent Delete
+                  </div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                    {isPermanentDelete ? "Item will be permanently erased" : "Item will be moved to trash"}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isPermanentDelete}
+                  onClick={() => setIsPermanentDelete(!isPermanentDelete)}
+                  className={cn(
+                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
+                    isPermanentDelete ? "bg-red-500" : "bg-slate-300 dark:bg-slate-600"
+                  )}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                      isPermanentDelete ? "translate-x-5" : "translate-x-0"
+                    )}
+                  />
+                </button>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setModalType(null);
+                    setModalItem(null);
+                    setIsPermanentDelete(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  className={cn(
+                    "flex-1 text-white",
+                    isPermanentDelete 
+                      ? "bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700" 
+                      : "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600"
+                  )}
+                  onClick={handleDeleteConfirm}
+                >
+                  {isPermanentDelete ? "Delete Permanently" : "Move to Trash"}
+                </Button>
+              </div>
+            </div>
+          ) : modalType === "delete-github" ? (
             <div className="space-y-6">
               <div className="flex items-center gap-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/30">
                 <div className="p-3 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-full shrink-0">

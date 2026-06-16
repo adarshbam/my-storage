@@ -1,5 +1,7 @@
 import SharedAccess from "../models/sharedAccessModel.js";
 import { cacheGet, cacheSet } from "./redis.js";
+import Directory from "../models/directoryModel.js";
+import File from "../models/fileModel.js";
 
 /**
  * Helper to get cached SharedAccess record with negative caching.
@@ -19,7 +21,7 @@ export async function getCachedSharedAccess(ownerId, guestUserId) {
   }).lean();
   
   const result = sharedAccess
-    ? { permission: sharedAccess.permission, exists: true }
+    ? { permission: sharedAccess.permission, items: sharedAccess.items || [], exists: true }
     : null;
   
   await cacheSet(cacheKey, result ? JSON.stringify(result) : "null", 300); // 5-minute TTL
@@ -79,6 +81,80 @@ export async function hasWriteAccess(ownerId, req) {
   const sharedAccess = await getCachedSharedAccess(ownerId, req.user.id);
   
   if (sharedAccess && (sharedAccess.permission.includes("write") || sharedAccess.permission.includes("owner"))) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Helper to determine if requesting user has specific item access (granular item-level sharing)
+ */
+export async function verifyItemAccess(ownerId, req, itemId, itemType, permissionNeeded = "read", pathArray = null) {
+  if (!ownerId) return true;
+  if (ownerId.toString() === req.user.id) {
+    return true;
+  }
+  
+  // Administrators/Managers bypass read authorization checks for local files
+  if (permissionNeeded === "read" && (req.user.role === "Owner" || req.user.role === "Admin" || req.user.role === "Manager")) {
+    return true;
+  }
+  
+  // Write actions are forbidden for Admins/Owners in others' drives
+  if (permissionNeeded === "write" && (req.user.role === "Owner" || req.user.role === "Admin")) {
+    return false;
+  }
+  
+  const sharedAccess = await getCachedSharedAccess(ownerId, req.user.id);
+  if (!sharedAccess) {
+    return false;
+  }
+  
+  // Validate basic permission type (read or write)
+  if (permissionNeeded === "write") {
+    if (!sharedAccess.permission.includes("write") && !sharedAccess.permission.includes("owner")) {
+      return false;
+    }
+  } else {
+    if (!sharedAccess.permission.includes("read") && !sharedAccess.permission.includes("write") && !sharedAccess.permission.includes("owner")) {
+      return false;
+    }
+  }
+  
+  // If items array is empty, grant full vault access (legacy behavior)
+  if (!sharedAccess.items || sharedAccess.items.length === 0) {
+    return true;
+  }
+  
+  // Check if current item itself is directly shared
+  const sharedItemIds = sharedAccess.items.map(i => i.id);
+  if (itemId && sharedItemIds.includes(itemId.toString())) {
+    return true;
+  }
+  
+  // If parent path is not supplied, fetch it
+  let resolvedPath = pathArray;
+  if (!resolvedPath && itemId) {
+    if (itemType === "directory") {
+      const dirDoc = await Directory.findById(itemId).select("path").lean();
+      resolvedPath = dirDoc ? dirDoc.path : [];
+    } else {
+      const fileDoc = await File.findById(itemId).select("path").lean();
+      resolvedPath = fileDoc ? fileDoc.path : [];
+    }
+  }
+  
+  // Check if any ancestor directory ID is in sharedItemIds
+  const ancestorIds = (resolvedPath || []).map(p => {
+    if (p && typeof p === "object") {
+      return (p._id || p).toString();
+    }
+    return p ? p.toString() : "";
+  });
+  
+  const isAncestorShared = ancestorIds.some(id => sharedItemIds.includes(id));
+  if (isAncestorShared) {
     return true;
   }
   

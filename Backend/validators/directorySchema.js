@@ -32,6 +32,10 @@ export const deleteDirectorySchema = {
   params: z.object({
     dirId: objectIdSchema,
   }),
+  query: z.object({
+    ownerId: z.string().optional(),
+    permanent: z.string().optional(),
+  }).optional(),
 };
 
 export const moveDirectorySchema = {
@@ -47,3 +51,12 @@ export const moveDirectorySchema = {
 };
 
 export const copyDirectorySchema = moveDirectorySchema;
+
+export const deleteDirectoryBatchSchema = {
+  body: z.array(
+    z.object({
+      id: objectIdSchema,
+      type: z.enum(["file", "directory"]),
+    })
+  ),
+};

@@ -20,11 +20,6 @@ import { formatSpeed, formatTime, cn } from "../../lib/utils";
 import getFileImage from "../../lib/FileImages";
 import Card from "../ui/Card";
 
-const MAX_FILE_SIZE = parseInt(
-  import.meta.env.VITE_MAX_FILE_SIZE || "104857600",
-  10,
-);
-
 // Custom helper to generate 24 character hex strings for MongoDB ObjectId compatibility
 const generateObjectId = () => {
   return [...Array(24)]
@@ -35,9 +30,29 @@ const generateObjectId = () => {
 const TransferManager = forwardRef((props, ref) => {
   const [transfers, setTransfers] = useState([]);
   const [minimized, setMinimized] = useState(false);
+  const [maxFileSize, setMaxFileSize] = useState(50 * 1024 * 1024); // Dynamic limit, default 50MB
   const downloadReaders = useRef({});
   const abortControllers = useRef({});
   const downloadWritables = useRef({});
+
+  useEffect(() => {
+    async function loadConfig() {
+      try {
+        const res = await fetch(`${SERVER_URL}/system-config`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.maxFileSizeLimit) {
+            setMaxFileSize(data.maxFileSizeLimit);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch system config in client size validation", err);
+      }
+    }
+    loadConfig();
+  }, []);
 
   const searchParams = new URLSearchParams(window.location.search);
   const ownerId = searchParams.get("ownerId");
@@ -176,7 +191,16 @@ const TransferManager = forwardRef((props, ref) => {
         // Remove from list after a short delay or keep it?
         // User wants to see progress. We keep it as completed.
       } else {
-        updateTransfer(_id, { status: "error", speed: 0 });
+        let errMsg = "Error";
+        try {
+          const resObj = JSON.parse(xhr.responseText);
+          errMsg = resObj.error || resObj.message || "Error";
+        } catch (e) {
+          if (xhr.responseText) {
+            errMsg = xhr.responseText;
+          }
+        }
+        updateTransfer(_id, { status: "error", speed: 0, errorMessage: errMsg });
       }
       delete abortControllers.current[_id];
     };
@@ -202,7 +226,7 @@ const TransferManager = forwardRef((props, ref) => {
       const id = existingId || generateObjectId();
 
       if (!existingId) {
-        if (file.size > MAX_FILE_SIZE) {
+        if (file.size > maxFileSize) {
           setTransfers((prev) => [
             ...prev,
             {
@@ -245,7 +269,7 @@ const TransferManager = forwardRef((props, ref) => {
         updateTransfer(id, { status: "queued", speed: 0 });
       }
     },
-    [updateTransfer],
+    [updateTransfer, maxFileSize],
   );
 
   const uploadFiles = useCallback((files, dirId) => {
@@ -256,8 +280,8 @@ const TransferManager = forwardRef((props, ref) => {
       progress: 0,
       loaded: 0,
       total: file.size,
-      status: "queued", // BYPASSED: file.size > MAX_FILE_SIZE ? "error" : "queued",
-      errorMessage: undefined, // BYPASSED: file.size > MAX_FILE_SIZE ? "File too large" : undefined,
+      status: file.size > maxFileSize ? "error" : "queued",
+      errorMessage: file.size > maxFileSize ? "File too large" : undefined,
       speed: 0,
       timeRemaining: 0,
       file: file,
@@ -266,7 +290,7 @@ const TransferManager = forwardRef((props, ref) => {
 
     setTransfers((prev) => [...prev, ...newTransfers]);
     setMinimized(false);
-  }, []);
+  }, [maxFileSize]);
 
   // --- DOWNLOAD LOGIC ---
   const downloadFile = async (

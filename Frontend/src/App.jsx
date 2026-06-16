@@ -66,7 +66,6 @@ function App() {
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<LandingPage />} />
-              <Route path="/users" element={<Users />} />
               <Route
                 path="/shared-access/:token"
                 element={<SharedAccessClaim />}
@@ -79,6 +78,7 @@ function App() {
 
               <Route element={<ProtectedRoute />}>
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/users" element={<Users />} />
               </Route>
 
               <Route path="/dashboard" element={<ProtectedRoute />}>

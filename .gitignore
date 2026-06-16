@@ -14,3 +14,4 @@ Backend/node_modules
 # SSL Credentials for local development
 Backend/server.cert
 Backend/server.key
+db

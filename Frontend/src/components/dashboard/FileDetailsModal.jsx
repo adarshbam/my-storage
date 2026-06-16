@@ -6,6 +6,7 @@ import {
   EncryptionBadgeIcon,
 } from "../ui/VaultIcons";
 import { SERVER_URL } from "../../lib/api";
+import getFileImage from "../../lib/FileImages";
 
 export default function FileDetailsModal({ item, onClose }) {
   if (!item) return null;
@@ -50,7 +51,7 @@ export default function FileDetailsModal({ item, onClose }) {
           />
 
           <div
-            className={`rounded-lg bg-vault-black border-white ${item.type === "file" ? "border-4" : ""} flex overflow-hidden items-center justify-center shrink-0 mb-4 relative z-10 shadow-xl`}
+            className={`rounded-lg ${item.type === "file" && item.hasThumbnail ? "bg-vault-black border-4 border-white shadow-xl" : ""} flex overflow-hidden items-center justify-center shrink-0 mb-4 relative z-10`}
           >
             {isDirectory ? (
               provider === "google_drive" ? (
@@ -79,11 +80,18 @@ export default function FileDetailsModal({ item, onClose }) {
                   </svg>
                 </div>
               )
-            ) : (
+            ) : item.hasThumbnail ? (
               <img
                 src={`${SERVER_URL}/file/${item._id}/thumbnail`}
+                alt="thumbnail"
+                className="w-full h-full object-cover drop-shadow-[0_5px_10px_rgba(0,0,0,0.5)]"
+                draggable={false}
+              />
+            ) : (
+              <img
+                src={getFileImage(ext)}
                 alt="icon"
-                className="object-contain drop-shadow-[0_5px_10px_rgba(0,0,0,0.5)]"
+                className="w-16 h-16 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
                 draggable={false}
               />
             )}
@@ -134,15 +142,46 @@ export default function FileDetailsModal({ item, onClose }) {
               <p className="text-[10px] uppercase font-bold text-white/30 tracking-wider">
                 Path
               </p>
-              <p className="text-sm text-white/80">
-                {Array.isArray(item.path) &&
-                  item.path.map(({ name }, index) => (
-                    <span key={index}>
-                      {name}
-                      {item.path.length - 1 != index ? "/" : ""}
-                    </span>
-                  ))}
-              </p>
+              <div className="text-sm text-white/80 flex flex-wrap items-center gap-1 font-medium mt-0.5">
+                {/* Root Segment */}
+                <span className="text-white/40 font-normal">
+                  {provider === "google_drive"
+                    ? "Google Drive"
+                    : provider === "github"
+                      ? "GitHub"
+                      : provider === "shared_drive"
+                        ? "Secure Relay"
+                        : "Vault Chamber"}
+                </span>
+
+                {/* Separator if path or item name exists */}
+                <span className="text-white/20 select-none">/</span>
+
+                {/* Path Segments */}
+                {Array.isArray(item.path) && item.path.length > 0 ? (
+                  item.path.map(({ name }, index) => {
+                    const isLast = index === item.path.length - 1;
+                    return (
+                      <span key={index} className="flex items-center gap-1">
+                        <span
+                          className={
+                            isLast
+                              ? "text-white font-semibold"
+                              : "text-white/50 font-normal"
+                          }
+                        >
+                          {name}
+                        </span>
+                        {!isLast && (
+                          <span className="text-white/20 select-none">/</span>
+                        )}
+                      </span>
+                    );
+                  })
+                ) : (
+                  <span className="text-white font-semibold">{item.name}</span>
+                )}
+              </div>
             </div>
           </div>
           {isDirectory ? (

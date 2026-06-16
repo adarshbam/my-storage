@@ -54,4 +54,8 @@ export const deleteFileSchema = {
   params: z.object({
     fileId: objectIdSchema,
   }),
+  query: z.object({
+    ownerId: z.string().optional(),
+    permanent: z.string().optional(),
+  }).optional(),
 };
