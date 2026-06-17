@@ -8,14 +8,11 @@ import { Readable } from "stream";
 import archiver from "archiver";
 import path from "path";
 import { createWriteStream, createReadStream } from "fs";
-import { fileURLToPath } from "url";
 import { stat, mkdir, unlink } from "fs/promises";
 import mongoose from "mongoose";
 import { pipeline } from "stream/promises";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const STORAGE_DIR = path.join(__dirname, "../storage");
+const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 
 import {
   resolveIntegrationOwnerId,

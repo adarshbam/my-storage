@@ -1,4 +1,5 @@
 import { rm } from "node:fs/promises";
+import path from "node:path";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import Session from "../models/sessionModel.js";
@@ -7,6 +8,7 @@ import { invalidateUserSessions } from "../utils/redis.js";
 import { BACKEND_URL } from "../config.js";
 
 const hierarchy = ["User", "Manager", "Admin", "Owner"];
+const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 
 export const getAllSystemUsers = async (req, res) => {
   console.log("GET /users called");
@@ -79,12 +81,12 @@ export const deleteSystemUser = async (req, res) => {
     const files = await File.find({ userId: id });
 
     for (const file of files) {
-      const filePath = `./storage/${file._id.toString()}${file.extension}`;
+      const filePath = path.join(STORAGE_DIR, `${file._id.toString()}${file.extension}`);
       try {
         await rm(filePath, { recursive: true, force: true });
 
         // Also delete thumbnail
-        await rm(`./storage/thumbnails/${file._id.toString()}.jpg`, {
+        await rm(path.join(STORAGE_DIR, "thumbnails", `${file._id.toString()}.jpg`), {
           force: true,
         }).catch(() => {});
       } catch (err) {

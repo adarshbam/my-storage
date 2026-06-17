@@ -1,10 +1,13 @@
 import { rm } from "fs/promises";
+import path from "node:path";
 import mongoose from "mongoose";
 import File from "../models/fileModel.js";
 import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 import { updateParentDirectorySize } from "./fileController.js";
+
+const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 
 export const getTrashItems = async (req, res, next) => {
   try {
@@ -105,12 +108,12 @@ export const emptyTrash = async (req, res) => {
         // Clean up all child files/directories still in File/Directory collections
         await deleteByParentChain(trashItem._id.toString());
       } else {
-        const filePath = `./storage/${trashItem._id.toString()}${trashItem.extension}`;
+        const filePath = path.join(STORAGE_DIR, `${trashItem._id.toString()}${trashItem.extension}`);
         try {
           await rm(filePath, { recursive: true, force: true });
 
           // Also try to delete thumbnail if exists
-          const thumbPath = `./storage/thumbnails/${trashItem._id.toString()}.jpg`;
+          const thumbPath = path.join(STORAGE_DIR, "thumbnails", `${trashItem._id.toString()}.jpg`);
           await rm(thumbPath, { force: true }).catch(() => {});
         } catch (err) {
           console.error(`Failed to delete file ${filePath}:`, err);
@@ -213,12 +216,12 @@ export const deleteFileForever = async (req, res) => {
 
     console.log("Deleting forever:", trashFile);
 
-    const filePath = `./storage/${trashFile._id.toString()}${trashFile.extension}`;
+    const filePath = path.join(STORAGE_DIR, `${trashFile._id.toString()}${trashFile.extension}`);
     try {
       await rm(filePath, { recursive: true, force: true });
 
       // Also delete thumbnail
-      await rm(`./storage/thumbnails/${trashFile._id.toString()}.jpg`, {
+      await rm(path.join(STORAGE_DIR, "thumbnails", `${trashFile._id.toString()}.jpg`), {
         force: true,
       }).catch(() => {});
     } catch (err) {
@@ -245,11 +248,11 @@ export async function deleteByParentChain(parentId) {
   }
 
   for (const file of filesToDelete) {
-    await rm(`./storage/${file._id.toString()}${file.extension}`, {
+    await rm(path.join(STORAGE_DIR, `${file._id.toString()}${file.extension}`), {
       force: true,
     }).catch(() => {});
     // Delete thumbnail
-    await rm(`./storage/thumbnails/${file._id.toString()}.jpg`, {
+    await rm(path.join(STORAGE_DIR, "thumbnails", `${file._id.toString()}.jpg`), {
       force: true,
     }).catch(() => {});
   }
@@ -436,10 +439,10 @@ export const batchDelete = async (req, res) => {
           .select("_id extension")
           .lean();
         if (trashFile) {
-          const filePath = `./storage/${trashFile._id.toString()}${trashFile.extension}`;
+          const filePath = path.join(STORAGE_DIR, `${trashFile._id.toString()}${trashFile.extension}`);
           try {
             await rm(filePath, { recursive: true, force: true });
-            await rm(`./storage/thumbnails/${trashFile._id.toString()}.jpg`, {
+            await rm(path.join(STORAGE_DIR, "thumbnails", `${trashFile._id.toString()}.jpg`), {
               force: true,
             }).catch(() => {});
           } catch (err) {

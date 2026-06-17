@@ -26,6 +26,8 @@ import OTP from "../models/otpModel.js";
 import { z } from "zod";
 import { loginSchema, registerSchema } from "../validators/authSchema.js";
 
+const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
+
 // ─── User Info ──────────────────────────────────────────────────────────────────
 
 export const getUser = async (req, res) => {
@@ -510,7 +512,7 @@ export const uploadProfilePic = async (req, res) => {
 
   await File.create(newProfilePic);
 
-  const filePath = `./storage/${profilePicId.toString()}${ext}`;
+  const filePath = path.join(STORAGE_DIR, `${profilePicId.toString()}${ext}`);
 
   // Clean up old profile pic (local file or external URL doc)
   if (user.profilepic) {
@@ -524,7 +526,7 @@ export const uploadProfilePic = async (req, res) => {
       // Only remove local file if it's not an external URL
       if (!oldProfilePic.externalUrl) {
         await rm(
-          `./storage/${oldProfilePic._id.toString()}${oldProfilePic.extension}`,
+          path.join(STORAGE_DIR, `${oldProfilePic._id.toString()}${oldProfilePic.extension}`),
         ).catch(() => {});
       }
     }
@@ -590,8 +592,9 @@ export const getProfilePic = async (req, res) => {
     return res.redirect(profilePic.externalUrl);
   }
 
-  const filePath = path.resolve(
-    `./storage/${profilePic._id.toString()}${profilePic.extension}`,
+  const filePath = path.join(
+    STORAGE_DIR,
+    `${profilePic._id.toString()}${profilePic.extension}`,
   );
   return res.status(200).sendFile(filePath);
 };

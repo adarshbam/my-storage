@@ -165,7 +165,7 @@ const sslOptions = {
 
 const httpsServer = https.createServer(sslOptions, app);
 
-const UPLOAD_DIR = "./storage";
+const UPLOAD_DIR = path.join(import.meta.dirname, "storage");
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
 async function cleanFiles() {

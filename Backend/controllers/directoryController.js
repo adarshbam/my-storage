@@ -1,6 +1,5 @@
 import archiver from "archiver";
 import path from "path";
-import { fileURLToPath } from "url";
 import fs from "fs/promises";
 import { sanitize } from "../utils/sanitize.js";
 import mongoose from "mongoose";
@@ -16,9 +15,7 @@ import {
 } from "./fileController.js";
 import { deleteByParentChain } from "./trashController.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const STORAGE_DIR = path.join(__dirname, "../storage");
+const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 const THUMBNAILS_DIR = path.join(STORAGE_DIR, "thumbnails");
 
 const getDirectorySize = async (dirId) => {

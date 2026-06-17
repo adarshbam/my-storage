@@ -3,7 +3,6 @@ import { Transform } from "stream";
 import { sanitize } from "../utils/sanitize.js";
 import path from "path";
 import { stat, unlink, mkdir } from "fs/promises";
-import { fileURLToPath } from "url";
 import SharedAccess from "../models/sharedAccessModel.js";
 import {
   hasWriteAccess,
@@ -11,11 +10,8 @@ import {
 } from "../utils/integrationHelper.js";
 import { escapeRegExp } from "../utils/escapeRegExp.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 // Absolute path to the storage directory (Backend/storage/)
-const STORAGE_DIR = path.join(__dirname, "../storage");
+const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 const THUMBNAILS_DIR = path.join(STORAGE_DIR, "thumbnails");
 
 // Ensure storage directories exist
