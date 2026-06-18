@@ -12,6 +12,10 @@ const fileSchema = new Schema(
       type: Schema.Types.Array,
       default: [],
     },
+    starred: {
+      type: Boolean,
+      default: false,
+    },
     hasThumbnail: { type: Boolean, default: false },
     externalUrl: { type: String, default: null },
   },

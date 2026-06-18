@@ -20,6 +20,10 @@ const directorySchema = new Schema(
       type: String,
       default: "directory",
     },
+    starred: {
+      type: Boolean,
+      default: false,
+    },
     size: {
       type: Number,
       default: 0,

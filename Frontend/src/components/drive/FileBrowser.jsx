@@ -136,7 +136,10 @@ export default function FileBrowser({ specialView }) {
     const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
 
     // 1. Root Segment
-    if (specialView === "google-drive" || specialView === "google-drive-folder") {
+    if (
+      specialView === "google-drive" ||
+      specialView === "google-drive-folder"
+    ) {
       list.push({
         label: "Google Drive",
         path: `/dashboard/google-drive${ownerParam}`,
@@ -177,10 +180,12 @@ export default function FileBrowser({ specialView }) {
     // 2. Middle & End Segments
     if (specialView === "google-drive-folder" && driveFolderId) {
       try {
-        const cached = JSON.parse(sessionStorage.getItem("folder_paths") || "{}");
+        const cached = JSON.parse(
+          sessionStorage.getItem("folder_paths") || "{}",
+        );
         const drivePath = [];
         let currentId = driveFolderId;
-        
+
         while (currentId && currentId !== "root" && cached[currentId]) {
           drivePath.unshift({
             label: cached[currentId].name,
@@ -240,7 +245,7 @@ export default function FileBrowser({ specialView }) {
       } else if (specialView === "admin") {
         pathUrl = `/dashboard/admin/folder/${folderId}${ownerParam}`;
       }
-      
+
       list.push({
         label: dirName,
         path: pathUrl,
@@ -553,7 +558,14 @@ export default function FileBrowser({ specialView }) {
     if (isReadOnly) return;
     const prepared = {
       action: "copy",
-      items: [{ _id: item._id, name: item.name, type: item.type || (item.extension ? "file" : "directory"), provider: item.provider || "local" }]
+      items: [
+        {
+          _id: item._id,
+          name: item.name,
+          type: item.type || (item.extension ? "file" : "directory"),
+          provider: item.provider || "local",
+        },
+      ],
     };
     updateClipboard(prepared);
   };
@@ -562,7 +574,14 @@ export default function FileBrowser({ specialView }) {
     if (isReadOnly) return;
     const prepared = {
       action: "cut",
-      items: [{ _id: item._id, name: item.name, type: item.type || (item.extension ? "file" : "directory"), provider: item.provider || "local" }]
+      items: [
+        {
+          _id: item._id,
+          name: item.name,
+          type: item.type || (item.extension ? "file" : "directory"),
+          provider: item.provider || "local",
+        },
+      ],
     };
     updateClipboard(prepared);
   };
@@ -571,12 +590,12 @@ export default function FileBrowser({ specialView }) {
     if (isReadOnly || selectedItems.length === 0) return;
     const prepared = {
       action: "copy",
-      items: selectedItems.map(item => ({
+      items: selectedItems.map((item) => ({
         _id: item._id,
         name: item.name,
         type: item.type || (item.extension ? "file" : "directory"),
-        provider: item.provider || "local"
-      }))
+        provider: item.provider || "local",
+      })),
     };
     updateClipboard(prepared);
     setSelectedItems([]);
@@ -586,12 +605,12 @@ export default function FileBrowser({ specialView }) {
     if (isReadOnly || selectedItems.length === 0) return;
     const prepared = {
       action: "cut",
-      items: selectedItems.map(item => ({
+      items: selectedItems.map((item) => ({
         _id: item._id,
         name: item.name,
         type: item.type || (item.extension ? "file" : "directory"),
-        provider: item.provider || "local"
-      }))
+        provider: item.provider || "local",
+      })),
     };
     updateClipboard(prepared);
     setSelectedItems([]);
@@ -602,10 +621,15 @@ export default function FileBrowser({ specialView }) {
 
     const targetFolderId = folderId || ""; // empty if root
     const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
-    
+
     // Check provider (only Vault local support)
-    const targetProvider = specialView === "google-drive" || specialView === "google-drive-folder" ? "google_drive" : (specialView === "github" || specialView === "github-repo" ? "github" : "local");
-    
+    const targetProvider =
+      specialView === "google-drive" || specialView === "google-drive-folder"
+        ? "google_drive"
+        : specialView === "github" || specialView === "github-repo"
+          ? "github"
+          : "local";
+
     if (targetProvider !== "local") {
       alert("Copy/Paste is only supported in the local Vault.");
       return;
@@ -614,12 +638,12 @@ export default function FileBrowser({ specialView }) {
     try {
       const method = clipboard.action === "cut" ? "PATCH" : "POST";
       const endpoint = clipboard.action === "cut" ? "move" : "copy";
-      
+
       const url = `${SERVER_URL}/directory/${targetFolderId}/${endpoint}${ownerParam}`;
-      
-      const requestBody = clipboard.items.map(item => ({
+
+      const requestBody = clipboard.items.map((item) => ({
         id: item._id,
-        type: item.type
+        type: item.type,
       }));
 
       const res = await fetch(url, {
@@ -631,15 +655,17 @@ export default function FileBrowser({ specialView }) {
 
       if (!res.ok) {
         const result = await res.json().catch(() => ({}));
-        throw new Error(result.message || result.error || "Paste operation failed");
+        throw new Error(
+          result.message || result.error || "Paste operation failed",
+        );
       }
 
       fetchFiles();
-      
+
       if (clipboard.action === "cut") {
         updateClipboard(null);
       }
-      
+
       setSelectedItems([]);
     } catch (err) {
       console.error("Paste failed:", err);
@@ -1066,7 +1092,7 @@ export default function FileBrowser({ specialView }) {
       setModalType("delete-github");
       return;
     }
-    
+
     setModalItem(item);
     setModalType("delete");
     setIsPermanentDelete(false);
@@ -1210,7 +1236,8 @@ export default function FileBrowser({ specialView }) {
       // Normalize targetItem: if it's a file, treat it as dropped into its parent directory
       let finalTargetItem = targetItem;
       if (targetItem && (targetItem.type === "file" || targetItem.extension)) {
-        const targetParentDir = targetItem.parentDir?._id || targetItem.parentDir;
+        const targetParentDir =
+          targetItem.parentDir?._id || targetItem.parentDir;
         finalTargetItem = {
           _id: targetParentDir || folderId || user?.rootDirectoryId,
           provider: targetItem.provider || "local",
@@ -1226,11 +1253,13 @@ export default function FileBrowser({ specialView }) {
         // Normalize comparison
         const itemParentStr = itemParentId ? itemParentId.toString() : null;
         const targetStr = targetId ? targetId.toString() : null;
-        
+
         return (
           itemParentStr === targetStr ||
           (!targetStr && !itemParentStr) ||
-          (targetStr === (user?.rootDirectoryId || user?.rootDirId)?.toString() && !itemParentStr)
+          (targetStr ===
+            (user?.rootDirectoryId || user?.rootDirId)?.toString() &&
+            !itemParentStr)
         );
       });
 
@@ -1239,8 +1268,7 @@ export default function FileBrowser({ specialView }) {
       }
 
       // Filter out if target is one of the moved items (can't move folder into itself)
-      if (targetId && itemsToMove.some((i) => i._id === targetId))
-        return;
+      if (targetId && itemsToMove.some((i) => i._id === targetId)) return;
 
       const sourceProviders = new Set(
         itemsToMove.map((i) => i.provider || "local"),
@@ -1292,7 +1320,10 @@ export default function FileBrowser({ specialView }) {
 
         if (targetProvider === "local") {
           try {
-            const payload = itemsToMove.map(item => ({ id: item._id || item.id, type: item.type }));
+            const payload = itemsToMove.map((item) => ({
+              id: item._id || item.id,
+              type: item.type,
+            }));
             await fetch(
               `${SERVER_URL}/directory/${targetId}/move${ownerParam}`,
               {
@@ -1553,7 +1584,9 @@ export default function FileBrowser({ specialView }) {
               return (
                 <div key={idx} className="flex items-center gap-1">
                   {idx > 0 && (
-                    <span className="text-white/20 select-none font-light mx-0.5">/</span>
+                    <span className="text-white/20 select-none font-light mx-0.5">
+                      /
+                    </span>
                   )}
                   {isLast ? (
                     <span className="text-white font-extrabold capitalize truncate max-w-[240px] select-none">
@@ -1722,7 +1755,11 @@ export default function FileBrowser({ specialView }) {
               readOnly={isReadOnly}
               onCopy={handleCopyItem}
               onCut={handleCutItem}
-              isCut={clipboard && clipboard.action === "cut" && clipboard.items.some((i) => i._id === dir._id)}
+              isCut={
+                clipboard &&
+                clipboard.action === "cut" &&
+                clipboard.items.some((i) => i._id === dir._id)
+              }
               isDragOver={dragOverTargetId === dir._id}
               isIntegrationRoot={
                 (!specialView &&
@@ -1753,7 +1790,11 @@ export default function FileBrowser({ specialView }) {
               readOnly={isReadOnly}
               onCopy={handleCopyItem}
               onCut={handleCutItem}
-              isCut={clipboard && clipboard.action === "cut" && clipboard.items.some((i) => i._id === file._id)}
+              isCut={
+                clipboard &&
+                clipboard.action === "cut" &&
+                clipboard.items.some((i) => i._id === file._id)
+              }
               onShare={openShareModal}
             />
           ))}
@@ -1884,27 +1925,36 @@ export default function FileBrowser({ specialView }) {
               if (!confirm(`Delete ${selectedItems.length} items?`)) return;
               try {
                 const localItems = selectedItems.filter(
-                  (item) => item.provider !== "google_drive" && item.provider !== "github"
+                  (item) =>
+                    item.provider !== "google_drive" &&
+                    item.provider !== "github",
                 );
                 const externalItems = selectedItems.filter(
-                  (item) => item.provider === "google_drive" || item.provider === "github"
+                  (item) =>
+                    item.provider === "google_drive" ||
+                    item.provider === "github",
                 );
 
                 if (localItems.length > 0) {
                   const requestBody = localItems.map((item) => {
-                    const type = data.directories.some((d) => d._id === item._id)
+                    const type = data.directories.some(
+                      (d) => d._id === item._id,
+                    )
                       ? "directory"
                       : "file";
                     return { id: item._id, type };
                   });
 
                   const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
-                  const res = await fetch(`${SERVER_URL}/directory/delete-batch${ownerParam}`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(requestBody),
-                    credentials: "include",
-                  });
+                  const res = await fetch(
+                    `${SERVER_URL}/directory/delete-batch${ownerParam}`,
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(requestBody),
+                      credentials: "include",
+                    },
+                  );
 
                   if (!res.ok) {
                     const errResult = await res.json().catch(() => ({}));
@@ -2009,7 +2059,9 @@ export default function FileBrowser({ specialView }) {
                     Permanent Delete
                   </div>
                   <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                    {isPermanentDelete ? "Item will be permanently erased" : "Item will be moved to trash"}
+                    {isPermanentDelete
+                      ? "Item will be permanently erased"
+                      : "Item will be moved to trash"}
                   </div>
                 </div>
                 <button
@@ -2019,14 +2071,16 @@ export default function FileBrowser({ specialView }) {
                   onClick={() => setIsPermanentDelete(!isPermanentDelete)}
                   className={cn(
                     "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
-                    isPermanentDelete ? "bg-red-500" : "bg-slate-300 dark:bg-slate-600"
+                    isPermanentDelete
+                      ? "bg-red-500"
+                      : "bg-slate-300 dark:bg-slate-600",
                   )}
                 >
                   <span
                     aria-hidden="true"
                     className={cn(
                       "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                      isPermanentDelete ? "translate-x-5" : "translate-x-0"
+                      isPermanentDelete ? "translate-x-5" : "translate-x-0",
                     )}
                   />
                 </button>
@@ -2048,9 +2102,9 @@ export default function FileBrowser({ specialView }) {
                   variant="danger"
                   className={cn(
                     "flex-1 text-white",
-                    isPermanentDelete 
-                      ? "bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700" 
-                      : "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600"
+                    isPermanentDelete
+                      ? "bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+                      : "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600",
                   )}
                   onClick={handleDeleteConfirm}
                 >
@@ -2312,7 +2366,9 @@ export default function FileBrowser({ specialView }) {
       {clipboard && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-4 py-2.5 bg-[#111113]/90 border border-vault-emerald/30 shadow-[0_8px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(0,212,165,0.1)] rounded-full text-sm backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
           <span className="text-white/60 font-medium whitespace-nowrap">
-            {clipboard.action === "cut" ? "Cut" : "Copied"} <strong className="text-white">{clipboard.items.length}</strong> {clipboard.items.length === 1 ? "item" : "items"}
+            {clipboard.action === "cut" ? "Cut" : "Copied"}{" "}
+            <strong className="text-white">{clipboard.items.length}</strong>{" "}
+            {clipboard.items.length === 1 ? "item" : "items"}
           </span>
           <div className="h-4 w-[1px] bg-white/10" />
           <button

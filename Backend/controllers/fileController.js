@@ -523,6 +523,42 @@ export const getFileById = async (req, res) => {
   }
 };
 
+export const getAllStarredItems = async (req, res) => {
+  try {
+    const starredFiles = await File.find({ starred: true }).lean();
+    const starredDirectories = await Directory.find({
+      starred: true,
+    }).lean();
+
+    console.log(starredFiles, starredDirectories);
+    const starredItems = starredFiles.concat(starredDirectories);
+    console.log(starredItems);
+
+    return res.status(200).json(starredItems);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
+  }
+};
+
+export const getAllRecentItems = async (req, res) => {
+  try {
+    const starredFiles = await File.find({ starred: true }).lean();
+    const starredDirectories = await Directory.find({
+      starred: true,
+    }).lean();
+
+    console.log(starredFiles, starredDirectories);
+    const starredItems = starredFiles.concat(starredDirectories);
+    console.log(starredItems);
+
+    return res.status(200).json(starredItems);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
+  }
+};
+
 export const uploadFile = async (req, res) => {
   try {
     const systemConfig = await getSystemConfigHelper();
@@ -545,7 +581,7 @@ export const uploadFile = async (req, res) => {
       .select("size")
       .lean();
     const usedStorage = rootDir ? rootDir.size : 0;
-    const maxStorage = req.user.maxStorage || (1024 * 1024 * 1024);
+    const maxStorage = req.user.maxStorage || 1024 * 1024 * 1024;
 
     if (usedStorage + fileSize > maxStorage) {
       if (!res.headersSent) {
