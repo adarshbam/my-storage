@@ -24,6 +24,10 @@ const directorySchema = new Schema(
       type: Boolean,
       default: false,
     },
+    openedAt: {
+      type: Date,
+      default: null,
+    },
     size: {
       type: Number,
       default: 0,

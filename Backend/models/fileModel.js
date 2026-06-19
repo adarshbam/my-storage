@@ -16,6 +16,10 @@ const fileSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    openedAt: {
+      type: Date,
+      default: null,
+    },
     hasThumbnail: { type: Boolean, default: false },
     externalUrl: { type: String, default: null },
   },

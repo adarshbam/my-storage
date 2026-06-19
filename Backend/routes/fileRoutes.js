@@ -13,6 +13,7 @@ import {
   saveFile,
   getAllStarredItems,
   getAllRecentItems,
+  setStarredItem,
 } from "../controllers/fileController.js";
 import { validate } from "../middlewares/validationMiddleware.js";
 import {
@@ -55,6 +56,14 @@ router.get(
   throttle(50, 20, "thumbnail"),
   validate(getThumbnailSchema),
   getThumbnail,
+);
+
+router.post(
+  "/:fileId/starred",
+  checkAuth,
+  standardWriteLimiter,
+  throttle(50, 12, "file-starred"),
+  setStarredItem,
 );
 
 router.get(

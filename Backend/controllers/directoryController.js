@@ -46,6 +46,10 @@ export const getDirectoryById = async (req, res) => {
     if (!dirId || dirId === "undefined") {
       dirId = rootDirId;
     }
+    
+    // Update openedAt timestamp for directory
+    await Directory.updateOne({ _id: dirId }, { $set: { openedAt: new Date() } });
+    
     const { action } = req.query;
 
     const cacheKey = `dir:contents:${dirId}`;

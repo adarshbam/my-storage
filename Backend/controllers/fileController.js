@@ -26,6 +26,7 @@ import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 import { getSystemConfigHelper } from "./systemConfigController.js";
+import { error } from "console";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
@@ -430,6 +431,10 @@ export const getFileById = async (req, res) => {
   try {
     const { fileId } = req.params;
     const { action } = req.query;
+    
+    // Update openedAt timestamp for file
+    await File.updateOne({ _id: fileId }, { $set: { openedAt: new Date() } });
+
     const file = await File.findOne({ _id: fileId })
       .select("userId name extension path")
       .lean();
@@ -541,18 +546,64 @@ export const getAllStarredItems = async (req, res) => {
   }
 };
 
+export const setStarredItem = async (req, res) => {
+  try {
+    const itemId = req.query.fildId;
+    const { type } = req.body;
+
+    if (!itemId) return res.status(401).json({ error: "Invalid Id" });
+
+    let starredItem;
+
+    if (type === "directory") {
+      const dir = await Directory.findOne({ _id: itemId });
+      if (!dir) return res.status(404).json({ error: "Directory not found" });
+      starredItem = await Directory.findOneAndUpdate(
+        { _id: itemId },
+        { $set: { starred: !dir.starred } },
+        { new: true }
+      );
+    } else {
+      const file = await File.findOne({ _id: itemId });
+      if (!file) return res.status(404).json({ error: "File not found" });
+      starredItem = await File.findOneAndUpdate(
+        { _id: itemId },
+        { $set: { starred: !file.starred } },
+        { new: true }
+      );
+    }
+
+    return res.status(200).json(starredItem);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
 export const getAllRecentItems = async (req, res) => {
   try {
-    const starredFiles = await File.find({ starred: true }).lean();
-    const starredDirectories = await Directory.find({
-      starred: true,
-    }).lean();
+    const userId = req.user.id;
+    const rootDirId = req.user.rootDirId;
 
-    console.log(starredFiles, starredDirectories);
-    const starredItems = starredFiles.concat(starredDirectories);
-    console.log(starredItems);
+    const recentFiles = await File.find({ userId, openedAt: { $ne: null } })
+      .sort({ openedAt: -1 })
+      .limit(10)
+      .lean();
+    const recentDirectories = await Directory.find({
+      userId,
+      openedAt: { $ne: null },
+      _id: { $ne: rootDirId },
+    })
+      .sort({ openedAt: -1 })
+      .limit(10)
+      .lean();
 
-    return res.status(200).json(starredItems);
+    const combined = recentFiles
+      .concat(recentDirectories)
+      .sort((a, b) => new Date(b.openedAt) - new Date(a.openedAt))
+      .slice(0, 10);
+
+    return res.status(200).json(combined);
   } catch (err) {
     console.error(err);
     res.status(500).send("Server error");

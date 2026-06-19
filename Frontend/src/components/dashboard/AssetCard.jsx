@@ -11,6 +11,7 @@ import {
   Copy,
   Scissors,
   Share2,
+  Star,
 } from "lucide-react";
 import getFileImage from "../../lib/FileImages";
 import { formatSize } from "../../lib/utils";
@@ -21,6 +22,31 @@ import {
 } from "../ui/VaultIcons";
 import { motion } from "framer-motion";
 import { SERVER_URL } from "../../lib/api";
+
+const formatRelativeTime = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "";
+
+  const now = new Date();
+  const diffMs = now - date;
+  const diffSecs = Math.floor(diffMs / 1000);
+  
+  if (diffSecs < 10) return "just now";
+  if (diffSecs < 60) return `${diffSecs} secs ago`;
+  
+  const diffMins = Math.floor(diffSecs / 60);
+  if (diffMins < 60) return `${diffMins} mins ago`;
+  
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} hours ago`;
+  
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 365) return `${diffDays} days ago`;
+  
+  const diffYears = Math.floor(diffDays / 365);
+  return `${diffYears} years ago`;
+};
 
 export default function AssetCard({
   item,
@@ -34,6 +60,7 @@ export default function AssetCard({
   onDelete,
   onDownload,
   onRestore,
+  onStarred,
   onDeleteForever,
   onDetails,
   readOnly = false,
@@ -78,6 +105,7 @@ export default function AssetCard({
   else if (["csv", "xlsx", "json"].includes(ext)) envClass = "env-glow-gold";
   else if (["js", "py", "ts", "jsx", "tsx", "html", "css"].includes(ext))
     envClass = "env-glow-emerald";
+  if (item.isStarred || item.starred) envClass = "env-glow-orange";
   if (isTrash) envClass = "env-glow-rose";
 
   const handleDoubleClick = (e) => {
@@ -151,10 +179,25 @@ export default function AssetCard({
           </p>
           <p className="text-white/40 text-xs mt-0.5 truncate flex items-center gap-2">
             {!isDirectory && <span>{formatSize(item.size)}</span>}
-            {isDirectory && <span>{item.itemCount !== undefined ? item.itemCount : item.items !== undefined ? item.items : ((item.filesCount || 0) + (item.directoriesCount || 0))} Assets</span>}
+            {isDirectory && (
+              <span>
+                {item.itemCount !== undefined
+                  ? item.itemCount
+                  : item.items !== undefined
+                    ? item.items
+                    : (item.filesCount || 0) +
+                      (item.directoriesCount || 0)}{" "}
+                Assets
+              </span>
+            )}
             {provider !== "local" && (
               <span className="opacity-70">
                 • {provider.replace("_", " ").toUpperCase()}
+              </span>
+            )}
+            {item.openedAt && (
+              <span className="text-teal-400 font-semibold font-mono">
+                • Opened {formatRelativeTime(item.openedAt)}
               </span>
             )}
           </p>
@@ -175,9 +218,9 @@ export default function AssetCard({
               <span className="text-[10px] text-white/50">Shared</span>
             </div>
           )}
-          {item.isStarred && (
+          {(item.isStarred || item.starred) && (
             <div className="flex items-center gap-1">
-              <div className="status-dot status-dot-gold" />
+              <div className="status-dot status-dot-orange" />
               <span className="text-[10px] text-white/50">Starred</span>
             </div>
           )}
@@ -339,10 +382,18 @@ export default function AssetCard({
           )}
         </div>
 
-        {/* AES-256 badge — top-left, always visible */}
-        <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10">
-          <EncryptionBadgeIcon size={12} className="text-vault-emerald" />
-          <span className="text-[10px] font-mono text-white/70">AES-256</span>
+        {/* Badges — top-left, always visible */}
+        <div className="absolute top-2 left-2 flex items-center gap-1.5 z-10">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10">
+            <EncryptionBadgeIcon size={12} className="text-vault-emerald" />
+            <span className="text-[10px] font-mono text-white/70">AES-256</span>
+          </div>
+          {(item.isStarred || item.starred) && (
+            <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-[#FF7A3D]/10 backdrop-blur-md border border-[#FF7A3D]/30 text-[#FF7A3D] shadow-[0_0_10px_rgba(255,122,61,0.15)]">
+              <Star size={10} fill="currentColor" />
+              <span className="text-[9px] font-mono font-bold uppercase tracking-wider">Starred</span>
+            </div>
+          )}
         </div>
 
         {/* ── 2 Quick-action buttons — bottom corners, show on hover ── */}
@@ -471,6 +522,24 @@ export default function AssetCard({
                 Details
               </button>
             )}
+
+            {!isTrash && !readOnly && onStarred && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStarred(item);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-white/80 hover:text-white hover:bg-white/[0.07] transition-colors"
+              >
+                <Star
+                  size={16}
+                  fill={(item.isStarred || item.starred) ? "#FF7A3D" : "none"}
+                  className={(item.isStarred || item.starred) ? "text-[#FF7A3D] drop-shadow-[0_0_8px_rgba(255,122,61,0.85)]" : "text-white/60"}
+                />
+                Priority
+              </button>
+            )}
+
             {!isTrash && !readOnly && onRename && (
               <button
                 onClick={() => {
@@ -588,13 +657,18 @@ export default function AssetCard({
         <div className="flex items-center justify-between text-[11px] font-mono text-white/40 gap-2">
           <span className="truncate min-w-0">
             {isDirectory
-              ? `${item.itemCount !== undefined ? item.itemCount : item.items !== undefined ? item.items : ((item.filesCount || 0) + (item.directoriesCount || 0))} ITEMS`
+              ? `${item.itemCount !== undefined ? item.itemCount : item.items !== undefined ? item.items : (item.filesCount || 0) + (item.directoriesCount || 0)} ITEMS`
               : formatSize(item.size)}
           </span>
           <span className="uppercase whitespace-nowrap shrink-0">
             {provider === "local" ? "VAULT NODE" : provider.replace("_", " ")}
           </span>
         </div>
+        {item.openedAt && (
+          <div className="text-[10px] text-teal-400 font-mono font-semibold tracking-wide mt-0.5">
+            Opened {formatRelativeTime(item.openedAt)}
+          </div>
+        )}
         <div className="flex items-center gap-2.5 mt-1 flex-wrap">
           <div className="flex items-center gap-1">
             <div className="status-dot status-dot-emerald" />
@@ -606,9 +680,9 @@ export default function AssetCard({
               <span className="text-[10px] text-white/50">Shared</span>
             </div>
           )}
-          {item.isStarred && (
+          {(item.isStarred || item.starred) && (
             <div className="flex items-center gap-1">
-              <div className="status-dot status-dot-gold" />
+              <div className="status-dot status-dot-orange" />
               <span className="text-[10px] text-white/50">Starred</span>
             </div>
           )}

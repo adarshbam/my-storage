@@ -396,8 +396,15 @@ export default function FileBrowser({ specialView }) {
         }
 
         const result = await response.json();
-        let directories = result.directories || [];
-        let files = result.files || [];
+        let directories = [];
+        let files = [];
+        if (Array.isArray(result)) {
+          directories = result.filter((item) => item.type === "directory");
+          files = result.filter((item) => item.type !== "directory");
+        } else {
+          directories = result.directories || [];
+          files = result.files || [];
+        }
 
         // Hide external integration mount points from administrative eye views
         if (specialView === "admin" || specialView === "owner") {
@@ -553,6 +560,41 @@ export default function FileBrowser({ specialView }) {
     specialView,
     selectedBranch,
   ]);
+
+  const handleStarred = async (item) => {
+    const type = item.type || (item.extension ? "file" : "directory");
+    const url = `${SERVER_URL}/file/${item._id}/starred?fildId=${item._id}`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ type }),
+    });
+
+    const resData = await response.json();
+
+    if (!response.ok) {
+      console.error(resData.error);
+    } else {
+      setData((prev) => {
+        const isStarred = resData.starred;
+        if (specialView === "starred" && !isStarred) {
+          return {
+            directories: prev.directories.filter((i) => i._id !== item._id),
+            files: prev.files.filter((i) => i._id !== item._id),
+          };
+        }
+        const updateItem = (i) =>
+          i._id === item._id ? { ...i, isStarred: isStarred, starred: isStarred } : i;
+        return {
+          directories: prev.directories.map(updateItem),
+          files: prev.files.map(updateItem),
+        };
+      });
+    }
+  };
 
   const handleCopyItem = (item) => {
     if (isReadOnly) return;
@@ -1742,6 +1784,7 @@ export default function FileBrowser({ specialView }) {
               selected={selectedItems.some((i) => i._id === dir._id)}
               onSelect={(item, e) => handleSelect(item, e)}
               onNavigate={handleNavigate}
+              onStarred={handleStarred}
               onRename={handleRenameClick}
               onDelete={handleDelete}
               onDownload={handleDownload}
@@ -1778,11 +1821,15 @@ export default function FileBrowser({ specialView }) {
               selected={selectedItems.some((i) => i._id === file._id)}
               onSelect={(item, e) => handleSelect(item, e)}
               onNavigate={() => {}} // Files don't navigate
+              onStarred={handleStarred}
               onRename={handleRenameClick}
               onDelete={handleDelete}
               onDownload={handleDownload}
               onPreview={handlePreview}
-              onDetails={(item) => setDetailsItem(item)}
+              onDetails={(item) => {
+                setDetailsItem(item);
+                fetch(`${SERVER_URL}/file/${item._id}`, { credentials: "include" }).catch(() => {});
+              }}
               onDragStart={handleDragStart}
               onDragOver={(e) => handleDragOver(e, file)}
               onDrop={handleDrop}
