@@ -5,6 +5,7 @@ import fileRouter from "./routes/fileRoutes.js";
 import trashRouter from "./routes/trashRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 import otpRouter from "./routes/otpRoutes.js";
+import subscriptionRouter from "./routes/subscriptionRoutes.js";
 import driveRouter from "./routes/driveRoutes.js";
 import githubRouter from "./routes/githubRoutes.js";
 import systemUsersRouter from "./routes/systemUsersRoutes.js";
@@ -63,10 +64,7 @@ app.use(
           "https://github.com",
           "https://*.googleapis.com",
         ],
-        frameSrc: [
-          "'self'",
-          "https://accounts.google.com/",
-        ],
+        frameSrc: ["'self'", "https://accounts.google.com/"],
         formAction: [
           "'self'",
           CLIENT_URL,
@@ -108,14 +106,14 @@ app.use(
     },
     // Disable COEP to allow loading external profile pictures without CORP headers
     crossOriginEmbedderPolicy: false,
-  })
+  }),
 );
 
 // 9. Extra Professional Header: Permissions-Policy - Disable all unused hardware features
 app.use((req, res, next) => {
   res.setHeader(
     "Permissions-Policy",
-    "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+    "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
   );
   next();
 });
@@ -135,6 +133,7 @@ app.use("/file", checkAuth, fileRouter);
 app.use("/trash", checkAuth, trashRouter);
 app.use("/user", userRouter);
 app.use("/otp", otpRouter);
+app.use("/subscriptions", subscriptionRouter);
 app.use("/drive", driveRouter);
 app.use("/github", githubRouter);
 app.use("/users", systemUsersRouter);
@@ -179,7 +178,7 @@ async function cleanFiles() {
     // 2. Identify expired and ghost Trash records
     const expiredTrash = await Trash.find({ deleted_at: { $lt: expiryDate } });
     const ghostTrash = await Trash.find({ userId: { $nin: userIds } });
-    
+
     // Combine trash items to delete (preventing duplicates)
     const trashMap = new Map();
     for (const item of [...expiredTrash, ...ghostTrash]) {
@@ -189,33 +188,41 @@ async function cleanFiles() {
 
     // 3. Identify Ghost Files and Directories of deleted users
     const ghostFiles = await File.find({ userId: { $nin: userIds } });
-    const ghostDirectories = await Directory.find({ userId: { $nin: userIds } });
+    const ghostDirectories = await Directory.find({
+      userId: { $nin: userIds },
+    });
 
     // 4. Identify Orphan Files and Directories (whose parentDir is not null and does not exist)
     const allDirIds = await Directory.distinct("_id");
-    const allDirIdsSet = new Set(allDirIds.map(id => id.toString()));
+    const allDirIdsSet = new Set(allDirIds.map((id) => id.toString()));
 
     const orphanFiles = await File.find({
-      parentDir: { $ne: null, $nin: Array.from(allDirIdsSet) }
+      parentDir: { $ne: null, $nin: Array.from(allDirIdsSet) },
     });
 
     const orphanDirectories = await Directory.find({
-      parentDir: { $ne: null, $nin: Array.from(allDirIdsSet) }
+      parentDir: { $ne: null, $nin: Array.from(allDirIdsSet) },
     });
 
     // For Trash records, a valid parentDir could be either in Directory or in Trash (another deleted/trashed dir)
-    const allTrashDirs = await Trash.find({ type: "directory" }, { _id: 1 }).lean();
-    const allTrashDirsSet = new Set(allTrashDirs.map(t => t._id.toString()));
+    const allTrashDirs = await Trash.find(
+      { type: "directory" },
+      { _id: 1 },
+    ).lean();
+    const allTrashDirsSet = new Set(allTrashDirs.map((t) => t._id.toString()));
     const validTrashParentsSet = new Set([...allDirIdsSet, ...allTrashDirsSet]);
 
     const orphanTrash = await Trash.find({
-      parentDir: { $ne: null, $nin: Array.from(validTrashParentsSet) }
+      parentDir: { $ne: null, $nin: Array.from(validTrashParentsSet) },
     });
 
     // 5. Identify Broken Database Records (Local files in DB that do not exist on disk)
     const activeLocalFiles = await File.find({ externalUrl: null }).lean();
-    const trashLocalFiles = await Trash.find({ type: "file", externalUrl: null }).lean();
-    
+    const trashLocalFiles = await Trash.find({
+      type: "file",
+      externalUrl: null,
+    }).lean();
+
     const brokenFiles = [];
     for (const f of activeLocalFiles) {
       const fPath = path.join(UPLOAD_DIR, `${f._id}${f.extension}`);
@@ -276,10 +283,14 @@ async function cleanFiles() {
     const trashToDirectDeleteIds = new Set();
     for (const t of orphanTrash) trashToDirectDeleteIds.add(t._id.toString());
     for (const t of brokenTrash) trashToDirectDeleteIds.add(t._id.toString());
-    
+
     if (trashToDirectDeleteIds.size > 0) {
-      const deletedTrashCount = await Trash.deleteMany({ _id: { $in: Array.from(trashToDirectDeleteIds) } });
-      console.log(`[Cleanup] Directly deleted ${deletedTrashCount.deletedCount} broken/orphan trash database records.`);
+      const deletedTrashCount = await Trash.deleteMany({
+        _id: { $in: Array.from(trashToDirectDeleteIds) },
+      });
+      console.log(
+        `[Cleanup] Directly deleted ${deletedTrashCount.deletedCount} broken/orphan trash database records.`,
+      );
     }
 
     // 7. Perform Directory Cleanup (recursive deletion from DB and disk)
@@ -292,11 +303,13 @@ async function cleanFiles() {
           const tPath = path.join(UPLOAD_DIR, "thumbnails", `${f._id}.jpg`);
           await rm(fPath, { force: true }).catch(() => {});
           await rm(tPath, { force: true }).catch(() => {});
-          console.log(`[Cleanup] Deleted descendant file on disk: ${f.name || f._id}`);
+          console.log(
+            `[Cleanup] Deleted descendant file on disk: ${f.name || f._id}`,
+          );
         }
-        
+
         // Remove children files from DB and Trash
-        const childFileIds = childFiles.map(f => f._id);
+        const childFileIds = childFiles.map((f) => f._id);
         if (childFileIds.length > 0) {
           await File.deleteMany({ _id: { $in: childFileIds } });
           await Trash.deleteMany({ _id: { $in: childFileIds } });
@@ -309,7 +322,7 @@ async function cleanFiles() {
         }
 
         // Remove child directories from DB and Trash
-        const childDirIds = childDirs.map(d => d._id);
+        const childDirIds = childDirs.map((d) => d._id);
         if (childDirIds.length > 0) {
           await Directory.deleteMany({ _id: { $in: childDirIds } });
           await Trash.deleteMany({ _id: { $in: childDirIds } });
@@ -321,13 +334,22 @@ async function cleanFiles() {
       // Finally, delete the top-level directory record itself
       await Directory.deleteOne({ _id: dirId });
       await Trash.deleteOne({ _id: dirId });
-      console.log(`[Cleanup] Recursively deleted directory: ${dirItem.name || dirId}`);
+      console.log(
+        `[Cleanup] Recursively deleted directory: ${dirItem.name || dirId}`,
+      );
     }
 
     // 8. Perform File Cleanup (deleting physical file, thumbnail, and DB/Trash records)
     for (const [fileId, fileItem] of filesToDeleteMap.entries()) {
-      const filePath = path.join(UPLOAD_DIR, `${fileItem._id}${fileItem.extension}`);
-      const thumbPath = path.join(UPLOAD_DIR, "thumbnails", `${fileItem._id}.jpg`);
+      const filePath = path.join(
+        UPLOAD_DIR,
+        `${fileItem._id}${fileItem.extension}`,
+      );
+      const thumbPath = path.join(
+        UPLOAD_DIR,
+        "thumbnails",
+        `${fileItem._id}.jpg`,
+      );
 
       await rm(filePath, { force: true }).catch(() => {});
       await rm(thumbPath, { force: true }).catch(() => {});
@@ -346,17 +368,17 @@ async function cleanFiles() {
       // Query BOTH File and Trash collections to see which file IDs are still valid
       const existingFiles = await File.find(
         { _id: { $in: storedFileIds } },
-        { _id: 1 }
+        { _id: 1 },
       ).lean();
 
       const existingTrashFiles = await Trash.find(
         { _id: { $in: storedFileIds }, type: "file" },
-        { _id: 1 }
+        { _id: 1 },
       ).lean();
 
       const validIdsSet = new Set([
         ...existingFiles.map((f) => f._id.toString()),
-        ...existingTrashFiles.map((t) => t._id.toString())
+        ...existingTrashFiles.map((t) => t._id.toString()),
       ]);
 
       const ghostStorageFiles = storageFiles.filter((fileName) => {
@@ -370,8 +392,10 @@ async function cleanFiles() {
         console.log(`[Cleanup] Deleted ghost storage file: ${fileName}`);
       }
     }
-    
-    console.log("[Cleanup] Storage and database cleanup completed successfully.");
+
+    console.log(
+      "[Cleanup] Storage and database cleanup completed successfully.",
+    );
   } catch (err) {
     console.error("[Cleanup] Cleanup error:", err);
   }

@@ -131,7 +131,7 @@ const Integrations = () => {
   const [activePanel, setActivePanel] = useState(0);
 
   return (
-    <section className="py-24 relative bg-transparent overflow-hidden my-12">
+    <section id="ecosystem" className="py-24 relative bg-transparent overflow-hidden my-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 max-w-[1400px]">
         <div className="text-center max-w-3xl mx-auto mb-16 md:mb-24">
           <span className="text-[#14b8a6] font-bold tracking-widest text-xs uppercase mb-4 block">

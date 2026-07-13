@@ -28,25 +28,25 @@ const Navbar = () => {
         >
         <div className={`px-6 py-3 flex items-center justify-between transition-all duration-500 ${scrolled ? 'py-3' : 'py-5'}`}>
             {/* Logo */}
-            <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="bg-[#01140f] border border-teal-500/30 p-2 rounded-xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),inset_0_-2px_4px_rgba(0,0,0,0.8),0_0_15px_rgba(20,184,166,0.3)] group-hover:border-teal-400 group-hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.8),0_0_25px_rgba(20,184,166,0.6)] transition-all duration-300 relative">
-                <Box className="text-[#14b8a6] relative z-10" size={20} />
-            </div>
-            <span className="text-2xl font-black text-white tracking-widest uppercase drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                VAULT
-            </span>
-            </div>
+            <Link to="/" className="flex items-center gap-3 group">
+              <div className="bg-[#01140f] border border-teal-500/30 p-2 rounded-xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),inset_0_-2px_4px_rgba(0,0,0,0.8),0_0_15px_rgba(20,184,166,0.3)] group-hover:border-teal-400 group-hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.8),0_0_25px_rgba(20,184,166,0.6)] transition-all duration-300 relative">
+                  <Box className="text-[#14b8a6] relative z-10" size={20} />
+              </div>
+              <span className="text-2xl font-black text-white tracking-widest uppercase drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+                  VAULT
+              </span>
+            </Link>
 
             {/* Desktop Nav Links */}
             <div className="hidden md:flex items-center gap-8 bg-black/20 border-t border-black/40 border-b border-white/10 px-8 py-2 rounded-full shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)]">
             {navLinks.map((link) => (
-                <a
+                <Link
                 key={link}
-                href={`#${link.toLowerCase()}`}
+                to={`/#${link.toLowerCase()}`}
                 className="text-[13px] font-bold tracking-widest uppercase text-white/50 hover:text-white transition-colors duration-200"
                 >
                 {link}
-                </a>
+                </Link>
             ))}
             </div>
 
@@ -94,14 +94,14 @@ const Navbar = () => {
             >
                 <div className="px-6 py-6 flex flex-col gap-6">
                 {navLinks.map((link) => (
-                    <a
+                    <Link
                     key={link}
-                    href={`#${link.toLowerCase()}`}
+                    to={`/#${link.toLowerCase()}`}
                     className="text-lg font-black text-white py-2 border-b border-white/5"
                     onClick={() => setMobileMenuOpen(false)}
                     >
                     {link}
-                    </a>
+                    </Link>
                 ))}
                 <div className="pt-4 flex flex-col gap-4">
                     {user ? (

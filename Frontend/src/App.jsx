@@ -1,5 +1,5 @@
-import { Suspense, lazy } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Suspense, lazy, useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ThemeProvider } from "./components/ui/ThemeProvider";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/drive/ProtectedRoute";
@@ -17,7 +17,7 @@ import Hero from "./components/sections/Hero";
 import ScaleSecurity from "./components/sections/ScaleSecurity";
 import HowItWorks from "./components/sections/HowItWorks";
 import Integrations from "./components/sections/Integrations";
-import Pricing from "./components/sections/Pricing";
+import PricingSection from "./components/sections/PricingSection";
 import FinalCTA from "./components/sections/FinalCTA";
 import Footer from "./components/sections/Footer";
 
@@ -42,7 +42,7 @@ function LandingPage() {
           <ScaleSecurity />
           <HowItWorks />
           <Integrations />
-          <Pricing />
+          <PricingSection />
           <FinalCTA />
         </main>
         <Footer />
@@ -58,11 +58,29 @@ const PageLoader = () => (
   </div>
 );
 
+function ScrollToHashElement() {
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (hash) {
+      const element = document.getElementById(hash.replace("#", ""));
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [hash]);
+
+  return null;
+}
+
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <AuthProvider>
         <BrowserRouter>
+          <ScrollToHashElement />
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<LandingPage />} />
