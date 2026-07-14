@@ -270,3 +270,19 @@ export const profilePicLimiter = createLimiter(
   "Too many profile picture uploads. Please slow down.",
   "profile-pic"
 );
+
+// 16. Subscription Limiter: max 5 / 15min (Razorpay API calls are expensive)
+export const subscriptionLimiter = createLimiter(
+  15 * 60 * 1000, // 15 minutes
+  5,
+  "Too many subscription requests. Please try again after 15 minutes.",
+  "subscription"
+);
+
+// 17. Webhook Limiter: max 100 / 15min (Razorpay sends events — generous limit)
+export const webhookLimiter = createLimiter(
+  15 * 60 * 1000, // 15 minutes
+  100,
+  "Too many webhook events. Please slow down.",
+  "webhook"
+);

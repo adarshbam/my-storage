@@ -7,9 +7,7 @@ const rzInstance = new Razorpay({
 });
 
 export const createSubscription = async (req, res, next) => {
-  console.log(req.body);
   const { planId } = req.body;
-  console.log(req.user.id);
   try {
     const newSubscription = await rzInstance.subscriptions.create({
       plan_id: planId,
@@ -18,8 +16,6 @@ export const createSubscription = async (req, res, next) => {
         userId: req.user.id,
       },
     });
-
-    console.log(newSubscription);
 
     if (!newSubscription) {
       return res.status(404).json({ message: "Subscription not created" });
@@ -30,11 +26,15 @@ export const createSubscription = async (req, res, next) => {
       userId: req.user.id,
     });
 
-    console.log(subscription);
+    console.log("[Subscription] Created:", subscription.razorpaySubscriptionId);
 
-    await res.json({ subscriptionId: newSubscription.id });
+    return res.json({
+      subscriptionId: newSubscription.id,
+      razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+    });
   } catch (err) {
-    console.log(err);
+    console.error("[Subscription] Error:", err.message);
     next(err);
   }
 };
+

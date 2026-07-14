@@ -11,6 +11,7 @@ import githubRouter from "./routes/githubRoutes.js";
 import systemUsersRouter from "./routes/systemUsersRoutes.js";
 import shareRouter from "./routes/shareRoutes.js";
 import systemConfigRouter from "./routes/systemConfigRoutes.js";
+import webhookRouter from "./routes/webhookRoutes.js";
 import cors from "cors";
 import checkAuth from "./middlewares/authMiddleware.js";
 import https from "https";
@@ -139,6 +140,7 @@ app.use("/github", githubRouter);
 app.use("/users", systemUsersRouter);
 app.use("/share", shareRouter);
 app.use("/system-config", systemConfigRouter);
+app.use("/webhooks", webhookRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);

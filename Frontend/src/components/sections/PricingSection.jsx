@@ -255,7 +255,8 @@ const PricingSection = () => {
 
   function openRazorpayPopup({ subscriptionId }) {
     const rzp = new Razorpay({
-      key: "rzp_live_T6hzM3zzz0kYbG",
+      // key: "rzp_live_T6hzM3zzz0kYbG", // live mode
+      key: "rzp_test_TD0xv90hsl04nA", // test mode
       description: "Testing payment",
       name: user.name,
       subscription_id: subscriptionId,

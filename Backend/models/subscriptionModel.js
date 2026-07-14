@@ -1,6 +1,5 @@
-import { Schema, model } from "mongoose";
-
 import mongoose from "mongoose";
+import { model } from "mongoose";
 
 const subscriptionSchema = new mongoose.Schema(
   {
