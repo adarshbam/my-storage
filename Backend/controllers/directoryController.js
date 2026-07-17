@@ -14,6 +14,7 @@ import {
   updateParentDirectorySize,
 } from "./fileController.js";
 import { deleteByParentChain } from "./trashController.js";
+import { copyInB2 } from "../utils/s3.js";
 
 const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 const THUMBNAILS_DIR = path.join(STORAGE_DIR, "thumbnails");
@@ -115,10 +116,28 @@ export const getDirectoryById = async (req, res) => {
     const parentPathNames = mappedCurrentPath.map(p => ({ name: p.name }));
     const baseSharedPathNames = [...parentPathNames, { name: directoryData.name }];
 
+    const mediaExts = [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".gif",
+      ".webp",
+      ".tiff",
+      ".svg",
+      ".mp4",
+      ".webm",
+      ".mkv",
+      ".avi",
+      ".mov",
+    ];
+
     directoryData.files = files.map((file) => {
+      const ext = file.extension ? file.extension.toLowerCase() : "";
+      const canHaveThumb = mediaExts.includes(ext);
       return {
         ...file,
         _id: file._id.toString(),
+        hasThumbnail: file.hasThumbnail || canHaveThumb,
         path: [...baseSharedPathNames, { name: file.name }],
       };
     });
@@ -497,21 +516,23 @@ const copyDirectoryRecursive = async (sourceDirId, newDirId, targetParentDirId, 
   const files = await File.find({ parentDir: sourceDirId }).session(session).lean();
   for (const file of files) {
     const newFileId = new mongoose.Types.ObjectId();
-    const oldFilePath = path.join(STORAGE_DIR, `${file._id.toString()}${file.extension}`);
-    const newFilePath = path.join(STORAGE_DIR, `${newFileId.toString()}${file.extension}`);
 
     try {
-      await fs.copyFile(oldFilePath, newFilePath);
+      await copyInB2({
+        sourceKey: `${file._id.toString()}${file.extension}`,
+        destinationKey: `${newFileId.toString()}${file.extension}`,
+      });
     } catch (copyErr) {
       console.error(`Failed to copy physical file ${file._id}:`, copyErr);
       throw new Error(`Physical file copying failed for "${file.name}"`);
     }
 
     if (file.hasThumbnail) {
-      const oldThumbPath = path.join(THUMBNAILS_DIR, `${file._id.toString()}.jpg`);
-      const newThumbPath = path.join(THUMBNAILS_DIR, `${newFileId.toString()}.jpg`);
       try {
-        await fs.copyFile(oldThumbPath, newThumbPath);
+        await copyInB2({
+          sourceKey: `thumbnails/${file._id.toString()}.jpg`,
+          destinationKey: `thumbnails/${newFileId.toString()}.jpg`,
+        });
       } catch (thumbErr) {
         console.warn(`Failed to copy thumbnail for ${file._id}:`, thumbErr);
       }
@@ -716,12 +737,12 @@ export const copyItems = async (req, res) => {
           const newFileId = new mongoose.Types.ObjectId();
           const resolvedName = await getAvailableName(dirId, file.name, false, session);
 
-          // Copy physical storage files
-          const oldFilePath = path.join(STORAGE_DIR, `${file._id.toString()}${file.extension}`);
-          const newFilePath = path.join(STORAGE_DIR, `${newFileId.toString()}${file.extension}`);
-          
+          // Copy physical storage files in Backblaze B2
           try {
-            await fs.copyFile(oldFilePath, newFilePath);
+            await copyInB2({
+              sourceKey: `${file._id.toString()}${file.extension}`,
+              destinationKey: `${newFileId.toString()}${file.extension}`,
+            });
           } catch (copyErr) {
             console.error(`Failed to copy physical file ${file._id}:`, copyErr);
             throw new Error(`Physical file copying failed for "${file.name}"`);
@@ -729,10 +750,11 @@ export const copyItems = async (req, res) => {
 
           // Copy thumbnail if it exists
           if (file.hasThumbnail) {
-            const oldThumbPath = path.join(THUMBNAILS_DIR, `${file._id.toString()}.jpg`);
-            const newThumbPath = path.join(THUMBNAILS_DIR, `${newFileId.toString()}.jpg`);
             try {
-              await fs.copyFile(oldThumbPath, newThumbPath);
+              await copyInB2({
+                sourceKey: `thumbnails/${file._id.toString()}.jpg`,
+                destinationKey: `thumbnails/${newFileId.toString()}.jpg`,
+              });
             } catch (thumbErr) {
               console.warn(`Failed to copy thumbnail for ${file._id}:`, thumbErr);
             }
@@ -835,6 +857,7 @@ export const deleteItemsBatch = async (req, res) => {
       }
     }
 
+    const isPermanent = req.query.permanent === "true";
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -863,12 +886,25 @@ export const deleteItemsBatch = async (req, res) => {
       const trashingDirs = dirs.map(d => ({ ...d, deleted_at: new Date() }));
 
       if (trashingFiles.length > 0) {
-        await Trash.insertMany(trashingFiles, { session });
+        if (isPermanent) {
+          for (const f of files) {
+            await deleteFromB2({ key: `${f._id.toString()}${f.extension}` });
+            await deleteFromB2({ key: `thumbnails/${f._id.toString()}.jpg` });
+          }
+        } else {
+          await Trash.insertMany(trashingFiles, { session });
+        }
         await File.deleteMany({ _id: { $in: fileIds } }).session(session);
       }
 
       if (trashingDirs.length > 0) {
-        await Trash.insertMany(trashingDirs, { session });
+        if (isPermanent) {
+          for (const dirId of dirIds) {
+            await deleteByParentChain(dirId);
+          }
+        } else {
+          await Trash.insertMany(trashingDirs, { session });
+        }
         await Directory.deleteMany({ _id: { $in: dirIds } }).session(session);
       }
 

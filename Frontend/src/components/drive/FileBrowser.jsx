@@ -1141,45 +1141,116 @@ export default function FileBrowser({ specialView }) {
   };
 
   const handleDeleteConfirm = async () => {
-    const item = modalItem;
-    if (!item) return;
+    const itemsToDelete = modalItem ? [modalItem] : selectedItems;
+    if (!itemsToDelete || itemsToDelete.length === 0) return;
 
     try {
-      let url;
+      if (itemsToDelete.length === 1 && modalItem) {
+        const item = modalItem;
+        let url;
 
-      if (item.provider === "google_drive") {
-        url = `${SERVER_URL}/drive/file/${item._id}`;
+        if (item.provider === "google_drive") {
+          url = `${SERVER_URL}/drive/file/${item._id}`;
+        } else {
+          const typeEndpoint = data.directories.find((d) => d._id === item._id)
+            ? "directory"
+            : "file";
+          url = `${SERVER_URL}/${typeEndpoint}/${item._id}`;
+        }
+
+        if (ownerId || isPermanentDelete) {
+          const params = new URLSearchParams();
+          if (ownerId) params.append("ownerId", ownerId);
+          if (isPermanentDelete) params.append("permanent", "true");
+          url = `${url}?${params.toString()}`;
+        }
+
+        const res = await fetch(url, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          const result = await res.json().catch(() => ({}));
+          throw new Error(result.error || "Delete failed");
+        }
       } else {
-        const typeEndpoint = data.directories.find((d) => d._id === item._id)
-          ? "directory"
-          : "file";
-        url = `${SERVER_URL}/${typeEndpoint}/${item._id}`;
-      }
+        const localItems = itemsToDelete.filter(
+          (item) =>
+            item.provider !== "google_drive" &&
+            item.provider !== "github",
+        );
+        const externalItems = itemsToDelete.filter(
+          (item) =>
+            item.provider === "google_drive" ||
+            item.provider === "github",
+        );
 
-      if (ownerId || isPermanentDelete) {
-        const params = new URLSearchParams();
-        if (ownerId) params.append("ownerId", ownerId);
-        if (isPermanentDelete) params.append("permanent", "true");
-        url = `${url}?${params.toString()}`;
-      }
+        if (localItems.length > 0) {
+          const requestBody = localItems.map((item) => {
+            const type = data.directories.some((d) => d._id === item._id)
+              ? "directory"
+              : "file";
+            return { id: item._id, type };
+          });
 
-      const res = await fetch(url, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
+          const params = new URLSearchParams();
+          if (ownerId) params.append("ownerId", ownerId);
+          if (isPermanentDelete) params.append("permanent", "true");
+          const queryStr = params.toString() ? `?${params.toString()}` : "";
 
-      if (!res.ok) {
-        const result = await res.json();
-        throw new Error(result.error || "Delete failed");
+          const res = await fetch(
+            `${SERVER_URL}/directory/delete-batch${queryStr}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(requestBody),
+              credentials: "include",
+            },
+          );
+
+          if (!res.ok) {
+            const errResult = await res.json().catch(() => ({}));
+            throw new Error(errResult.error || "Batch delete failed");
+          }
+        }
+
+        if (externalItems.length > 0) {
+          const deletePromises = externalItems.map((item) => {
+            const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
+            if (item.provider === "google_drive") {
+              return fetch(
+                `${SERVER_URL}/drive/file/${item._id}${ownerParam}`,
+                {
+                  method: "DELETE",
+                  credentials: "include",
+                },
+              );
+            } else {
+              return fetch(
+                `${SERVER_URL}/github/file/${item.githubPath}${ownerParam}`,
+                {
+                  method: "DELETE",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ sha: item.sha }),
+                  credentials: "include",
+                },
+              );
+            }
+          });
+          await Promise.all(deletePromises);
+        }
       }
 
       fetchFiles();
       setModalType(null);
       setModalItem(null);
+      setSelectedItems([]);
+      setIsPermanentDelete(false);
     } catch (err) {
       console.error("Delete failed", err);
-      alert(err.message || "Failed to delete item");
+      alert(err.message || "Failed to delete item(s)");
     }
   };
 
@@ -1289,20 +1360,20 @@ export default function FileBrowser({ specialView }) {
       const targetId = finalTargetItem?._id || finalTargetItem?.id;
       const targetProvider = finalTargetItem?.provider || "local";
 
+      const normalizeDirId = (id) => {
+        if (!id || id === "root" || id === "undefined" || id === "null") {
+          return (user?.rootDirectoryId || user?.rootDirId)?.toString() || "root";
+        }
+        if (typeof id === "object" && id._id) {
+          return id._id.toString();
+        }
+        return id.toString();
+      };
+
       // Filter out same-directory moves
       const isSameDirectory = itemsToMove.every((item) => {
-        const itemParentId = item.parentDir?._id || item.parentDir;
-        // Normalize comparison
-        const itemParentStr = itemParentId ? itemParentId.toString() : null;
-        const targetStr = targetId ? targetId.toString() : null;
-
-        return (
-          itemParentStr === targetStr ||
-          (!targetStr && !itemParentStr) ||
-          (targetStr ===
-            (user?.rootDirectoryId || user?.rootDirId)?.toString() &&
-            !itemParentStr)
-        );
+        const itemParent = item.parentDir?._id || item.parentDir;
+        return normalizeDirId(itemParent) === normalizeDirId(targetId);
       });
 
       if (isSameDirectory) {
@@ -1968,78 +2039,13 @@ export default function FileBrowser({ specialView }) {
           </button>
           <div className="h-4 w-px bg-slate-700"></div>
           <button
-            onClick={async () => {
-              if (!confirm(`Delete ${selectedItems.length} items?`)) return;
-              try {
-                const localItems = selectedItems.filter(
-                  (item) =>
-                    item.provider !== "google_drive" &&
-                    item.provider !== "github",
-                );
-                const externalItems = selectedItems.filter(
-                  (item) =>
-                    item.provider === "google_drive" ||
-                    item.provider === "github",
-                );
-
-                if (localItems.length > 0) {
-                  const requestBody = localItems.map((item) => {
-                    const type = data.directories.some(
-                      (d) => d._id === item._id,
-                    )
-                      ? "directory"
-                      : "file";
-                    return { id: item._id, type };
-                  });
-
-                  const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
-                  const res = await fetch(
-                    `${SERVER_URL}/directory/delete-batch${ownerParam}`,
-                    {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(requestBody),
-                      credentials: "include",
-                    },
-                  );
-
-                  if (!res.ok) {
-                    const errResult = await res.json().catch(() => ({}));
-                    throw new Error(errResult.error || "Batch delete failed");
-                  }
-                }
-
-                if (externalItems.length > 0) {
-                  const deletePromises = externalItems.map((item) => {
-                    const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
-                    if (item.provider === "google_drive") {
-                      return fetch(
-                        `${SERVER_URL}/drive/file/${item._id}${ownerParam}`,
-                        {
-                          method: "DELETE",
-                          credentials: "include",
-                        },
-                      );
-                    } else {
-                      return fetch(
-                        `${SERVER_URL}/github/file/${item.githubPath}${ownerParam}`,
-                        {
-                          method: "DELETE",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ sha: item.sha }),
-                          credentials: "include",
-                        },
-                      );
-                    }
-                  });
-                  await Promise.all(deletePromises);
-                }
-
-                fetchFiles();
-                setSelectedItems([]);
-              } catch (err) {
-                console.error("Batch delete error:", err);
-                alert(err.message || "Failed to delete some items");
+            onClick={() => {
+              if (selectedItems.length === 1) {
+                handleDelete(selectedItems[0]);
+              } else {
+                setModalItem(null);
+                setIsPermanentDelete(false);
+                setModalType("delete");
               }
             }}
             className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors font-medium text-sm"

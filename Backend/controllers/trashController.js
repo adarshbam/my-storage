@@ -6,6 +6,7 @@ import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 import { updateParentDirectorySize } from "./fileController.js";
+import { deleteFromB2, deleteMultipleFromB2 } from "../utils/s3.js";
 
 const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 
@@ -108,16 +109,8 @@ export const emptyTrash = async (req, res) => {
         // Clean up all child files/directories still in File/Directory collections
         await deleteByParentChain(trashItem._id.toString());
       } else {
-        const filePath = path.join(STORAGE_DIR, `${trashItem._id.toString()}${trashItem.extension}`);
-        try {
-          await rm(filePath, { recursive: true, force: true });
-
-          // Also try to delete thumbnail if exists
-          const thumbPath = path.join(STORAGE_DIR, "thumbnails", `${trashItem._id.toString()}.jpg`);
-          await rm(thumbPath, { force: true }).catch(() => {});
-        } catch (err) {
-          console.error(`Failed to delete file ${filePath}:`, err);
-        }
+        await deleteFromB2({ key: `${trashItem._id.toString()}${trashItem.extension}` });
+        await deleteFromB2({ key: `thumbnails/${trashItem._id.toString()}.jpg` });
       }
     }
 
@@ -216,17 +209,8 @@ export const deleteFileForever = async (req, res) => {
 
     console.log("Deleting forever:", trashFile);
 
-    const filePath = path.join(STORAGE_DIR, `${trashFile._id.toString()}${trashFile.extension}`);
-    try {
-      await rm(filePath, { recursive: true, force: true });
-
-      // Also delete thumbnail
-      await rm(path.join(STORAGE_DIR, "thumbnails", `${trashFile._id.toString()}.jpg`), {
-        force: true,
-      }).catch(() => {});
-    } catch (err) {
-      console.error(`Failed to delete file on disk ${filePath}:`, err);
-    }
+    await deleteFromB2({ key: `${trashFile._id.toString()}${trashFile.extension}` });
+    await deleteFromB2({ key: `thumbnails/${trashFile._id.toString()}.jpg` });
 
     await Trash.deleteOne({ _id: fileid });
     return res.status(200).send("File deleted forever");
@@ -248,13 +232,8 @@ export async function deleteByParentChain(parentId) {
   }
 
   for (const file of filesToDelete) {
-    await rm(path.join(STORAGE_DIR, `${file._id.toString()}${file.extension}`), {
-      force: true,
-    }).catch(() => {});
-    // Delete thumbnail
-    await rm(path.join(STORAGE_DIR, "thumbnails", `${file._id.toString()}.jpg`), {
-      force: true,
-    }).catch(() => {});
+    await deleteFromB2({ key: `${file._id.toString()}${file.extension}` });
+    await deleteFromB2({ key: `thumbnails/${file._id.toString()}.jpg` });
   }
 
   const childDirs = await Directory.find({ parentDir: parentId })
@@ -439,15 +418,8 @@ export const batchDelete = async (req, res) => {
           .select("_id extension")
           .lean();
         if (trashFile) {
-          const filePath = path.join(STORAGE_DIR, `${trashFile._id.toString()}${trashFile.extension}`);
-          try {
-            await rm(filePath, { recursive: true, force: true });
-            await rm(path.join(STORAGE_DIR, "thumbnails", `${trashFile._id.toString()}.jpg`), {
-              force: true,
-            }).catch(() => {});
-          } catch (err) {
-            console.error(`Failed to delete file on disk ${filePath}:`, err);
-          }
+          await deleteFromB2({ key: `${trashFile._id.toString()}${trashFile.extension}` });
+          await deleteFromB2({ key: `thumbnails/${trashFile._id.toString()}.jpg` });
         }
       }
     }

@@ -22,6 +22,7 @@ import {
 import SharedAccess from "../models/sharedAccessModel.js";
 import { invalidateUserSessions } from "../utils/redis.js";
 import { updateParentDirectorySize } from "./fileController.js";
+import { uploadToB2, getObjectFromB2, deleteFromB2 } from "../utils/s3.js";
 
 // ─── Shared Helper: Build an authenticated Drive client ───────────────────────
 async function getDriveClient(userId) {
@@ -757,31 +758,36 @@ export const transferToVault = async (req, res) => {
         const fileId = new mongoose.Types.ObjectId();
         const ext = path.extname(driveItem.name);
         const fileName = driveItem.name;
-        const filePath = path.join(STORAGE_DIR, `${fileId}${ext}`);
 
-        // 2. Stream from Drive to local storage
+        // 2. Stream from Drive directly to Backblaze B2
         const driveRes = await drive.files.get(
           { fileId: driveItemId, alt: "media" },
           { responseType: "stream" },
         );
 
-        await mkdir(STORAGE_DIR, { recursive: true });
-        const writeStream = createWriteStream(filePath);
+        const chunks = [];
+        for await (const chunk of driveRes.data) {
+          chunks.push(chunk);
+        }
+        const buffer = Buffer.concat(chunks);
+        const fileSize = buffer.length;
 
-        await pipeline(driveRes.data, writeStream);
+        await uploadToB2({
+          key: `${fileId}${ext}`,
+          body: buffer,
+        });
 
-        const stats = await stat(filePath);
         const newFile = await File.create({
           _id: fileId,
           name: fileName,
           extension: ext,
-          size: stats.size,
+          size: fileSize,
           userId: ownerId, // Transferred files belong to the actual folder owner
           parentDir: localParentId,
           type: "file",
         });
 
-        await updateParentDirectorySize(parentPath, stats.size);
+        await updateParentDirectorySize(parentPath, fileSize);
 
         return newFile;
       }
@@ -852,9 +858,9 @@ export const transferFromVault = async (req, res) => {
         }
         return driveFolder.data;
       } else {
-        // 1. Stream from local to Drive
+        // 1. Stream from Backblaze B2 to Drive
         const ext = localItem.extension || "";
-        const filePath = path.join(STORAGE_DIR, `${localItemId}${ext}`);
+        const s3Response = await getObjectFromB2({ key: `${localItemId}${ext}` });
 
         const response = await drive.files.create({
           requestBody: {
@@ -862,7 +868,7 @@ export const transferFromVault = async (req, res) => {
             parents: [driveParentId || "root"],
           },
           media: {
-            body: createReadStream(filePath),
+            body: s3Response.Body,
           },
           fields: "id, name",
         });
@@ -875,16 +881,14 @@ export const transferFromVault = async (req, res) => {
       await exportItem(item, targetDriveFolderId);
 
       const itemId = item._id || item.id;
-      // Delete from Vault after successful transfer
+      // Delete from Vault (B2) after successful transfer
       if (item.type === "directory") {
-        // Recursive delete logic for local directory
+        // Recursive delete logic for Vault directory
         const deleteLocalDir = async (dirId) => {
           const files = await File.find({ parentDir: dirId });
           for (const f of files) {
-            const fPath = path.join(STORAGE_DIR, `${f._id}${f.extension}`);
-            try {
-              await unlink(fPath);
-            } catch (e) {}
+            await deleteFromB2({ key: `${f._id}${f.extension}` });
+            await deleteFromB2({ key: `thumbnails/${f._id}.jpg` });
             await File.deleteOne({ _id: f._id });
           }
           const dirs = await Directory.find({ parentDir: dirId });
@@ -895,13 +899,9 @@ export const transferFromVault = async (req, res) => {
         };
         await deleteLocalDir(itemId);
       } else {
-        const fPath = path.join(
-          STORAGE_DIR,
-          `${itemId}${item.extension || ""}`,
-        );
-        try {
-          await unlink(fPath);
-        } catch (e) {}
+        const ext = item.extension || "";
+        await deleteFromB2({ key: `${itemId}${ext}` });
+        await deleteFromB2({ key: `thumbnails/${itemId}.jpg` });
         await File.deleteOne({ _id: itemId });
       }
     }

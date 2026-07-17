@@ -16,6 +16,7 @@ import SharedAccess from "../models/sharedAccessModel.js";
 import { cacheDel, invalidateUserSessions } from "../utils/redis.js";
 
 import { sanitize } from "../utils/sanitize.js";
+import { uploadToB2, deleteFromB2, getObjectFromB2 } from "../utils/s3.js";
 
 import {
   createSessionAndSetCookies,
@@ -31,27 +32,31 @@ const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 // ─── User Info ──────────────────────────────────────────────────────────────────
 
 export const getUser = async (req, res) => {
-  const user = req.user;
-  console.log(req.user);
-  const rootDir = await Directory.findOne({ _id: user.rootDirId })
-    .select("-_id size")
-    .lean();
-  console.log(rootDir.size);
+  try {
+    const user = req.user;
+    const rootDir = await Directory.findOne({ _id: user.rootDirId })
+      .select("-_id size")
+      .lean();
+    const usedStorage = rootDir ? rootDir.size : 0;
 
-  return res.status(200).json({
-    name: user.name,
-    email: user.email,
-    role: user.role || "User",
-    profilepic: user.profilepic,
-    maxStorage: user.maxStorage,
-    rootDirectoryId: user.rootDirId,
-    usedStorage: rootDir.size,
-    theme: user.theme || "dark",
-    integrations: {
-      googleDrive: { connected: !!user.integrations?.googleDrive?.connected },
-      github: { connected: !!user.integrations?.github?.connected },
-    },
-  });
+    return res.status(200).json({
+      name: user.name,
+      email: user.email,
+      role: user.role || "User",
+      profilepic: user.profilepic,
+      maxStorage: user.maxStorage,
+      rootDirectoryId: user.rootDirId,
+      usedStorage,
+      theme: user.theme || "dark",
+      integrations: {
+        googleDrive: { connected: !!user.integrations?.googleDrive?.connected },
+        github: { connected: !!user.integrations?.github?.connected },
+      },
+    });
+  } catch (err) {
+    console.error("getUser error:", err);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
 };
 
 // ─── Email/Password Registration ────────────────────────────────────────────────
@@ -512,9 +517,7 @@ export const uploadProfilePic = async (req, res) => {
 
   await File.create(newProfilePic);
 
-  const filePath = path.join(STORAGE_DIR, `${profilePicId.toString()}${ext}`);
-
-  // Clean up old profile pic (local file or external URL doc)
+  // Clean up old profile pic (B2 object or external URL doc)
   if (user.profilepic) {
     const oldProfilePic = await File.findOne({
       _id: user.profilepic,
@@ -523,32 +526,39 @@ export const uploadProfilePic = async (req, res) => {
       .lean();
     if (oldProfilePic) {
       await File.deleteOne({ _id: oldProfilePic._id });
-      // Only remove local file if it's not an external URL
       if (!oldProfilePic.externalUrl) {
-        await rm(
-          path.join(STORAGE_DIR, `${oldProfilePic._id.toString()}${oldProfilePic.extension}`),
-        ).catch(() => {});
+        await deleteFromB2({
+          key: `${oldProfilePic._id.toString()}${oldProfilePic.extension}`,
+        });
       }
     }
   }
 
-  const writeStream = createWriteStream(filePath);
-
   try {
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
+    const contentType = req.headers["content-type"] || "image/png";
+
+    await uploadToB2({
+      key: `${profilePicId.toString()}${ext}`,
+      body: buffer,
+      contentType,
+    });
+
     await User.updateOne(
       { _id: user._id },
       { $set: { profilepic: profilePicId } },
     );
 
-    writeStream.on("finish", async () => {
-      await invalidateUserSessions(req.user.id);
-      return res.status(200).json({ message: "Profile pic updated" });
-    });
+    await invalidateUserSessions(req.user.id);
+    return res.status(200).json({ message: "Profile pic updated" });
   } catch (err) {
-    console.error(err);
+    console.error("Profile pic upload error:", err);
     return res.status(500).json({ message: "Internal Server Error" });
   }
-  req.pipe(writeStream);
 };
 
 export const getProfilePic = async (req, res) => {
@@ -562,12 +572,15 @@ export const getProfilePic = async (req, res) => {
     .select("extension externalUrl userId")
     .lean();
 
-  // If requesting someone else's profile pic, check if user is > User role
+  if (!profilePic) {
+    return res.status(404).send("Profile pic not found");
+  }
+
+  // If requesting someone else's profile pic, check if user has access
   if (id && id !== req.user.profilepic?.toString()) {
     const hierarchy = ["User", "Manager", "Admin", "Owner"];
     const userRoleIndex = hierarchy.indexOf(req.user.role || "User");
 
-    console.log(profilePic.userId, req.user.id);
     const hasAccess =
       (await SharedAccess.findOne({
         userId: profilePic.userId,
@@ -583,20 +596,24 @@ export const getProfilePic = async (req, res) => {
     }
   }
 
-  if (!profilePic) {
-    return res.status(404).send("Profile pic not found");
-  }
-
   // If it's an external URL (e.g. Google avatar), redirect to it
   if (profilePic.externalUrl) {
     return res.redirect(profilePic.externalUrl);
   }
 
-  const filePath = path.join(
-    STORAGE_DIR,
-    `${profilePic._id.toString()}${profilePic.extension}`,
-  );
-  return res.status(200).sendFile(filePath);
+  try {
+    const s3Response = await getObjectFromB2({
+      key: `${profilePic._id.toString()}${profilePic.extension}`,
+    });
+    res.setHeader(
+      "Content-Type",
+      s3Response.ContentType || "image/png",
+    );
+    return s3Response.Body.pipe(res);
+  } catch (s3Err) {
+    console.error("Failed to fetch profile pic from B2:", s3Err);
+    return res.status(404).send("Profile pic file not found");
+  }
 };
 
 // ─── Search History ─────────────────────────────────────────────────────────────

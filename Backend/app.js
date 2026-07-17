@@ -26,7 +26,7 @@ import User from "./models/userModel.js";
 import { reconcileDirectoryPathsAndSizes } from "./utils/reconcile.js";
 import helmet from "helmet";
 import { s3Client } from "./utils/s3.js";
-import { ListObjectsV2Command, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { ListObjectVersionsCommand, DeleteObjectsCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 import { PORT, REDIS_URL, CLIENT_URL, SESSION_SECRET } from "./config.js";
 
@@ -220,22 +220,33 @@ async function cleanFiles() {
       parentDir: { $ne: null, $nin: Array.from(validTrashParentsSet) },
     });
 
-    // 5. Fetch all objects from Backblaze B2 to identify broken database records and orphans
-    const allS3Keys = new Set();
-    let continuationToken;
-    do {
-      const listCommand = new ListObjectsV2Command({
+    // 5. Fetch all object versions from Backblaze B2 to identify broken database records and orphans
+    const allVersions = [];
+    const allDeleteMarkers = [];
+    let keyMarker;
+    let versionIdMarker;
+    let isTruncated = true;
+
+    while (isTruncated) {
+      const listCommand = new ListObjectVersionsCommand({
         Bucket: process.env.BACKBLAZE_BUCKET_NAME,
-        ContinuationToken: continuationToken,
+        KeyMarker: keyMarker,
+        VersionIdMarker: versionIdMarker,
       });
-      const listResponse = await s3Client.send(listCommand);
-      if (listResponse.Contents) {
-        for (const obj of listResponse.Contents) {
-          allS3Keys.add(obj.Key);
-        }
+      const response = await s3Client.send(listCommand);
+      if (response.Versions) {
+        allVersions.push(...response.Versions);
       }
-      continuationToken = listResponse.NextContinuationToken;
-    } while (continuationToken);
+      if (response.DeleteMarkers) {
+        allDeleteMarkers.push(...response.DeleteMarkers);
+      }
+      isTruncated = response.IsTruncated;
+      keyMarker = response.NextKeyMarker;
+      versionIdMarker = response.NextVersionIdMarker;
+    }
+
+    // Set of all unique keys currently in S3 (having at least one version)
+    const allS3Keys = new Set(allVersions.map((v) => v.Key));
 
     // Identify Broken Database Records (files in DB with externalUrl = null that do not exist in Backblaze B2)
     const activeLocalFiles = await File.find({ externalUrl: null }).lean();
@@ -389,40 +400,64 @@ async function cleanFiles() {
       console.log(`[Cleanup] Deleted file from B2 and database: ${fileItem.name || fileId}`);
     }
 
-    // 9. Safe Storage Housekeeping (Delete orphan S3 files in B2)
+    // 9. Safe Storage Housekeeping (Delete all versions of orphaned S3 files/thumbnails in B2)
     const activeFileDocs = await File.find({}, { _id: 1, extension: 1, hasThumbnail: 1 }).lean();
     const trashFileDocs = await Trash.find({ type: "file" }, { _id: 1, extension: 1, hasThumbnail: 1 }).lean();
 
-    const activeFileIdsSet = new Set(activeFileDocs.map(f => f._id.toString()));
-    const trashFileIdsSet = new Set(trashFileDocs.map(t => t._id.toString()));
+    const activeFileIdsSet = new Set(activeFileDocs.map((f) => f._id.toString()));
+    const trashFileIdsSet = new Set(trashFileDocs.map((t) => t._id.toString()));
 
-    const activeThumbnailIdsSet = new Set(activeFileDocs.filter(f => f.hasThumbnail).map(f => f._id.toString()));
-    const trashThumbnailIdsSet = new Set(trashFileDocs.filter(t => t.hasThumbnail).map(t => t._id.toString()));
+    const activeThumbnailIdsSet = new Set(activeFileDocs.filter((f) => f.hasThumbnail).map((f) => f._id.toString()));
+    const trashThumbnailIdsSet = new Set(trashFileDocs.filter((t) => t.hasThumbnail).map((t) => t._id.toString()));
 
-    for (const key of allS3Keys) {
+    const isOrphanedKey = (key) => {
       if (key.startsWith("thumbnails/")) {
         const match = key.match(/^thumbnails\/(.+)\.jpg$/);
         if (match) {
           const fileId = match[1];
-          if (!activeThumbnailIdsSet.has(fileId) && !trashThumbnailIdsSet.has(fileId)) {
-            console.log(`[Cleanup] Deleting orphaned S3 thumbnail: ${key}`);
-            await s3Client.send(new DeleteObjectCommand({
-              Bucket: process.env.BACKBLAZE_BUCKET_NAME,
-              Key: key
-            })).catch(() => {});
-          }
+          return !activeThumbnailIdsSet.has(fileId) && !trashThumbnailIdsSet.has(fileId);
         }
+        return true; // Malformed thumbnail key or folder placeholder itself
       } else {
         const dotIndex = key.lastIndexOf(".");
         const fileId = dotIndex !== -1 ? key.substring(0, dotIndex) : key;
-        if (!activeFileIdsSet.has(fileId) && !trashFileIdsSet.has(fileId)) {
-          console.log(`[Cleanup] Deleting orphaned S3 original file: ${key}`);
-          await s3Client.send(new DeleteObjectCommand({
-            Bucket: process.env.BACKBLAZE_BUCKET_NAME,
-            Key: key
-          })).catch(() => {});
+        // B2 folder markers/placeholders should not be deleted if they don't match typical IDs, but wait,
+        // if it doesn't have a dot and is not a valid ObjectId format, maybe we should ignore it to be safe?
+        // Let's check if the fileId is 24 hex characters
+        const isHex24 = /^[0-9a-fA-F]{24}$/.test(fileId);
+        if (isHex24) {
+          return !activeFileIdsSet.has(fileId) && !trashFileIdsSet.has(fileId);
         }
+        return false; // Ignore general/non-asset keys to prevent accidental deletion of user assets
       }
+    };
+
+    const objectsToDelete = [];
+
+    // Collect orphaned versions
+    for (const v of allVersions) {
+      if (isOrphanedKey(v.Key)) {
+        objectsToDelete.push({ Key: v.Key, VersionId: v.VersionId });
+      }
+    }
+
+    // Collect orphaned delete markers
+    for (const dm of allDeleteMarkers) {
+      if (isOrphanedKey(dm.Key)) {
+        objectsToDelete.push({ Key: dm.Key, VersionId: dm.VersionId });
+      }
+    }
+
+    if (objectsToDelete.length > 0) {
+      console.log(`[Cleanup] Permanently purging ${objectsToDelete.length} orphaned B2 file versions/delete markers...`);
+      for (let i = 0; i < objectsToDelete.length; i += 1000) {
+        const batch = objectsToDelete.slice(i, i + 1000);
+        await s3Client.send(new DeleteObjectsCommand({
+          Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+          Delete: { Objects: batch }
+        }));
+      }
+      console.log("[Cleanup] S3 purging complete.");
     }
 
     console.log(

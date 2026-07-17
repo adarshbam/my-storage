@@ -2,7 +2,7 @@ import { createReadStream, createWriteStream } from "fs";
 import { Transform } from "stream";
 import { sanitize } from "../utils/sanitize.js";
 import path from "path";
-import { stat, unlink, mkdir, readFile } from "fs/promises";
+import { stat, unlink, mkdir, readFile, writeFile } from "fs/promises";
 import SharedAccess from "../models/sharedAccessModel.js";
 import {
   hasWriteAccess,
@@ -27,7 +27,14 @@ import Trash from "../models/trashModel.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 import { getSystemConfigHelper } from "./systemConfigController.js";
 import { error } from "console";
-import { createUploadSignedUrl, createDownloadSignedUrl, s3Client } from "../utils/s3.js";
+import {
+  createUploadSignedUrl,
+  createDownloadSignedUrl,
+  s3Client,
+  uploadToB2,
+  deleteFromB2,
+  getObjectFromB2,
+} from "../utils/s3.js";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -448,71 +455,39 @@ export const getThumbnail = async (req, res) => {
       }
     }
 
-    // 2. Generate on-demand locally as temporary file, upload to B2, and delete locally
-    const originalLocalPath = path.join(STORAGE_DIR, `${fileId}${file.extension}`);
-    let hasLocalOriginal = false;
-    try {
-      await stat(originalLocalPath);
-      hasLocalOriginal = true;
-    } catch {
-      hasLocalOriginal = false;
-    }
-
+    // 2. Generate on-demand from Backblaze B2 original file, upload to B2, and send to client
     const tempThumbnailPath = path.join(THUMBNAILS_DIR, `${fileId}.jpg`);
 
     try {
-      if (hasLocalOriginal) {
-        // Generate from local original file
-        if (imageExtensions.includes(fileExt)) {
-          await sharp(originalLocalPath)
-            .resize(256, 128, { fit: "cover" })
-            .jpeg({ quality: 80 })
-            .toFile(tempThumbnailPath);
-        } else if (videoExtensions.includes(fileExt)) {
-          await new Promise((resolve, reject) => {
-            ffmpeg(originalLocalPath)
-              .on("end", resolve)
-              .on("error", reject)
-              .screenshots({
-                timestamps: ["1"],
-                filename: `${fileId}.jpg`,
-                folder: THUMBNAILS_DIR,
-                size: "256x128",
-              });
-          });
+      if (imageExtensions.includes(fileExt)) {
+        const s3Params = {
+          Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+          Key: `${fileId}${file.extension}`,
+        };
+        const command = new GetObjectCommand(s3Params);
+        const s3Response = await s3Client.send(command);
+        const chunks = [];
+        for await (const chunk of s3Response.Body) {
+          chunks.push(chunk);
         }
-      } else {
-        // Generate from Backblaze B2 original file
-        if (imageExtensions.includes(fileExt)) {
-          const s3Params = {
-            Bucket: process.env.BACKBLAZE_BUCKET_NAME,
-            Key: `${fileId}${file.extension}`,
-          };
-          const command = new GetObjectCommand(s3Params);
-          const s3Response = await s3Client.send(command);
-          const chunks = [];
-          for await (const chunk of s3Response.Body) {
-            chunks.push(chunk);
-          }
-          const buffer = Buffer.concat(chunks);
-          await sharp(buffer)
-            .resize(256, 128, { fit: "cover" })
-            .jpeg({ quality: 80 })
-            .toFile(tempThumbnailPath);
-        } else if (videoExtensions.includes(fileExt)) {
-          const videoUrl = await createDownloadSignedUrl({ key: `${fileId}${file.extension}` });
-          await new Promise((resolve, reject) => {
-            ffmpeg(videoUrl)
-              .on("end", resolve)
-              .on("error", reject)
-              .screenshots({
-                timestamps: ["1"],
-                filename: `${fileId}.jpg`,
-                folder: THUMBNAILS_DIR,
-                size: "256x128",
-              });
-          });
-        }
+        const buffer = Buffer.concat(chunks);
+        await sharp(buffer, { failOnError: false })
+          .resize(256, 128, { fit: "cover" })
+          .jpeg({ quality: 80 })
+          .toFile(tempThumbnailPath);
+      } else if (videoExtensions.includes(fileExt)) {
+        const videoUrl = await createDownloadSignedUrl({ key: `${fileId}${file.extension}` });
+        await new Promise((resolve, reject) => {
+          ffmpeg(videoUrl)
+            .on("end", resolve)
+            .on("error", reject)
+            .screenshots({
+              timestamps: ["1"],
+              filename: `${fileId}.jpg`,
+              folder: THUMBNAILS_DIR,
+              size: "256x128",
+            });
+        });
       }
 
       // Read generated temp thumbnail
@@ -790,25 +765,6 @@ export const uploadFile = async (req, res) => {
       return;
     }
 
-    let recievedBytes = 0;
-    const sizeValidator = new Transform({
-      transform(chunk, encoding, callback) {
-        recievedBytes += chunk.length;
-
-        if (
-          recievedBytes > fileSize ||
-          recievedBytes > systemConfig.maxFileSizeLimit
-        ) {
-          // Cleanup: delete partial file on disk, thumbnail, and any DB record
-          unlink(filePath).catch(() => {});
-          unlink(path.join(THUMBNAILS_DIR, `${id}.jpg`)).catch(() => {});
-          File.deleteOne({ _id: id }).catch(() => {});
-          req.destroy(new Error("File exceeds maximum allowed size"));
-        }
-        callback(null, chunk);
-      },
-    });
-
     let ownerId = req.user.id;
     // Verify parent directory ownership and check shared permissions
     if (parentDirId && parentDirId !== rootDirId) {
@@ -833,146 +789,119 @@ export const uploadFile = async (req, res) => {
       }
     }
 
-    // Support client-provided ID for resumption, or generate new one
     const id =
       req.headers["x-file-id"] || new mongoose.Types.ObjectId().toString();
     const fileName = sanitize(req.headers.filename);
-    const startByte = parseInt(req.headers["x-start-byte"] || "0", 10);
     const ext = path.extname(fileName);
     const fullFileName = `${id}${ext}`;
-    const filePath = path.join(STORAGE_DIR, fullFileName);
-    const contentType = req.headers["content-type"];
+    const contentType = req.headers["content-type"] || "application/octet-stream";
 
-    const getUrl = await createUploadSignedUrl({ key: fullFileName, contentType });
-
-    // Decide flags: 'a' for append (resume), 'w' for write (new)
-    const flags = startByte > 0 ? "a" : "w";
-
-    const writeStream = createWriteStream(filePath, { flags });
-
-    writeStream.on("error", async (err) => {
-      console.error("Write stream error:", err);
-
-      try {
-        // Delete the physical file that was being uploaded
-        await unlink(filePath).catch(() => {});
-
-        // Delete the thumbnail if it exists
-        const thumbnailPath = path.join(THUMBNAILS_DIR, `${id}.jpg`);
-        await unlink(thumbnailPath).catch(() => {});
-
-        // Remove the file entry from the database
-        await File.deleteOne({ _id: id });
-      } catch (cleanupErr) {
-        console.error("Error during cleanup:", cleanupErr);
+    let buffer;
+    if (req.body && req.body.content !== undefined) {
+      buffer = Buffer.from(req.body.content, "utf-8");
+    } else {
+      const chunks = [];
+      for await (const chunk of req) {
+        chunks.push(chunk);
       }
+      buffer = Buffer.concat(chunks);
+    }
 
-      if (!res.headersSent) {
-        return res.status(500).send("Error writing file");
-      }
+    const actualSize = buffer.length;
+    if (actualSize > systemConfig.maxFileSizeLimit) {
+      return res.status(400).send("File exceeds maximum allowed size");
+    }
+
+    // Upload main file to Backblaze B2
+    await uploadToB2({
+      key: fullFileName,
+      body: buffer,
+      contentType,
     });
 
-    writeStream.on("finish", async () => {
-      const exists = await File.findOne({ _id: id }).select("_id").lean();
+    let hasThumbnail = false;
+    const imageExtensions = [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".gif",
+      ".webp",
+      ".tiff",
+      ".svg",
+    ];
+    const videoExtensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"];
+    const fileExt = ext.toLowerCase();
 
-      await updateParentDirectorySize(parentDirId, fileSize);
-
-      let hasThumbnail = false;
-
-      // Generate thumbnail if image or video
-      const imageExtensions = [
-        ".jpg",
-        ".jpeg",
-        ".png",
-        ".gif",
-        ".webp",
-        ".tiff",
-        ".svg",
-      ];
-      const videoExtensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"];
-
-      try {
-        const thumbnailPath = path.join(THUMBNAILS_DIR, `${id}.jpg`);
-        const fileExt = ext.toLowerCase();
-
-        if (imageExtensions.includes(fileExt)) {
-          await sharp(filePath)
-            .resize(256, 128, { fit: "cover" }) // Resize to 256x128 as requested (16:8 ratio)
-            .jpeg({ quality: 80 })
-            .toFile(thumbnailPath);
-          hasThumbnail = true;
-        } else if (videoExtensions.includes(fileExt)) {
+    try {
+      if (imageExtensions.includes(fileExt)) {
+        const thumbBuffer = await sharp(buffer)
+          .resize(256, 128, { fit: "cover" })
+          .jpeg({ quality: 80 })
+          .toBuffer();
+        await uploadToB2({
+          key: `thumbnails/${id}.jpg`,
+          body: thumbBuffer,
+          contentType: "image/jpeg",
+        });
+        hasThumbnail = true;
+      } else if (videoExtensions.includes(fileExt)) {
+        const tempVideoPath = path.join(THUMBNAILS_DIR, `temp_${id}${ext}`);
+        const tempThumbPath = path.join(THUMBNAILS_DIR, `${id}.jpg`);
+        try {
+          await writeFile(tempVideoPath, buffer);
           await new Promise((resolve, reject) => {
-            ffmpeg(filePath)
-              .on("end", () => {
-                hasThumbnail = true;
-                resolve();
-              })
-              .on("error", (err) => {
-                console.error("Failed to generate video thumbnail", err);
-                resolve(); // resolve anyway to continue file upload
-              })
+            ffmpeg(tempVideoPath)
+              .on("end", resolve)
+              .on("error", reject)
               .screenshots({
-                timestamps: ["1"], // capture at 1 second
+                timestamps: ["1"],
                 filename: `${id}.jpg`,
                 folder: THUMBNAILS_DIR,
                 size: "256x128",
               });
           });
-        }
-      } catch (err) {
-        console.error("Failed to generate thumbnail", err);
-      }
-
-      if (hasThumbnail) {
-        try {
-          const thumbnailPath = path.join(THUMBNAILS_DIR, `${id}.jpg`);
-          const thumbnailBuffer = await readFile(thumbnailPath);
-          const uploadCommand = new PutObjectCommand({
-            Bucket: process.env.BACKBLAZE_BUCKET_NAME,
-            Key: `thumbnails/${id}.jpg`,
-            Body: thumbnailBuffer,
-            ContentType: "image/jpeg",
+          const thumbBuffer = await readFile(tempThumbPath);
+          await uploadToB2({
+            key: `thumbnails/${id}.jpg`,
+            body: thumbBuffer,
+            contentType: "image/jpeg",
           });
-          await s3Client.send(uploadCommand);
-          await unlink(thumbnailPath).catch(() => {});
-        } catch (uploadErr) {
-          console.error("Failed to upload thumbnail to S3 in uploadFile:", uploadErr);
+          hasThumbnail = true;
+        } catch (vErr) {
+          console.error("Video thumbnail generation error:", vErr);
+        } finally {
+          await unlink(tempVideoPath).catch(() => {});
+          await unlink(tempThumbPath).catch(() => {});
         }
       }
-
-      console.log(parentDirId);
-
-      const dirPath = await getDirectoryPath(id, parentDirId);
-
-      if (!exists) {
-        await File.create({
-          _id: id,
-          extension: ext,
-          type: "file",
-          userId: ownerId,
-          path: dirPath,
-          size: fileSize,
-          name: fileName,
-          parentDir: parentDirId,
-          hasThumbnail,
-        });
-      }
-
-      await cacheDel("dir:contents:" + parentDirId);
-      await cacheDel("dir:meta:" + parentDirId);
-
-      if (!res.writableEnded) return res.status(201).send("File uploaded");
-    });
-
-    // If we have content in req.body (from New File modal), write it and end
-    if (req.body && req.body.content !== undefined) {
-      writeStream.write(req.body.content);
-      writeStream.end();
-    } else {
-      // Otherwise pipe the binary stream (from TransferManager)
-      req.pipe(sizeValidator).pipe(writeStream);
+    } catch (tErr) {
+      console.error("Thumbnail generation error:", tErr);
     }
+
+    const finalSize = actualSize || fileSize;
+    const exists = await File.findOne({ _id: id }).select("_id").lean();
+    await updateParentDirectorySize(parentDirId, finalSize);
+
+    const dirPath = await getDirectoryPath(id, parentDirId);
+
+    if (!exists) {
+      await File.create({
+        _id: id,
+        extension: ext,
+        type: "file",
+        userId: ownerId,
+        path: dirPath,
+        size: finalSize,
+        name: fileName,
+        parentDir: parentDirId,
+        hasThumbnail,
+      });
+    }
+
+    await cacheDel("dir:contents:" + parentDirId);
+    await cacheDel("dir:meta:" + parentDirId);
+
+    if (!res.writableEnded) return res.status(201).send("File uploaded");
   } catch (err) {
     console.error(err);
     return res.status(500).send("Internal Server Error");
@@ -1004,6 +933,18 @@ export const uploadVaultInitate = async (req, res) => {
     
     const dirPath = dirId ? await getDirectoryPath(id, dirId) : [];
 
+    const imageExtensions = [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".gif",
+      ".webp",
+      ".tiff",
+      ".svg",
+    ];
+    const videoExtensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"];
+    const isMedia = imageExtensions.includes(ext.toLowerCase()) || videoExtensions.includes(ext.toLowerCase());
+
     // Create the initial file entry
     await File.create({
       _id: id,
@@ -1014,7 +955,7 @@ export const uploadVaultInitate = async (req, res) => {
       size: size || 0,
       name: name,
       parentDir: dirId,
-      hasThumbnail: false,
+      hasThumbnail: isMedia,
     });
 
     if (size) {
@@ -1075,7 +1016,7 @@ export const deleteFile = async (req, res) => {
   try {
     const { fileId } = req.params;
     const fileData = await File.findOne({ _id: fileId })
-      .select("userId parentDir size path")
+      .select("userId parentDir size path extension")
       .lean();
 
     if (!fileData) {
@@ -1115,14 +1056,9 @@ export const deleteFile = async (req, res) => {
         if (!isPermanent) {
           await Trash.create([deletedFile], { session });
         } else {
-          // Physically delete the file and thumbnail
-          const filePath = path.join(
-            STORAGE_DIR,
-            `${fileId}${fileData.extension}`,
-          );
-          const thumbnailPath = path.join(THUMBNAILS_DIR, `${fileId}.jpg`);
-          unlink(filePath).catch(() => {});
-          unlink(thumbnailPath).catch(() => {});
+          // Physically delete the file and thumbnail from Backblaze B2
+          await deleteFromB2({ key: `${fileId}${fileData.extension}` });
+          await deleteFromB2({ key: `thumbnails/${fileId}.jpg` });
         }
       }
 
@@ -1168,31 +1104,27 @@ export const saveFile = async (req, res) => {
       return res.status(403).send("Unauthorized");
     }
 
-    const filePath = path.join(STORAGE_DIR, `${fileId}${file.extension}`);
-    const writeStream = createWriteStream(filePath);
-    writeStream.write(content);
-    writeStream.end();
-
-    writeStream.on("finish", async () => {
-      const stats = await stat(filePath);
-      const sizeDiff = stats.size - (file.size || 0);
-      await File.updateOne({ _id: fileId }, { size: stats.size });
-      if (sizeDiff !== 0) {
-        await updateParentDirectorySize(file.parentDir, sizeDiff);
-      }
-      if (file && file.parentDir) {
-        await cacheDel("dir:meta:" + file.parentDir.toString());
-        await cacheDel("dir:contents:" + file.parentDir.toString());
-      }
-      return res.status(200).send("File saved");
+    const fileBuffer = Buffer.from(content || "", "utf-8");
+    await uploadToB2({
+      key: `${fileId}${file.extension}`,
+      body: fileBuffer,
+      contentType: "text/plain",
     });
 
-    writeStream.on("error", (err) => {
-      console.error(err);
-      return res.status(500).send("Error saving file");
-    });
+    const newSize = fileBuffer.length;
+    const sizeDiff = newSize - (file.size || 0);
+    await File.updateOne({ _id: fileId }, { size: newSize });
+    if (sizeDiff !== 0) {
+      await updateParentDirectorySize(file.parentDir, sizeDiff);
+    }
+    if (file && file.parentDir) {
+      await cacheDel("dir:meta:" + file.parentDir.toString());
+      await cacheDel("dir:contents:" + file.parentDir.toString());
+    }
+    return res.status(200).send("File saved");
   } catch (err) {
-    console.error(err);
+    console.error("Save error:", err);
     return res.status(500).send("Server error");
   }
 };
+
