@@ -25,6 +25,8 @@ import Directory from "./models/directoryModel.js";
 import User from "./models/userModel.js";
 import { reconcileDirectoryPathsAndSizes } from "./utils/reconcile.js";
 import helmet from "helmet";
+import { s3Client } from "./utils/s3.js";
+import { ListObjectsV2Command, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 import { PORT, REDIS_URL, CLIENT_URL, SESSION_SECRET } from "./config.js";
 
@@ -171,7 +173,7 @@ const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
 async function cleanFiles() {
   try {
-    console.log("[Cleanup] Starting storage and database cleanup...");
+    console.log("[Cleanup] Starting Backblaze B2 storage and database cleanup...");
     const expiryDate = new Date(Date.now() - THIRTY_DAYS);
 
     // 1. Identify active user IDs
@@ -218,7 +220,24 @@ async function cleanFiles() {
       parentDir: { $ne: null, $nin: Array.from(validTrashParentsSet) },
     });
 
-    // 5. Identify Broken Database Records (Local files in DB that do not exist on disk)
+    // 5. Fetch all objects from Backblaze B2 to identify broken database records and orphans
+    const allS3Keys = new Set();
+    let continuationToken;
+    do {
+      const listCommand = new ListObjectsV2Command({
+        Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+        ContinuationToken: continuationToken,
+      });
+      const listResponse = await s3Client.send(listCommand);
+      if (listResponse.Contents) {
+        for (const obj of listResponse.Contents) {
+          allS3Keys.add(obj.Key);
+        }
+      }
+      continuationToken = listResponse.NextContinuationToken;
+    } while (continuationToken);
+
+    // Identify Broken Database Records (files in DB with externalUrl = null that do not exist in Backblaze B2)
     const activeLocalFiles = await File.find({ externalUrl: null }).lean();
     const trashLocalFiles = await Trash.find({
       type: "file",
@@ -227,16 +246,16 @@ async function cleanFiles() {
 
     const brokenFiles = [];
     for (const f of activeLocalFiles) {
-      const fPath = path.join(UPLOAD_DIR, `${f._id}${f.extension}`);
-      if (!existsSync(fPath)) {
+      const s3Key = `${f._id}${f.extension}`;
+      if (!allS3Keys.has(s3Key)) {
         brokenFiles.push(f);
       }
     }
 
     const brokenTrash = [];
     for (const t of trashLocalFiles) {
-      const tPath = path.join(UPLOAD_DIR, `${t._id}${t.extension}`);
-      if (!existsSync(tPath)) {
+      const s3Key = `${t._id}${t.extension}`;
+      if (!allS3Keys.has(s3Key)) {
         brokenTrash.push(t);
       }
     }
@@ -248,8 +267,8 @@ async function cleanFiles() {
       - Orphan files: ${orphanFiles.length}
       - Orphan directories: ${orphanDirectories.length}
       - Orphan trash records: ${orphanTrash.length}
-      - Broken active files: ${brokenFiles.length}
-      - Broken trash files: ${brokenTrash.length}
+      - Broken active files (missing in B2): ${brokenFiles.length}
+      - Broken trash files (missing in B2): ${brokenTrash.length}
     `);
 
     // 6. Consolidate items to delete recursively or directly
@@ -295,18 +314,27 @@ async function cleanFiles() {
       );
     }
 
-    // 7. Perform Directory Cleanup (recursive deletion from DB and disk)
+    // 7. Perform Directory Cleanup (recursive deletion from DB and Backblaze B2)
     for (const [dirId, dirItem] of dirsToDeleteMap.entries()) {
       const recursiveDelete = async (id) => {
         // Find descendant files
         const childFiles = await File.find({ parentDir: id });
         for (const f of childFiles) {
-          const fPath = path.join(UPLOAD_DIR, `${f._id}${f.extension}`);
-          const tPath = path.join(UPLOAD_DIR, "thumbnails", `${f._id}.jpg`);
-          await rm(fPath, { force: true }).catch(() => {});
-          await rm(tPath, { force: true }).catch(() => {});
+          const fileKey = `${f._id.toString()}${f.extension}`;
+          const thumbKey = `thumbnails/${f._id.toString()}.jpg`;
+
+          await s3Client.send(new DeleteObjectCommand({
+            Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+            Key: fileKey,
+          })).catch(() => {});
+
+          await s3Client.send(new DeleteObjectCommand({
+            Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+            Key: thumbKey,
+          })).catch(() => {});
+
           console.log(
-            `[Cleanup] Deleted descendant file on disk: ${f.name || f._id}`,
+            `[Cleanup] Deleted descendant file in B2: ${f.name || f._id}`,
           );
         }
 
@@ -341,57 +369,59 @@ async function cleanFiles() {
       );
     }
 
-    // 8. Perform File Cleanup (deleting physical file, thumbnail, and DB/Trash records)
+    // 8. Perform File Cleanup (deleting Backblaze B2 files, thumbnails, and DB/Trash records)
     for (const [fileId, fileItem] of filesToDeleteMap.entries()) {
-      const filePath = path.join(
-        UPLOAD_DIR,
-        `${fileItem._id}${fileItem.extension}`,
-      );
-      const thumbPath = path.join(
-        UPLOAD_DIR,
-        "thumbnails",
-        `${fileItem._id}.jpg`,
-      );
+      const fileKey = `${fileItem._id}${fileItem.extension}`;
+      const thumbKey = `thumbnails/${fileItem._id}.jpg`;
 
-      await rm(filePath, { force: true }).catch(() => {});
-      await rm(thumbPath, { force: true }).catch(() => {});
+      await s3Client.send(new DeleteObjectCommand({
+        Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+        Key: fileKey,
+      })).catch(() => {});
+
+      await s3Client.send(new DeleteObjectCommand({
+        Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+        Key: thumbKey,
+      })).catch(() => {});
 
       await File.deleteOne({ _id: fileId });
       await Trash.deleteOne({ _id: fileId });
-      console.log(`[Cleanup] Deleted file: ${fileItem.name || fileId}`);
+      console.log(`[Cleanup] Deleted file from B2 and database: ${fileItem.name || fileId}`);
     }
 
-    // 9. Safe Storage Housekeeping (Delete orphan storage files)
-    if (existsSync(UPLOAD_DIR)) {
-      const storageItems = readdirSync(UPLOAD_DIR);
-      const storageFiles = storageItems.filter((name) => name.includes("."));
-      const storedFileIds = storageFiles.map((name) => name.split(".")[0]);
+    // 9. Safe Storage Housekeeping (Delete orphan S3 files in B2)
+    const activeFileDocs = await File.find({}, { _id: 1, extension: 1, hasThumbnail: 1 }).lean();
+    const trashFileDocs = await Trash.find({ type: "file" }, { _id: 1, extension: 1, hasThumbnail: 1 }).lean();
 
-      // Query BOTH File and Trash collections to see which file IDs are still valid
-      const existingFiles = await File.find(
-        { _id: { $in: storedFileIds } },
-        { _id: 1 },
-      ).lean();
+    const activeFileIdsSet = new Set(activeFileDocs.map(f => f._id.toString()));
+    const trashFileIdsSet = new Set(trashFileDocs.map(t => t._id.toString()));
 
-      const existingTrashFiles = await Trash.find(
-        { _id: { $in: storedFileIds }, type: "file" },
-        { _id: 1 },
-      ).lean();
+    const activeThumbnailIdsSet = new Set(activeFileDocs.filter(f => f.hasThumbnail).map(f => f._id.toString()));
+    const trashThumbnailIdsSet = new Set(trashFileDocs.filter(t => t.hasThumbnail).map(t => t._id.toString()));
 
-      const validIdsSet = new Set([
-        ...existingFiles.map((f) => f._id.toString()),
-        ...existingTrashFiles.map((t) => t._id.toString()),
-      ]);
-
-      const ghostStorageFiles = storageFiles.filter((fileName) => {
-        const id = fileName.split(".")[0];
-        return !validIdsSet.has(id);
-      });
-
-      for (const fileName of ghostStorageFiles) {
-        const filePath = path.join(UPLOAD_DIR, fileName);
-        await rm(filePath, { force: true }).catch(() => {});
-        console.log(`[Cleanup] Deleted ghost storage file: ${fileName}`);
+    for (const key of allS3Keys) {
+      if (key.startsWith("thumbnails/")) {
+        const match = key.match(/^thumbnails\/(.+)\.jpg$/);
+        if (match) {
+          const fileId = match[1];
+          if (!activeThumbnailIdsSet.has(fileId) && !trashThumbnailIdsSet.has(fileId)) {
+            console.log(`[Cleanup] Deleting orphaned S3 thumbnail: ${key}`);
+            await s3Client.send(new DeleteObjectCommand({
+              Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+              Key: key
+            })).catch(() => {});
+          }
+        }
+      } else {
+        const dotIndex = key.lastIndexOf(".");
+        const fileId = dotIndex !== -1 ? key.substring(0, dotIndex) : key;
+        if (!activeFileIdsSet.has(fileId) && !trashFileIdsSet.has(fileId)) {
+          console.log(`[Cleanup] Deleting orphaned S3 original file: ${key}`);
+          await s3Client.send(new DeleteObjectCommand({
+            Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+            Key: key
+          })).catch(() => {});
+        }
       }
     }
 
@@ -406,8 +436,6 @@ async function cleanFiles() {
 cleanFiles();
 
 setInterval(cleanFiles, 24 * 60 * 60 * 1000); // Check every minute
-
-console.log();
 
 // httpsServer.listen(PORT, () => {
 //   console.log(`HTTPS Server running on port ${PORT}`);

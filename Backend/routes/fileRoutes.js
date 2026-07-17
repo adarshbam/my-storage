@@ -14,6 +14,7 @@ import {
   getAllStarredItems,
   getAllRecentItems,
   setStarredItem,
+  uploadVaultInitate,
 } from "../controllers/fileController.js";
 import { validate } from "../middlewares/validationMiddleware.js";
 import {
@@ -24,6 +25,7 @@ import {
   renameFileSchema,
   saveFileSchema,
   deleteFileSchema,
+  uploadVaultInitiateSchema,
 } from "../validators/fileSchema.js";
 import {
   searchLimiter,
@@ -93,6 +95,16 @@ router.get(
 
 // Allow both root upload (no param) and param upload
 // Note: router.param middleware will NOT run for "/"
+
+router.post(
+  "/upload-vault/initiate",
+  checkAuth,
+  uploadLimiter,
+  throttle(300, 8, "file-upload"),
+  validate(uploadVaultInitiateSchema),
+  uploadVaultInitate,
+);
+
 router.post(
   ["/", "/:parentDirId"],
   checkAuth,

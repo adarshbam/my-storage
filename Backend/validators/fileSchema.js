@@ -32,6 +32,15 @@ export const uploadFileSchema = {
   }).optional(),
 };
 
+export const uploadVaultInitiateSchema = {
+  body: z.object({
+    name: z.string().min(1, "Name is required"),
+    size: z.number().optional(),
+    contentType: z.string().optional(),
+    parentDirId: z.string().nullable().optional(),
+  }),
+};
+
 export const renameFileSchema = {
   params: z.object({
     fileId: objectIdSchema,

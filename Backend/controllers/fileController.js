@@ -2,7 +2,7 @@ import { createReadStream, createWriteStream } from "fs";
 import { Transform } from "stream";
 import { sanitize } from "../utils/sanitize.js";
 import path from "path";
-import { stat, unlink, mkdir } from "fs/promises";
+import { stat, unlink, mkdir, readFile } from "fs/promises";
 import SharedAccess from "../models/sharedAccessModel.js";
 import {
   hasWriteAccess,
@@ -27,6 +27,8 @@ import Trash from "../models/trashModel.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 import { getSystemConfigHelper } from "./systemConfigController.js";
 import { error } from "console";
+import { createUploadSignedUrl, createDownloadSignedUrl, s3Client } from "../utils/s3.js";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
@@ -94,9 +96,9 @@ export const updateParentDirectorySize = async (
 };
 
 export const getDirectoryPath = async (itemId, parentDirId) => {
+  if (!parentDirId) return [itemId];
   const parentDir = await Directory.findById(parentDirId).select("path").lean();
-  const path = [...parentDir.path, itemId];
-  console.log(path);
+  const path = parentDir && parentDir.path ? [...parentDir.path, itemId] : [itemId];
   return path;
 };
 
@@ -390,11 +392,13 @@ export const search = async (req, res) => {
 export const getThumbnail = async (req, res) => {
   try {
     const { fileId } = req.params;
-    let file = await File.findOne({ _id: fileId }).select("userId path").lean();
+    let isTrash = false;
+    let file = await File.findOne({ _id: fileId }).select("userId path name extension size hasThumbnail").lean();
 
     // If not found in File collection, check Trash collection
     if (!file) {
-      file = await Trash.findOne({ _id: fileId }).select("userId path").lean();
+      file = await Trash.findOne({ _id: fileId }).select("userId path name extension size hasThumbnail").lean();
+      isTrash = true;
     }
 
     if (!file) return res.status(404).send("File not found");
@@ -412,14 +416,136 @@ export const getThumbnail = async (req, res) => {
       }
     }
 
-    const thumbnailPath = path.join(THUMBNAILS_DIR, `${fileId}.jpg`);
+    const imageExtensions = [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".gif",
+      ".webp",
+      ".tiff",
+      ".svg",
+    ];
+    const videoExtensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"];
+    const fileExt = file.extension ? file.extension.toLowerCase() : "";
 
-    // Check if thumbnail exists
+    if (!imageExtensions.includes(fileExt) && !videoExtensions.includes(fileExt)) {
+      return res.status(404).send("Thumbnail not available");
+    }
+
+    // 1. Try to serve from Backblaze B2 first if hasThumbnail is true
+    if (file.hasThumbnail) {
+      try {
+        const s3Params = {
+          Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+          Key: `thumbnails/${fileId}.jpg`,
+        };
+        const command = new GetObjectCommand(s3Params);
+        const s3Response = await s3Client.send(command);
+        res.setHeader("Content-Type", "image/jpeg");
+        return s3Response.Body.pipe(res);
+      } catch (s3Err) {
+        console.warn("Thumbnail was marked in DB but not found in B2, regenerating on-demand:", s3Err.name);
+      }
+    }
+
+    // 2. Generate on-demand locally as temporary file, upload to B2, and delete locally
+    const originalLocalPath = path.join(STORAGE_DIR, `${fileId}${file.extension}`);
+    let hasLocalOriginal = false;
     try {
-      await stat(thumbnailPath);
-      res.sendFile(thumbnailPath);
+      await stat(originalLocalPath);
+      hasLocalOriginal = true;
     } catch {
-      res.status(404).send("Thumbnail not available");
+      hasLocalOriginal = false;
+    }
+
+    const tempThumbnailPath = path.join(THUMBNAILS_DIR, `${fileId}.jpg`);
+
+    try {
+      if (hasLocalOriginal) {
+        // Generate from local original file
+        if (imageExtensions.includes(fileExt)) {
+          await sharp(originalLocalPath)
+            .resize(256, 128, { fit: "cover" })
+            .jpeg({ quality: 80 })
+            .toFile(tempThumbnailPath);
+        } else if (videoExtensions.includes(fileExt)) {
+          await new Promise((resolve, reject) => {
+            ffmpeg(originalLocalPath)
+              .on("end", resolve)
+              .on("error", reject)
+              .screenshots({
+                timestamps: ["1"],
+                filename: `${fileId}.jpg`,
+                folder: THUMBNAILS_DIR,
+                size: "256x128",
+              });
+          });
+        }
+      } else {
+        // Generate from Backblaze B2 original file
+        if (imageExtensions.includes(fileExt)) {
+          const s3Params = {
+            Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+            Key: `${fileId}${file.extension}`,
+          };
+          const command = new GetObjectCommand(s3Params);
+          const s3Response = await s3Client.send(command);
+          const chunks = [];
+          for await (const chunk of s3Response.Body) {
+            chunks.push(chunk);
+          }
+          const buffer = Buffer.concat(chunks);
+          await sharp(buffer)
+            .resize(256, 128, { fit: "cover" })
+            .jpeg({ quality: 80 })
+            .toFile(tempThumbnailPath);
+        } else if (videoExtensions.includes(fileExt)) {
+          const videoUrl = await createDownloadSignedUrl({ key: `${fileId}${file.extension}` });
+          await new Promise((resolve, reject) => {
+            ffmpeg(videoUrl)
+              .on("end", resolve)
+              .on("error", reject)
+              .screenshots({
+                timestamps: ["1"],
+                filename: `${fileId}.jpg`,
+                folder: THUMBNAILS_DIR,
+                size: "256x128",
+              });
+          });
+        }
+      }
+
+      // Read generated temp thumbnail
+      const thumbnailBuffer = await readFile(tempThumbnailPath);
+
+      // Upload to Backblaze B2
+      const uploadCommand = new PutObjectCommand({
+        Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+        Key: `thumbnails/${fileId}.jpg`,
+        Body: thumbnailBuffer,
+        ContentType: "image/jpeg",
+      });
+      await s3Client.send(uploadCommand);
+
+      // Delete local temporary thumbnail immediately
+      await unlink(tempThumbnailPath).catch(() => {});
+
+      // Update database: set hasThumbnail: true
+      if (isTrash) {
+        await Trash.updateOne({ _id: fileId }, { $set: { hasThumbnail: true } });
+      } else {
+        await File.updateOne({ _id: fileId }, { $set: { hasThumbnail: true } });
+      }
+
+      // Send the newly generated thumbnail buffer
+      res.setHeader("Content-Type", "image/jpeg");
+      return res.send(thumbnailBuffer);
+
+    } catch (genErr) {
+      console.error("Failed on-demand thumbnail generation:", genErr);
+      // Clean up temp file if it was created
+      await unlink(tempThumbnailPath).catch(() => {});
+      return res.status(404).send("Thumbnail not available");
     }
   } catch (err) {
     console.error(err);
@@ -436,7 +562,7 @@ export const getFileById = async (req, res) => {
     await File.updateOne({ _id: fileId }, { $set: { openedAt: new Date() } });
 
     const file = await File.findOne({ _id: fileId })
-      .select("userId name extension path")
+      .select("userId name extension path size")
       .lean();
 
     // Check if file exists first
@@ -458,10 +584,26 @@ export const getFileById = async (req, res) => {
       }
     }
 
-    const filePath = path.join(STORAGE_DIR, `${fileId}${file.extension}`);
+    try {
+      const s3Key = `${fileId}${file.extension}`;
+      const s3Params = {
+        Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+        Key: s3Key,
+      };
 
-    // If action is NOT download, just send the file simple way (fixes Open File)
-    if (action !== "download") {
+      const range = req.headers.range;
+      if (range) {
+        s3Params.Range = range;
+      }
+
+      const command = new GetObjectCommand(s3Params);
+      const s3Response = await s3Client.send(command);
+
+      res.setHeader("Accept-Ranges", "bytes");
+      if (action === "download") {
+        res.setHeader("Content-Disposition", `attachment; filename="${file.name}"`);
+      }
+
       const textExtensions = [
         ".txt",
         ".md",
@@ -486,41 +628,44 @@ export const getFileById = async (req, res) => {
         ".env",
         ".gitignore",
       ];
-      if (
-        file.extension &&
-        textExtensions.includes(file.extension.toLowerCase())
-      ) {
+      if (action !== "download" && file.extension && textExtensions.includes(file.extension.toLowerCase())) {
         res.setHeader("Content-Type", "text/plain");
-      } else if (file.extension && file.extension.toLowerCase() === ".svg") {
+      } else if (action !== "download" && file.extension && file.extension.toLowerCase() === ".svg") {
         res.setHeader("Content-Type", "image/svg+xml");
+      } else {
+        res.setHeader("Content-Type", s3Response.ContentType || "application/octet-stream");
       }
-      return res.sendFile(path.resolve(filePath));
-    }
 
-    const stats = await stat(filePath);
-    const fileSize = stats.size;
+      let totalSize = file.size || 0;
+      if (s3Response.ContentRange) {
+        const parts = s3Response.ContentRange.split("/");
+        if (parts.length > 1) {
+          totalSize = Number(parts[1]) || totalSize;
+        }
+      }
+      res.setHeader("X-Total-Size", totalSize);
 
-    const range = req.headers.range;
+      if (range) {
+        res.status(206);
+        if (s3Response.ContentRange) {
+          res.setHeader("Content-Range", s3Response.ContentRange);
+        }
+        if (s3Response.ContentLength) {
+          res.setHeader("Content-Length", s3Response.ContentLength);
+        }
+      } else {
+        if (s3Response.ContentLength) {
+          res.setHeader("Content-Length", s3Response.ContentLength);
+        }
+      }
 
-    // ✅ IMPORTANT HEADERS
-    res.setHeader("Content-Disposition", `attachment; filename="${file.name}"`);
-    res.setHeader("Accept-Ranges", "bytes");
-
-    res.setHeader("Content-Type", "application/octet-stream");
-    res.setHeader("X-Total-Size", fileSize);
-
-    if (range) {
-      const start = Number(range.replace(/\D/g, ""));
-      const end = fileSize - 1;
-
-      res.status(206);
-      res.setHeader("Content-Range", `bytes ${start}-${end}/${fileSize}`);
-      res.setHeader("Content-Length", end - start + 1);
-
-      createReadStream(filePath, { start, end }).pipe(res);
-    } else {
-      res.setHeader("Content-Length", fileSize);
-      createReadStream(filePath).pipe(res);
+      s3Response.Body.pipe(res);
+    } catch (s3Err) {
+      console.error("S3 error:", s3Err);
+      if (s3Err.name === "NoSuchKey") {
+        return res.status(404).send("File not found");
+      }
+      return res.status(500).send("Server error fetching file from S3");
     }
   } catch (err) {
     console.error(err);
@@ -696,6 +841,9 @@ export const uploadFile = async (req, res) => {
     const ext = path.extname(fileName);
     const fullFileName = `${id}${ext}`;
     const filePath = path.join(STORAGE_DIR, fullFileName);
+    const contentType = req.headers["content-type"];
+
+    const getUrl = await createUploadSignedUrl({ key: fullFileName, contentType });
 
     // Decide flags: 'a' for append (resume), 'w' for write (new)
     const flags = startByte > 0 ? "a" : "w";
@@ -776,6 +924,23 @@ export const uploadFile = async (req, res) => {
         console.error("Failed to generate thumbnail", err);
       }
 
+      if (hasThumbnail) {
+        try {
+          const thumbnailPath = path.join(THUMBNAILS_DIR, `${id}.jpg`);
+          const thumbnailBuffer = await readFile(thumbnailPath);
+          const uploadCommand = new PutObjectCommand({
+            Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+            Key: `thumbnails/${id}.jpg`,
+            Body: thumbnailBuffer,
+            ContentType: "image/jpeg",
+          });
+          await s3Client.send(uploadCommand);
+          await unlink(thumbnailPath).catch(() => {});
+        } catch (uploadErr) {
+          console.error("Failed to upload thumbnail to S3 in uploadFile:", uploadErr);
+        }
+      }
+
       console.log(parentDirId);
 
       const dirPath = await getDirectoryPath(id, parentDirId);
@@ -810,6 +975,62 @@ export const uploadFile = async (req, res) => {
     }
   } catch (err) {
     console.error(err);
+    return res.status(500).send("Internal Server Error");
+  }
+};
+
+export const uploadVaultInitate = async (req, res) => {
+  try {
+    const { name, size, contentType, parentDirId } = req.body;
+    
+    // Default to root dir if no parentDirId provided
+    const rootDirId = req.user.rootDirId.toString();
+    const dirId = !parentDirId || parentDirId === "root" || parentDirId === "undefined" ? rootDirId : parentDirId;
+    
+    let ownerId = req.user.id;
+    if (dirId) {
+      const dir = await Directory.findOne({ _id: dirId }).lean();
+      if (dir && dir.userId) {
+        ownerId = dir.userId.toString();
+      }
+    }
+
+    const id = new mongoose.Types.ObjectId().toString();
+    const ext = path.extname(name);
+    const fullFileName = `${id}${ext}`;
+    
+    // Get the signed URL for the client to upload to
+    const signedUrl = await createUploadSignedUrl({ key: fullFileName, contentType });
+    
+    const dirPath = dirId ? await getDirectoryPath(id, dirId) : [];
+
+    // Create the initial file entry
+    await File.create({
+      _id: id,
+      extension: ext,
+      type: "file",
+      userId: ownerId,
+      path: dirPath,
+      size: size || 0,
+      name: name,
+      parentDir: dirId,
+      hasThumbnail: false,
+    });
+
+    if (size) {
+      await updateParentDirectorySize(dirId, size);
+    }
+
+    await cacheDel("dir:contents:" + dirId);
+    await cacheDel("dir:meta:" + dirId);
+
+    return res.status(200).json({
+      fileId: id,
+      signedUrl: signedUrl,
+      fileName: fullFileName,
+    });
+  } catch (err) {
+    console.error("Vault Upload Initiate Error:", err);
     return res.status(500).send("Internal Server Error");
   }
 };

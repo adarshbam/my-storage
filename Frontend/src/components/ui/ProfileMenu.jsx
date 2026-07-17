@@ -72,8 +72,6 @@ export default function ProfileMenu({
   // Simulated storage data (you can wire this to a real endpoint later)
   const usedPercent = ((usedStorage / maxStorage) * 100).toFixed(1);
 
-  console.log(user);
-
   const handleAvatarClick = (e) => {
     e.stopPropagation();
     fileInputRef.current?.click();
@@ -112,7 +110,7 @@ export default function ProfileMenu({
       if (res.ok) {
         const data = await res.json();
         setDevicesLimit(data.maxDevicesLimit);
-        
+
         const bytes = data.maxFileSizeLimit || 0;
         if (bytes === 0) {
           setFileSizeVal(0);
@@ -486,8 +484,12 @@ export default function ProfileMenu({
                       <Sliders size={20} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-black text-white tracking-tight">System Limits</h3>
-                      <p className="text-xs text-gray-400">Configure global parameters (Owner Only)</p>
+                      <h3 className="text-xl font-black text-white tracking-tight">
+                        System Limits
+                      </h3>
+                      <p className="text-xs text-gray-400">
+                        Configure global parameters (Owner Only)
+                      </p>
                     </div>
                   </div>
                   <button
@@ -504,7 +506,10 @@ export default function ProfileMenu({
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
                   </div>
                 ) : (
-                  <form onSubmit={handleSaveConfig} className="space-y-6 relative z-10">
+                  <form
+                    onSubmit={handleSaveConfig}
+                    className="space-y-6 relative z-10"
+                  >
                     {configError && (
                       <div className="text-sm px-4 py-3 rounded-xl font-medium bg-red-500/10 text-red-400 border border-red-500/20">
                         {configError}
@@ -532,7 +537,8 @@ export default function ProfileMenu({
                           placeholder="e.g. 3"
                         />
                         <p className="text-[10px] text-gray-500 mt-1">
-                          The maximum number of concurrent device sessions allowed per user.
+                          The maximum number of concurrent device sessions
+                          allowed per user.
                         </p>
                       </div>
 
@@ -565,7 +571,8 @@ export default function ProfileMenu({
                           </select>
                         </div>
                         <p className="text-[10px] text-gray-500 mt-1">
-                          Maximum file size allowed for uploading. Stored on backend in bytes.
+                          Maximum file size allowed for uploading. Stored on
+                          backend in bytes.
                         </p>
                       </div>
                     </div>
@@ -592,7 +599,7 @@ export default function ProfileMenu({
             </div>
           )}
         </AnimatePresence>,
-        document.body
+        document.body,
       )}
 
       <style>{`
