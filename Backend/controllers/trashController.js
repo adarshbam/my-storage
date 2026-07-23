@@ -6,19 +6,21 @@ import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
 import { updateParentDirectorySize } from "./fileController.js";
-import { deleteFromB2, deleteMultipleFromB2 } from "../utils/s3.js";
+import { deleteFromB2, deleteMultipleFromB2 } from "../services/s3.js";
 
 const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 
 export const getTrashItems = async (req, res, next) => {
   try {
-    const trashItems = await Trash.find({ userId: req.user.id }).select("-__v").lean();
+    const trashItems = await Trash.find({ userId: req.user.id })
+      .select("-__v")
+      .lean();
 
     const dirItems = trashItems.filter((item) => item.type === "directory");
 
     // Check cache in parallel
     const cachedMetas = await Promise.all(
-      dirItems.map((item) => cacheHgetall("dir:meta:" + item._id.toString()))
+      dirItems.map((item) => cacheHgetall("dir:meta:" + item._id.toString())),
     );
 
     // Identify cache misses
@@ -44,8 +46,12 @@ export const getTrashItems = async (req, res, next) => {
         ]),
       ]);
 
-      filesCountMap = new Map(filesCounts.map((c) => [c._id.toString(), c.count]));
-      dirsCountMap = new Map(dirsCounts.map((c) => [c._id.toString(), c.count]));
+      filesCountMap = new Map(
+        filesCounts.map((c) => [c._id.toString(), c.count]),
+      );
+      dirsCountMap = new Map(
+        dirsCounts.map((c) => [c._id.toString(), c.count]),
+      );
     }
 
     let dirItemIdx = 0;
@@ -80,7 +86,9 @@ export const getTrashItems = async (req, res, next) => {
               directoriesCount: dirCount,
             },
             600,
-          ).catch((err) => console.error("Cache populate error in trash:", err));
+          ).catch((err) =>
+            console.error("Cache populate error in trash:", err),
+          );
 
           return {
             ...item,
@@ -91,7 +99,7 @@ export const getTrashItems = async (req, res, next) => {
           };
         }
         return { ...item, id: item._id.toString() };
-      })
+      }),
     );
 
     return res.send(itemsWithCount);
@@ -103,14 +111,20 @@ export const getTrashItems = async (req, res, next) => {
 
 export const emptyTrash = async (req, res) => {
   try {
-    const trashItems = await Trash.find({ userId: req.user.id }).select("_id type extension").lean();
+    const trashItems = await Trash.find({ userId: req.user.id })
+      .select("_id type extension")
+      .lean();
     for (const trashItem of trashItems) {
       if (trashItem.type === "directory") {
         // Clean up all child files/directories still in File/Directory collections
         await deleteByParentChain(trashItem._id.toString());
       } else {
-        await deleteFromB2({ key: `${trashItem._id.toString()}${trashItem.extension}` });
-        await deleteFromB2({ key: `thumbnails/${trashItem._id.toString()}.jpg` });
+        await deleteFromB2({
+          key: `${trashItem._id.toString()}${trashItem.extension}`,
+        });
+        await deleteFromB2({
+          key: `thumbnails/${trashItem._id.toString()}.jpg`,
+        });
       }
     }
 
@@ -150,7 +164,9 @@ export const restoreFile = async (req, res, next) => {
         .lean();
     }
 
-    const parentDirId = parentDirData ? trashfile.parentDir : req.user.rootDirId;
+    const parentDirId = parentDirData
+      ? trashfile.parentDir
+      : req.user.rootDirId;
 
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -160,7 +176,10 @@ export const restoreFile = async (req, res, next) => {
       validFileData.parentDir = parentDirId;
 
       // Recalculate path
-      const parentDirDoc = await Directory.findById(parentDirId).session(session).select("path").lean();
+      const parentDirDoc = await Directory.findById(parentDirId)
+        .session(session)
+        .select("path")
+        .lean();
       const parentPath = parentDirDoc ? parentDirDoc.path : [];
       validFileData.path = [...parentPath, id];
 
@@ -209,7 +228,9 @@ export const deleteFileForever = async (req, res) => {
 
     console.log("Deleting forever:", trashFile);
 
-    await deleteFromB2({ key: `${trashFile._id.toString()}${trashFile.extension}` });
+    await deleteFromB2({
+      key: `${trashFile._id.toString()}${trashFile.extension}`,
+    });
     await deleteFromB2({ key: `thumbnails/${trashFile._id.toString()}.jpg` });
 
     await Trash.deleteOne({ _id: fileid });
@@ -256,7 +277,11 @@ export async function deleteByParentChain(parentId) {
   return idsToDelete;
 }
 
-const updateDirectoryPathAndDescendants = async (dirId, newParentDirId, session) => {
+const updateDirectoryPathAndDescendants = async (
+  dirId,
+  newParentDirId,
+  session,
+) => {
   const dir = await Directory.findById(dirId).session(session);
   if (!dir) return;
 
@@ -316,11 +341,15 @@ export const restoreDirectory = async (req, res, next) => {
     session.startTransaction();
 
     try {
-      const { extension, size, hasThumbnail, deleted_at, ...validDirData } = trashDir;
+      const { extension, size, hasThumbnail, deleted_at, ...validDirData } =
+        trashDir;
       validDirData.parentDir = parentDirId;
 
       // Recalculate directory path
-      const parentDirDoc = await Directory.findById(parentDirId).session(session).select("path").lean();
+      const parentDirDoc = await Directory.findById(parentDirId)
+        .session(session)
+        .select("path")
+        .lean();
       const parentPath = parentDirDoc ? parentDirDoc.path : [];
       validDirData.path = [...parentPath, dirId];
 
@@ -357,7 +386,9 @@ export const restoreDirectory = async (req, res, next) => {
 export const deleteDirectoryForever = async (req, res) => {
   try {
     const { dirId } = req.params;
-    const trashDir = await Trash.findOne({ _id: dirId }).select("userId").lean();
+    const trashDir = await Trash.findOne({ _id: dirId })
+      .select("userId")
+      .lean();
     if (!trashDir) {
       return res.status(404).send("Directory not found in trash");
     }
@@ -397,7 +428,9 @@ export const batchDelete = async (req, res) => {
     let allIdsToDeleteFromTrash = [];
 
     for (const item of items) {
-      const trashItem = await Trash.findOne({ _id: item.id }).select("userId").lean();
+      const trashItem = await Trash.findOne({ _id: item.id })
+        .select("userId")
+        .lean();
       if (!trashItem) continue;
 
       if (
@@ -418,8 +451,12 @@ export const batchDelete = async (req, res) => {
           .select("_id extension")
           .lean();
         if (trashFile) {
-          await deleteFromB2({ key: `${trashFile._id.toString()}${trashFile.extension}` });
-          await deleteFromB2({ key: `thumbnails/${trashFile._id.toString()}.jpg` });
+          await deleteFromB2({
+            key: `${trashFile._id.toString()}${trashFile.extension}`,
+          });
+          await deleteFromB2({
+            key: `thumbnails/${trashFile._id.toString()}.jpg`,
+          });
         }
       }
     }

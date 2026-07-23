@@ -34,7 +34,7 @@ import {
   uploadToB2,
   deleteFromB2,
   getObjectFromB2,
-} from "../utils/s3.js";
+} from "../services/s3.js";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -105,7 +105,8 @@ export const updateParentDirectorySize = async (
 export const getDirectoryPath = async (itemId, parentDirId) => {
   if (!parentDirId) return [itemId];
   const parentDir = await Directory.findById(parentDirId).select("path").lean();
-  const path = parentDir && parentDir.path ? [...parentDir.path, itemId] : [itemId];
+  const path =
+    parentDir && parentDir.path ? [...parentDir.path, itemId] : [itemId];
   return path;
 };
 
@@ -400,11 +401,15 @@ export const getThumbnail = async (req, res) => {
   try {
     const { fileId } = req.params;
     let isTrash = false;
-    let file = await File.findOne({ _id: fileId }).select("userId path name extension size hasThumbnail").lean();
+    let file = await File.findOne({ _id: fileId })
+      .select("userId path name extension size hasThumbnail")
+      .lean();
 
     // If not found in File collection, check Trash collection
     if (!file) {
-      file = await Trash.findOne({ _id: fileId }).select("userId path name extension size hasThumbnail").lean();
+      file = await Trash.findOne({ _id: fileId })
+        .select("userId path name extension size hasThumbnail")
+        .lean();
       isTrash = true;
     }
 
@@ -435,7 +440,10 @@ export const getThumbnail = async (req, res) => {
     const videoExtensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"];
     const fileExt = file.extension ? file.extension.toLowerCase() : "";
 
-    if (!imageExtensions.includes(fileExt) && !videoExtensions.includes(fileExt)) {
+    if (
+      !imageExtensions.includes(fileExt) &&
+      !videoExtensions.includes(fileExt)
+    ) {
       return res.status(404).send("Thumbnail not available");
     }
 
@@ -451,7 +459,10 @@ export const getThumbnail = async (req, res) => {
         res.setHeader("Content-Type", "image/jpeg");
         return s3Response.Body.pipe(res);
       } catch (s3Err) {
-        console.warn("Thumbnail was marked in DB but not found in B2, regenerating on-demand:", s3Err.name);
+        console.warn(
+          "Thumbnail was marked in DB but not found in B2, regenerating on-demand:",
+          s3Err.name,
+        );
       }
     }
 
@@ -476,7 +487,9 @@ export const getThumbnail = async (req, res) => {
           .jpeg({ quality: 80 })
           .toFile(tempThumbnailPath);
       } else if (videoExtensions.includes(fileExt)) {
-        const videoUrl = await createDownloadSignedUrl({ key: `${fileId}${file.extension}` });
+        const videoUrl = await createDownloadSignedUrl({
+          key: `${fileId}${file.extension}`,
+        });
         await new Promise((resolve, reject) => {
           ffmpeg(videoUrl)
             .on("end", resolve)
@@ -507,7 +520,10 @@ export const getThumbnail = async (req, res) => {
 
       // Update database: set hasThumbnail: true
       if (isTrash) {
-        await Trash.updateOne({ _id: fileId }, { $set: { hasThumbnail: true } });
+        await Trash.updateOne(
+          { _id: fileId },
+          { $set: { hasThumbnail: true } },
+        );
       } else {
         await File.updateOne({ _id: fileId }, { $set: { hasThumbnail: true } });
       }
@@ -515,7 +531,6 @@ export const getThumbnail = async (req, res) => {
       // Send the newly generated thumbnail buffer
       res.setHeader("Content-Type", "image/jpeg");
       return res.send(thumbnailBuffer);
-
     } catch (genErr) {
       console.error("Failed on-demand thumbnail generation:", genErr);
       // Clean up temp file if it was created
@@ -532,7 +547,7 @@ export const getFileById = async (req, res) => {
   try {
     const { fileId } = req.params;
     const { action } = req.query;
-    
+
     // Update openedAt timestamp for file
     await File.updateOne({ _id: fileId }, { $set: { openedAt: new Date() } });
 
@@ -576,7 +591,10 @@ export const getFileById = async (req, res) => {
 
       res.setHeader("Accept-Ranges", "bytes");
       if (action === "download") {
-        res.setHeader("Content-Disposition", `attachment; filename="${file.name}"`);
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${file.name}"`,
+        );
       }
 
       const textExtensions = [
@@ -603,12 +621,23 @@ export const getFileById = async (req, res) => {
         ".env",
         ".gitignore",
       ];
-      if (action !== "download" && file.extension && textExtensions.includes(file.extension.toLowerCase())) {
+      if (
+        action !== "download" &&
+        file.extension &&
+        textExtensions.includes(file.extension.toLowerCase())
+      ) {
         res.setHeader("Content-Type", "text/plain");
-      } else if (action !== "download" && file.extension && file.extension.toLowerCase() === ".svg") {
+      } else if (
+        action !== "download" &&
+        file.extension &&
+        file.extension.toLowerCase() === ".svg"
+      ) {
         res.setHeader("Content-Type", "image/svg+xml");
       } else {
-        res.setHeader("Content-Type", s3Response.ContentType || "application/octet-stream");
+        res.setHeader(
+          "Content-Type",
+          s3Response.ContentType || "application/octet-stream",
+        );
       }
 
       let totalSize = file.size || 0;
@@ -681,7 +710,7 @@ export const setStarredItem = async (req, res) => {
       starredItem = await Directory.findOneAndUpdate(
         { _id: itemId },
         { $set: { starred: !dir.starred } },
-        { new: true }
+        { new: true },
       );
     } else {
       const file = await File.findOne({ _id: itemId });
@@ -689,7 +718,7 @@ export const setStarredItem = async (req, res) => {
       starredItem = await File.findOneAndUpdate(
         { _id: itemId },
         { $set: { starred: !file.starred } },
-        { new: true }
+        { new: true },
       );
     }
 
@@ -794,7 +823,8 @@ export const uploadFile = async (req, res) => {
     const fileName = sanitize(req.headers.filename);
     const ext = path.extname(fileName);
     const fullFileName = `${id}${ext}`;
-    const contentType = req.headers["content-type"] || "application/octet-stream";
+    const contentType =
+      req.headers["content-type"] || "application/octet-stream";
 
     let buffer;
     if (req.body && req.body.content !== undefined) {
@@ -911,11 +941,14 @@ export const uploadFile = async (req, res) => {
 export const uploadVaultInitate = async (req, res) => {
   try {
     const { name, size, contentType, parentDirId } = req.body;
-    
+
     // Default to root dir if no parentDirId provided
     const rootDirId = req.user.rootDirId.toString();
-    const dirId = !parentDirId || parentDirId === "root" || parentDirId === "undefined" ? rootDirId : parentDirId;
-    
+    const dirId =
+      !parentDirId || parentDirId === "root" || parentDirId === "undefined"
+        ? rootDirId
+        : parentDirId;
+
     let ownerId = req.user.id;
     if (dirId) {
       const dir = await Directory.findOne({ _id: dirId }).lean();
@@ -927,10 +960,13 @@ export const uploadVaultInitate = async (req, res) => {
     const id = new mongoose.Types.ObjectId().toString();
     const ext = path.extname(name);
     const fullFileName = `${id}${ext}`;
-    
+
     // Get the signed URL for the client to upload to
-    const signedUrl = await createUploadSignedUrl({ key: fullFileName, contentType });
-    
+    const signedUrl = await createUploadSignedUrl({
+      key: fullFileName,
+      contentType,
+    });
+
     const dirPath = dirId ? await getDirectoryPath(id, dirId) : [];
 
     const imageExtensions = [
@@ -943,7 +979,9 @@ export const uploadVaultInitate = async (req, res) => {
       ".svg",
     ];
     const videoExtensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"];
-    const isMedia = imageExtensions.includes(ext.toLowerCase()) || videoExtensions.includes(ext.toLowerCase());
+    const isMedia =
+      imageExtensions.includes(ext.toLowerCase()) ||
+      videoExtensions.includes(ext.toLowerCase());
 
     // Create the initial file entry
     await File.create({
@@ -1127,4 +1165,3 @@ export const saveFile = async (req, res) => {
     return res.status(500).send("Server error");
   }
 };
-

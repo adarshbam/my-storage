@@ -6,7 +6,7 @@ import Session from "../models/sessionModel.js";
 import {
   SESSION_COOKIE_OPTIONS,
   ROOT_DIR_COOKIE_OPTIONS,
-} from "../config.js";
+} from "../config/config.js";
 import { getSystemConfigHelper } from "../controllers/systemConfigController.js";
 
 /**
