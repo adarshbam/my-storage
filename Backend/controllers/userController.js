@@ -1,5 +1,3 @@
-import { rm } from "node:fs/promises";
-import { createWriteStream } from "node:fs";
 import path from "node:path";
 import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
@@ -7,22 +5,22 @@ import File from "../models/fileModel.js";
 import Session from "../models/sessionModel.js";
 import mongoose from "mongoose";
 import { OAuth2Client } from "google-auth-library";
-import { GOOGLE_CLIENT_ID, CLIENT_URL } from "../config.js";
+import { GOOGLE_CLIENT_ID, CLIENT_URL } from "../config/config.js";
 
 import crypto from "crypto";
 
 import ShareLink from "../models/shareLinkModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
-import { cacheDel, invalidateUserSessions } from "../utils/redis.js";
+import { cacheDel, invalidateUserSessions } from "../db/redis.js";
 
 import { sanitize } from "../utils/sanitize.js";
-import { uploadToB2, deleteFromB2, getObjectFromB2 } from "../utils/s3.js";
+import { uploadToB2, deleteFromB2, getObjectFromB2 } from "../services/s3.js";
 
 import {
   createSessionAndSetCookies,
   createUserWithRootDir,
 } from "../utils/authHelpers.js";
-import sendEmail from "../utils/email.js";
+import sendEmail from "../services/email.js";
 import OTP from "../models/otpModel.js";
 import { z } from "zod";
 import { loginSchema, registerSchema } from "../validators/authSchema.js";
@@ -605,10 +603,7 @@ export const getProfilePic = async (req, res) => {
     const s3Response = await getObjectFromB2({
       key: `${profilePic._id.toString()}${profilePic.extension}`,
     });
-    res.setHeader(
-      "Content-Type",
-      s3Response.ContentType || "image/png",
-    );
+    res.setHeader("Content-Type", s3Response.ContentType || "image/png");
     return s3Response.Body.pipe(res);
   } catch (s3Err) {
     console.error("Failed to fetch profile pic from B2:", s3Err);

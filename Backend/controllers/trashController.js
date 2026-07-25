@@ -1,10 +1,9 @@
-import { rm } from "fs/promises";
 import path from "node:path";
 import mongoose from "mongoose";
 import File from "../models/fileModel.js";
 import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
-import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
+import { cacheDel, cacheHgetall, cacheHset } from "../db/redis.js";
 import { updateParentDirectorySize } from "./fileController.js";
 import { deleteFromB2, deleteMultipleFromB2 } from "../services/s3.js";
 

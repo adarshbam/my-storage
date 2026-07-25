@@ -1,8 +1,6 @@
-import { createReadStream, createWriteStream } from "fs";
-import { Transform } from "stream";
 import { sanitize } from "../utils/sanitize.js";
 import path from "path";
-import { stat, unlink, mkdir, readFile, writeFile } from "fs/promises";
+import { unlink, mkdir, readFile, writeFile } from "fs/promises";
 import SharedAccess from "../models/sharedAccessModel.js";
 import {
   hasWriteAccess,
@@ -24,9 +22,8 @@ import mongoose from "mongoose";
 import File from "../models/fileModel.js";
 import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
-import { cacheDel, cacheHgetall, cacheHset } from "../utils/redis.js";
+import { cacheDel, cacheHgetall, cacheHset } from "../db/redis.js";
 import { getSystemConfigHelper } from "./systemConfigController.js";
-import { error } from "console";
 import {
   createUploadSignedUrl,
   createDownloadSignedUrl,

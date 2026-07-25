@@ -2,7 +2,7 @@
 
 import OTP from "../models/otpModel.js";
 import User from "../models/userModel.js";
-import sendEmail from "../utils/email.js";
+import sendEmail from "../services/email.js";
 import { OTPSchema } from "../validators/authSchema.js";
 
 export const sendOtp = async (req, res) => {
@@ -21,10 +21,10 @@ export const sendOtp = async (req, res) => {
   try {
     await sendEmail({
       from: `"Storiffy" <no-reply@storiffy.com>`,
-    to: email,
-    subject: "Your Storiffy OTP Code",
-    text: `Your OTP is ${generatedOTP}. It will expire in 10 minutes.`,
-    html: `
+      to: email,
+      subject: "Your Storiffy OTP Code",
+      text: `Your OTP is ${generatedOTP}. It will expire in 10 minutes.`,
+      html: `
         <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
         <h2 style="color: #333;">Storiffy Verification</h2>
         <p style="font-size: 16px; color: #555;">
@@ -66,9 +66,9 @@ export const sendOtp = async (req, res) => {
 export const verifyOtp = async (req, res) => {
   // TODO: Implement OTP verification logic
   // Expected body: { email, otp }
-  const {success, data, error} = OTPSchema.safeParse(req.body);
-  if(!success) return res.status(400).json({ error: z.flattenError(error)});
-  
+  const { success, data, error } = OTPSchema.safeParse(req.body);
+  if (!success) return res.status(400).json({ error: z.flattenError(error) });
+
   const { email, otp } = data;
 
   // 1. Look up stored OTP for this email

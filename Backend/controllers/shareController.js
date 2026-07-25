@@ -2,8 +2,8 @@ import crypto from "crypto";
 import ShareLink from "../models/shareLinkModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
 import User from "../models/userModel.js";
-import { cacheDel } from "../utils/redis.js";
-import { BACKEND_URL } from "../config.js";
+import { cacheDel } from "../db/redis.js";
+import { BACKEND_URL } from "../config/config.js";
 
 export const generateShareLink = async (req, res) => {
   const { expiresAt, permission, items } = req.body;
@@ -33,7 +33,7 @@ export const generateShareLink = async (req, res) => {
           item.type &&
           item.provider &&
           item.name &&
-          ["file", "directory"].includes(item.type)
+          ["file", "directory"].includes(item.type),
       );
   }
 

@@ -4,9 +4,9 @@ import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import Session from "../models/sessionModel.js";
 import User from "../models/userModel.js";
-import { invalidateUserSessions } from "../utils/redis.js";
-import { BACKEND_URL } from "../config.js";
-import { deleteFromB2 } from "../utils/s3.js";
+import { invalidateUserSessions } from "../db/redis.js";
+import { BACKEND_URL } from "../config/config.js";
+import { deleteFromB2 } from "../services/s3.js";
 
 const hierarchy = ["User", "Manager", "Admin", "Owner"];
 const STORAGE_DIR = path.join(import.meta.dirname, "../storage");

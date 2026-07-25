@@ -1,6 +1,6 @@
 import express from "express";
 import { createPlanSchema } from "../validators/planSchema.js";
-import checkAuth from "../middlewares/authMiddleware";
+import checkAuth from "../middlewares/authMiddleware.js";
 import { validate } from "../middlewares/validationMiddleware.js";
 import { createPlan } from "../controllers/planController.js";
 const router = express.Router();

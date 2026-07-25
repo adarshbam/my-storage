@@ -1,6 +1,6 @@
 import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis";
-import redis from "../utils/redis.js";
+import redis from "../db/redis.js";
 
 /**
  * Resolve the best identity key for rate limiting.
@@ -152,7 +152,7 @@ export const registerLimiter = createLimiter(
   60 * 60 * 1000, // 1 hour
   3,
   "Too many account creation attempts. Please try again after an hour.",
-  "register"
+  "register",
 );
 
 // 2. Login Limiter: max 10 requests per 15 minutes
@@ -160,7 +160,7 @@ export const loginLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   10,
   "Too many login attempts. Please try again after 15 minutes.",
-  "login"
+  "login",
 );
 
 // 3. OTP Limiter (Send & Verify): max 5 attempts per 15 minutes
@@ -168,7 +168,7 @@ export const otpLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   5,
   "Too many OTP requests or verification attempts. Please try again after 15 minutes.",
-  "otp"
+  "otp",
 );
 
 // 4. Password Reset Limiter: max 5 requests per 15 minutes
@@ -176,7 +176,7 @@ export const passwordResetLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   5,
   "Too many password reset requests. Please try again after 15 minutes.",
-  "pwd-reset"
+  "pwd-reset",
 );
 
 // 5. Password Update Limiter: max 10 requests per 15 minutes
@@ -184,7 +184,7 @@ export const passwordUpdateLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   10,
   "Too many password update attempts. Please try again after 15 minutes.",
-  "pwd-update"
+  "pwd-update",
 );
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -196,7 +196,7 @@ export const heavyOpLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   5,
   "Too many heavy operations performed. Please try again after 15 minutes.",
-  "heavy-op"
+  "heavy-op",
 );
 
 // 7. File Upload Limiter: max 30 uploads per 15 minutes
@@ -204,7 +204,7 @@ export const uploadLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   30,
   "Too many file upload requests. Please try again after 15 minutes.",
-  "upload"
+  "upload",
 );
 
 // 8. Search Limiter: max 30 searches per 15 minutes
@@ -212,7 +212,7 @@ export const searchLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   30,
   "Too many search queries. Please try again after 15 minutes.",
-  "search"
+  "search",
 );
 
 // 9. Thumbnail Limiter: max 100 requests per 15 minutes (must be fast for UI)
@@ -220,7 +220,7 @@ export const thumbnailLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   100,
   "Too many thumbnail requests. Please try again after 15 minutes.",
-  "thumbnail"
+  "thumbnail",
 );
 
 // 10. Light Read Limiter: max 100 / 15min (user info, profile pic GET, searched items, theme)
@@ -228,7 +228,7 @@ export const lightReadLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   100,
   "Too many requests. Please slow down.",
-  "light-read"
+  "light-read",
 );
 
 // 11. Standard Write Limiter: max 60 / 15min (directory CRUD, file rename/delete, get)
@@ -236,7 +236,7 @@ export const standardWriteLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   60,
   "Too many requests. Please slow down.",
-  "std-write"
+  "std-write",
 );
 
 // 12. Medium Write Limiter: max 30 / 15min (file save, GitHub/Drive write ops)
@@ -244,7 +244,7 @@ export const mediumWriteLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   30,
   "Too many write operations. Please slow down.",
-  "med-write"
+  "med-write",
 );
 
 // 13. Share Limiter: max 20 / 15min (share link generation/claiming)
@@ -252,7 +252,7 @@ export const shareLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   20,
   "Too many share requests. Please slow down.",
-  "share"
+  "share",
 );
 
 // 14. Admin Limiter: max 30 / 15min (system user management)
@@ -260,7 +260,7 @@ export const adminLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   30,
   "Too many admin operations. Please slow down.",
-  "admin"
+  "admin",
 );
 
 // 15. Profile Pic Upload Limiter: max 15 / 15min (sharp image processing)
@@ -268,7 +268,7 @@ export const profilePicLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   15,
   "Too many profile picture uploads. Please slow down.",
-  "profile-pic"
+  "profile-pic",
 );
 
 // 16. Subscription Limiter: max 5 / 15min (Razorpay API calls are expensive)
@@ -276,7 +276,7 @@ export const subscriptionLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   5,
   "Too many subscription requests. Please try again after 15 minutes.",
-  "subscription"
+  "subscription",
 );
 
 // 17. Webhook Limiter: max 100 / 15min (Razorpay sends events — generous limit)
@@ -284,5 +284,5 @@ export const webhookLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   100,
   "Too many webhook events. Please slow down.",
-  "webhook"
+  "webhook",
 );

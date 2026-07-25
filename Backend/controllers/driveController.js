@@ -2,15 +2,12 @@ import User from "../models/userModel.js";
 import { sanitize } from "../utils/sanitize.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
-import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "../config.js";
+import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "../config/config.js";
 import { google } from "googleapis";
 import { Readable } from "stream";
 import archiver from "archiver";
 import path from "path";
-import { createWriteStream, createReadStream } from "fs";
-import { stat, mkdir, unlink } from "fs/promises";
 import mongoose from "mongoose";
-import { pipeline } from "stream/promises";
 
 const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 
@@ -20,9 +17,9 @@ import {
   verifyItemAccess,
 } from "../utils/integrationHelper.js";
 import SharedAccess from "../models/sharedAccessModel.js";
-import { invalidateUserSessions } from "../utils/redis.js";
+import { invalidateUserSessions } from "../db/redis.js";
 import { updateParentDirectorySize } from "./fileController.js";
-import { uploadToB2, getObjectFromB2, deleteFromB2 } from "../utils/s3.js";
+import { uploadToB2, getObjectFromB2, deleteFromB2 } from "../services/s3.js";
 
 // ─── Shared Helper: Build an authenticated Drive client ───────────────────────
 async function getDriveClient(userId) {
@@ -714,7 +711,14 @@ export const transferToVault = async (req, res) => {
     // Check if the user has write access to the target local folder
     const targetDir = await Directory.findById(targetFolderId).lean();
     const localOwnerId = targetDir ? targetDir.userId.toString() : ownerId;
-    const hasLocalWrite = await verifyItemAccess(localOwnerId, req, targetFolderId, "directory", "write", targetDir ? targetDir.path : []);
+    const hasLocalWrite = await verifyItemAccess(
+      localOwnerId,
+      req,
+      targetFolderId,
+      "directory",
+      "write",
+      targetDir ? targetDir.path : [],
+    );
     if (!hasLocalWrite) {
       return res
         .status(403)
@@ -822,11 +826,17 @@ export const transferFromVault = async (req, res) => {
 
     // Check if the user has write/delete access to the local items
     for (const item of items) {
-      const isAllowed = await verifyItemAccess(ownerId, req, item.id || item._id, item.type, "write");
+      const isAllowed = await verifyItemAccess(
+        ownerId,
+        req,
+        item.id || item._id,
+        item.type,
+        "write",
+      );
       if (!isAllowed) {
-        return res
-          .status(403)
-          .json({ error: `No permission to transfer local item: ${item.name || item.id}` });
+        return res.status(403).json({
+          error: `No permission to transfer local item: ${item.name || item.id}`,
+        });
       }
     }
 
@@ -860,7 +870,9 @@ export const transferFromVault = async (req, res) => {
       } else {
         // 1. Stream from Backblaze B2 to Drive
         const ext = localItem.extension || "";
-        const s3Response = await getObjectFromB2({ key: `${localItemId}${ext}` });
+        const s3Response = await getObjectFromB2({
+          key: `${localItemId}${ext}`,
+        });
 
         const response = await drive.files.create({
           requestBody: {

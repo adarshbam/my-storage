@@ -5,6 +5,7 @@ import fileRouter from "./routes/fileRoutes.js";
 import trashRouter from "./routes/trashRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 import otpRouter from "./routes/otpRoutes.js";
+import planRouter from "./routes/planRoutes.js";
 import subscriptionRouter from "./routes/subscriptionRoutes.js";
 import driveRouter from "./routes/driveRoutes.js";
 import githubRouter from "./routes/githubRoutes.js";
@@ -16,7 +17,7 @@ import cors from "cors";
 import checkAuth from "./middlewares/authMiddleware.js";
 import https from "https";
 import { readFileSync } from "fs";
-import "./databases/mongoose.js";
+import "./db/mongoose.js";
 import path from "path";
 import Trash from "./models/trashModel.js";
 import File from "./models/fileModel.js";
@@ -31,7 +32,7 @@ import {
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 
-import { PORT, CLIENT_URL, SESSION_SECRET } from "./config.js";
+import { PORT, CLIENT_URL, SESSION_SECRET } from "./config/config.js";
 
 const app = express();
 
@@ -139,6 +140,7 @@ app.use("/file", checkAuth, fileRouter);
 app.use("/trash", checkAuth, trashRouter);
 app.use("/user", userRouter);
 app.use("/otp", otpRouter);
+app.use("/plan", planRouter);
 app.use("/subscriptions", subscriptionRouter);
 app.use("/drive", driveRouter);
 app.use("/github", githubRouter);

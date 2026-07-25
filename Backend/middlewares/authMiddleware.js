@@ -1,6 +1,6 @@
 import Session from "../models/sessionModel.js";
 import User from "../models/userModel.js";
-import { cacheGet, cacheSet, cacheSadd } from "../utils/redis.js";
+import { cacheGet, cacheSet, cacheSadd } from "../db/redis.js";
 
 async function checkAuth(req, res, next) {
   const { sessionId } = req.signedCookies;

@@ -3,21 +3,25 @@ import { model } from "mongoose";
 
 const PlanSchema = new mongoose.Schema(
   {
-    razorpayPlanId: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-
     type: {
       type: String,
       enum: ["Novice", "Professional", "Ultimate"],
       default: "Novice",
     },
 
+    period: {
+      type: String,
+      enum: ["Daily", "Weekly", "Monthly", "Yearly"],
+      default: "Monthly",
+    },
+
     storage: {
       type: Number,
       required: true,
+    },
+
+    currency: {
+      type: String,
     },
 
     active: {
@@ -28,10 +32,6 @@ const PlanSchema = new mongoose.Schema(
     amount: {
       type: Number,
       required: true,
-    },
-
-    version: {
-      type: Number,
     },
 
     createdAt: {

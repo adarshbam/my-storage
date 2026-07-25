@@ -1,6 +1,5 @@
 import archiver from "archiver";
 import path from "path";
-import fs from "fs/promises";
 import { sanitize } from "../utils/sanitize.js";
 import mongoose from "mongoose";
 import Directory from "../models/directoryModel.js";
@@ -17,7 +16,7 @@ import {
   cacheHset,
   cacheGet,
   cacheSet,
-} from "../utils/redis.js";
+} from "../db/redis.js";
 import {
   getDirectoryPath,
   updateParentDirectorySize,

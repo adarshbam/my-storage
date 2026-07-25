@@ -1,4 +1,4 @@
-import redis from "./redis.js";
+import redis from "../db/redis.js";
 
 // In-memory fallback when Redis is unavailable
 const memoryStore = new Map();
@@ -70,7 +70,11 @@ async function redisSet(key, store, ttlMs) {
  * @param {number} maxFastReq — Number of requests allowed instantly before queuing (default 3)
  * @param {string} tag        — Route tag for independent throttle buckets (default "default")
  */
-export default function throttle(delayMs = 1000, maxFastReq = 3, tag = "default") {
+export default function throttle(
+  delayMs = 1000,
+  maxFastReq = 3,
+  tag = "default",
+) {
   return async (req, res, next) => {
     const now = Date.now();
     const identity = resolveIdentity(req);
