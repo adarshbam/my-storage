@@ -577,6 +577,113 @@ export default function ProfileMenu({
                       </div>
                     </div>
 
+                    <div className="flex items-center justify-between mb-6 relative z-10">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400">
+                          <Sliders size={20} />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-black text-white tracking-tight">
+                            Plan Settings
+                          </h3>
+                          <p className="text-xs text-gray-400">
+                            Customise Plans (Owner Only)
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Devices Limit */}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                          Plan Category
+                        </label>
+                        <select
+                          value={fileSizeUnit}
+                          onChange={(e) => setFileSizeUnit(e.target.value)}
+                          className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
+                        >
+                          <option value="Novice">Novice</option>
+                          <option value="Professional">Professional</option>
+                          <option value="Ultimate">Ultimate</option>
+                        </select>
+                      </div>
+
+                      {/* Max File Size Limit */}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                          Storage Limit
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            value={fileSizeVal}
+                            onChange={(e) => setFileSizeVal(e.target.value)}
+                            required
+                            min="1"
+                            step="any"
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all font-semibold"
+                            placeholder="e.g. 50"
+                          />
+                          <select
+                            value={fileSizeUnit}
+                            onChange={(e) => setFileSizeUnit(e.target.value)}
+                            className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
+                          >
+                            <option value="B">Bytes (B)</option>
+                            <option value="KB">Kilobytes (KB)</option>
+                            <option value="MB">Megabytes (MB)</option>
+                            <option value="GB">Gigabytes (GB)</option>
+                            <option value="TB">Terabytes (TB)</option>
+                          </select>
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          Maximum storage limit for the user on this plan.
+                          Stored on backend in bytes.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                          Plan Price
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            value={fileSizeVal}
+                            onChange={(e) => setFileSizeVal(e.target.value)}
+                            required
+                            min="1"
+                            step="any"
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all font-semibold"
+                            placeholder="e.g. 50"
+                          />
+                          <select
+                            value={fileSizeUnit}
+                            onChange={(e) => setFileSizeUnit(e.target.value)}
+                            className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
+                          >
+                            <option value="B">Dollars</option>
+                            <option value="KB">Rupees</option>
+                          </select>
+                          <select
+                            value={fileSizeUnit}
+                            onChange={(e) => setFileSizeUnit(e.target.value)}
+                            className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
+                          >
+                            <option value="Daily">Daily</option>
+                            <option value="Weekly">Weekly</option>
+                            <option value="Monthly">Monthly</option>
+                            <option value="Yearly">Yearly</option>
+                          </select>
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          Plan price, currency, frequnecy period
+                        </p>
+                      </div>
+                    </div>
+
                     <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
                       <button
                         type="button"
