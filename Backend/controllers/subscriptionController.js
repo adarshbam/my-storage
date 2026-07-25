@@ -1,10 +1,6 @@
 import Razorpay from "razorpay";
 import Subscription from "../models/subscriptionModel.js";
-
-const rzInstance = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+import { rzInstance } from "../config/config.js";
 
 export const createSubscription = async (req, res, next) => {
   const { planId } = req.body;
@@ -37,4 +33,3 @@ export const createSubscription = async (req, res, next) => {
     next(err);
   }
 };
-

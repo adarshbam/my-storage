@@ -1,3 +1,5 @@
+import Razorpay from "razorpay";
+
 export const PORT = process.env.PORT || 4000;
 export const DB_URL = process.env.DB_URL;
 export const REDIS_URL = process.env.REDIS_URL || "redis://127.0.0.1:6379";
@@ -11,6 +13,11 @@ export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 export const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 export const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
+
+export const rzInstance = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 export const MAX_DEVICES_LIMIT =
   parseInt(process.env.MAX_DEVICES_LIMIT, 10) || 3;

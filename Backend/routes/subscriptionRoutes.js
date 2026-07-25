@@ -3,8 +3,6 @@ import { createSubscription } from "../controllers/subscriptionController.js";
 import checkAuth from "../middlewares/authMiddleware.js";
 import { validate } from "../middlewares/validationMiddleware.js";
 import { createSubscriptionSchema } from "../validators/subscriptionSchema.js";
-import { subscriptionLimiter } from "../middlewares/rateLimiter.js";
-import throttle from "../utils/throttle.js";
 
 const router = express.Router();
 
@@ -12,8 +10,6 @@ const router = express.Router();
 router.post(
   "/create-subscription",
   checkAuth,
-  // subscriptionLimiter,
-  // throttle(1000, 3, "subscription-create"),
   validate(createSubscriptionSchema),
   createSubscription,
 );
