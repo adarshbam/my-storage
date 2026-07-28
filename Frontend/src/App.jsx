@@ -9,6 +9,7 @@ import Register from "./pages/Register";
 import ResetPassword from "./pages/ResetPassword";
 import Users from "./pages/Users";
 import Profile from "./pages/Profile";
+import OwnerSettings from "./pages/OwnerSettings/OwnerSettings";
 import SharedAccessClaim from "./pages/SharedAccessClaim";
 
 // Landing Page Components
@@ -97,6 +98,7 @@ function App() {
               <Route element={<ProtectedRoute />}>
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/users" element={<Users />} />
+                <Route path="/owner/settings" element={<OwnerSettings />} />
               </Route>
 
               <Route path="/dashboard" element={<ProtectedRoute />}>

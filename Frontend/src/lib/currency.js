@@ -1,9 +1,4 @@
 // Base prices in INR as specified by the user
-export const basePrices = {
-  Novice: { monthly: 199, yearly: 1999 },
-  Professional: { monthly: 399, yearly: 3999 },
-  Ultimate: { monthly: 999, yearly: 9999 }
-};
 
 export const currencySymbols = {
   INR: "₹",
@@ -39,12 +34,12 @@ export const supportedCountries = [
 
 export const fallbackRates = {
   INR: 1.0,
-  USD: 0.012,   // 1 INR = 0.012 USD
-  EUR: 0.011,   // 1 INR = 0.011 EUR
-  GBP: 0.0093,  // 1 INR = 0.0093 GBP
-  JPY: 1.90,    // 1 INR = 1.90 JPY
-  AUD: 0.018,   // 1 INR = 0.018 AUD
-  CAD: 0.016,   // 1 INR = 0.016 CAD
+  USD: 0.012, // 1 INR = 0.012 USD
+  EUR: 0.011, // 1 INR = 0.011 EUR
+  GBP: 0.0093, // 1 INR = 0.0093 GBP
+  JPY: 1.9, // 1 INR = 1.90 JPY
+  AUD: 0.018, // 1 INR = 0.018 AUD
+  CAD: 0.016, // 1 INR = 0.016 CAD
 };
 
 /**
@@ -91,13 +86,24 @@ export function detectLocalCurrencyFallback() {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
     const locale = navigator.language || "";
 
-    if (timeZone.includes("Kolkata") || timeZone.includes("Calcutta") || locale.includes("IN")) {
+    if (
+      timeZone.includes("Kolkata") ||
+      timeZone.includes("Calcutta") ||
+      locale.includes("IN")
+    ) {
       return "INR";
     }
     if (timeZone.includes("London") || locale.includes("GB")) {
       return "GBP";
     }
-    if (timeZone.includes("Europe") || locale.includes("EU") || locale.includes("fr") || locale.includes("de") || locale.includes("it") || locale.includes("es")) {
+    if (
+      timeZone.includes("Europe") ||
+      locale.includes("EU") ||
+      locale.includes("fr") ||
+      locale.includes("de") ||
+      locale.includes("it") ||
+      locale.includes("es")
+    ) {
       return "EUR";
     }
     if (timeZone.includes("Tokyo") || locale.includes("JP")) {

@@ -11,7 +11,7 @@ import crypto from "crypto";
 
 import ShareLink from "../models/shareLinkModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
-import { cacheDel, invalidateUserSessions } from "../db/redis.js";
+import { cacheDel, invalidateUserSessions } from "../databases/redis.js";
 
 import { sanitize } from "../utils/sanitize.js";
 import { uploadToB2, deleteFromB2, getObjectFromB2 } from "../services/s3.js";

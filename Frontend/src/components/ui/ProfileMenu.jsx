@@ -21,6 +21,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { formatSize } from "../../lib/utils";
 import { SERVER_URL } from "../../lib/api";
+import { supportedCountries } from "../../lib/currency";
 
 export default function ProfileMenu({
   user,
@@ -37,13 +38,22 @@ export default function ProfileMenu({
   const usedStorage = user.usedStorage || 0;
   const navigate = useNavigate();
 
-  // Owner settings state
+  // Owner configartion settings state
   const [ownerSettingsOpen, setOwnerSettingsOpen] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [devicesLimit, setDevicesLimit] = useState(3);
   const [fileSizeVal, setFileSizeVal] = useState(50);
   const [fileSizeUnit, setFileSizeUnit] = useState("MB");
+
+  // Owner Plan settings
+  const [category, setCategory] = useState("Professional");
+  const [maxStorageVal, setMaxStorageVal] = useState(100);
+  const [maxStorageUnit, setMaxStorageUnit] = useState("MB");
+  const [price, setPrice] = useState(100);
+  const [currency, setCurrency] = useState("INR");
+  const [period, setPeriod] = useState("Monthly");
+
   const [configError, setConfigError] = useState(null);
   const [configSuccess, setConfigSuccess] = useState(null);
 
@@ -141,8 +151,17 @@ export default function ProfileMenu({
 
     const k = 1024;
     const units = ["B", "KB", "MB", "GB", "TB"];
-    const unitIndex = units.indexOf(fileSizeUnit);
-    const bytes = Math.round(fileSizeVal * Math.pow(k, unitIndex));
+    const fileUnitIndex = units.indexOf(fileSizeUnit);
+    const maxFileSizeBytes = Math.round(
+      fileSizeVal * Math.pow(k, fileUnitIndex),
+    );
+
+    const maxStorageIndex = units.indexOf(maxStorageUnit);
+    const maxStorageBytes = Math.round(
+      maxStorageVal * Math.pow(k, maxStorageIndex),
+    );
+
+    console.log(maxStorageBytes);
 
     try {
       const res = await fetch(`${SERVER_URL}/system-config`, {
@@ -150,7 +169,7 @@ export default function ProfileMenu({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           maxDevicesLimit: devicesLimit,
-          maxFileSizeLimit: bytes,
+          maxFileSizeLimit: maxStorageBytes,
         }),
         credentials: "include",
       });
@@ -163,6 +182,35 @@ export default function ProfileMenu({
         }, 1500);
       } else {
         setConfigError(data.error || "Failed to update system settings.");
+      }
+    } catch (err) {
+      setConfigError("Network error occurred.");
+    } finally {
+      setSavingConfig(false);
+    }
+
+    try {
+      const res = await fetch(`${SERVER_URL}/plan/create-plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: category,
+          amount: Number(price),
+          currency,
+          storage: maxStorageBytes,
+          period,
+        }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConfigSuccess("Plan settings updated successfully!");
+        setTimeout(() => {
+          setOwnerSettingsOpen(false);
+          setConfigSuccess(null);
+        }, 1500);
+      } else {
+        setConfigError(data.error || "Failed to update Plan settings.");
       }
     } catch (err) {
       setConfigError("Network error occurred.");
@@ -190,7 +238,7 @@ export default function ProfileMenu({
             desc: "Global limits & config",
             onClick: () => {
               setIsOpen(false);
-              setOwnerSettingsOpen(true);
+              navigate("/owner/settings");
             },
             gradient: "from-purple-500 to-indigo-500",
           },
@@ -600,8 +648,8 @@ export default function ProfileMenu({
                           Plan Category
                         </label>
                         <select
-                          value={fileSizeUnit}
-                          onChange={(e) => setFileSizeUnit(e.target.value)}
+                          value={category}
+                          onChange={(e) => setCategory(e.target.value)}
                           className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
                         >
                           <option value="Novice">Novice</option>
@@ -618,8 +666,8 @@ export default function ProfileMenu({
                         <div className="flex gap-2">
                           <input
                             type="number"
-                            value={fileSizeVal}
-                            onChange={(e) => setFileSizeVal(e.target.value)}
+                            value={maxStorageVal}
+                            onChange={(e) => setMaxStorageVal(e.target.value)}
                             required
                             min="1"
                             step="any"
@@ -627,8 +675,8 @@ export default function ProfileMenu({
                             placeholder="e.g. 50"
                           />
                           <select
-                            value={fileSizeUnit}
-                            onChange={(e) => setFileSizeUnit(e.target.value)}
+                            value={maxStorageUnit}
+                            onChange={(e) => setMaxStorageUnit(e.target.value)}
                             className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
                           >
                             <option value="B">Bytes (B)</option>
@@ -651,8 +699,8 @@ export default function ProfileMenu({
                         <div className="flex gap-2">
                           <input
                             type="number"
-                            value={fileSizeVal}
-                            onChange={(e) => setFileSizeVal(e.target.value)}
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
                             required
                             min="1"
                             step="any"
@@ -660,16 +708,21 @@ export default function ProfileMenu({
                             placeholder="e.g. 50"
                           />
                           <select
-                            value={fileSizeUnit}
-                            onChange={(e) => setFileSizeUnit(e.target.value)}
+                            value={currency}
+                            onChange={(e) => setCurrency(e.target.value)}
                             className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
                           >
-                            <option value="B">Dollars</option>
-                            <option value="KB">Rupees</option>
+                            {supportedCountries
+                              .filter((c) => c.currency !== "AUTO")
+                              .map((c) => (
+                                <option key={c.currency} value={c.currency}>
+                                  {c.name}
+                                </option>
+                              ))}
                           </select>
                           <select
-                            value={fileSizeUnit}
-                            onChange={(e) => setFileSizeUnit(e.target.value)}
+                            value={period}
+                            onChange={(e) => setPeriod(e.target.value)}
                             className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
                           >
                             <option value="Daily">Daily</option>

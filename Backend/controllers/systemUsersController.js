@@ -4,7 +4,7 @@ import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import Session from "../models/sessionModel.js";
 import User from "../models/userModel.js";
-import { invalidateUserSessions } from "../db/redis.js";
+import { invalidateUserSessions } from "../databases/redis.js";
 import { BACKEND_URL } from "../config/config.js";
 import { deleteFromB2 } from "../services/s3.js";
 

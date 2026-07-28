@@ -1,6 +1,6 @@
 import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis";
-import redis from "../db/redis.js";
+import redis from "../databases/redis.js";
 
 /**
  * Resolve the best identity key for rate limiting.

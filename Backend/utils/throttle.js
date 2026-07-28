@@ -1,4 +1,4 @@
-import redis from "../db/redis.js";
+import redis from "../databases/redis.js";
 
 // In-memory fallback when Redis is unavailable
 const memoryStore = new Map();

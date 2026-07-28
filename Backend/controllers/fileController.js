@@ -22,7 +22,7 @@ import mongoose from "mongoose";
 import File from "../models/fileModel.js";
 import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
-import { cacheDel, cacheHgetall, cacheHset } from "../db/redis.js";
+import { cacheDel, cacheHgetall, cacheHset } from "../databases/redis.js";
 import { getSystemConfigHelper } from "./systemConfigController.js";
 import {
   createUploadSignedUrl,

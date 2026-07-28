@@ -9,7 +9,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
-  basePrices,
   currencySymbols,
   supportedCountries,
   fallbackRates,
@@ -18,136 +17,7 @@ import {
 } from "../../lib/currency";
 import { SERVER_URL } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
-
-const planDetails = {
-  monthly: {
-    Novice: {
-      id: "plan_TCC4EtSVu7anNx",
-      desc: "1 TB secure storage for files and photos.",
-      color: "from-fuchsia-500 to-purple-500",
-      shadow: "shadow-fuchsia-500/10",
-      borderHover: "hover:border-fuchsia-500/30",
-      borderClass: "border-fuchsia-500/20",
-      bgHover: "hover:bg-fuchsia-500/5",
-      textClass: "text-fuchsia-500",
-      bgClass: "bg-fuchsia-500/10",
-      iconBorder: "border-fuchsia-500/20",
-      btnClass:
-        "bg-transparent hover:bg-fuchsia-500/10 border-slate-200 hover:border-fuchsia-500/30 dark:border-white/10 dark:hover:border-fuchsia-500/30 text-slate-800 dark:text-white",
-      features: [
-        "1 TB of secure vault storage",
-        "Link & Folder sharing",
-        "Basic support",
-      ],
-    },
-    Professional: {
-      // id: "plan_TCC6MnALTGCITa", // live mode
-      id: "plan_TD10msXSXeCock", // test mode
-      desc: "5 TB storage with priority speed and linkage.",
-      color: "from-rose-500 to-orange-500",
-      shadow: "shadow-[0_20px_80px_rgba(244,63,94,0.15)]",
-      borderHover: "hover:border-rose-500/40",
-      borderClass: "border-rose-500/30",
-      bgHover: "hover:bg-rose-500/5",
-      textClass: "text-rose-500",
-      bgClass: "bg-rose-500/10",
-      iconBorder: "border-rose-500/25",
-      btnClass:
-        "bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_10px_30px_rgba(244,63,94,0.3)] hover:shadow-[0_15px_40px_rgba(244,63,94,0.5)] border-transparent",
-      popular: true,
-      features: [
-        "5 TB of secure vault storage",
-        "Priority uploads (10x faster)",
-        "Email Support",
-        "GitHub, Google Drive, Dropbox seamless linkage",
-      ],
-    },
-    Ultimate: {
-      id: "plan_TCC7yJR64OKj7M",
-      desc: "15 TB storage for teams and extensive backup.",
-      color: "from-blue-500 to-sky-400",
-      shadow: "shadow-[0_15px_50px_rgba(59,130,246,0.15)]",
-      borderHover: "hover:border-blue-500/50",
-      borderClass: "border-blue-500/30",
-      bgHover: "hover:bg-blue-500/10",
-      textClass: "text-blue-400",
-      bgClass: "bg-blue-500/15",
-      iconBorder: "border-blue-500/25",
-      btnClass:
-        "bg-gradient-to-r from-blue-500 to-sky-500 text-white shadow-[0_10px_30px_rgba(59,130,246,0.3)] hover:shadow-[0_15px_40px_rgba(59,130,246,0.5)] border-transparent group-hover:scale-[1.02]",
-      isUltimate: true,
-      features: [
-        "15 TB of secure vault storage",
-        "Everything in Professional",
-        "Version history (unlimited)",
-        "Priority Support (24/7)",
-      ],
-    },
-  },
-  yearly: {
-    Novice: {
-      id: "plan_TCC8m4UWWy28DX",
-      desc: "1 TB secure storage for files and photos.",
-      color: "from-fuchsia-500 to-purple-500",
-      shadow: "shadow-fuchsia-500/10",
-      borderHover: "hover:border-fuchsia-500/30",
-      borderClass: "border-fuchsia-500/20",
-      bgHover: "hover:bg-fuchsia-500/5",
-      textClass: "text-fuchsia-500",
-      bgClass: "bg-fuchsia-500/10",
-      iconBorder: "border-fuchsia-500/20",
-      btnClass:
-        "bg-transparent hover:bg-fuchsia-500/10 border-slate-200 hover:border-fuchsia-500/30 dark:border-white/10 dark:hover:border-fuchsia-500/30 text-slate-800 dark:text-white",
-      features: [
-        "1 TB of secure vault storage",
-        "Link & Folder sharing",
-        "Basic support",
-      ],
-    },
-    Professional: {
-      id: "plan_TCC9kiG9hIPkoG",
-      desc: "5 TB storage with priority speed and linkage.",
-      color: "from-rose-500 to-orange-500",
-      shadow: "shadow-[0_20px_80px_rgba(244,63,94,0.15)]",
-      borderHover: "hover:border-rose-500/40",
-      borderClass: "border-rose-500/30",
-      bgHover: "hover:bg-rose-500/5",
-      textClass: "text-rose-500",
-      bgClass: "bg-rose-500/10",
-      iconBorder: "border-rose-500/25",
-      btnClass:
-        "bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_10px_30px_rgba(244,63,94,0.3)] hover:shadow-[0_15px_40px_rgba(244,63,94,0.5)] border-transparent",
-      popular: true,
-      features: [
-        "5 TB of secure vault storage",
-        "Priority uploads (10x faster)",
-        "Email Support",
-        "GitHub, Google Drive, Dropbox seamless linkage",
-      ],
-    },
-    Ultimate: {
-      id: "plan_TCCA63CvmRzF7D",
-      desc: "15 TB storage for teams and extensive backup.",
-      color: "from-blue-500 to-sky-400",
-      shadow: "shadow-[0_15px_50px_rgba(59,130,246,0.15)]",
-      borderHover: "hover:border-blue-500/50",
-      borderClass: "border-blue-500/30",
-      bgHover: "hover:bg-blue-500/10",
-      textClass: "text-blue-400",
-      bgClass: "bg-blue-500/15",
-      iconBorder: "border-blue-500/25",
-      btnClass:
-        "bg-gradient-to-r from-blue-500 to-sky-500 text-white shadow-[0_10px_30px_rgba(59,130,246,0.3)] hover:shadow-[0_15px_40px_rgba(59,130,246,0.5)] border-transparent group-hover:scale-[1.02]",
-      isUltimate: true,
-      features: [
-        "15 TB of secure vault storage",
-        "Everything in Professional",
-        "Version history (unlimited)",
-        "Priority Support (24/7)",
-      ],
-    },
-  },
-};
+import { formatSize } from "../../lib/utils";
 
 const PricingSection = () => {
   const { user } = useAuth();
@@ -157,9 +27,175 @@ const PricingSection = () => {
   const [detectedCountryName, setDetectedCountryName] = useState("");
   const [rates, setRates] = useState(fallbackRates);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [planDetails, setPlanDetails] = useState([
+    {
+      type: "Novice",
+      period: "Monthly",
+      price: 199,
+      desc: "secure storage for files and photos.",
+      color: "from-fuchsia-500 to-purple-500",
+      shadow: "shadow-fuchsia-500/10",
+      borderHover: "hover:border-fuchsia-500/30",
+      borderClass: "border-fuchsia-500/20",
+      bgHover: "hover:bg-fuchsia-500/5",
+      textClass: "text-fuchsia-500",
+      bgClass: "bg-fuchsia-500/10",
+      storage: "1TB",
+      iconBorder: "border-fuchsia-500/20",
+      btnClass:
+        "bg-transparent hover:bg-fuchsia-500/10 border-slate-200 hover:border-fuchsia-500/30 dark:border-white/10 dark:hover:border-fuchsia-500/30 text-slate-800 dark:text-white",
+      features: [
+        "1 TB of secure vault storage",
+        "Link & Folder sharing",
+        "Basic support",
+      ],
+    },
+    {
+      type: "Professional",
+      period: "Monthly",
+      price: 399,
+      desc: " storage with priority speed and linkage.",
+      color: "from-rose-500 to-orange-500",
+      shadow: "shadow-[0_20px_80px_rgba(244,63,94,0.15)]",
+      borderHover: "hover:border-rose-500/40",
+      borderClass: "border-rose-500/30",
+      bgHover: "hover:bg-rose-500/5",
+
+      textClass: "text-rose-500",
+      bgClass: "bg-rose-500/10",
+      iconBorder: "border-rose-500/25",
+      btnClass:
+        "bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_10px_30px_rgba(244,63,94,0.3)] hover:shadow-[0_15px_40px_rgba(244,63,94,0.5)] border-transparent",
+      popular: true,
+      features: [
+        "5 TB of secure vault storage",
+        "Priority uploads (10x faster)",
+        "Email Support",
+        "GitHub, Google Drive, Dropbox seamless linkage",
+      ],
+    },
+    {
+      type: "Ultimate",
+      period: "Monthly",
+      price: 999,
+      desc: "15 TB storage for teams and extensive backup.",
+      color: "from-blue-500 to-sky-400",
+      shadow: "shadow-[0_15px_50px_rgba(59,130,246,0.15)]",
+      borderHover: "hover:border-blue-500/50",
+      borderClass: "border-blue-500/30",
+      bgHover: "hover:bg-blue-500/10",
+      textClass: "text-blue-400",
+      bgClass: "bg-blue-500/15",
+      iconBorder: "border-blue-500/25",
+      btnClass:
+        "bg-gradient-to-r from-blue-500 to-sky-500 text-white shadow-[0_10px_30px_rgba(59,130,246,0.3)] hover:shadow-[0_15px_40px_rgba(59,130,246,0.5)] border-transparent group-hover:scale-[1.02]",
+      isUltimate: true,
+      features: [
+        "15 TB of secure vault storage",
+        "Everything in Professional",
+        "Version history (unlimited)",
+        "Priority Support (24/7)",
+      ],
+    },
+    {
+      type: "Novice",
+      period: "Yearly",
+      price: 1999,
+      desc: "1 TB secure storage for files and photos.",
+      color: "from-fuchsia-500 to-purple-500",
+      shadow: "shadow-fuchsia-500/10",
+      borderHover: "hover:border-fuchsia-500/30",
+      borderClass: "border-fuchsia-500/20",
+      bgHover: "hover:bg-fuchsia-500/5",
+      textClass: "text-fuchsia-500",
+      bgClass: "bg-fuchsia-500/10",
+      iconBorder: "border-fuchsia-500/20",
+      btnClass:
+        "bg-transparent hover:bg-fuchsia-500/10 border-slate-200 hover:border-fuchsia-500/30 dark:border-white/10 dark:hover:border-fuchsia-500/30 text-slate-800 dark:text-white",
+      features: [
+        "1 TB of secure vault storage",
+        "Link & Folder sharing",
+        "Basic support",
+      ],
+    },
+    {
+      type: "Professional",
+      period: "Yearly",
+      price: 3999,
+      desc: "5 TB storage with priority speed and linkage.",
+      color: "from-rose-500 to-orange-500",
+      shadow: "shadow-[0_20px_80px_rgba(244,63,94,0.15)]",
+      borderHover: "hover:border-rose-500/40",
+      borderClass: "border-rose-500/30",
+      bgHover: "hover:bg-rose-500/5",
+      textClass: "text-rose-500",
+      bgClass: "bg-rose-500/10",
+      iconBorder: "border-rose-500/25",
+      btnClass:
+        "bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_10px_30px_rgba(244,63,94,0.3)] hover:shadow-[0_15px_40px_rgba(244,63,94,0.5)] border-transparent",
+      popular: true,
+      features: [
+        "5 TB of secure vault storage",
+        "Priority uploads (10x faster)",
+        "Email Support",
+        "GitHub, Google Drive, Dropbox seamless linkage",
+      ],
+    },
+    {
+      type: "Ultimate",
+      period: "Yearly",
+      price: 9999,
+      desc: "15 TB storage for teams and extensive backup.",
+      color: "from-blue-500 to-sky-400",
+      shadow: "shadow-[0_15px_50px_rgba(59,130,246,0.15)]",
+      borderHover: "hover:border-blue-500/50",
+      borderClass: "border-blue-500/30",
+      bgHover: "hover:bg-blue-500/10",
+      textClass: "text-blue-400",
+      bgClass: "bg-blue-500/15",
+      iconBorder: "border-blue-500/25",
+      btnClass:
+        "bg-gradient-to-r from-blue-500 to-sky-500 text-white shadow-[0_10px_30px_rgba(59,130,246,0.3)] hover:shadow-[0_15px_40px_rgba(59,130,246,0.5)] border-transparent group-hover:scale-[1.02]",
+      isUltimate: true,
+      features: [
+        "15 TB of secure vault storage",
+        "Everything in Professional",
+        "Version history (unlimited)",
+        "Priority Support (24/7)",
+      ],
+    },
+  ]);
+  console.log(planDetails);
 
   // Fetch exchange rates on mount
   useEffect(() => {
+    fetch(`${SERVER_URL}/plan/get-active-plans`)
+      .then((res) => res.json())
+      .then((allActivePlans) => {
+        console.log(allActivePlans);
+        if (Array.isArray(allActivePlans)) {
+          setPlanDetails((prevPlanDetails) =>
+            prevPlanDetails.map((frontendPlan) => {
+              const backendPlan = allActivePlans.find(
+                (plan) =>
+                  plan.type === frontendPlan.type &&
+                  plan.period === frontendPlan.period,
+              );
+              if (!backendPlan) return frontendPlan;
+
+              return {
+                ...frontendPlan,
+                ...backendPlan,
+                price: backendPlan.amount,
+              };
+            }),
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch active plans:", err);
+      });
+
     fetch("https://open.er-api.com/v6/latest/INR")
       .then((res) => res.json())
       .then((data) => {
@@ -233,9 +269,8 @@ const PricingSection = () => {
     return `${symbol}${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const getPriceDisplay = (planKey) => {
+  const getPriceDisplay = (basePrice) => {
     const type = isYearly ? "yearly" : "monthly";
-    const basePrice = basePrices[planKey][type];
     const rate = rates[currency] || fallbackRates[currency] || 0.012;
     const converted = basePrice * rate;
     const rounded = getRoundedPrice(converted, currency);
@@ -427,14 +462,12 @@ const PricingSection = () => {
           <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-fuchsia-500/5 blur-[100px] rounded-full pointer-events-none" />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch relative z-10">
-            {Object.entries(
-              isYearly ? planDetails.yearly : planDetails.monthly,
-            ).map(([name, details], index) => {
-              const isPopular = details.popular;
-              const isUltimate = details.isUltimate;
-              return (
+            {planDetails.map((detail, index) => {
+              const isPopular = detail.popular;
+              const isUltimate = detail.isUltimate;
+              return (detail.period === "Yearly") === isYearly ? (
                 <motion.div
-                  key={name}
+                  key={detail.type + detail.period}
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-50px" }}
@@ -443,17 +476,17 @@ const PricingSection = () => {
                     duration: 0.6,
                     ease: [0.16, 1, 0.3, 1],
                   }}
-                  className={`relative group rounded-[2.5rem] bg-white/50 dark:bg-white/[0.02] border transition-all duration-500 overflow-hidden flex flex-col justify-between ${details.borderHover} ${details.bgHover} ${
+                  className={`relative group rounded-[2.5rem] bg-white/50 dark:bg-white/[0.02] border transition-all duration-500 overflow-hidden flex flex-col justify-between ${detail.borderHover} ${detail.bgHover} ${
                     isPopular
-                      ? `md:scale-[1.04] ${details.shadow} z-20 py-12 ${details.borderClass} bg-rose-50/50 dark:bg-rose-500/5`
+                      ? `md:scale-[1.04] ${detail.shadow} z-20 py-12 ${detail.borderClass} bg-rose-50/50 dark:bg-rose-500/5`
                       : isUltimate
-                        ? `md:scale-[1.02] ${details.shadow} z-15 py-11 ${details.borderClass} bg-blue-50/30 dark:bg-blue-500/5 hover:-translate-y-1 hover:shadow-2xl`
+                        ? `md:scale-[1.02] ${detail.shadow} z-15 py-11 ${detail.borderClass} bg-blue-50/30 dark:bg-blue-500/5 hover:-translate-y-1 hover:shadow-2xl`
                         : `shadow-xl z-10 py-10 border-slate-200/60 dark:border-white/5 opacity-95 hover:opacity-100 hover:-translate-y-1`
                   }`}
                 >
                   {/* Top border highlight gradient */}
                   <div
-                    className={`absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r ${details.color} opacity-50 group-hover:opacity-100 transition-opacity duration-500`}
+                    className={`absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r ${detail.color} opacity-50 group-hover:opacity-100 transition-opacity duration-500`}
                   />
 
                   {isPopular && (
@@ -471,7 +504,7 @@ const PricingSection = () => {
                         {name}
                       </h3>
                       <p className="text-slate-500 dark:text-white/40 text-xs font-medium">
-                        {details.desc}
+                        {formatSize(detail.storage) + " " + detail.desc}
                       </p>
                     </div>
 
@@ -484,7 +517,7 @@ const PricingSection = () => {
                         transition={{ duration: 0.3 }}
                         className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tighter"
                       >
-                        {getPriceDisplay(name)}
+                        {getPriceDisplay(detail.price)}
                       </motion.span>
                       <span className="text-slate-500 dark:text-white/30 text-sm font-semibold">
                         /{isYearly ? "yr" : "mo"}
@@ -496,7 +529,7 @@ const PricingSection = () => {
                       <motion.p
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
-                        className={`${details.textClass} text-xs font-bold mb-6 -mt-4`}
+                        className={`${detail.textClass} text-xs font-bold mb-6 -mt-4`}
                       >
                         Save 2 months vs monthly billing
                       </motion.p>
@@ -504,32 +537,34 @@ const PricingSection = () => {
 
                     {/* Features List */}
                     <div className="space-y-4 mb-8 flex-grow">
-                      {details.features.map((feature, i) => (
-                        <div key={i} className="flex items-start gap-3">
-                          <div
-                            className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${details.bgClass} border ${details.iconBorder} ${details.textClass}`}
-                          >
-                            <Check size={11} strokeWidth={3} />
+                      {detail.features.map((feature, i) => {
+                        return (
+                          <div key={i} className="flex items-start gap-3">
+                            <div
+                              className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${detail.bgClass} border ${detail.iconBorder} ${detail.textClass}`}
+                            >
+                              <Check size={11} strokeWidth={3} />
+                            </div>
+                            <span
+                              className={`text-sm leading-relaxed ${
+                                isPopular
+                                  ? "text-slate-700 dark:text-white/80 font-semibold"
+                                  : "text-slate-600 dark:text-white/60 font-medium"
+                              }`}
+                            >
+                              {feature}
+                            </span>
                           </div>
-                          <span
-                            className={`text-sm leading-relaxed ${
-                              isPopular
-                                ? "text-slate-700 dark:text-white/80 font-semibold"
-                                : "text-slate-600 dark:text-white/60 font-medium"
-                            }`}
-                          >
-                            {feature}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
                   {/* Call To Action Button */}
                   <div className="px-8 mt-auto">
                     <button
-                      onClick={() => handleGetStarted(details.id)}
-                      className={`w-full py-4 rounded-2xl font-bold tracking-wide transition-all duration-300 flex items-center justify-center gap-2 group/btn relative overflow-hidden border ${details.btnClass}`}
+                      onClick={() => handleGetStarted(detail.razorpayPlanId)}
+                      className={`w-full py-4 rounded-2xl font-bold tracking-wide transition-all duration-300 flex items-center justify-center gap-2 group/btn relative overflow-hidden border ${detail.btnClass}`}
                     >
                       {isPopular && (
                         <div className="absolute inset-0 bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
@@ -542,6 +577,8 @@ const PricingSection = () => {
                     </button>
                   </div>
                 </motion.div>
+              ) : (
+                ""
               );
             })}
           </div>

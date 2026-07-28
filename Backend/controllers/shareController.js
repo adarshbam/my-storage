@@ -2,7 +2,7 @@ import crypto from "crypto";
 import ShareLink from "../models/shareLinkModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
 import User from "../models/userModel.js";
-import { cacheDel } from "../db/redis.js";
+import { cacheDel } from "../databases/redis.js";
 import { BACKEND_URL } from "../config/config.js";
 
 export const generateShareLink = async (req, res) => {

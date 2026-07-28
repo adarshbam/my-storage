@@ -17,7 +17,7 @@ import {
   verifyItemAccess,
 } from "../utils/integrationHelper.js";
 import SharedAccess from "../models/sharedAccessModel.js";
-import { invalidateUserSessions } from "../db/redis.js";
+import { invalidateUserSessions } from "../databases/redis.js";
 import { updateParentDirectorySize } from "./fileController.js";
 import { uploadToB2, getObjectFromB2, deleteFromB2 } from "../services/s3.js";
 

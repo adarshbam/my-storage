@@ -16,7 +16,7 @@ import {
   cacheHset,
   cacheGet,
   cacheSet,
-} from "../db/redis.js";
+} from "../databases/redis.js";
 import {
   getDirectoryPath,
   updateParentDirectorySize,

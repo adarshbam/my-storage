@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const createPlanSchema = {
   body: z.object({
-    type: z.enum(["Newbie", "Professional", "Ultimate"], {
+    type: z.enum(["Novice", "Professional", "Ultimate"], {
       error: "Invalid plan type",
     }),
     amount: z.number().min(1),

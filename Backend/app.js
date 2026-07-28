@@ -17,7 +17,7 @@ import cors from "cors";
 import checkAuth from "./middlewares/authMiddleware.js";
 import https from "https";
 import { readFileSync } from "fs";
-import "./db/mongoose.js";
+import "./databases/mongoose.js";
 import path from "path";
 import Trash from "./models/trashModel.js";
 import File from "./models/fileModel.js";

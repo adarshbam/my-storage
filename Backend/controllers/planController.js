@@ -1,71 +1,104 @@
 import { rzInstance } from "../config/config.js";
-import Plan from "../models/planModel.js";
+import BillingPlan from "../models/billingPlanModel.js";
 
 export const createPlan = async (req, res, next) => {
   const { type, amount, storage, period, currency } = req.body;
+
+  console.log(req.body);
 
   if (req.user.role != "Owner")
     return res.status(403).json("You are forbidden to perform this action");
 
   try {
-    const existingPlan = await Plan.findOne({ type, amount, period });
+    const planCurrency = (currency || "INR").toUpperCase();
+    const existingPlan = await Plan.findOne({
+      type,
+      amount,
+      period,
+    });
+    console.log(existingPlan);
 
     if (existingPlan) {
-      existingPlan.updateOne({
+      const disablingPlans = await Plan.updateMany(
+        {
+          type,
+          period,
+        },
+        {
+          active: false,
+        },
+      );
+
+      await existingPlan.updateOne({
         storage,
         active: true,
       });
+
       return res.json({
-        planId: existingPlan._id,
+        planId: existingPlan.razorpayPlanId,
       });
     }
 
+    // Convert amount to subunit for Razorpay (e.g. paise for INR, cents for USD)
+    const zeroDecimalCurrencies = ["JPY", "KRW"];
+    const rzAmount = zeroDecimalCurrencies.includes(planCurrency)
+      ? Math.round(amount)
+      : Math.round(amount * 100);
+
+    console.log(rzAmount, planCurrency);
+
     const newPlan = await rzInstance.plans.create({
-      period,
+      period: period.toLowerCase(),
       interval: 1,
       item: {
         name: `${type} - ${period}`,
-        amount,
-        currency,
+        amount: rzAmount,
+        currency: "INR",
       },
     });
 
     console.log(newPlan);
 
+    console.log(type, period);
+
+    const disablingPlans = await Plan.updateMany(
+      {
+        type,
+        period,
+      },
+      {
+        active: false,
+      },
+    );
+
+    console.log(disablingPlans);
+
     const plan = await Plan.create({
-      _id: newPlan.id,
+      razorpayPlanId: newPlan.id,
       type,
       amount,
-      currency,
+      currency: planCurrency,
       period,
       storage,
-      currency,
     });
 
-    console.log("[Plan] Created:", plan._id);
+    console.log("[Plan] Created:", plan.razorpayPlanId);
 
     return res.json({
-      plan: plan._id,
+      plan: plan.razorpayPlanId,
     });
   } catch (err) {
-    console.error("[Plan] Error:", err.message);
+    console.error("[Plan] Error:", err?.error || err?.message || err);
     next(err);
   }
 };
 
-export const getCurrentActivePlan = async (req, res, next) => {
-  const { type, period } = req.body;
-
+export const getAllActivePlans = async (req, res, next) => {
   try {
-    const existingPlan = await Plan.findOne({ type, period, active: true });
+    const existingActivePlans = await BillingPlan.find({ active: true });
+    console.log(existingActivePlans);
 
-    if (!existingPlan) {
-      return res.status(404).json("Plan doesn't exist");
-    }
-
-    return res.json({
-      planId: existingPlan._id,
-    });
+    return res.json(existingActivePlans);
   } catch (err) {
     console.error("[Plan] Error:", err.message);
     next(err);

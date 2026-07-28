@@ -1,5 +1,5 @@
 import SharedAccess from "../models/sharedAccessModel.js";
-import { cacheGet, cacheSet } from "../db/redis.js";
+import { cacheGet, cacheSet } from "../databases/redis.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 
