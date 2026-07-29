@@ -758,38 +758,15 @@ export const getAllRecentItems = async (req, res) => {
 
 export const uploadFile = async (req, res) => {
   try {
-    const systemConfig = await getSystemConfigHelper();
+    // Buffer and actual size come from enforceUploadLimit middleware
+    const buffer = req.fileBuffer;
+    const actualSize = req.actualFileSize;
 
     // Robustly handle missing or "undefined" string param
     let parentDirId = req.params.parentDirId;
     const rootDirId = req.user.rootDirId.toString();
     const parsedSize = parseInt(sanitize(req.headers.filesize), 10);
     const fileSize = Number.isNaN(parsedSize) ? 0 : parsedSize;
-
-    if (!parentDirId || parentDirId === "undefined") {
-      parentDirId = rootDirId;
-    }
-
-    if (fileSize > systemConfig.maxFileSizeLimit) {
-      return req.destroy();
-    }
-
-    const rootDir = await Directory.findOne({ _id: req.user.rootDirId })
-      .select("size")
-      .lean();
-    const usedStorage = rootDir ? rootDir.size : 0;
-    const maxStorage = req.user.maxStorage || 1024 * 1024 * 1024;
-
-    if (usedStorage + fileSize > maxStorage) {
-      if (!res.headersSent) {
-        res.setHeader("Connection", "close");
-        res.status(400).json({ error: "Not enough storage left" });
-      }
-      setTimeout(() => {
-        req.destroy();
-      }, 0);
-      return;
-    }
 
     let ownerId = req.user.id;
     // Verify parent directory ownership and check shared permissions
@@ -822,22 +799,6 @@ export const uploadFile = async (req, res) => {
     const fullFileName = `${id}${ext}`;
     const contentType =
       req.headers["content-type"] || "application/octet-stream";
-
-    let buffer;
-    if (req.body && req.body.content !== undefined) {
-      buffer = Buffer.from(req.body.content, "utf-8");
-    } else {
-      const chunks = [];
-      for await (const chunk of req) {
-        chunks.push(chunk);
-      }
-      buffer = Buffer.concat(chunks);
-    }
-
-    const actualSize = buffer.length;
-    if (actualSize > systemConfig.maxFileSizeLimit) {
-      return res.status(400).send("File exceeds maximum allowed size");
-    }
 
     // Upload main file to Backblaze B2
     await uploadToB2({
@@ -959,9 +920,11 @@ export const uploadVaultInitate = async (req, res) => {
     const fullFileName = `${id}${ext}`;
 
     // Get the signed URL for the client to upload to
+    // ContentLength is baked into the signed URL so B2 rejects mismatched sizes
     const signedUrl = await createUploadSignedUrl({
       key: fullFileName,
       contentType,
+      contentLength: size,
     });
 
     const dirPath = dirId ? await getDirectoryPath(id, dirId) : [];

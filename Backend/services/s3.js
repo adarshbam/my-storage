@@ -19,11 +19,18 @@ export const s3Client = new S3Client({
   },
 });
 
-export const createUploadSignedUrl = async ({ key, contentType }) => {
-  const command = new PutObjectCommand({
+export const createUploadSignedUrl = async ({ key, contentType, contentLength }) => {
+  const params = {
     Bucket: process.env.BACKBLAZE_BUCKET_NAME,
     Key: key,
-  });
+  };
+
+  // When contentLength is set, B2/S3 will reject uploads that don't match this exact size
+  if (contentLength) {
+    params.ContentLength = contentLength;
+  }
+
+  const command = new PutObjectCommand(params);
 
   const url = await getSignedUrl(s3Client, command, {
     expiresIn: 3600,

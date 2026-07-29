@@ -35,6 +35,8 @@ import {
   mediumWriteLimiter,
 } from "../middlewares/rateLimiter.js";
 import throttle from "../utils/throttle.js";
+import { enforceUploadLimit } from "../middlewares/enforceUploadLimit.js";
+import { loadPlanContext } from "../middlewares/loadPlanContext.js";
 
 const router = express.Router();
 
@@ -102,6 +104,7 @@ router.post(
   uploadLimiter,
   throttle(300, 8, "file-upload"),
   validate(uploadVaultInitiateSchema),
+  enforceUploadLimit,
   uploadVaultInitate,
 );
 
@@ -111,6 +114,8 @@ router.post(
   uploadLimiter,
   throttle(300, 8, "file-upload"),
   validate(uploadFileSchema),
+  loadPlanContext,
+  enforceUploadLimit,
   uploadFile,
 );
 
