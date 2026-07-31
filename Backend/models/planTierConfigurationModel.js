@@ -17,44 +17,54 @@ const planTierConfigurationSchema = new mongoose.Schema(
     ],
 
     rules: {
-      allowUpload: {
-        type: Boolean,
-        default: true,
+      permissions: {
+        allowUpload: {
+          type: Boolean,
+          default: true,
+        },
+
+        allowDownload: {
+          type: Boolean,
+          default: true,
+        },
+
+        allowSharing: {
+          type: Boolean,
+          default: true,
+        },
       },
 
-      allowDownload: {
-        type: Boolean,
-        default: true,
+      limits: {
+        storageLimit: {
+          type: Number,
+          default: 10737418240,
+        },
+        maxConnectedDevices: {
+          type: Number,
+          default: 3,
+        },
+
+        maxUploadFileSize: {
+          type: Number,
+          default: 0,
+        },
       },
 
-      allowSharing: {
-        type: Boolean,
-        default: true,
-      },
+      settings: {
+        uploadSpeedMultiplier: {
+          type: Number,
+          default: 1,
+        },
 
-      maxConnectedDevices: {
-        type: Number,
-        default: 3,
-      },
+        versionHistoryDays: {
+          type: Number,
+          default: 30,
+        },
 
-      maxUploadFileSize: {
-        type: Number,
-        default: 0,
-      },
-
-      uploadSpeedMultiplier: {
-        type: Number,
-        default: 1,
-      },
-
-      versionHistoryDays: {
-        type: Number,
-        default: 30,
-      },
-
-      deleteFilesAfterExpiryDays: {
-        type: Number,
-        default: 30,
+        deleteFilesAfterExpiryDays: {
+          type: Number,
+          default: 30,
+        },
       },
     },
   },

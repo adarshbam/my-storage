@@ -1,12 +1,12 @@
-export const requireRule = (ruleName) => {
+export const checkPlanLimit = ({ rule, getValue }) => {
   return (req, res, next) => {
-    const rules = req.planContext.rules;
+    const limit = req.planContext.rules.limits[rule];
 
-    if (!rules[ruleName]) {
-      return res.status(403).json({
-        success: false,
+    const value = getValue(req);
 
-        message: `Your plan does not allow ${ruleName}.`,
+    if (value > limit) {
+      return res.status(413).json({
+        message: "Plan limit exceeded.",
       });
     }
 

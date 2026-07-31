@@ -25,8 +25,6 @@ import OTP from "../models/otpModel.js";
 import { z } from "zod";
 import { loginSchema, registerSchema } from "../validators/authSchema.js";
 
-const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
-
 // ─── User Info ──────────────────────────────────────────────────────────────────
 
 export const getUser = async (req, res) => {

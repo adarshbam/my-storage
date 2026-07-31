@@ -1,8 +1,10 @@
 import mongoose from "mongoose";
-import argon2 from "argon2";
 import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import Session from "../models/sessionModel.js";
+import BillingPlan from "../models/billingPlanModel.js";
+import PlanTier from "../models/planTierModel.js";
+import PlanTierConfiguration from "../models/planTierConfigurationModel.js";
 import {
   SESSION_COOKIE_OPTIONS,
   ROOT_DIR_COOKIE_OPTIONS,
@@ -19,29 +21,64 @@ import { getSystemConfigHelper } from "../controllers/systemConfigController.js"
  * @param {import("express").Response} res
  */
 export async function createSessionAndSetCookies(userId, rootDirId, req, res) {
-  const deviceFingerprint = req.headers["user-agent"];
-  const deviceId = await argon2.hash(deviceFingerprint);
+  // Client generates a random UUID once and stores it in localStorage,
+  // sending it as x-device-id on every login. Falls back to User-Agent.
+  const deviceId =
+    req.headers["x-device-id"] || req.headers["user-agent"] || "unknown";
 
+  const systemConfig = await getSystemConfigHelper();
+  const globalDevicesLimit = systemConfig.maxDevicesLimit;
+
+  // Load plan-based device limit directly from DB
+  let planDevicesLimit = null;
+  try {
+    const user = await User.findById(userId).select("billingPlan").lean();
+    if (user?.billingPlan) {
+      const billingPlan = await BillingPlan.findById(user.billingPlan).lean();
+      if (billingPlan?.tier) {
+        const config = await PlanTierConfiguration.findOne({
+          tier: billingPlan.tier,
+        }).lean();
+        planDevicesLimit = config?.rules?.limits?.maxConnectedDevices ?? null;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to load plan device limit:", err);
+  }
+
+  const devicesLimit = Math.min(
+    globalDevicesLimit,
+    planDevicesLimit ?? globalDevicesLimit,
+  );
+
+  // 1. Find existing session (may not exist for first-time login)
+  const existingSession = await Session.findOne({ userId });
+
+  if (existingSession) {
+    const existingDevice = existingSession.devices.find(
+      (d) => d.deviceId === deviceId,
+    );
+
+    // 2. If new device and at the limit, evict the oldest device
+    if (!existingDevice && existingSession.devices.length >= devicesLimit) {
+      await Session.updateOne(
+        { _id: existingSession._id },
+        { $pull: { devices: { _id: existingSession.devices[0]._id } } },
+      );
+    }
+  }
+
+  // 3. Upsert session and add device (creates session on first login)
   const session = await Session.findOneAndUpdate(
     { userId },
     {
       $setOnInsert: { userId },
       $addToSet: { devices: { deviceId } },
     },
-    {
-      returnDocument: "after",
-      new: true,
-      upsert: true,
-    },
+    { new: true, upsert: true },
   );
 
   const sessionId = session._id;
-
-  const systemConfig = await getSystemConfigHelper();
-  const existingDevice = session.devices.find((d) => d.deviceId === deviceId);
-  if (!existingDevice && session.devices.length >= systemConfig.maxDevicesLimit) {
-    await Session.findByIdAndDelete(sessionId);
-  }
 
   res.cookie("sessionId", sessionId, SESSION_COOKIE_OPTIONS);
   res.cookie(

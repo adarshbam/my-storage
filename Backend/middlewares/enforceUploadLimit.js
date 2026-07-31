@@ -23,7 +23,10 @@ export const enforceUploadLimit = async (req, res, next) => {
       .select("size")
       .lean();
     const usedStorage = rootDir ? rootDir.size : 0;
-    const maxStorage = req.user.maxStorage || 1024 * 1024 * 1024;
+    const maxStorage = Math.min(
+      req.user.maxStorage,
+      req.planContext.rules.limits.storageLimit,
+    );
 
     // ── Detect request type ──
     // Vault initiate sends JSON body with a numeric `size` field
