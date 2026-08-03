@@ -2,11 +2,15 @@ import { Sliders, Sparkles, Plus, Check, X, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 
 const accentOptions = [
-  { value: "emerald", label: "Emerald Green", class: "bg-emerald-500" },
   { value: "purple", label: "Fuchsia Purple", class: "bg-purple-500" },
-  { value: "rose", label: "Rose Pink/Orange", class: "bg-rose-500" },
-  { value: "sky", label: "Sky Blue", class: "bg-sky-500" },
-  { value: "amber", label: "Amber Yellow", class: "bg-amber-500" },
+  { value: "rose", label: "Rose Pink / Sunset Orange", class: "bg-rose-500" },
+  { value: "sky", label: "Sky Blue / Ocean", class: "bg-sky-500" },
+  { value: "emerald", label: "Emerald Green", class: "bg-emerald-500" },
+  { value: "amber", label: "Amber Gold", class: "bg-amber-500" },
+  { value: "indigo", label: "Deep Indigo", class: "bg-indigo-500" },
+  { value: "cyan", label: "Electric Cyan", class: "bg-cyan-500" },
+  { value: "pink", label: "Neon Pink", class: "bg-pink-500" },
+  { value: "violet", label: "Radiant Violet", class: "bg-violet-500" },
 ];
 
 export default function PlanTiersSection({
@@ -86,7 +90,7 @@ export default function PlanTiersSection({
         >
           <div className="flex items-center justify-between pb-3 border-b border-slate-200/50 dark:border-white/10">
             <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <Plus size={16} className="text-rose-400" /> Create New Plan Tier (Dummy)
+              <Plus size={16} className="text-rose-400" /> Create New Plan Tier
             </h3>
             <button
               type="button"
@@ -168,7 +172,7 @@ export default function PlanTiersSection({
 
             <div>
               <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                Accent Color
+                Highlight Accent Color
               </label>
               <select
                 value={newTierData.accentColor}
@@ -220,7 +224,7 @@ export default function PlanTiersSection({
       )}
 
       {/* Plan Tiers Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {planTiers.map((tier) => (
           <div
             key={tier.type}
@@ -231,13 +235,13 @@ export default function PlanTiersSection({
             }`}
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-200/50 dark:border-white/5">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span
-                  className={`w-3 h-3 rounded-full ${
+                  className={`w-3 h-3 rounded-full shrink-0 ${
                     tier.active !== false ? "bg-rose-500" : "bg-slate-500"
                   }`}
                 />
-                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                <h3 className="text-base font-black text-slate-900 dark:text-white truncate" title={tier.type}>
                   {tier.type}
                 </h3>
               </div>
@@ -248,7 +252,7 @@ export default function PlanTiersSection({
                 onClick={() =>
                   onUpdateTierDetail(tier.type, "active", !(tier.active !== false))
                 }
-                className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 flex items-center ${
+                className={`w-11 h-6 shrink-0 rounded-full p-1 transition-colors duration-200 flex items-center ${
                   tier.active !== false ? "bg-rose-500" : "bg-slate-700"
                 }`}
                 title={tier.active !== false ? "Disable Tier" : "Enable Tier"}

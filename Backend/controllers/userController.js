@@ -352,6 +352,9 @@ export const authGithub = async (req, res) => {
             },
           },
         },
+        {
+          new: true,
+        },
       );
 
       // Create a Special Directory to act as the Google Drive mount point

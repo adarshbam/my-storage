@@ -3,6 +3,99 @@ import { motion } from "framer-motion";
 import { Check, Sparkles, Eye, Shield, Zap, HardDrive } from "lucide-react";
 import { currencySymbols } from "../../lib/currency";
 
+const accentThemes = {
+  emerald: {
+    border: "border-emerald-500/40 hover:border-emerald-500/70",
+    shadow: "shadow-[0_10px_40px_rgba(16,185,129,0.15)]",
+    bgTint: "bg-emerald-500/[0.03]",
+    badgeBg: "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
+    text: "text-emerald-400",
+    check: "text-emerald-400",
+    ruleBox: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300",
+    btnGradient: "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_8px_25px_rgba(16,185,129,0.3)] hover:shadow-[0_12px_35px_rgba(16,185,129,0.5)]",
+  },
+  purple: {
+    border: "border-fuchsia-500/40 hover:border-fuchsia-500/70",
+    shadow: "shadow-[0_10px_40px_rgba(217,70,239,0.15)]",
+    bgTint: "bg-fuchsia-500/[0.03]",
+    badgeBg: "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/25",
+    text: "text-fuchsia-400",
+    check: "text-fuchsia-400",
+    ruleBox: "bg-fuchsia-500/10 border-fuchsia-500/20 text-fuchsia-300",
+    btnGradient: "bg-gradient-to-r from-fuchsia-500 to-purple-500 text-white shadow-[0_8px_25px_rgba(217,70,239,0.3)] hover:shadow-[0_12px_35px_rgba(217,70,239,0.5)]",
+  },
+  rose: {
+    border: "border-rose-500/50 hover:border-rose-500/80",
+    shadow: "shadow-[0_10px_40px_rgba(244,63,94,0.2)]",
+    bgTint: "bg-rose-500/[0.04]",
+    badgeBg: "bg-rose-500/15 text-rose-400 border-rose-500/25",
+    text: "text-rose-400",
+    check: "text-rose-400",
+    ruleBox: "bg-rose-500/10 border-rose-500/20 text-rose-300",
+    btnGradient: "bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_8px_25px_rgba(244,63,94,0.35)] hover:shadow-[0_12px_35px_rgba(244,63,94,0.55)]",
+  },
+  sky: {
+    border: "border-blue-500/40 hover:border-blue-500/70",
+    shadow: "shadow-[0_10px_40px_rgba(59,130,246,0.15)]",
+    bgTint: "bg-blue-500/[0.03]",
+    badgeBg: "bg-blue-500/15 text-sky-400 border-blue-500/25",
+    text: "text-sky-400",
+    check: "text-sky-400",
+    ruleBox: "bg-blue-500/10 border-blue-500/20 text-sky-300",
+    btnGradient: "bg-gradient-to-r from-blue-500 to-sky-400 text-white shadow-[0_8px_25px_rgba(59,130,246,0.3)] hover:shadow-[0_12px_35px_rgba(59,130,246,0.5)]",
+  },
+  amber: {
+    border: "border-amber-500/40 hover:border-amber-500/70",
+    shadow: "shadow-[0_10px_40px_rgba(245,158,11,0.15)]",
+    bgTint: "bg-amber-500/[0.03]",
+    badgeBg: "bg-amber-500/15 text-amber-400 border-amber-500/25",
+    text: "text-amber-400",
+    check: "text-amber-400",
+    ruleBox: "bg-amber-500/10 border-amber-500/20 text-amber-300",
+    btnGradient: "bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-[0_8px_25px_rgba(245,158,11,0.3)] hover:shadow-[0_12px_35px_rgba(245,158,11,0.5)]",
+  },
+  indigo: {
+    border: "border-indigo-500/40 hover:border-indigo-500/70",
+    shadow: "shadow-[0_10px_40px_rgba(99,102,241,0.15)]",
+    bgTint: "bg-indigo-500/[0.03]",
+    badgeBg: "bg-indigo-500/15 text-indigo-400 border-indigo-500/25",
+    text: "text-indigo-400",
+    check: "text-indigo-400",
+    ruleBox: "bg-indigo-500/10 border-indigo-500/20 text-indigo-300",
+    btnGradient: "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-[0_8px_25px_rgba(99,102,241,0.3)] hover:shadow-[0_12px_35px_rgba(99,102,241,0.5)]",
+  },
+  cyan: {
+    border: "border-cyan-500/40 hover:border-cyan-500/70",
+    shadow: "shadow-[0_10px_40px_rgba(6,182,212,0.15)]",
+    bgTint: "bg-cyan-500/[0.03]",
+    badgeBg: "bg-cyan-500/15 text-cyan-400 border-cyan-500/25",
+    text: "text-cyan-400",
+    check: "text-cyan-400",
+    ruleBox: "bg-cyan-500/10 border-cyan-500/20 text-cyan-300",
+    btnGradient: "bg-gradient-to-r from-cyan-500 to-teal-400 text-white shadow-[0_8px_25px_rgba(6,182,212,0.3)] hover:shadow-[0_12px_35px_rgba(6,182,212,0.5)]",
+  },
+  pink: {
+    border: "border-pink-500/40 hover:border-pink-500/70",
+    shadow: "shadow-[0_10px_40px_rgba(236,72,153,0.15)]",
+    bgTint: "bg-pink-500/[0.03]",
+    badgeBg: "bg-pink-500/15 text-pink-400 border-pink-500/25",
+    text: "text-pink-400",
+    check: "text-pink-400",
+    ruleBox: "bg-pink-500/10 border-pink-500/20 text-pink-300",
+    btnGradient: "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-[0_8px_25px_rgba(236,72,153,0.3)] hover:shadow-[0_12px_35px_rgba(236,72,153,0.5)]",
+  },
+  violet: {
+    border: "border-violet-500/40 hover:border-violet-500/70",
+    shadow: "shadow-[0_10px_40px_rgba(139,92,246,0.15)]",
+    bgTint: "bg-violet-500/[0.03]",
+    badgeBg: "bg-violet-500/15 text-violet-400 border-violet-500/25",
+    text: "text-violet-400",
+    check: "text-violet-400",
+    ruleBox: "bg-violet-500/10 border-violet-500/20 text-violet-300",
+    btnGradient: "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-[0_8px_25px_rgba(139,92,246,0.3)] hover:shadow-[0_12px_35px_rgba(139,92,246,0.5)]",
+  },
+};
+
 export default function PricingLivePreviewSection({
   billingPlans,
   planTiers,
@@ -84,108 +177,188 @@ export default function PricingLivePreviewSection({
       </div>
 
       {/* Embedded Live Preview Canvas */}
-      <div className="w-full bg-slate-950/80 dark:bg-[#020705] p-6 md:p-8 rounded-[2.5rem] border border-slate-800 dark:border-white/10 relative overflow-hidden shadow-2xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch relative z-10">
-          {planTiers.map((tier) => {
-            const period = isYearly ? "Yearly" : "Monthly";
-            const planObj = billingPlans.find(
-              (p) => p.planTier === tier.type && p.period === period
-            ) || {
-              amount: 0,
-              currency: "USD",
-              storage: 5368709120,
-              active: true,
-            };
+      <div className="w-full bg-slate-950/80 dark:bg-[#020705] p-6 md:p-8 rounded-[2.5rem] border border-slate-800 dark:border-white/10 relative overflow-hidden shadow-2xl space-y-6">
+        {(() => {
+          const period = isYearly ? "Yearly" : "Monthly";
+          const freeTrialTier = planTiers.find(
+            (t) => t.type.toLowerCase().includes("free") || t.slug.includes("free")
+          );
+          const mainTiers = planTiers.filter((t) => t !== freeTrialTier);
 
-            const tierFeatures = getFeaturesForTier(tier.type);
-            const tierRules = tierRuleConfigs[tier.type] || {};
-            const symbol =
-              currencySymbols[planObj.currency] || planObj.currency + " ";
-            const storageText = formatStorageText(planObj.storage);
+          return (
+            <>
+              {/* Separate Free Trial Top Banner Card */}
+              {freeTrialTier && (() => {
+                const planObj = billingPlans.find(
+                  (p) => p.planTier === freeTrialTier.type && p.period === period
+                ) || { amount: 0, currency: "USD", storage: 5368709120 };
+                const tierFeatures = getFeaturesForTier(freeTrialTier.type);
+                const tierRules = tierRuleConfigs[freeTrialTier.type] || {};
+                const symbol = currencySymbols[planObj.currency] || planObj.currency + " ";
+                const storageText = formatStorageText(planObj.storage);
+                const theme = accentThemes[freeTrialTier.accentColor] || accentThemes.emerald;
 
-            return (
-              <div
-                key={tier.type}
-                className={`relative rounded-3xl p-6 bg-white/5 dark:bg-white/[0.02] border flex flex-col justify-between transition-all duration-300 ${
-                  tier.badge === "Most Popular"
-                    ? "border-rose-500/50 bg-rose-500/5 shadow-[0_10px_40px_rgba(244,63,94,0.15)] scale-[1.02]"
-                    : "border-slate-700/60 dark:border-white/10"
-                }`}
-              >
-                {/* Badge */}
-                {tier.badge && (
-                  <div className="mb-3">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-400 border border-rose-500/25">
-                      <Sparkles size={10} /> {tier.badge}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex-1 flex flex-col">
-                  {/* Title & Subtitle */}
-                  <h3 className="text-xl font-black text-white mb-1">
-                    {tier.title}
-                  </h3>
-                  <p className="text-xs text-white/50 font-medium mb-4 min-h-[32px]">
-                    {storageText} • {tier.description}
-                  </p>
-
-                  {/* Price Display */}
-                  <div className="flex items-baseline gap-1 mb-4 pb-4 border-b border-white/10">
-                    <span className="text-3xl font-black text-white">
-                      {symbol}
-                      {planObj.amount}
-                    </span>
-                    <span className="text-xs text-white/40 font-semibold">
-                      /{isYearly ? "yr" : "mo"}
-                    </span>
-                  </div>
-
-                  {/* Rule summary highlights */}
-                  <div className="mb-4 text-[11px] font-semibold text-teal-400 bg-teal-500/10 border border-teal-500/20 rounded-xl p-2.5 space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Max Devices:</span>
-                      <span>{tierRules.maxConnectedDevices ?? 3} Sessions</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Upload Speed:</span>
-                      <span>{tierRules.uploadSpeedMultiplier ?? "1x"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Version History:</span>
-                      <span>{tierRules.versionHistoryDays ?? "30"} Days</span>
-                    </div>
-                  </div>
-
-                  {/* Feature Checklist */}
-                  <div className="space-y-2 mb-6 flex-grow">
-                    {tierFeatures.slice(0, 5).map((feat) => (
-                      <div
-                        key={feat.id}
-                        className="flex items-center gap-2 text-xs font-medium text-white/80"
-                      >
-                        <Check size={14} className="text-emerald-400 shrink-0" />
-                        <span className="truncate">{feat.title}</span>
+                return (
+                  <div
+                    key={freeTrialTier.type}
+                    className={`relative rounded-3xl p-6 border flex flex-col md:flex-row items-center justify-between gap-6 transition-all duration-300 ${theme.border} ${theme.shadow} ${theme.bgTint}`}
+                  >
+                    <div className="flex-1 flex flex-col md:flex-row md:items-center gap-6 w-full">
+                      <div className="min-w-[240px]">
+                        {freeTrialTier.badge && (
+                          <div className="mb-2">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${theme.badgeBg}`}>
+                              <Sparkles size={10} /> {freeTrialTier.badge}
+                            </span>
+                          </div>
+                        )}
+                        <h3 className="text-2xl font-black text-white">{freeTrialTier.title}</h3>
+                        <p className="text-xs text-white/50 font-medium mt-1">
+                          {storageText} • {freeTrialTier.description}
+                        </p>
                       </div>
-                    ))}
-                    {tierFeatures.length > 5 && (
-                      <p className="text-[10px] font-bold text-white/40 pt-1">
-                        + {tierFeatures.length - 5} additional features
-                      </p>
-                    )}
-                  </div>
-                </div>
 
-                <button
-                  type="button"
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-teal-500 to-sky-500 text-white font-bold text-xs shadow-lg shadow-teal-500/20 hover:opacity-95 transition-opacity"
-                >
-                  Get Started
-                </button>
+                      {/* Price Display */}
+                      <div className="md:border-l md:border-white/10 md:pl-6 flex items-baseline gap-1 shrink-0">
+                        <span className="text-4xl font-black text-white">{symbol}{planObj.amount}</span>
+                        <span className="text-xs text-white/40 font-semibold">/{isYearly ? "yr" : "mo"}</span>
+                      </div>
+
+                      {/* Highlights */}
+                      <div className={`hidden lg:flex flex-wrap items-center gap-3 text-[11px] font-semibold rounded-2xl p-3 border ${theme.ruleBox}`}>
+                        <div>Max Devices: <span className="text-white font-bold">{tierRules.maxConnectedDevices ?? 3} Sessions</span></div>
+                        <div className="w-px h-3 bg-white/20" />
+                        <div>Speed: <span className="text-white font-bold">{tierRules.uploadSpeedMultiplier ?? "1x"}</span></div>
+                        <div className="w-px h-3 bg-white/20" />
+                        <div>History: <span className="text-white font-bold">{tierRules.versionHistoryDays ?? "30"} Days</span></div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 w-full md:w-auto shrink-0 justify-between md:justify-end">
+                      <div className="hidden sm:flex items-center gap-2">
+                        {tierFeatures.slice(0, 2).map((feat) => (
+                          <div key={feat.id} className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-xs text-white/80 font-medium">
+                            <Check size={12} className={`${theme.check} shrink-0`} />
+                            <span>{feat.title}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs shadow-lg hover:opacity-95 transition-all duration-300 ${theme.btnGradient}`}
+                      >
+                        Get Started Free
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Spacious 3-Column Grid for Main Tiers */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8 items-stretch relative z-10">
+                {mainTiers.map((tier) => {
+                  const planObj = billingPlans.find(
+                    (p) => p.planTier === tier.type && p.period === period
+                  ) || {
+                    amount: 0,
+                    currency: "USD",
+                    storage: 5368709120,
+                    active: true,
+                  };
+
+                  const tierFeatures = getFeaturesForTier(tier.type);
+                  const tierRules = tierRuleConfigs[tier.type] || {};
+                  const symbol = currencySymbols[planObj.currency] || planObj.currency + " ";
+                  const storageText = formatStorageText(planObj.storage);
+                  const theme = accentThemes[tier.accentColor] || accentThemes.emerald;
+
+                  return (
+                    <div
+                      key={tier.type}
+                      className={`relative rounded-3xl p-6 md:p-7 border flex flex-col justify-between transition-all duration-300 ${
+                        tier.badge === "Most Popular" ? "scale-[1.02]" : ""
+                      } ${theme.border} ${theme.shadow} ${theme.bgTint}`}
+                    >
+                      {/* Badge */}
+                      {tier.badge && (
+                        <div className="mb-3">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider ${theme.badgeBg}`}
+                          >
+                            <Sparkles size={10} /> {tier.badge}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex-1 flex flex-col">
+                        {/* Title & Subtitle */}
+                        <h3 className="text-2xl font-black text-white mb-1">
+                          {tier.title}
+                        </h3>
+                        <p className="text-xs text-white/50 font-medium mb-4 min-h-[32px]">
+                          {storageText} • {tier.description}
+                        </p>
+
+                        {/* Price Display */}
+                        <div className="flex items-baseline gap-1 mb-5 pb-5 border-b border-white/10">
+                          <span className="text-4xl font-black text-white">
+                            {symbol}
+                            {planObj.amount}
+                          </span>
+                          <span className="text-xs text-white/40 font-semibold">
+                            /{isYearly ? "yr" : "mo"}
+                          </span>
+                        </div>
+
+                        {/* Rule summary highlights */}
+                        <div className={`mb-5 text-[11px] font-semibold rounded-2xl p-3 space-y-1.5 border ${theme.ruleBox}`}>
+                          <div className="flex justify-between">
+                            <span className="text-white/60">Max Devices:</span>
+                            <span className="text-white font-bold">{tierRules.maxConnectedDevices ?? 3} Sessions</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-white/60">Upload Speed:</span>
+                            <span className="text-white font-bold">{tierRules.uploadSpeedMultiplier ?? "1x"}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-white/60">Version History:</span>
+                            <span className="text-white font-bold">{tierRules.versionHistoryDays ?? "30"} Days</span>
+                          </div>
+                        </div>
+
+                        {/* Feature Checklist */}
+                        <div className="space-y-2.5 mb-6 flex-grow">
+                          {tierFeatures.slice(0, 6).map((feat) => (
+                            <div
+                              key={feat.id}
+                              className="flex items-center gap-2 text-xs font-medium text-white/80"
+                            >
+                              <Check size={14} className={`${theme.check} shrink-0`} />
+                              <span className="truncate">{feat.title}</span>
+                            </div>
+                          ))}
+                          {tierFeatures.length > 6 && (
+                            <p className="text-[10px] font-bold text-white/40 pt-1">
+                              + {tierFeatures.length - 6} additional features
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className={`w-full py-3.5 rounded-xl font-bold text-xs shadow-lg hover:opacity-95 transition-all duration-300 ${theme.btnGradient}`}
+                      >
+                        Get Started
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </>
+          );
+        })()}
       </div>
     </section>
   );

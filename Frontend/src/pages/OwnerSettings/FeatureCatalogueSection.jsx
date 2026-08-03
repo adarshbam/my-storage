@@ -66,7 +66,7 @@ export default function FeatureCatalogueSection({ features, onToggleFeatureEnabl
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredFeatures.map((feature) => {
           const IconComp = categoryIcons[feature.category] || Layers;
           const badgeClass = categoryBadgeColors[feature.category] || "bg-slate-500/10 text-slate-400 border-slate-500/20";

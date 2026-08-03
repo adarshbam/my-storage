@@ -1,4 +1,4 @@
-import { CreditCard, Zap, Power, Layers, HardDrive, Key } from "lucide-react";
+import { CreditCard, Zap, Power, Layers, HardDrive, Key, Lock } from "lucide-react";
 import { supportedCountries } from "../../lib/currency";
 
 export default function BillingPlansSection({
@@ -46,7 +46,7 @@ export default function BillingPlansSection({
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {billingPlans.map((plan) => {
           const { value: storageVal, unit: storageUnit } = formatBytesForInput(
             plan.storage
@@ -62,19 +62,19 @@ export default function BillingPlansSection({
               }`}
             >
               {/* Top Banner Header */}
-              <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-200/50 dark:border-white/5">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-200/50 dark:border-white/5 overflow-hidden">
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
                   <span
-                    className={`w-2.5 h-2.5 rounded-full ${
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${
                       plan.active
                         ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
                         : "bg-slate-500"
                     }`}
                   />
-                  <span className="text-sm font-black text-slate-900 dark:text-white">
+                  <span className="text-xs font-black text-slate-900 dark:text-white truncate" title={plan.planTier}>
                     {plan.planTier}
                   </span>
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wide">
+                  <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wide shrink-0">
                     {plan.period}
                   </span>
                 </div>
@@ -83,7 +83,7 @@ export default function BillingPlansSection({
                 <button
                   type="button"
                   onClick={() => onUpdatePlan(plan.id, "active", !plan.active)}
-                  className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 flex items-center ${
+                  className={`w-11 h-6 shrink-0 rounded-full p-1 transition-colors duration-200 flex items-center ${
                     plan.active ? "bg-amber-500" : "bg-slate-700"
                   }`}
                   title={plan.active ? "Deactivate Plan" : "Activate Plan"}
@@ -153,22 +153,6 @@ export default function BillingPlansSection({
                   </div>
                 </div>
 
-                {/* Razorpay Plan ID */}
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
-                    Razorpay Plan ID
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={plan.razorpayPlanId || ""}
-                      onChange={(e) => onUpdatePlan(plan.id, "razorpayPlanId", e.target.value)}
-                      className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono text-[11px] focus:outline-none focus:border-amber-500/50"
-                      placeholder="e.g. plan_N123abc"
-                    />
-                  </div>
-                </div>
-
                 {/* Storage Quota */}
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
@@ -197,32 +181,40 @@ export default function BillingPlansSection({
                   </div>
                 </div>
 
-                {/* Version & Period */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
-                      Version Tag
+                {/* Billing Cycle */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
+                    Billing Cycle
+                  </label>
+                  <select
+                    value={plan.period}
+                    onChange={(e) => onUpdatePlan(plan.id, "period", e.target.value)}
+                    className="w-full bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
+                  >
+                    <option value="Monthly">Monthly</option>
+                    <option value="Yearly">Yearly</option>
+                  </select>
+                </div>
+
+                {/* Razorpay Plan ID (Read-only / System Managed) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50">
+                      Razorpay Plan ID
                     </label>
+                    <span className="flex items-center gap-1 text-[9px] font-bold text-amber-500/80 dark:text-amber-400/80">
+                      <Lock size={10} /> System Managed
+                    </span>
+                  </div>
+                  <div className="relative">
                     <input
                       type="text"
-                      value={plan.version}
-                      onChange={(e) => onUpdatePlan(plan.id, "version", e.target.value)}
-                      className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
+                      value={plan.razorpayPlanId || "N/A"}
+                      readOnly
+                      tabIndex="-1"
+                      className="w-full bg-slate-200/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-xl px-3 py-2 text-slate-400 dark:text-white/40 font-mono text-[11px] cursor-not-allowed select-all focus:outline-none"
+                      title="Razorpay Plan ID is system-managed and read-only"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
-                      Billing Cycle
-                    </label>
-                    <select
-                      value={plan.period}
-                      onChange={(e) => onUpdatePlan(plan.id, "period", e.target.value)}
-                      className="w-full bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-2 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
-                    >
-                      <option value="Monthly">Monthly</option>
-                      <option value="Yearly">Yearly</option>
-                    </select>
                   </div>
                 </div>
               </div>
