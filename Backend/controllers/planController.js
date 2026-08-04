@@ -11,7 +11,7 @@ export const createPlan = async (req, res, next) => {
 
   try {
     const planCurrency = (currency || "INR").toUpperCase();
-    const existingPlan = await Plan.findOne({
+    const existingPlan = await BillingPlan.findOne({
       type,
       amount,
       period,
@@ -19,21 +19,6 @@ export const createPlan = async (req, res, next) => {
     console.log(existingPlan);
 
     if (existingPlan) {
-      const disablingPlans = await Plan.updateMany(
-        {
-          type,
-          period,
-        },
-        {
-          active: false,
-        },
-      );
-
-      await existingPlan.updateOne({
-        storage,
-        active: true,
-      });
-
       return res.json({
         planId: existingPlan.razorpayPlanId,
       });
@@ -73,7 +58,7 @@ export const createPlan = async (req, res, next) => {
 
     console.log(disablingPlans);
 
-    const plan = await Plan.create({
+    const plan = await BillingPlan.create({
       razorpayPlanId: newPlan.id,
       type,
       amount,
@@ -83,6 +68,53 @@ export const createPlan = async (req, res, next) => {
     });
 
     console.log("[Plan] Created:", plan.razorpayPlanId);
+
+    return res.json({
+      plan: plan.razorpayPlanId,
+    });
+  } catch (err) {
+    console.error("[Plan] Error:", err?.error || err?.message || err);
+    next(err);
+  }
+};
+
+export const planTierManagement = async (req, res, next) => {
+  const { type, amount, storage, period, currency } = req.body;
+
+  console.log(req.body);
+
+  if (req.user.role != "Owner")
+    return res.status(403).json("You are forbidden to perform this action");
+
+  try {
+    const planCurrency = (currency || "INR").toUpperCase();
+    const existingPlan = await Plan.findOne({
+      type,
+      amount,
+      period,
+    });
+    console.log(existingPlan);
+
+    if (existingPlan) {
+      const disablingPlans = await Plan.updateMany(
+        {
+          type,
+          period,
+        },
+        {
+          active: false,
+        },
+      );
+
+      await existingPlan.updateOne({
+        storage,
+        active: true,
+      });
+
+      return res.json({
+        planId: existingPlan.razorpayPlanId,
+      });
+    }
 
     return res.json({
       plan: plan.razorpayPlanId,

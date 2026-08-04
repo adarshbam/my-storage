@@ -7,7 +7,10 @@ const accentOptions = [
   { value: "sky", label: "Sky Blue", class: "bg-sky-500" },
 ];
 
-export default function PlanTierDetailsSection({ planTiers, onUpdateTierDetail }) {
+export default function PlanTierDetailsSection({
+  planTiers,
+  onUpdateTierDetail,
+}) {
   return (
     <section className="bg-slate-900/60 dark:bg-[#071310]/80 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-rose-500/30">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
@@ -20,7 +23,8 @@ export default function PlanTierDetailsSection({ planTiers, onUpdateTierDetail }
               Pricing Landing Page Marketing Tier Details
             </h2>
             <p className="text-xs text-slate-500 dark:text-white/50 font-medium">
-              Customize tier titles, marketing badges, card accent highlights, and public landing page descriptions.
+              Customize tier titles, marketing badges, card accent highlights,
+              and public landing page descriptions.
             </p>
           </div>
         </div>
@@ -56,7 +60,9 @@ export default function PlanTierDetailsSection({ planTiers, onUpdateTierDetail }
               <input
                 type="text"
                 value={tier.title}
-                onChange={(e) => onUpdateTierDetail(tier.type, "title", e.target.value)}
+                onChange={(e) =>
+                  onUpdateTierDetail(tier.type, "title", e.target.value)
+                }
                 className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500/50 text-xs"
               />
             </div>
@@ -69,7 +75,9 @@ export default function PlanTierDetailsSection({ planTiers, onUpdateTierDetail }
               <input
                 type="text"
                 value={tier.badge}
-                onChange={(e) => onUpdateTierDetail(tier.type, "badge", e.target.value)}
+                onChange={(e) =>
+                  onUpdateTierDetail(tier.type, "badge", e.target.value)
+                }
                 className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500/50 text-xs"
                 placeholder="e.g. Most Popular"
               />
@@ -82,7 +90,9 @@ export default function PlanTierDetailsSection({ planTiers, onUpdateTierDetail }
               </label>
               <select
                 value={tier.accentColor}
-                onChange={(e) => onUpdateTierDetail(tier.type, "accentColor", e.target.value)}
+                onChange={(e) =>
+                  onUpdateTierDetail(tier.type, "accentColor", e.target.value)
+                }
                 className="w-full bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500/50 text-xs"
               >
                 {accentOptions.map((opt) => (
@@ -101,7 +111,9 @@ export default function PlanTierDetailsSection({ planTiers, onUpdateTierDetail }
               <textarea
                 rows="3"
                 value={tier.description}
-                onChange={(e) => onUpdateTierDetail(tier.type, "description", e.target.value)}
+                onChange={(e) =>
+                  onUpdateTierDetail(tier.type, "description", e.target.value)
+                }
                 className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-900 dark:text-white font-medium text-xs resize-none focus:outline-none focus:border-rose-500/50"
               />
             </div>

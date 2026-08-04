@@ -1,11 +1,4 @@
-export const initialSystemLimits = {
-  maxDevicesLimit: 3,
-  maxFileSizeValue: 500,
-  maxFileSizeUnit: "MB",
-  sessionTimeoutValue: 24,
-  sessionTimeoutUnit: "Hours",
-  defaultStorageUnit: "GB",
-};
+import PlanTier from "../models/planTierModel.js";
 
 export const initialPlanTiers = [
   {
@@ -80,7 +73,7 @@ export const initialBillingPlans = [
     amount: 199,
     currency: "INR",
     storage: 1099511627776, // 1 TB
-    razorpayPlanId: "plan_novice_199_mo",
+    razorpayPlanId: "plan_TLhlNqWa9N7Eds",
     active: true,
     version: "v1.2",
     description: "1 TB secure storage for personal files and photos.",
@@ -92,7 +85,7 @@ export const initialBillingPlans = [
     amount: 1999,
     currency: "INR",
     storage: 1099511627776, // 1 TB
-    razorpayPlanId: "plan_novice_1999_yr",
+    razorpayPlanId: "plan_TLhpKywIQbITby",
     active: true,
     version: "v1.2",
     description: "1 TB secure storage billed annually (2 months free).",
@@ -101,10 +94,10 @@ export const initialBillingPlans = [
     id: "plan_pro_monthly",
     planTier: "Professional",
     period: "Monthly",
-    amount: 399,
+    amount: 499,
     currency: "INR",
     storage: 5497558138880, // 5 TB
-    razorpayPlanId: "plan_pro_399_mo",
+    razorpayPlanId: "plan_TLhqYa2YW08mV0",
     active: true,
     version: "v2.0",
     description:
@@ -114,10 +107,10 @@ export const initialBillingPlans = [
     id: "plan_pro_yearly",
     planTier: "Professional",
     period: "Yearly",
-    amount: 3999,
+    amount: 4999,
     currency: "INR",
     storage: 5497558138880, // 5 TB
-    razorpayPlanId: "plan_pro_3999_yr",
+    razorpayPlanId: "plan_TLhsDtgn6S2jzn",
     active: true,
     version: "v2.0",
     description:
@@ -127,10 +120,10 @@ export const initialBillingPlans = [
     id: "plan_ultimate_monthly",
     planTier: "Ultimate",
     period: "Monthly",
-    amount: 999,
+    amount: 1199,
     currency: "INR",
     storage: 16492674416640, // 15 TB
-    razorpayPlanId: "plan_ult_999_mo",
+    razorpayPlanId: "plan_TLhu6W2TP8aXLF",
     active: true,
     version: "v3.1",
     description:
@@ -140,10 +133,10 @@ export const initialBillingPlans = [
     id: "plan_ultimate_yearly",
     planTier: "Ultimate",
     period: "Yearly",
-    amount: 9999,
+    amount: 11999,
     currency: "INR",
     storage: 16492674416640, // 15 TB
-    razorpayPlanId: "plan_ult_9999_yr",
+    razorpayPlanId: "plan_TLhvIDwdeWiEmn",
     active: true,
     version: "v3.1",
     description: "15 TB annual power tier for teams and total backup.",
@@ -332,3 +325,29 @@ export const initialPlanTierRuleConfigs = {
     versionHistoryDays: "Unlimited",
   },
 };
+
+const resetToDefaultSettings = async (req, res, next) => {
+  // Plan Tier reset to initial Set
+  for (const planTier of initialPlanTiers) {
+    console.log(planTier);
+    const { slug, type, title, description, accentColor, active } = planTier;
+    let currentPlanTier = await PlanTier.findOneAndUpdate(
+      { slug, type },
+      { slug, type, title, description, accentColor, active },
+      { returnDocument: "after" },
+    );
+
+    if (!currentPlanTier)
+      currentPlanTier = await PlanTier.create({
+        slug,
+        type,
+        title,
+        description,
+        accentColor,
+        active,
+      });
+  }
+  // Billing Plans
+};
+
+export default resetToDefaultSettings;

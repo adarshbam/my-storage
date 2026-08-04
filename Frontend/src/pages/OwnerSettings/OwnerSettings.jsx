@@ -29,6 +29,7 @@ import PlanTiersSection from "./PlanTiersSection";
 import PlanTierConfigurationSection from "./PlanTierConfigurationSection";
 import FeatureCatalogueSection from "./FeatureCatalogueSection";
 import PricingLivePreviewSection from "./PricingLivePreviewSection";
+import { SERVER_URL } from "../../lib/api";
 
 export default function OwnerSettings() {
   const navigate = useNavigate();
@@ -39,10 +40,10 @@ export default function OwnerSettings() {
   const [billingPlans, setBillingPlans] = useState(initialBillingPlans);
   const [features, setFeatures] = useState(initialFeatures);
   const [tierFeatureConfigs, setTierFeatureConfigs] = useState(
-    initialPlanTierFeatureConfigs
+    initialPlanTierFeatureConfigs,
   );
   const [tierRuleConfigs, setTierRuleConfigs] = useState(
-    initialPlanTierRuleConfigs
+    initialPlanTierRuleConfigs,
   );
 
   const [activeTab, setActiveTab] = useState("all");
@@ -60,15 +61,18 @@ export default function OwnerSettings() {
 
   const handleUpdatePlan = (planId, field, val) => {
     setBillingPlans((prev) =>
-      prev.map((plan) => (plan.id === planId ? { ...plan, [field]: val } : plan))
+      prev.map((plan) =>
+        plan.id === planId ? { ...plan, [field]: val } : plan,
+      ),
     );
   };
 
+  // Need to be configured with the backend
   const handleUpdateTierDetail = (tierType, field, val) => {
     setPlanTiers((prev) =>
       prev.map((tier) =>
-        tier.type === tierType ? { ...tier, [field]: val } : tier
-      )
+        tier.type === tierType ? { ...tier, [field]: val } : tier,
+      ),
     );
   };
 
@@ -122,11 +126,15 @@ export default function OwnerSettings() {
 
   const handleToggleFeatureEnabled = (featureId) => {
     setFeatures((prev) =>
-      prev.map((f) => (f.id === featureId ? { ...f, enabled: !f.enabled } : f))
+      prev.map((f) => (f.id === featureId ? { ...f, enabled: !f.enabled } : f)),
     );
   };
 
-  const handleResetDefaults = () => {
+  const handleResetDefaults = async () => {
+    const res = await fetch(`${SERVER_URL}/owner-settings/reset`, {
+      method: "PATCH",
+      credentials: "include",
+    });
     setLimits(initialSystemLimits);
     setPlanTiers(initialPlanTiers);
     setBillingPlans(initialBillingPlans);
@@ -193,7 +201,10 @@ export default function OwnerSettings() {
         {/* Floating Toast Notification */}
         {toastMessage && (
           <div className="fixed top-6 right-6 z-[100] bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-3 rounded-2xl font-bold text-xs shadow-2xl border border-white/10 flex items-center gap-2 animate-bounce">
-            <Sparkles size={14} className="text-emerald-400 dark:text-emerald-600" />
+            <Sparkles
+              size={14}
+              className="text-emerald-400 dark:text-emerald-600"
+            />
             {toastMessage}
           </div>
         )}
