@@ -52,7 +52,7 @@ export const handleRazorpayWebhook = async (req, res, next) => {
             maxStorage: PLANS[plan_id]?.maxStorage,
           },
         },
-        { new: true },
+        { returnDocument: "after" },
       );
 
       console.log("Updated user storage:", user?.maxStorage);

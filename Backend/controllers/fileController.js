@@ -707,7 +707,7 @@ export const setStarredItem = async (req, res) => {
       starredItem = await Directory.findOneAndUpdate(
         { _id: itemId },
         { $set: { starred: !dir.starred } },
-        { new: true },
+        { returnDocument: "after" },
       );
     } else {
       const file = await File.findOne({ _id: itemId });
@@ -715,7 +715,7 @@ export const setStarredItem = async (req, res) => {
       starredItem = await File.findOneAndUpdate(
         { _id: itemId },
         { $set: { starred: !file.starred } },
-        { new: true },
+        { returnDocument: "after" },
       );
     }
 

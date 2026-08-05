@@ -83,7 +83,7 @@ export const verifyOtp = async (req, res) => {
   const user = await User.findOneAndUpdate(
     { email },
     { isVerified: true },
-    { new: true },
+    { returnDocument: "after" },
   );
 
   // Mark OTP as verified (so the register endpoint can confirm it)

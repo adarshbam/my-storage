@@ -8,6 +8,11 @@ const billingPlanSchema = new mongoose.Schema(
       required: true,
     },
 
+    slug: {
+      type: String,
+      required: true,
+    },
+
     period: {
       type: String,
       enum: ["Monthly", "Yearly"],

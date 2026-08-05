@@ -1,3 +1,6 @@
+import BillingPlan from "../models/billingPlanModel.js";
+import Feature from "../models/featureModel.js";
+import PlanTierConfiguration from "../models/planTierConfigurationModel.js";
 import PlanTier from "../models/planTierModel.js";
 
 export const initialPlanTiers = [
@@ -43,109 +46,100 @@ export const initialPlanTiers = [
 
 export const initialBillingPlans = [
   {
-    id: "plan_freetrial_monthly",
-    planTier: "Free Trial",
     period: "Monthly",
+    slug: "free-trail",
     amount: 0,
     currency: "USD",
     storage: 5368709120, // 5 GB
     razorpayPlanId: "plan_free_0000",
     active: true,
-    version: "v1.0",
+    version: 1,
     description: "30-day free trial tier with 5 GB storage.",
   },
   {
-    id: "plan_freetrial_yearly",
-    planTier: "Free Trial",
     period: "Yearly",
+    slug: "free-trail",
     amount: 0,
     currency: "USD",
     storage: 5368709120, // 5 GB
     razorpayPlanId: "plan_free_0000_yr",
     active: true,
-    version: "v1.0",
+    version: 1,
     description: "Annual free trial tier with 5 GB storage.",
   },
   {
-    id: "plan_novice_monthly",
-    planTier: "Novice",
     period: "Monthly",
+    slug: "novice",
     amount: 199,
     currency: "INR",
     storage: 1099511627776, // 1 TB
     razorpayPlanId: "plan_TLhlNqWa9N7Eds",
     active: true,
-    version: "v1.2",
+    version: 1,
     description: "1 TB secure storage for personal files and photos.",
   },
   {
-    id: "plan_novice_yearly",
-    planTier: "Novice",
+    slug: "novice",
     period: "Yearly",
     amount: 1999,
     currency: "INR",
     storage: 1099511627776, // 1 TB
     razorpayPlanId: "plan_TLhpKywIQbITby",
     active: true,
-    version: "v1.2",
+    version: 1,
     description: "1 TB secure storage billed annually (2 months free).",
   },
   {
-    id: "plan_pro_monthly",
-    planTier: "Professional",
+    slug: "professional",
     period: "Monthly",
     amount: 499,
     currency: "INR",
     storage: 5497558138880, // 5 TB
     razorpayPlanId: "plan_TLhqYa2YW08mV0",
     active: true,
-    version: "v2.0",
+    version: 1,
     description:
       "5 TB storage with priority speed, cloud linkage and integrations.",
   },
   {
-    id: "plan_pro_yearly",
-    planTier: "Professional",
+    slug: "professional",
     period: "Yearly",
     amount: 4999,
     currency: "INR",
     storage: 5497558138880, // 5 TB
     razorpayPlanId: "plan_TLhsDtgn6S2jzn",
     active: true,
-    version: "v2.0",
+    version: 1,
     description:
       "5 TB storage billed annually with priority speed and linkage.",
   },
   {
-    id: "plan_ultimate_monthly",
-    planTier: "Ultimate",
+    slug: "ultimate",
     period: "Monthly",
     amount: 1199,
     currency: "INR",
     storage: 16492674416640, // 15 TB
     razorpayPlanId: "plan_TLhu6W2TP8aXLF",
     active: true,
-    version: "v3.1",
+    version: 1,
     description:
       "15 TB power storage for teams, AI search and unlimited versioning.",
   },
   {
-    id: "plan_ultimate_yearly",
-    planTier: "Ultimate",
+    slug: "ultimate",
     period: "Yearly",
     amount: 11999,
     currency: "INR",
     storage: 16492674416640, // 15 TB
     razorpayPlanId: "plan_TLhvIDwdeWiEmn",
     active: true,
-    version: "v3.1",
+    version: 1,
     description: "15 TB annual power tier for teams and total backup.",
   },
 ];
 
 export const initialFeatures = [
   {
-    id: "feat_secure_storage",
     key: "secure_storage",
     title: "Secure Vault Storage",
     description: "AES-256 encrypted cloud file vault storage.",
@@ -153,7 +147,6 @@ export const initialFeatures = [
     enabled: true,
   },
   {
-    id: "feat_folder_upload",
     key: "folder_upload",
     title: "Folder Hierarchy Upload",
     description:
@@ -162,7 +155,6 @@ export const initialFeatures = [
     enabled: true,
   },
   {
-    id: "feat_share_links",
     key: "share_links",
     title: "Public Share Links",
     description: "Generate shareable links with read and download access.",
@@ -170,7 +162,6 @@ export const initialFeatures = [
     enabled: true,
   },
   {
-    id: "feat_password_links",
     key: "password_links",
     title: "Password Protected Links",
     description: "Protect shared files with secret access passcodes.",
@@ -178,7 +169,6 @@ export const initialFeatures = [
     enabled: true,
   },
   {
-    id: "feat_expiring_links",
     key: "expiring_links",
     title: "Expiring Access Links",
     description: "Set self-destruct time limits on public file shares.",
@@ -186,7 +176,6 @@ export const initialFeatures = [
     enabled: true,
   },
   {
-    id: "feat_gdrive",
     key: "gdrive_sync",
     title: "Google Drive Integration",
     description: "Direct import and seamless sync with Google Drive accounts.",
@@ -194,7 +183,6 @@ export const initialFeatures = [
     enabled: true,
   },
   {
-    id: "feat_dropbox",
     key: "dropbox_sync",
     title: "Dropbox Integration",
     description: "Connect and sync files directly with Dropbox vaults.",
@@ -202,7 +190,6 @@ export const initialFeatures = [
     enabled: true,
   },
   {
-    id: "feat_github",
     key: "github_backup",
     title: "GitHub Repository Backup",
     description: "Automated snapshot backup of code repositories.",
@@ -210,7 +197,6 @@ export const initialFeatures = [
     enabled: true,
   },
   {
-    id: "feat_ai_search",
     key: "ai_search",
     title: "AI Semantic Search",
     description: "Natural language search across file contents and metadata.",
@@ -218,7 +204,6 @@ export const initialFeatures = [
     enabled: true,
   },
   {
-    id: "feat_priority_speed",
     key: "priority_speed",
     title: "Priority Upload Acceleration",
     description: "10x faster multi-part upload bandwidth pipes.",
@@ -226,7 +211,6 @@ export const initialFeatures = [
     enabled: true,
   },
   {
-    id: "feat_version_history",
     key: "version_history",
     title: "Unlimited Version History",
     description: "Restore previous file revisions without auto-pruning.",
@@ -234,7 +218,6 @@ export const initialFeatures = [
     enabled: true,
   },
   {
-    id: "feat_priority_support",
     key: "priority_support",
     title: "24/7 Priority Support",
     description: "Dedicated account support channel with SLA guarantee.",
@@ -244,15 +227,15 @@ export const initialFeatures = [
 ];
 
 export const initialPlanTierFeatureConfigs = {
-  "Free Trial": ["secure_storage", "share_links"],
-  Novice: [
+  "free-trial": ["secure_storage", "share_links"],
+  novice: [
     "secure_storage",
     "folder_upload",
     "share_links",
     "password_links",
     "expiring_links",
   ],
-  Professional: [
+  professional: [
     "secure_storage",
     "folder_upload",
     "share_links",
@@ -263,7 +246,7 @@ export const initialPlanTierFeatureConfigs = {
     "ai_search",
     "priority_speed",
   ],
-  Ultimate: [
+  ultimate: [
     "secure_storage",
     "folder_upload",
     "share_links",
@@ -280,74 +263,159 @@ export const initialPlanTierFeatureConfigs = {
 };
 
 export const initialPlanTierRuleConfigs = {
-  "Free Trial": {
-    allowUpload: true,
-    allowDownload: true,
-    allowSharing: true,
-    maxConnectedDevices: 3,
-    maxUploadSizeVal: 2,
-    maxUploadSizeUnit: "GB",
-    uploadSpeedMultiplier: "1x",
-    deleteFilesAfterExpiry: "60 days",
-    versionHistoryDays: "30",
+  "free-trial": {
+    permissions: {
+      allowUpload: true,
+      allowDownload: true,
+      allowSharing: true,
+    },
+    limits: {
+      storageLimit: 5368709120, // 5 GB
+      maxConnectedDevices: 3,
+      maxUploadFileSize: 2147483648, // 2 GB
+    },
+    settings: {
+      uploadSpeedMultiplier: 1,
+      versionHistoryDays: 30,
+      deleteFilesAfterExpiryDays: 60,
+    },
   },
-  Novice: {
-    allowUpload: true,
-    allowDownload: true,
-    allowSharing: true,
-    maxConnectedDevices: 5,
-    maxUploadSizeVal: 5,
-    maxUploadSizeUnit: "GB",
-    uploadSpeedMultiplier: "5x",
-    deleteFilesAfterExpiry: "Never",
-    versionHistoryDays: "90",
+  novice: {
+    permissions: {
+      allowUpload: true,
+      allowDownload: true,
+      allowSharing: true,
+    },
+    limits: {
+      storageLimit: 1099511627776, // 1 TB
+      maxConnectedDevices: 5,
+      maxUploadFileSize: 5368709120, // 5 GB
+    },
+    settings: {
+      uploadSpeedMultiplier: 5,
+      versionHistoryDays: 90,
+      deleteFilesAfterExpiryDays: 0, // Never
+    },
   },
-  Professional: {
-    allowUpload: true,
-    allowDownload: true,
-    allowSharing: true,
-    maxConnectedDevices: 10,
-    maxUploadSizeVal: 10,
-    maxUploadSizeUnit: "GB",
-    uploadSpeedMultiplier: "10x",
-    deleteFilesAfterExpiry: "Never",
-    versionHistoryDays: "365",
+  professional: {
+    permissions: {
+      allowUpload: true,
+      allowDownload: true,
+      allowSharing: true,
+    },
+    limits: {
+      storageLimit: 5497558138880, // 5 TB
+      maxConnectedDevices: 10,
+      maxUploadFileSize: 10737418240, // 10 GB
+    },
+    settings: {
+      uploadSpeedMultiplier: 10,
+      versionHistoryDays: 365,
+      deleteFilesAfterExpiryDays: 0, // Never
+    },
   },
-  Ultimate: {
-    allowUpload: true,
-    allowDownload: true,
-    allowSharing: true,
-    maxConnectedDevices: 20,
-    maxUploadSizeVal: 20,
-    maxUploadSizeUnit: "GB",
-    uploadSpeedMultiplier: "20x",
-    deleteFilesAfterExpiry: "Never",
-    versionHistoryDays: "Unlimited",
+  ultimate: {
+    permissions: {
+      allowUpload: true,
+      allowDownload: true,
+      allowSharing: true,
+    },
+    limits: {
+      storageLimit: 16492674416640, // 15 TB
+      maxConnectedDevices: 20,
+      maxUploadFileSize: 21474836480, // 20 GB
+    },
+    settings: {
+      uploadSpeedMultiplier: 20,
+      versionHistoryDays: 0, // Unlimited
+      deleteFilesAfterExpiryDays: 0, // Never
+    },
   },
 };
 
 const resetToDefaultSettings = async (req, res, next) => {
-  // Plan Tier reset to initial Set
+  // Global System Limits
+
+  // Initial Features reset or inital Set
+  for (const initialFeature of initialFeatures) {
+    console.log(initialFeature);
+    const { title, key, category, description, enabled } = initialFeature;
+
+    console.log(initialFeature);
+    let currentFeature = await Feature.findOneAndUpdate(
+      { key },
+      { title, key, category, description, enabled },
+      { upsert: true, returnDocument: "after" },
+    );
+    console.log(currentFeature);
+  }
+
+  // Plan Tier reset or initial Set
   for (const planTier of initialPlanTiers) {
     console.log(planTier);
     const { slug, type, title, description, accentColor, active } = planTier;
-    let currentPlanTier = await PlanTier.findOneAndUpdate(
-      { slug, type },
-      { slug, type, title, description, accentColor, active },
-      { returnDocument: "after" },
+    const currentPlanTier = await PlanTier.findOneAndUpdate(
+      { slug },
+      { slug, title, description, accentColor, active },
+      { upsert: true, returnDocument: "after" },
     );
+    console.log(currentPlanTier);
 
-    if (!currentPlanTier)
-      currentPlanTier = await PlanTier.create({
-        slug,
-        type,
-        title,
-        description,
-        accentColor,
-        active,
-      });
+    const currentPlanFeatures = await Feature.find({
+      key: { $in: initialPlanTierFeatureConfigs[slug] },
+    }).select("_id");
+
+    console.log(currentPlanFeatures);
+    const tierRules = initialPlanTierRuleConfigs[slug] || {};
+
+    const currentPlanTierConfiguration =
+      await PlanTierConfiguration.findOneAndUpdate(
+        { tier: currentPlanTier._id },
+        {
+          tier: currentPlanTier._id,
+          features: currentPlanFeatures,
+          rules: tierRules,
+        },
+        { upsert: true, returnDocument: "after" },
+      );
+    console.log(currentPlanTierConfiguration);
   }
-  // Billing Plans
+
+  // Billing Plans reset or inital Set
+  for (const billingPlan of initialBillingPlans) {
+    console.log(billingPlan);
+    const {
+      slug,
+      amount,
+      period,
+      description,
+      version,
+      storage,
+      active,
+      currency,
+      razorpayPlanId,
+    } = billingPlan;
+
+    const currentPlanTier = await PlanTier.find({ slug });
+    console.log(currentPlanTier);
+    let currentBillingPlan = await BillingPlan.findOneAndUpdate(
+      { slug, period, amount },
+      {
+        tier: currentPlanTier._id,
+        slug,
+        amount,
+        period,
+        description,
+        version,
+        storage,
+        active,
+        currency,
+        razorpayPlanId,
+      },
+      { upsert: true, returnDocument: "after" },
+    );
+    console.log(currentBillingPlan);
+  }
 };
 
 export default resetToDefaultSettings;
