@@ -2,6 +2,7 @@ import BillingPlan from "../models/billingPlanModel.js";
 import Feature from "../models/featureModel.js";
 import PlanTierConfiguration from "../models/planTierConfigurationModel.js";
 import PlanTier from "../models/planTierModel.js";
+import SystemConfig from "../models/systemConfigModel.js";
 
 export const initialPlanTiers = [
   {
@@ -333,10 +334,42 @@ export const initialPlanTierRuleConfigs = {
   },
 };
 
-const resetToDefaultSettings = async (req, res, next) => {
-  // Global System Limits
+export const initialSystemConfig = {
+  maxDevicesLimit: 3,
+  maxFileSizeValue: 500,
+  maxFileSizeUnit: "MB",
+  sessionTimeoutValue: 24,
+  sessionTimeoutUnit: "Hours",
+  defaultStorageUnit: "GB",
+};
 
-  // Initial Features reset or inital Set
+const resetToDefaultSettings = async (req, res, next) => {
+  // Global System Config reset or initial set
+  const {
+    maxDevicesLimit,
+    maxFileSizeValue,
+    maxFileSizeUnit,
+    sessionTimeoutValue,
+    sessionTimeoutUnit,
+    defaultStorageUnit,
+  } = initialSystemConfig;
+
+  const globalSystemConfig = await SystemConfig.findOneAndUpdate(
+    { key: "global" },
+    {
+      maxDevicesLimit,
+      maxFileSizeValue,
+      maxFileSizeUnit,
+      sessionTimeoutValue,
+      sessionTimeoutUnit,
+      defaultStorageUnit,
+    },
+    { upsert: true, returnDocument: "after" },
+  );
+
+  console.log(globalSystemConfig);
+
+  // Initial Features reset or initial Set
   for (const initialFeature of initialFeatures) {
     console.log(initialFeature);
     const { title, key, category, description, enabled } = initialFeature;
@@ -370,9 +403,10 @@ const resetToDefaultSettings = async (req, res, next) => {
 
     const currentPlanTierConfiguration =
       await PlanTierConfiguration.findOneAndUpdate(
-        { tier: currentPlanTier._id },
+        { tier: currentPlanTier._id, slug },
         {
           tier: currentPlanTier._id,
+          slug,
           features: currentPlanFeatures,
           rules: tierRules,
         },

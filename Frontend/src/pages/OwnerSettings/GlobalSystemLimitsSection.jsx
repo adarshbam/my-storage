@@ -47,7 +47,7 @@ export default function GlobalSystemLimitsSection({ limits, onChange }) {
               type="number"
               min="1"
               max="20"
-              value={limits.maxDevicesLimit}
+              value={limits.maxDevicesLimit ?? ""}
               onChange={(e) => onChange("maxDevicesLimit", Number(e.target.value))}
               className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-300 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-sm"
             />
@@ -66,12 +66,12 @@ export default function GlobalSystemLimitsSection({ limits, onChange }) {
             <input
               type="number"
               min="1"
-              value={limits.maxFileSizeValue}
+              value={limits.maxFileSizeValue ?? ""}
               onChange={(e) => onChange("maxFileSizeValue", Number(e.target.value))}
               className="w-2/5 min-w-0 bg-slate-100 dark:bg-white/[0.04] border border-slate-300 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-sm"
             />
             <select
-              value={limits.maxFileSizeUnit}
+              value={limits.maxFileSizeUnit ?? "MB"}
               onChange={(e) => onChange("maxFileSizeUnit", e.target.value)}
               className="w-3/5 min-w-0 truncate bg-slate-100 dark:bg-[#0c1613] border border-slate-300 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-xs"
             >
@@ -96,12 +96,12 @@ export default function GlobalSystemLimitsSection({ limits, onChange }) {
             <input
               type="number"
               min="1"
-              value={limits.sessionTimeoutValue}
+              value={limits.sessionTimeoutValue ?? ""}
               onChange={(e) => onChange("sessionTimeoutValue", Number(e.target.value))}
               className="w-2/5 min-w-0 bg-slate-100 dark:bg-white/[0.04] border border-slate-300 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-sm"
             />
             <select
-              value={limits.sessionTimeoutUnit}
+              value={limits.sessionTimeoutUnit ?? "Hours"}
               onChange={(e) => onChange("sessionTimeoutUnit", e.target.value)}
               className="w-3/5 min-w-0 truncate bg-slate-100 dark:bg-[#0c1613] border border-slate-300 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-xs"
             >
@@ -121,7 +121,7 @@ export default function GlobalSystemLimitsSection({ limits, onChange }) {
             Default Storage Unit
           </label>
           <select
-            value={limits.defaultStorageUnit}
+            value={limits.defaultStorageUnit ?? "GB"}
             onChange={(e) => onChange("defaultStorageUnit", e.target.value)}
             className="w-full min-w-0 bg-slate-100 dark:bg-[#0c1613] border border-slate-300 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-xs"
           >

@@ -54,7 +54,7 @@ export default function BillingPlansSection({
 
           return (
             <div
-              key={plan.id}
+              key={plan._id}
               className={`relative rounded-2xl p-5 border transition-all duration-300 flex flex-col justify-between ${
                 plan.active
                   ? "bg-slate-800/40 dark:bg-white/[0.02] border-slate-200/80 dark:border-white/10 hover:border-amber-500/40 shadow-lg"
@@ -71,8 +71,8 @@ export default function BillingPlansSection({
                         : "bg-slate-500"
                     }`}
                   />
-                  <span className="text-xs font-black text-slate-900 dark:text-white truncate" title={plan.planTier}>
-                    {plan.planTier}
+                  <span className="text-xs font-black text-slate-900 dark:text-white truncate" title={plan.slug}>
+                    {plan.slug}
                   </span>
                   <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wide shrink-0">
                     {plan.period}
@@ -82,7 +82,7 @@ export default function BillingPlansSection({
                 {/* Active Toggle Switch */}
                 <button
                   type="button"
-                  onClick={() => onUpdatePlan(plan.id, "active", !plan.active)}
+                  onClick={() => onUpdatePlan(plan._id, "active", !plan.active)}
                   className={`w-11 h-6 shrink-0 rounded-full p-1 transition-colors duration-200 flex items-center ${
                     plan.active ? "bg-amber-500" : "bg-slate-700"
                   }`}
@@ -104,13 +104,13 @@ export default function BillingPlansSection({
                     Plan Tier
                   </label>
                   <select
-                    value={plan.planTier}
-                    onChange={(e) => onUpdatePlan(plan.id, "planTier", e.target.value)}
+                    value={plan.slug}
+                    onChange={(e) => onUpdatePlan(plan._id, "slug", e.target.value)}
                     className="w-full bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
                   >
                     {planTiers.map((t) => (
-                      <option key={t.type} value={t.type}>
-                        {t.title} ({t.type})
+                      <option key={t.slug} value={t.slug}>
+                        {t.title} ({t.slug})
                       </option>
                     ))}
                   </select>
@@ -127,7 +127,7 @@ export default function BillingPlansSection({
                       min="0"
                       value={plan.amount}
                       onChange={(e) =>
-                        onUpdatePlan(plan.id, "amount", Number(e.target.value))
+                        onUpdatePlan(plan._id, "amount", Number(e.target.value))
                       }
                       className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
                     />
@@ -139,7 +139,7 @@ export default function BillingPlansSection({
                     </label>
                     <select
                       value={plan.currency}
-                      onChange={(e) => onUpdatePlan(plan.id, "currency", e.target.value)}
+                      onChange={(e) => onUpdatePlan(plan._id, "currency", e.target.value)}
                       className="w-full bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-2 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
                     >
                       {supportedCountries
@@ -164,14 +164,14 @@ export default function BillingPlansSection({
                       min="1"
                       value={storageVal}
                       onChange={(e) =>
-                        handleStorageChange(plan.id, e.target.value, storageUnit)
+                        handleStorageChange(plan._id, e.target.value, storageUnit)
                       }
                       className="w-2/3 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
                     />
                     <select
                       value={storageUnit}
                       onChange={(e) =>
-                        handleStorageChange(plan.id, storageVal, e.target.value)
+                        handleStorageChange(plan._id, storageVal, e.target.value)
                       }
                       className="w-1/3 bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-2 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
                     >
@@ -188,7 +188,7 @@ export default function BillingPlansSection({
                   </label>
                   <select
                     value={plan.period}
-                    onChange={(e) => onUpdatePlan(plan.id, "period", e.target.value)}
+                    onChange={(e) => onUpdatePlan(plan._id, "period", e.target.value)}
                     className="w-full bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
                   >
                     <option value="Monthly">Monthly</option>

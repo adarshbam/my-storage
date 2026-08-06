@@ -1,8 +1,12 @@
 import express from "express";
 import checkAuth from "../middlewares/authMiddleware.js";
 import resetToDefaultSettings from "../utils/syncDefaultPlans.js";
+import { getOwnerSettings } from "../controllers/planController.js";
 
 const router = express.Router();
+
+// GET /owner-settings — Fetch all owner settings
+router.get("/", checkAuth, getOwnerSettings);
 
 // PATCH /owner-settings/reset — Reset all owner settings to defaults
 router.patch("/reset", checkAuth, resetToDefaultSettings);

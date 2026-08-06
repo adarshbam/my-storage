@@ -4,9 +4,25 @@ const systemConfigSchema = new Schema(
   {
     key: { type: String, required: true, unique: true, default: "global" },
     maxDevicesLimit: { type: Number, default: 3 },
-    maxFileSizeLimit: { type: Number, default: 50 * 1024 * 1024 }, // 50 MB
+    maxFileSizeValue: { type: Number, default: 500 },
+    maxFileSizeUnit: {
+      type: String,
+      enum: ["KB", "MB", "GB"],
+      default: "MB",
+    },
+    sessionTimeoutValue: { type: Number, default: 24 },
+    sessionTimeoutUnit: {
+      type: String,
+      enum: ["Minutes", "Hours", "Days"],
+      default: "Hours",
+    },
+    defaultStorageUnit: {
+      type: String,
+      enum: ["MB", "GB", "TB"],
+      default: "GB",
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const SystemConfig = model("SystemConfig", systemConfigSchema);

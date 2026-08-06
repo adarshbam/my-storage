@@ -1,5 +1,9 @@
 import { rzInstance } from "../config/config.js";
 import BillingPlan from "../models/billingPlanModel.js";
+import Feature from "../models/featureModel.js";
+import PlanTierConfiguration from "../models/planTierConfigurationModel.js";
+import PlanTier from "../models/planTierModel.js";
+import SystemConfig from "../models/systemConfigModel.js";
 
 export const createPlan = async (req, res, next) => {
   const { type, amount, storage, period, currency } = req.body;
@@ -133,6 +137,53 @@ export const getAllActivePlans = async (req, res, next) => {
     return res.json(existingActivePlans);
   } catch (err) {
     console.error("[Plan] Error:", err.message);
+    next(err);
+  }
+};
+
+export const getOwnerSettings = async (req, res, next) => {
+  try {
+    if (req.user?.role !== "Owner") {
+      return res
+        .status(403)
+        .json({ error: "Access denied. Only Owners can view settings." });
+    }
+
+    // TODO: fetch and return all owner settings
+    const systemConfig = await SystemConfig.findOne({ key: "global" }).lean();
+    const features = await Feature.find().lean();
+
+    const planTiers = await PlanTier.find().lean();
+    const planTierConfigurations = await PlanTierConfiguration.find()
+      .populate("features")
+      .lean();
+    const billingPlans = await BillingPlan.find({ active: true }).lean();
+
+    console.log(planTierConfigurations);
+
+    const tierFeatureConfigs = {};
+    const tierRuleConfigs = {};
+
+    planTierConfigurations.forEach((config) => {
+      const slugKey = config.slug || config.tier?.slug;
+      if (slugKey) {
+        tierFeatureConfigs[slugKey] = (config.features || []).map((f) =>
+          typeof f === "object" ? f.key : f
+        );
+        tierRuleConfigs[slugKey] = config.rules || {};
+      }
+    });
+
+    return res.json({
+      limits: systemConfig,
+      planTiers,
+      billingPlans,
+      features,
+      tierFeatureConfigs,
+      tierRuleConfigs,
+    });
+  } catch (err) {
+    console.error("[OwnerSettings] Error:", err.message);
     next(err);
   }
 };

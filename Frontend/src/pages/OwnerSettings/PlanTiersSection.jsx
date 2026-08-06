@@ -227,7 +227,7 @@ export default function PlanTiersSection({
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {planTiers.map((tier) => (
           <div
-            key={tier.type}
+            key={tier.slug}
             className={`rounded-2xl p-5 border transition-all duration-300 space-y-4 shadow-lg ${
               tier.active !== false
                 ? "border-slate-200/80 dark:border-white/10 bg-slate-800/40 dark:bg-white/[0.02] hover:border-rose-500/40"
@@ -241,8 +241,8 @@ export default function PlanTiersSection({
                     tier.active !== false ? "bg-rose-500" : "bg-slate-500"
                   }`}
                 />
-                <h3 className="text-base font-black text-slate-900 dark:text-white truncate" title={tier.type}>
-                  {tier.type}
+                <h3 className="text-base font-black text-slate-900 dark:text-white truncate" title={tier.slug}>
+                  {tier.slug}
                 </h3>
               </div>
 
@@ -250,7 +250,7 @@ export default function PlanTiersSection({
               <button
                 type="button"
                 onClick={() =>
-                  onUpdateTierDetail(tier.type, "active", !(tier.active !== false))
+                  onUpdateTierDetail(tier.slug, "active", !(tier.active !== false))
                 }
                 className={`w-11 h-6 shrink-0 rounded-full p-1 transition-colors duration-200 flex items-center ${
                   tier.active !== false ? "bg-rose-500" : "bg-slate-700"
@@ -272,9 +272,9 @@ export default function PlanTiersSection({
               </label>
               <input
                 type="text"
-                value={tier.slug || tier.type.toLowerCase().replace(/\s+/g, "-")}
+                value={tier.slug}
                 onChange={(e) =>
-                  onUpdateTierDetail(tier.type, "slug", e.target.value)
+                  onUpdateTierDetail(tier.slug, "slug", e.target.value)
                 }
                 className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-rose-500/50"
               />
@@ -289,7 +289,7 @@ export default function PlanTiersSection({
                 type="text"
                 value={tier.title}
                 onChange={(e) =>
-                  onUpdateTierDetail(tier.type, "title", e.target.value)
+                  onUpdateTierDetail(tier.slug, "title", e.target.value)
                 }
                 className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500/50 text-xs"
               />
@@ -304,7 +304,7 @@ export default function PlanTiersSection({
                 type="text"
                 value={tier.badge}
                 onChange={(e) =>
-                  onUpdateTierDetail(tier.type, "badge", e.target.value)
+                  onUpdateTierDetail(tier.slug, "badge", e.target.value)
                 }
                 className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500/50 text-xs"
                 placeholder="e.g. Most Popular"
@@ -319,7 +319,7 @@ export default function PlanTiersSection({
               <select
                 value={tier.accentColor}
                 onChange={(e) =>
-                  onUpdateTierDetail(tier.type, "accentColor", e.target.value)
+                  onUpdateTierDetail(tier.slug, "accentColor", e.target.value)
                 }
                 className="w-full bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500/50 text-xs"
               >
@@ -340,7 +340,7 @@ export default function PlanTiersSection({
                 rows="3"
                 value={tier.description}
                 onChange={(e) =>
-                  onUpdateTierDetail(tier.type, "description", e.target.value)
+                  onUpdateTierDetail(tier.slug, "description", e.target.value)
                 }
                 className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-900 dark:text-white font-medium text-xs resize-none focus:outline-none focus:border-rose-500/50"
               />

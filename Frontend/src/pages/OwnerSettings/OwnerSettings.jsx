@@ -15,10 +15,6 @@ import {
 } from "lucide-react";
 
 import {
-  initialSystemLimits,
-  initialPlanTiers,
-  initialBillingPlans,
-  initialFeatures,
   initialPlanTierFeatureConfigs,
   initialPlanTierRuleConfigs,
 } from "./initialOwnerData";
@@ -30,24 +26,42 @@ import PlanTierConfigurationSection from "./PlanTierConfigurationSection";
 import FeatureCatalogueSection from "./FeatureCatalogueSection";
 import PricingLivePreviewSection from "./PricingLivePreviewSection";
 import { SERVER_URL } from "../../lib/api";
+import { useEffect } from "react";
 
 export default function OwnerSettings() {
   const navigate = useNavigate();
 
   // Pure frontend state — no backend requests
-  const [limits, setLimits] = useState(initialSystemLimits);
-  const [planTiers, setPlanTiers] = useState(initialPlanTiers);
-  const [billingPlans, setBillingPlans] = useState(initialBillingPlans);
-  const [features, setFeatures] = useState(initialFeatures);
-  const [tierFeatureConfigs, setTierFeatureConfigs] = useState(
-    initialPlanTierFeatureConfigs,
-  );
-  const [tierRuleConfigs, setTierRuleConfigs] = useState(
-    initialPlanTierRuleConfigs,
-  );
+  const [limits, setLimits] = useState({});
+  const [planTiers, setPlanTiers] = useState([]);
+  const [billingPlans, setBillingPlans] = useState([]);
+  const [features, setFeatures] = useState([]);
+  const [tierFeatureConfigs, setTierFeatureConfigs] = useState({});
+  const [tierRuleConfigs, setTierRuleConfigs] = useState({});
 
   const [activeTab, setActiveTab] = useState("all");
   const [toastMessage, setToastMessage] = useState(null);
+
+  async function getOwnerSettings() {
+    const res = await fetch(`${SERVER_URL}/owner-settings`, {
+      credentials: "include",
+    });
+    const ownerSettings = await res.json();
+
+    if (res.ok) {
+      console.log(ownerSettings);
+      setLimits(ownerSettings.limits);
+      setPlanTiers(ownerSettings.planTiers);
+      setBillingPlans(ownerSettings.billingPlans);
+      setFeatures(ownerSettings.features);
+      setTierFeatureConfigs(ownerSettings.tierFeatureConfigs);
+      setTierRuleConfigs(ownerSettings.tierRuleConfigs);
+    }
+  }
+
+  useEffect(() => {
+    getOwnerSettings();
+  }, []);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -62,16 +76,16 @@ export default function OwnerSettings() {
   const handleUpdatePlan = (planId, field, val) => {
     setBillingPlans((prev) =>
       prev.map((plan) =>
-        plan.id === planId ? { ...plan, [field]: val } : plan,
+        plan._id === planId ? { ...plan, [field]: val } : plan,
       ),
     );
   };
 
   // Need to be configured with the backend
-  const handleUpdateTierDetail = (tierType, field, val) => {
+  const handleUpdateTierDetail = (tierSlug, field, val) => {
     setPlanTiers((prev) =>
       prev.map((tier) =>
-        tier.type === tierType ? { ...tier, [field]: val } : tier,
+        tier.slug === tierSlug ? { ...tier, [field]: val } : tier,
       ),
     );
   };
@@ -126,7 +140,9 @@ export default function OwnerSettings() {
 
   const handleToggleFeatureEnabled = (featureId) => {
     setFeatures((prev) =>
-      prev.map((f) => (f.id === featureId ? { ...f, enabled: !f.enabled } : f)),
+      prev.map((f) =>
+        f._id === featureId ? { ...f, enabled: !f.enabled } : f,
+      ),
     );
   };
 
@@ -135,13 +151,12 @@ export default function OwnerSettings() {
       method: "PATCH",
       credentials: "include",
     });
-    setLimits(initialSystemLimits);
-    setPlanTiers(initialPlanTiers);
-    setBillingPlans(initialBillingPlans);
-    setFeatures(initialFeatures);
-    setTierFeatureConfigs(initialPlanTierFeatureConfigs);
-    setTierRuleConfigs(initialPlanTierRuleConfigs);
-    showToast("Reset all frontend configurations to defaults.");
+    if (res.ok) {
+      await getOwnerSettings();
+      showToast("Reset all configurations to defaults.");
+    } else {
+      showToast("Failed to reset configurations.");
+    }
   };
 
   return (

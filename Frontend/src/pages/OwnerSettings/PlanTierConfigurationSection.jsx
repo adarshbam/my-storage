@@ -2,10 +2,10 @@ import { Grid, Check, X, ShieldCheck, Layers, Sliders, ToggleLeft, Hash, HardDri
 import { useState } from "react";
 
 export const tierBadgeColors = {
-  "Free Trial": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  Novice: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  Professional: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-  Ultimate: "bg-sky-500/10 text-sky-400 border-sky-500/20",
+  "free-trial": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  novice: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  professional: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+  ultimate: "bg-sky-500/10 text-sky-400 border-sky-500/20",
 };
 
 export default function PlanTierConfigurationSection({
@@ -18,7 +18,7 @@ export default function PlanTierConfigurationSection({
 }) {
   const [activeTab, setActiveTab] = useState("features"); // 'features' | 'rules'
 
-  const tierList = planTiers.map((t) => t.type);
+  const tierList = planTiers.map((t) => t.slug);
 
   const rulesList = [
     {
@@ -70,6 +70,18 @@ export default function PlanTierConfigurationSection({
       description: "Days of file version history retained (e.g. 30, 90, 365, Unlimited).",
     },
   ];
+
+  const getRuleValue = (tierConfig, ruleKey) => {
+    if (!tierConfig) return undefined;
+    if (tierConfig[ruleKey] !== undefined) return tierConfig[ruleKey];
+    if (tierConfig.permissions && tierConfig.permissions[ruleKey] !== undefined)
+      return tierConfig.permissions[ruleKey];
+    if (tierConfig.limits && tierConfig.limits[ruleKey] !== undefined)
+      return tierConfig.limits[ruleKey];
+    if (tierConfig.settings && tierConfig.settings[ruleKey] !== undefined)
+      return tierConfig.settings[ruleKey];
+    return undefined;
+  };
 
   return (
     <section className="bg-slate-900/60 dark:bg-[#071310]/80 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-emerald-500/30">
@@ -141,7 +153,7 @@ export default function PlanTierConfigurationSection({
             <tbody className="divide-y divide-slate-200/40 dark:divide-white/5 text-xs">
               {features.map((feature) => (
                 <tr
-                  key={feature.id}
+                  key={feature._id}
                   className="hover:bg-slate-100/50 dark:hover:bg-white/[0.02] transition-colors duration-150"
                 >
                   <td className="py-4 px-6">
@@ -156,7 +168,7 @@ export default function PlanTierConfigurationSection({
                   </td>
 
                   {tierList.map((tier) => {
-                    const isEnabled = (tierFeatureConfigs[tier] || []).includes(
+                    const isEnabled = (tierFeatureConfigs?.[tier] || []).includes(
                       feature.key
                     );
 
@@ -229,7 +241,10 @@ export default function PlanTierConfigurationSection({
                   </td>
 
                   {tierList.map((tier) => {
-                    const currentRuleVal = (tierRuleConfigs[tier] || {})[rule.key];
+                    const currentRuleVal = getRuleValue(
+                      tierRuleConfigs?.[tier],
+                      rule.key
+                    );
 
                     return (
                       <td key={tier} className="py-4 px-6 text-center align-middle">

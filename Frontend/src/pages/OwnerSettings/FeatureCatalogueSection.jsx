@@ -73,7 +73,7 @@ export default function FeatureCatalogueSection({ features, onToggleFeatureEnabl
 
           return (
             <div
-              key={feature.id}
+              key={feature._id || feature.key || feature.id}
               className={`rounded-2xl p-5 border transition-all duration-300 flex flex-col justify-between ${
                 feature.enabled
                   ? "bg-slate-800/40 dark:bg-white/[0.02] border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 shadow-lg"
@@ -99,7 +99,7 @@ export default function FeatureCatalogueSection({ features, onToggleFeatureEnabl
                   {/* Switch */}
                   <button
                     type="button"
-                    onClick={() => onToggleFeatureEnabled(feature.id)}
+                    onClick={() => onToggleFeatureEnabled(feature._id)}
                     className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 flex items-center shrink-0 ${
                       feature.enabled ? "bg-blue-500" : "bg-slate-700"
                     }`}
@@ -124,7 +124,7 @@ export default function FeatureCatalogueSection({ features, onToggleFeatureEnabl
                 </span>
 
                 <span className="text-[10px] font-bold text-slate-400 dark:text-white/30">
-                  ID: {feature.id}
+                  ID: {feature._id}
                 </span>
               </div>
             </div>

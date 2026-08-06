@@ -106,9 +106,18 @@ export default function PricingLivePreviewSection({
   const [isYearly, setIsYearly] = useState(false);
 
   // Filter features enabled for a given tier
-  const getFeaturesForTier = (tierType) => {
-    const activeKeys = tierFeatureConfigs[tierType] || [];
+  const getFeaturesForTier = (tierSlug) => {
+    const activeKeys = tierFeatureConfigs?.[tierSlug] || [];
     return features.filter((f) => activeKeys.includes(f.key) && f.enabled);
+  };
+
+  const getRuleVal = (config, key, fallback) => {
+    if (!config) return fallback;
+    if (config[key] !== undefined) return config[key];
+    if (config.limits && config.limits[key] !== undefined) return config.limits[key];
+    if (config.settings && config.settings[key] !== undefined) return config.settings[key];
+    if (config.permissions && config.permissions[key] !== undefined) return config.permissions[key];
+    return fallback;
   };
 
   const formatStorageText = (bytes) => {
@@ -181,7 +190,7 @@ export default function PricingLivePreviewSection({
         {(() => {
           const period = isYearly ? "Yearly" : "Monthly";
           const freeTrialTier = planTiers.find(
-            (t) => t.type.toLowerCase().includes("free") || t.slug.includes("free")
+            (t) => t.slug?.includes("free")
           );
           const mainTiers = planTiers.filter((t) => t !== freeTrialTier);
 
@@ -190,17 +199,17 @@ export default function PricingLivePreviewSection({
               {/* Separate Free Trial Top Banner Card */}
               {freeTrialTier && (() => {
                 const planObj = billingPlans.find(
-                  (p) => p.planTier === freeTrialTier.type && p.period === period
+                  (p) => p.slug === freeTrialTier.slug && p.period === period
                 ) || { amount: 0, currency: "USD", storage: 5368709120 };
-                const tierFeatures = getFeaturesForTier(freeTrialTier.type);
-                const tierRules = tierRuleConfigs[freeTrialTier.type] || {};
+                const tierFeatures = getFeaturesForTier(freeTrialTier.slug);
+                const tierRules = tierRuleConfigs[freeTrialTier.slug] || {};
                 const symbol = currencySymbols[planObj.currency] || planObj.currency + " ";
                 const storageText = formatStorageText(planObj.storage);
                 const theme = accentThemes[freeTrialTier.accentColor] || accentThemes.emerald;
 
                 return (
                   <div
-                    key={freeTrialTier.type}
+                    key={freeTrialTier.slug}
                     className={`relative rounded-3xl p-6 border flex flex-col md:flex-row items-center justify-between gap-6 transition-all duration-300 ${theme.border} ${theme.shadow} ${theme.bgTint}`}
                   >
                     <div className="flex-1 flex flex-col md:flex-row md:items-center gap-6 w-full">
@@ -226,18 +235,18 @@ export default function PricingLivePreviewSection({
 
                       {/* Highlights */}
                       <div className={`hidden lg:flex flex-wrap items-center gap-3 text-[11px] font-semibold rounded-2xl p-3 border ${theme.ruleBox}`}>
-                        <div>Max Devices: <span className="text-white font-bold">{tierRules.maxConnectedDevices ?? 3} Sessions</span></div>
+                        <div>Max Devices: <span className="text-white font-bold">{getRuleVal(tierRules, "maxConnectedDevices", 3)} Sessions</span></div>
                         <div className="w-px h-3 bg-white/20" />
-                        <div>Speed: <span className="text-white font-bold">{tierRules.uploadSpeedMultiplier ?? "1x"}</span></div>
+                        <div>Speed: <span className="text-white font-bold">{getRuleVal(tierRules, "uploadSpeedMultiplier", 1)}x</span></div>
                         <div className="w-px h-3 bg-white/20" />
-                        <div>History: <span className="text-white font-bold">{tierRules.versionHistoryDays ?? "30"} Days</span></div>
+                        <div>History: <span className="text-white font-bold">{getRuleVal(tierRules, "versionHistoryDays", 30)} Days</span></div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-4 w-full md:w-auto shrink-0 justify-between md:justify-end">
                       <div className="hidden sm:flex items-center gap-2">
                         {tierFeatures.slice(0, 2).map((feat) => (
-                          <div key={feat.id} className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-xs text-white/80 font-medium">
+                          <div key={feat._id} className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-xs text-white/80 font-medium">
                             <Check size={12} className={`${theme.check} shrink-0`} />
                             <span>{feat.title}</span>
                           </div>
@@ -259,7 +268,7 @@ export default function PricingLivePreviewSection({
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8 items-stretch relative z-10">
                 {mainTiers.map((tier) => {
                   const planObj = billingPlans.find(
-                    (p) => p.planTier === tier.type && p.period === period
+                    (p) => p.slug === tier.slug && p.period === period
                   ) || {
                     amount: 0,
                     currency: "USD",
@@ -267,15 +276,15 @@ export default function PricingLivePreviewSection({
                     active: true,
                   };
 
-                  const tierFeatures = getFeaturesForTier(tier.type);
-                  const tierRules = tierRuleConfigs[tier.type] || {};
+                  const tierFeatures = getFeaturesForTier(tier.slug);
+                  const tierRules = tierRuleConfigs[tier.slug] || {};
                   const symbol = currencySymbols[planObj.currency] || planObj.currency + " ";
                   const storageText = formatStorageText(planObj.storage);
                   const theme = accentThemes[tier.accentColor] || accentThemes.emerald;
 
                   return (
                     <div
-                      key={tier.type}
+                      key={tier.slug}
                       className={`relative rounded-3xl p-6 md:p-7 border flex flex-col justify-between transition-all duration-300 ${
                         tier.badge === "Most Popular" ? "scale-[1.02]" : ""
                       } ${theme.border} ${theme.shadow} ${theme.bgTint}`}
@@ -315,15 +324,15 @@ export default function PricingLivePreviewSection({
                         <div className={`mb-5 text-[11px] font-semibold rounded-2xl p-3 space-y-1.5 border ${theme.ruleBox}`}>
                           <div className="flex justify-between">
                             <span className="text-white/60">Max Devices:</span>
-                            <span className="text-white font-bold">{tierRules.maxConnectedDevices ?? 3} Sessions</span>
+                            <span className="text-white font-bold">{getRuleVal(tierRules, "maxConnectedDevices", 3)} Sessions</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-white/60">Upload Speed:</span>
-                            <span className="text-white font-bold">{tierRules.uploadSpeedMultiplier ?? "1x"}</span>
+                            <span className="text-white font-bold">{getRuleVal(tierRules, "uploadSpeedMultiplier", 1)}x</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-white/60">Version History:</span>
-                            <span className="text-white font-bold">{tierRules.versionHistoryDays ?? "30"} Days</span>
+                            <span className="text-white font-bold">{getRuleVal(tierRules, "versionHistoryDays", 30)} Days</span>
                           </div>
                         </div>
 
@@ -331,7 +340,7 @@ export default function PricingLivePreviewSection({
                         <div className="space-y-2.5 mb-6 flex-grow">
                           {tierFeatures.slice(0, 6).map((feat) => (
                             <div
-                              key={feat.id}
+                              key={feat._id}
                               className="flex items-center gap-2 text-xs font-medium text-white/80"
                             >
                               <Check size={14} className={`${theme.check} shrink-0`} />

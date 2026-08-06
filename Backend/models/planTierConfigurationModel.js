@@ -9,6 +9,14 @@ const planTierConfigurationSchema = new mongoose.Schema(
       unique: true,
     },
 
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
     features: [
       {
         type: mongoose.Schema.Types.ObjectId,
