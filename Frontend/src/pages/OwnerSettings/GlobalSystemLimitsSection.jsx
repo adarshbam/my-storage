@@ -1,11 +1,16 @@
 import { Cpu, HardDrive, Clock, ShieldCheck, Check } from "lucide-react";
 import { useState } from "react";
 
-export default function GlobalSystemLimitsSection({ limits, onChange }) {
+export default function GlobalSystemLimitsSection({
+  limits,
+  onChange,
+  handleGlobalLimits,
+}) {
   const [savedMessage, setSavedMessage] = useState(false);
 
   const handleSave = (e) => {
     e.preventDefault();
+    if (handleGlobalLimits) handleGlobalLimits();
     setSavedMessage(true);
     setTimeout(() => setSavedMessage(false), 2000);
   };
@@ -24,7 +29,8 @@ export default function GlobalSystemLimitsSection({ limits, onChange }) {
               Global System Limits
             </h2>
             <p className="text-xs text-slate-500 dark:text-white/50 font-medium">
-              Configure global system thresholds, maximum device connections and upload ceilings.
+              Configure global system thresholds, maximum device connections and
+              upload ceilings.
             </p>
           </div>
         </div>
@@ -36,7 +42,10 @@ export default function GlobalSystemLimitsSection({ limits, onChange }) {
         )}
       </div>
 
-      <form onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+      <form
+        onSubmit={handleSave}
+        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6"
+      >
         {/* Max Connected Devices */}
         <div className="space-y-2">
           <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white/70">
@@ -48,7 +57,9 @@ export default function GlobalSystemLimitsSection({ limits, onChange }) {
               min="1"
               max="20"
               value={limits.maxDevicesLimit ?? ""}
-              onChange={(e) => onChange("maxDevicesLimit", Number(e.target.value))}
+              onChange={(e) =>
+                onChange("maxDevicesLimit", Number(e.target.value))
+              }
               className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-300 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-sm"
             />
           </div>
@@ -67,7 +78,9 @@ export default function GlobalSystemLimitsSection({ limits, onChange }) {
               type="number"
               min="1"
               value={limits.maxFileSizeValue ?? ""}
-              onChange={(e) => onChange("maxFileSizeValue", Number(e.target.value))}
+              onChange={(e) =>
+                onChange("maxFileSizeValue", Number(e.target.value))
+              }
               className="w-2/5 min-w-0 bg-slate-100 dark:bg-white/[0.04] border border-slate-300 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-sm"
             />
             <select
@@ -97,7 +110,9 @@ export default function GlobalSystemLimitsSection({ limits, onChange }) {
               type="number"
               min="1"
               value={limits.sessionTimeoutValue ?? ""}
-              onChange={(e) => onChange("sessionTimeoutValue", Number(e.target.value))}
+              onChange={(e) =>
+                onChange("sessionTimeoutValue", Number(e.target.value))
+              }
               className="w-2/5 min-w-0 bg-slate-100 dark:bg-white/[0.04] border border-slate-300 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-sm"
             />
             <select

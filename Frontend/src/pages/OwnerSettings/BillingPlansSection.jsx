@@ -1,4 +1,12 @@
-import { CreditCard, Zap, Power, Layers, HardDrive, Key, Lock } from "lucide-react";
+import {
+  CreditCard,
+  Zap,
+  Power,
+  Layers,
+  HardDrive,
+  Key,
+  Lock,
+} from "lucide-react";
 import { supportedCountries } from "../../lib/currency";
 
 export default function BillingPlansSection({
@@ -36,7 +44,8 @@ export default function BillingPlansSection({
               Billing Plans
             </h2>
             <p className="text-xs text-slate-500 dark:text-white/50 font-medium">
-              Manage billing plans, Razorpay plan IDs, currency rates, storage quotas, and active plan statuses.
+              Manage billing plans, Razorpay plan IDs, currency rates, storage
+              quotas, and active plan statuses.
             </p>
           </div>
         </div>
@@ -49,7 +58,7 @@ export default function BillingPlansSection({
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {billingPlans.map((plan) => {
           const { value: storageVal, unit: storageUnit } = formatBytesForInput(
-            plan.storage
+            plan.storage,
           );
 
           return (
@@ -71,7 +80,10 @@ export default function BillingPlansSection({
                         : "bg-slate-500"
                     }`}
                   />
-                  <span className="text-xs font-black text-slate-900 dark:text-white truncate" title={plan.slug}>
+                  <span
+                    className="text-xs font-black text-slate-900 dark:text-white truncate"
+                    title={plan.slug}
+                  >
                     {plan.slug}
                   </span>
                   <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wide shrink-0">
@@ -105,7 +117,9 @@ export default function BillingPlansSection({
                   </label>
                   <select
                     value={plan.slug}
-                    onChange={(e) => onUpdatePlan(plan._id, "slug", e.target.value)}
+                    onChange={(e) =>
+                      onUpdatePlan(plan._id, "slug", e.target.value)
+                    }
                     className="w-full bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
                   >
                     {planTiers.map((t) => (
@@ -139,7 +153,9 @@ export default function BillingPlansSection({
                     </label>
                     <select
                       value={plan.currency}
-                      onChange={(e) => onUpdatePlan(plan._id, "currency", e.target.value)}
+                      onChange={(e) =>
+                        onUpdatePlan(plan._id, "currency", e.target.value)
+                      }
                       className="w-full bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-2 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
                     >
                       {supportedCountries
@@ -164,14 +180,22 @@ export default function BillingPlansSection({
                       min="1"
                       value={storageVal}
                       onChange={(e) =>
-                        handleStorageChange(plan._id, e.target.value, storageUnit)
+                        handleStorageChange(
+                          plan._id,
+                          e.target.value,
+                          storageUnit,
+                        )
                       }
                       className="w-2/3 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
                     />
                     <select
                       value={storageUnit}
                       onChange={(e) =>
-                        handleStorageChange(plan._id, storageVal, e.target.value)
+                        handleStorageChange(
+                          plan._id,
+                          storageVal,
+                          e.target.value,
+                        )
                       }
                       className="w-1/3 bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-2 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
                     >
@@ -188,7 +212,9 @@ export default function BillingPlansSection({
                   </label>
                   <select
                     value={plan.period}
-                    onChange={(e) => onUpdatePlan(plan._id, "period", e.target.value)}
+                    onChange={(e) =>
+                      onUpdatePlan(plan._id, "period", e.target.value)
+                    }
                     className="w-full bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500/50"
                   >
                     <option value="Monthly">Monthly</option>

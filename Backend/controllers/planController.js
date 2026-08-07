@@ -168,7 +168,7 @@ export const getOwnerSettings = async (req, res, next) => {
       const slugKey = config.slug || config.tier?.slug;
       if (slugKey) {
         tierFeatureConfigs[slugKey] = (config.features || []).map((f) =>
-          typeof f === "object" ? f.key : f
+          typeof f === "object" ? f.key : f,
         );
         tierRuleConfigs[slugKey] = config.rules || {};
       }
@@ -184,6 +184,58 @@ export const getOwnerSettings = async (req, res, next) => {
     });
   } catch (err) {
     console.error("[OwnerSettings] Error:", err.message);
+    next(err);
+  }
+};
+
+export const updateGlobalLimits = async (req, res, next) => {
+  try {
+    if (req.user?.role !== "Owner") {
+      return res
+        .status(403)
+        .json({ error: "Access denied. Only Owners can update settings." });
+    }
+
+    // TODO: Update global system config in DB using req.body
+    const {
+      maxDevicesLimit,
+      maxFileSizeLimit,
+      defaultStorageUnit,
+      maxFileSizeUnit,
+      maxFileSizeValue,
+      sessionTimeoutUnit,
+      sessionTimeoutValue,
+    } = req.body;
+    console.log(
+      maxDevicesLimit,
+      maxFileSizeLimit,
+      defaultStorageUnit,
+      maxFileSizeUnit,
+      maxFileSizeValue,
+      sessionTimeoutUnit,
+      sessionTimeoutValue,
+    );
+
+    const systemConfig = await SystemConfig.findOneAndUpdate(
+      { key: "global" },
+      {
+        maxDevicesLimit,
+        maxFileSizeLimit,
+        defaultStorageUnit,
+        maxFileSizeUnit,
+        maxFileSizeValue,
+        sessionTimeoutUnit,
+        sessionTimeoutValue,
+      },
+      {
+        upsert: true,
+        returnDocument: "after",
+      },
+    ).lean();
+
+    return res.json(systemConfig);
+  } catch (err) {
+    console.error("[OwnerSettings] Error updating global limits:", err.message);
     next(err);
   }
 };

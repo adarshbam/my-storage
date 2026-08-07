@@ -69,8 +69,26 @@ export default function OwnerSettings() {
   };
 
   // Handlers for state updates
-  const handleLimitsChange = (field, val) => {
+  const handleLimitsChange = async (field, val) => {
     setLimits((prev) => ({ ...prev, [field]: val }));
+  };
+
+  const handleGlobalLimits = async () => {
+    const res = await fetch(`${SERVER_URL}/owner-settings/global`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json", // 2. Set the content type header
+      },
+      body: JSON.stringify(limits),
+    });
+    const globalSystemLimits = await res.json();
+    console.log(globalSystemLimits);
+
+    if (res.ok) {
+      setLimits(globalSystemLimits);
+      showToast("Global system limits saved successfully!");
+    }
   };
 
   const handleUpdatePlan = (planId, field, val) => {
@@ -260,6 +278,7 @@ export default function OwnerSettings() {
             <GlobalSystemLimitsSection
               limits={limits}
               onChange={handleLimitsChange}
+              handleGlobalLimits={handleGlobalLimits}
             />
           )}
 
