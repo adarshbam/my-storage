@@ -239,3 +239,43 @@ export const updateGlobalLimits = async (req, res, next) => {
     next(err);
   }
 };
+
+
+export const updatePlans = async (req, res, next) => {
+  try {
+    if (req.user?.role !== "Owner") {
+      return res.status(403).json({
+        error: "Access denied. Only Owners can update billing plans.",
+      });
+    }
+
+    const plans = req.body.plans || (Array.isArray(req.body) ? req.body : []);
+    if (!Array.isArray(plans) || plans.length === 0) {
+      return res.status(400).json({ error: "Plans array is required" });
+    }
+
+    const bulkOps = plans.map((p) => ({
+      updateOne: {
+        filter: { _id: p._id },
+        update: {
+          $set: {
+            slug: p.slug,
+            amount: p.amount,
+            currency: p.currency,
+            storage: p.storage,
+            period: p.period,
+            active: p.active,
+          },
+        },
+      },
+    }));
+
+    await BillingPlan.bulkWrite(bulkOps);
+    const updatedBillingPlans = await BillingPlan.find({ active: true }).lean();
+
+    return res.json(updatedBillingPlans);
+  } catch (err) {
+    console.error("[updatePlans] Error:", err.message);
+    next(err);
+  }
+};

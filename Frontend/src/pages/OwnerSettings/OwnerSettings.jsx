@@ -99,6 +99,29 @@ export default function OwnerSettings() {
     );
   };
 
+  const handleSaveBillingPlans = async () => {
+    try {
+      const res = await fetch(`${SERVER_URL}/plans/update-plans`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ plans: billingPlans }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setBillingPlans(data);
+        showToast("All billing plans saved successfully!");
+      } else {
+        showToast(data.error || "Failed to save billing plans.");
+      }
+    } catch (err) {
+      console.error("[handleSaveBillingPlans] Error:", err);
+      showToast("Error connecting to server.");
+    }
+  };
+
   // Need to be configured with the backend
   const handleUpdateTierDetail = (tierSlug, field, val) => {
     setPlanTiers((prev) =>
@@ -287,6 +310,7 @@ export default function OwnerSettings() {
               billingPlans={billingPlans}
               planTiers={planTiers}
               onUpdatePlan={handleUpdatePlan}
+              onSavePlans={handleSaveBillingPlans}
             />
           )}
 

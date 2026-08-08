@@ -142,6 +142,7 @@ app.use("/trash", checkAuth, trashRouter);
 app.use("/user", userRouter);
 app.use("/otp", otpRouter);
 app.use("/plan", planRouter);
+app.use("/plans", planRouter);
 app.use("/subscriptions", subscriptionRouter);
 app.use("/drive", driveRouter);
 app.use("/github", githubRouter);

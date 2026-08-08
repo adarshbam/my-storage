@@ -6,14 +6,25 @@ import {
   HardDrive,
   Key,
   Lock,
+  Check,
 } from "lucide-react";
+import { useState } from "react";
 import { supportedCountries } from "../../lib/currency";
 
 export default function BillingPlansSection({
   billingPlans,
   planTiers,
   onUpdatePlan,
+  onSavePlans,
 }) {
+  const [savedMessage, setSavedMessage] = useState(false);
+
+  const handleSave = async () => {
+    if (onSavePlans) await onSavePlans();
+    setSavedMessage(true);
+    setTimeout(() => setSavedMessage(false), 2000);
+  };
+
   // Helper to convert bytes to readable input (GB/TB)
   const formatBytesForInput = (bytes) => {
     if (!bytes) return { value: 0, unit: "GB" };
@@ -50,9 +61,25 @@ export default function BillingPlansSection({
           </div>
         </div>
 
-        <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/70">
-          {billingPlans.length} Configured Plans
-        </span>
+        <div className="flex items-center gap-3">
+          {savedMessage && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 text-xs font-bold border border-emerald-500/20 animate-fade-in">
+              <Check size={14} /> Plans Saved
+            </span>
+          )}
+
+          <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/70">
+            {billingPlans.length} Configured Plans
+          </span>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold shadow-lg shadow-amber-500/20 hover:opacity-95 active:scale-95 transition-all"
+          >
+            <Check size={14} /> Save Plans
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
