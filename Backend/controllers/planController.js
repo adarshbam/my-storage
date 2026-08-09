@@ -240,7 +240,6 @@ export const updateGlobalLimits = async (req, res, next) => {
   }
 };
 
-
 export const updatePlans = async (req, res, next) => {
   try {
     if (req.user?.role !== "Owner") {
@@ -279,3 +278,78 @@ export const updatePlans = async (req, res, next) => {
     next(err);
   }
 };
+
+export const updatePlanTiers = async (req, res, next) => {
+  try {
+    if (req.user?.role !== "Owner") {
+      return res.status(403).json({
+        error: "Access denied. Only Owners can update plan tiers.",
+      });
+    }
+
+    console.log("[updatePlanTiers] req.body:", req.body);
+
+    return res.json(req.body);
+  } catch (err) {
+    console.error("[updatePlanTiers] Error:", err.message);
+    next(err);
+  }
+};
+
+export const updateFeatures = async (req, res, next) => {
+  try {
+    if (req.user?.role !== "Owner") {
+      return res.status(403).json({
+        error: "Access denied. Only Owners can update feature catalogue.",
+      });
+    }
+
+    console.log(
+      "[updateFeatures] req.body:",
+      JSON.stringify(req.body, null, 2),
+    );
+
+    return res.json(req.body);
+  } catch (err) {
+    console.error("[updateFeatures] Error:", err.message);
+    next(err);
+  }
+};
+
+export const updateTierConfigurations = async (req, res, next) => {
+  try {
+    if (req.user?.role !== "Owner") {
+      return res.status(403).json({
+        error: "Access denied. Only Owners can update tier configurations.",
+      });
+    }
+
+    console.log(
+      "[updateTierConfigurations] req.body:",
+      JSON.stringify(req.body, null, 2),
+    );
+
+    return res.json(req.body);
+  } catch (err) {
+    console.error("[updateTierConfigurations] Error:", err.message);
+    next(err);
+  }
+};
+
+export const createPlanTier = async (req, res, next) => {
+  try {
+    if (req.user?.role !== "Owner") {
+      return res.status(403).json({
+        error: "Access denied. Only Owners can create plan tiers.",
+      });
+    }
+
+    console.log("[createPlanTier] req.body:", req.body);
+
+    return res.status(201).json(req.body);
+  } catch (err) {
+    console.error("[createPlanTier] Error:", err.message);
+    next(err);
+  }
+};
+

@@ -107,7 +107,7 @@ export default function OwnerSettings() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ plans: billingPlans }),
+        body: JSON.stringify(billingPlans),
       });
       const data = await res.json();
       if (res.ok) {
@@ -122,7 +122,77 @@ export default function OwnerSettings() {
     }
   };
 
-  // Need to be configured with the backend
+  // Save handlers for each section
+  const handleSavePlanTiers = async () => {
+    try {
+      const res = await fetch(`${SERVER_URL}/owner-settings/tiers`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tiers: planTiers }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Plan tiers saved successfully!");
+      } else {
+        showToast(data.error || "Failed to save plan tiers.");
+      }
+    } catch (err) {
+      console.error("[handleSavePlanTiers] Error:", err);
+      showToast("Error connecting to server.");
+    }
+  };
+
+  const handleSaveFeatures = async () => {
+    try {
+      const res = await fetch(`${SERVER_URL}/owner-settings/features`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ features }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Feature catalogue saved successfully!");
+      } else {
+        showToast(data.error || "Failed to save feature catalogue.");
+      }
+    } catch (err) {
+      console.error("[handleSaveFeatures] Error:", err);
+      showToast("Error connecting to server.");
+    }
+  };
+
+  const handleSaveConfigurations = async () => {
+    try {
+      const res = await fetch(`${SERVER_URL}/owner-settings/configurations`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tierFeatureConfigs,
+          tierRuleConfigs,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Tier configurations saved successfully!");
+      } else {
+        showToast(data.error || "Failed to save tier configurations.");
+      }
+    } catch (err) {
+      console.error("[handleSaveConfigurations] Error:", err);
+      showToast("Error connecting to server.");
+    }
+  };
+
+  // Handlers for state updates
   const handleUpdateTierDetail = (tierSlug, field, val) => {
     setPlanTiers((prev) =>
       prev.map((tier) =>
@@ -131,16 +201,20 @@ export default function OwnerSettings() {
     );
   };
 
-  const handleCreateNewTier = (newTier) => {
-    setPlanTiers((prev) => [...prev, newTier]);
-    // Initialize empty feature & rule configs for the new tier
+  const handleCreateNewTier = async (newTier) => {
+    const slugKey =
+      newTier.slug || newTier.type.toLowerCase().replace(/\s+/g, "-");
+    const tierPayload = { ...newTier, slug: slugKey };
+
+    setPlanTiers((prev) => [...prev, tierPayload]);
+    // Initialize empty feature & rule configs for the new tier using slugKey
     setTierFeatureConfigs((prev) => ({
       ...prev,
-      [newTier.type]: ["secure_storage", "share_links"],
+      [slugKey]: ["secure_storage", "share_links"],
     }));
     setTierRuleConfigs((prev) => ({
       ...prev,
-      [newTier.type]: {
+      [slugKey]: {
         allowUpload: true,
         allowDownload: true,
         allowSharing: true,
@@ -152,7 +226,23 @@ export default function OwnerSettings() {
         versionHistoryDays: "30",
       },
     }));
-    showToast(`Created new plan tier "${newTier.title}"!`);
+
+    try {
+      const res = await fetch(`${SERVER_URL}/owner-settings/tier`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(tierPayload),
+      });
+      const data = await res.json();
+      console.log("[handleCreateNewTier] Server response:", data);
+      showToast(`Created new plan tier "${newTier.title}"!`);
+    } catch (err) {
+      console.error("[handleCreateNewTier] Error:", err);
+      showToast(`Created new plan tier "${newTier.title}" locally!`);
+    }
   };
 
   const handleToggleTierFeature = (tier, featureKey) => {
@@ -319,6 +409,7 @@ export default function OwnerSettings() {
               planTiers={planTiers}
               onUpdateTierDetail={handleUpdateTierDetail}
               onCreateNewTier={handleCreateNewTier}
+              onSaveTiers={handleSavePlanTiers}
             />
           )}
 
@@ -326,6 +417,7 @@ export default function OwnerSettings() {
             <FeatureCatalogueSection
               features={features}
               onToggleFeatureEnabled={handleToggleFeatureEnabled}
+              onSaveFeatures={handleSaveFeatures}
             />
           )}
 
@@ -337,6 +429,7 @@ export default function OwnerSettings() {
               tierRuleConfigs={tierRuleConfigs}
               onToggleTierFeature={handleToggleTierFeature}
               onUpdateTierRule={handleUpdateTierRule}
+              onSaveConfigurations={handleSaveConfigurations}
             />
           )}
 

@@ -15,8 +15,16 @@ export default function PlanTierConfigurationSection({
   tierRuleConfigs,
   onToggleTierFeature,
   onUpdateTierRule,
+  onSaveConfigurations,
 }) {
   const [activeTab, setActiveTab] = useState("features"); // 'features' | 'rules'
+  const [savedMessage, setSavedMessage] = useState(false);
+
+  const handleSave = async () => {
+    if (onSaveConfigurations) await onSaveConfigurations();
+    setSavedMessage(true);
+    setTimeout(() => setSavedMessage(false), 2000);
+  };
 
   const tierList = planTiers.map((t) => t.slug);
 
@@ -100,29 +108,45 @@ export default function PlanTierConfigurationSection({
           </div>
         </div>
 
-        {/* Tab 1 (Features) / Tab 2 (Rules) Switcher */}
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-white/[0.04] p-1.5 rounded-2xl border border-slate-200 dark:border-white/10">
+        <div className="flex flex-wrap items-center gap-3">
+          {savedMessage && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 text-xs font-bold border border-emerald-500/20 animate-fade-in">
+              <Check size={14} /> Configurations Saved
+            </span>
+          )}
+
+          {/* Tab 1 (Features) / Tab 2 (Rules) Switcher */}
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-white/[0.04] p-1.5 rounded-2xl border border-slate-200 dark:border-white/10">
+            <button
+              type="button"
+              onClick={() => setActiveTab("features")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                activeTab === "features"
+                  ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                  : "text-slate-600 dark:text-white/60 hover:text-white"
+              }`}
+            >
+              <Layers size={14} /> Features Matrix
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("rules")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                activeTab === "rules"
+                  ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                  : "text-slate-600 dark:text-white/60 hover:text-white"
+              }`}
+            >
+              <Sliders size={14} /> Operational Rules
+            </button>
+          </div>
+
           <button
             type="button"
-            onClick={() => setActiveTab("features")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeTab === "features"
-                ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
-                : "text-slate-600 dark:text-white/60 hover:text-white"
-            }`}
+            onClick={handleSave}
+            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 hover:opacity-95 active:scale-95 transition-all"
           >
-            <Layers size={14} /> Features Matrix
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("rules")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeTab === "rules"
-                ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
-                : "text-slate-600 dark:text-white/60 hover:text-white"
-            }`}
-          >
-            <Sliders size={14} /> Operational Rules
+            <Check size={14} /> Save Configurations
           </button>
         </div>
       </div>

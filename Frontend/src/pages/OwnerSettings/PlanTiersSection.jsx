@@ -17,8 +17,16 @@ export default function PlanTiersSection({
   planTiers,
   onUpdateTierDetail,
   onCreateNewTier,
+  onSaveTiers,
 }) {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [savedMessage, setSavedMessage] = useState(false);
+
+  const handleSave = async () => {
+    if (onSaveTiers) await onSaveTiers();
+    setSavedMessage(true);
+    setTimeout(() => setSavedMessage(false), 2000);
+  };
   const [newTierData, setNewTierData] = useState({
     slug: "",
     type: "",
@@ -68,6 +76,12 @@ export default function PlanTiersSection({
         </div>
 
         <div className="flex items-center gap-3">
+          {savedMessage && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 text-xs font-bold border border-emerald-500/20 animate-fade-in">
+              <Check size={14} /> Tiers Saved
+            </span>
+          )}
+
           <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400">
             {planTiers.length} Defined Tiers
           </span>
@@ -78,6 +92,14 @@ export default function PlanTiersSection({
             className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-500/25 hover:bg-rose-600 transition-colors"
           >
             <Plus size={16} /> Add New Tier
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-bold shadow-lg shadow-rose-500/20 hover:opacity-95 active:scale-95 transition-all"
+          >
+            <Check size={14} /> Save Tiers
           </button>
         </div>
       </div>

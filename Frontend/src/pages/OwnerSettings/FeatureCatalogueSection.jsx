@@ -1,4 +1,4 @@
-import { Layers, Power, HardDrive, Share2, Shield, Cpu, Zap, Headphones, Sparkles, FolderUp, Lock, Clock, Eye, Video, FileText } from "lucide-react";
+import { Layers, Power, HardDrive, Share2, Shield, Cpu, Zap, Headphones, Sparkles, FolderUp, Lock, Clock, Eye, Video, FileText, Check } from "lucide-react";
 import { useState } from "react";
 
 const categoryIcons = {
@@ -21,8 +21,19 @@ const categoryBadgeColors = {
   AI: "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20",
 };
 
-export default function FeatureCatalogueSection({ features, onToggleFeatureEnabled }) {
+export default function FeatureCatalogueSection({
+  features,
+  onToggleFeatureEnabled,
+  onSaveFeatures,
+}) {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("ALL");
+  const [savedMessage, setSavedMessage] = useState(false);
+
+  const handleSave = async () => {
+    if (onSaveFeatures) await onSaveFeatures();
+    setSavedMessage(true);
+    setTimeout(() => setSavedMessage(false), 2000);
+  };
 
   const categories = ["ALL", "Storage", "Sharing", "Integrations", "Security", "Performance", "Support", "AI"];
 
@@ -48,21 +59,37 @@ export default function FeatureCatalogueSection({ features, onToggleFeatureEnabl
           </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex flex-wrap gap-1.5">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategoryFilter(cat)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-                selectedCategoryFilter === cat
-                  ? "bg-blue-500 text-white shadow-md shadow-blue-500/25"
-                  : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/60 hover:bg-slate-200 dark:hover:bg-white/10"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-3">
+          {savedMessage && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 text-xs font-bold border border-emerald-500/20 animate-fade-in">
+              <Check size={14} /> Features Saved
+            </span>
+          )}
+
+          {/* Filter Pills */}
+          <div className="flex flex-wrap gap-1.5">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategoryFilter(cat)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                  selectedCategoryFilter === cat
+                    ? "bg-blue-500 text-white shadow-md shadow-blue-500/25"
+                    : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/60 hover:bg-slate-200 dark:hover:bg-white/10"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:opacity-95 active:scale-95 transition-all"
+          >
+            <Check size={14} /> Save Features
+          </button>
         </div>
       </div>
 
