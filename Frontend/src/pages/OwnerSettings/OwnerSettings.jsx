@@ -131,10 +131,11 @@ export default function OwnerSettings() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ tiers: planTiers }),
+        body: JSON.stringify(planTiers),
       });
       const data = await res.json();
       if (res.ok) {
+        setPlanTiers(data);
         showToast("Plan tiers saved successfully!");
       } else {
         showToast(data.error || "Failed to save plan tiers.");
@@ -153,10 +154,11 @@ export default function OwnerSettings() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ features }),
+        body: JSON.stringify(features),
       });
       const data = await res.json();
       if (res.ok) {
+        setFeatures(data);
         showToast("Feature catalogue saved successfully!");
       } else {
         showToast(data.error || "Failed to save feature catalogue.");
@@ -182,6 +184,9 @@ export default function OwnerSettings() {
       });
       const data = await res.json();
       if (res.ok) {
+        if (data.tierFeatureConfigs)
+          setTierFeatureConfigs(data.tierFeatureConfigs);
+        if (data.tierRuleConfigs) setTierRuleConfigs(data.tierRuleConfigs);
         showToast("Tier configurations saved successfully!");
       } else {
         showToast(data.error || "Failed to save tier configurations.");

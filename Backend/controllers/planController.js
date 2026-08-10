@@ -287,9 +287,29 @@ export const updatePlanTiers = async (req, res, next) => {
       });
     }
 
-    console.log("[updatePlanTiers] req.body:", req.body);
+    const planTiers = req.body;
+    console.log(planTiers);
 
-    return res.json(req.body);
+    const bulkOps = planTiers.map((p) => ({
+      updateOne: {
+        filter: { _id: p._id },
+        update: {
+          $set: {
+            slug: p.slug,
+            title: p.title,
+            description: p.description,
+            badge: p.badge,
+            accentColor: p.accentColor,
+            active: p.active,
+          },
+        },
+      },
+    }));
+
+    await PlanTier.bulkWrite(bulkOps);
+    const updatedPlanTiers = await PlanTier.find().lean();
+
+    return res.json(updatedPlanTiers);
   } catch (err) {
     console.error("[updatePlanTiers] Error:", err.message);
     next(err);
@@ -304,12 +324,28 @@ export const updateFeatures = async (req, res, next) => {
       });
     }
 
-    console.log(
-      "[updateFeatures] req.body:",
-      JSON.stringify(req.body, null, 2),
-    );
+    const features = req.body;
+    console.log(features);
 
-    return res.json(req.body);
+    const bulkOps = features.map((f) => ({
+      updateOne: {
+        filter: { _id: f._id },
+        update: {
+          $set: {
+            category: f.category,
+            description: f.description,
+            enabled: f.enabled,
+            title: f.title,
+            updatedAt: Date.now(),
+          },
+        },
+      },
+    }));
+
+    await Feature.bulkWrite(bulkOps);
+    const updatedFeatures = await Feature.find().lean();
+
+    return res.json(updatedFeatures);
   } catch (err) {
     console.error("[updateFeatures] Error:", err.message);
     next(err);
@@ -324,12 +360,82 @@ export const updateTierConfigurations = async (req, res, next) => {
       });
     }
 
-    console.log(
-      "[updateTierConfigurations] req.body:",
-      JSON.stringify(req.body, null, 2),
+    const { tierFeatureConfigs = {}, tierRuleConfigs = {} } = req.body;
+    console.log("[updateTierConfigurations] Received configs:", {
+      tierFeatureConfigs,
+      tierRuleConfigs,
+    });
+
+    const allFeatures = await Feature.find().lean();
+    const featureKeyToId = {};
+    allFeatures.forEach((f) => {
+      featureKeyToId[f.key] = f._id;
+    });
+
+    const allTiers = await PlanTier.find().lean();
+    const tierSlugToDoc = {};
+    allTiers.forEach((t) => {
+      tierSlugToDoc[t.slug] = t;
+    });
+
+    const allSlugs = Array.from(
+      new Set([
+        ...Object.keys(tierFeatureConfigs),
+        ...Object.keys(tierRuleConfigs),
+      ])
     );
 
-    return res.json(req.body);
+    const bulkOps = allSlugs
+      .filter((slug) => tierSlugToDoc[slug])
+      .map((slug) => {
+        const tierDoc = tierSlugToDoc[slug];
+        const featureKeys = tierFeatureConfigs[slug] || [];
+        const featureIds = featureKeys
+          .map((key) => featureKeyToId[key])
+          .filter(Boolean);
+        const rules = tierRuleConfigs[slug] || {};
+
+        return {
+          updateOne: {
+            filter: { tier: tierDoc._id },
+            update: {
+              $set: {
+                tier: tierDoc._id,
+                slug,
+                features: featureIds,
+                rules,
+              },
+            },
+            upsert: true,
+          },
+        };
+      });
+
+    if (bulkOps.length > 0) {
+      await PlanTierConfiguration.bulkWrite(bulkOps);
+    }
+
+    const updatedConfigs = await PlanTierConfiguration.find()
+      .populate("features")
+      .lean();
+
+    const updatedTierFeatureConfigs = {};
+    const updatedTierRuleConfigs = {};
+
+    updatedConfigs.forEach((config) => {
+      const slugKey = config.slug || config.tier?.slug;
+      if (slugKey) {
+        updatedTierFeatureConfigs[slugKey] = (config.features || []).map((f) =>
+          typeof f === "object" ? f.key : f
+        );
+        updatedTierRuleConfigs[slugKey] = config.rules || {};
+      }
+    });
+
+    return res.json({
+      tierFeatureConfigs: updatedTierFeatureConfigs,
+      tierRuleConfigs: updatedTierRuleConfigs,
+    });
   } catch (err) {
     console.error("[updateTierConfigurations] Error:", err.message);
     next(err);
@@ -352,4 +458,3 @@ export const createPlanTier = async (req, res, next) => {
     next(err);
   }
 };
-
