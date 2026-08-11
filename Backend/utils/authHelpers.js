@@ -9,7 +9,7 @@ import {
   SESSION_COOKIE_OPTIONS,
   ROOT_DIR_COOKIE_OPTIONS,
 } from "../config/config.js";
-import { getSystemConfigHelper } from "../controllers/systemConfigController.js";
+import { getSystemConfigHelper } from "../services/systemConfig.service.js";
 
 /**
  * Creates (or upserts) a session for the user, enforces the device limit,

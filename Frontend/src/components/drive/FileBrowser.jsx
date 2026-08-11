@@ -55,6 +55,16 @@ import {
   Clipboard,
 } from "lucide-react";
 
+import { useFiles } from "../../hooks/useFiles";
+import { useSelectionBox } from "../../hooks/useSelectionBox";
+import { useClipboard } from "../../hooks/useClipboard";
+import { useFileOperations } from "../../hooks/useFileOperations";
+import { useContextMenu } from "../../hooks/useContextMenu";
+
+import SelectionBox from "./SelectionBox";
+import EmptyState from "./EmptyState";
+import FileOperationModals from "./FileOperationModals";
+
 // Lazy load the preview modal since it contains heavy syntax highlighter dependencies
 const FilePreviewModal = lazy(() => import("./FilePreviewModal"));
 

@@ -1,5 +1,5 @@
 import express from "express";
-import { handleRazorpayWebhook } from "../controllers/webhookController.js";
+import { handleRazorpayWebhook } from "../webhooks/razorpay/razorpay.webhook.controller.js";
 import { webhookLimiter } from "../middlewares/rateLimiter.js";
 import throttle from "../utils/throttle.js";
 

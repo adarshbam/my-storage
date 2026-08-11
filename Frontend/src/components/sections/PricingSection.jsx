@@ -18,6 +18,7 @@ import {
 import { SERVER_URL } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { formatSize } from "../../lib/utils";
+import PlanCard from "../billing/PlanCard";
 
 const PricingSection = () => {
   const { user } = useAuth();
@@ -462,125 +463,17 @@ const PricingSection = () => {
           <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-fuchsia-500/5 blur-[100px] rounded-full pointer-events-none" />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch relative z-10">
-            {planDetails.map((detail, index) => {
-              const isPopular = detail.popular;
-              const isUltimate = detail.isUltimate;
-              return (detail.period === "Yearly") === isYearly ? (
-                <motion.div
-                  key={detail.type + detail.period}
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-50px" }}
-                  transition={{
-                    delay: index * 0.1,
-                    duration: 0.6,
-                    ease: [0.16, 1, 0.3, 1],
-                  }}
-                  className={`relative group rounded-[2.5rem] bg-white/50 dark:bg-white/[0.02] border transition-all duration-500 overflow-hidden flex flex-col justify-between ${detail.borderHover} ${detail.bgHover} ${
-                    isPopular
-                      ? `md:scale-[1.04] ${detail.shadow} z-20 py-12 ${detail.borderClass} bg-rose-50/50 dark:bg-rose-500/5`
-                      : isUltimate
-                        ? `md:scale-[1.02] ${detail.shadow} z-15 py-11 ${detail.borderClass} bg-blue-50/30 dark:bg-blue-500/5 hover:-translate-y-1 hover:shadow-2xl`
-                        : `shadow-xl z-10 py-10 border-slate-200/60 dark:border-white/5 opacity-95 hover:opacity-100 hover:-translate-y-1`
-                  }`}
-                >
-                  {/* Top border highlight gradient */}
-                  <div
-                    className={`absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r ${detail.color} opacity-50 group-hover:opacity-100 transition-opacity duration-500`}
-                  />
-
-                  {isPopular && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 px-5 py-1.5 bg-gradient-to-r from-rose-500/15 to-orange-500/15 border-b border-x border-rose-500/20 rounded-b-2xl backdrop-blur-md">
-                      <span className="text-rose-500 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-1.5 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]">
-                        <Sparkles size={9} fill="currentColor" /> Most Popular
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="px-8 flex-1 flex flex-col">
-                    {/* Name and Tag */}
-                    <div className="mb-6">
-                      <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-1.5 tracking-tight">
-                        {name}
-                      </h3>
-                      <p className="text-slate-500 dark:text-white/40 text-xs font-medium">
-                        {formatSize(detail.storage) + " " + detail.desc}
-                      </p>
-                    </div>
-
-                    {/* Pricing Display */}
-                    <div className="flex items-baseline gap-1.5 mb-8 border-b border-slate-200/60 dark:border-white/[0.06] pb-8">
-                      <motion.span
-                        key={`${currency}-${isYearly}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tighter"
-                      >
-                        {getPriceDisplay(detail.price)}
-                      </motion.span>
-                      <span className="text-slate-500 dark:text-white/30 text-sm font-semibold">
-                        /{isYearly ? "yr" : "mo"}
-                      </span>
-                    </div>
-
-                    {/* Yearly savings note on cards */}
-                    {isYearly && (
-                      <motion.p
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        className={`${detail.textClass} text-xs font-bold mb-6 -mt-4`}
-                      >
-                        Save 2 months vs monthly billing
-                      </motion.p>
-                    )}
-
-                    {/* Features List */}
-                    <div className="space-y-4 mb-8 flex-grow">
-                      {detail.features.map((feature, i) => {
-                        return (
-                          <div key={i} className="flex items-start gap-3">
-                            <div
-                              className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${detail.bgClass} border ${detail.iconBorder} ${detail.textClass}`}
-                            >
-                              <Check size={11} strokeWidth={3} />
-                            </div>
-                            <span
-                              className={`text-sm leading-relaxed ${
-                                isPopular
-                                  ? "text-slate-700 dark:text-white/80 font-semibold"
-                                  : "text-slate-600 dark:text-white/60 font-medium"
-                              }`}
-                            >
-                              {feature}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Call To Action Button */}
-                  <div className="px-8 mt-auto">
-                    <button
-                      onClick={() => handleGetStarted(detail.razorpayPlanId)}
-                      className={`w-full py-4 rounded-2xl font-bold tracking-wide transition-all duration-300 flex items-center justify-center gap-2 group/btn relative overflow-hidden border ${detail.btnClass}`}
-                    >
-                      {isPopular && (
-                        <div className="absolute inset-0 bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
-                      )}
-                      <span className="relative z-10">Get Started</span>
-                      <ArrowRight
-                        size={18}
-                        className="relative z-10 group-hover/btn:translate-x-1 transition-transform duration-300"
-                      />
-                    </button>
-                  </div>
-                </motion.div>
-              ) : (
-                ""
-              );
-            })}
+            {planDetails
+              .filter((detail) => (detail.period?.toLowerCase() === "yearly") === isYearly)
+              .map((detail) => (
+                <PlanCard
+                  key={detail._id || detail.razorpayPlanId || detail.type + detail.period}
+                  plan={detail}
+                  currency={currency}
+                  rates={rates}
+                  onSelect={(plan) => handleGetStarted(plan.razorpayPlanId || plan._id)}
+                />
+              ))}
           </div>
         </div>
       </div>

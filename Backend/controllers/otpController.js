@@ -1,94 +1,25 @@
-// OTP Controller — stub functions (implement logic manually)
+import * as otpService from '../services/otp.service.js';
 
-import OTP from "../models/otpModel.js";
-import User from "../models/userModel.js";
-import sendEmail from "../services/email.js";
-import { OTPSchema } from "../validators/authSchema.js";
-
-export const sendOtp = async (req, res) => {
-  // TODO: Implement OTP sending logic
-  // Expected body: { email }
-  const { email } = req.body;
-
-  // 1. Generate OTP
-  const generatedOTP = Math.floor(Math.random() * 900000 + 100000);
-  console.log(generatedOTP);
-  // 2. Store OTP with expiry (e.g., in DB or cache)
-  await OTP.deleteMany({ email });
-  await OTP.create({ email, otp: generatedOTP });
-  // 3. Send OTP via email/SMS
-
+export async function sendOtp(req, res, next) {
   try {
-    await sendEmail({
-      from: `"Storiffy" <no-reply@storiffy.com>`,
-      to: email,
-      subject: "Your Storiffy OTP Code",
-      text: `Your OTP is ${generatedOTP}. It will expire in 10 minutes.`,
-      html: `
-        <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-        <h2 style="color: #333;">Storiffy Verification</h2>
-        <p style="font-size: 16px; color: #555;">
-            Use the OTP below to complete your verification:
-        </p>
-
-        <div style="
-            display: inline-block;
-            margin: 20px 0;
-            padding: 15px 30px;
-            font-size: 28px;
-            letter-spacing: 5px;
-            font-weight: bold;
-            background-color: #f4f4f4;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            user-select: all;
-        ">
-            ${generatedOTP}
-        </div>
-
-        <p style="color: #888; font-size: 14px;">
-            This OTP is valid for 10 minutes.
-        </p>
-
-        <p style="color: #aaa; font-size: 12px;">
-            If you didn’t request this, you can ignore this email.
-        </p>
-        </div>
-    `,
-    });
-    return res.status(200).json({ message: "OTP sent successfully" });
-  } catch (err) {
-    console.error("Error while sending mail:", err);
-    return res.status(500).json({ message: "Internal Server Error" });
+    const result = await otpService.sendOtpLogic({ email: req.body.email });
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json(error.details ? { error: error.details } : { error: error.message || error });
+    }
+    next(error);
   }
-};
+}
 
-export const verifyOtp = async (req, res) => {
-  // TODO: Implement OTP verification logic
-  // Expected body: { email, otp }
-  const { success, data, error } = OTPSchema.safeParse(req.body);
-  if (!success) return res.status(400).json({ error: z.flattenError(error) });
-
-  const { email, otp } = data;
-
-  // 1. Look up stored OTP for this email
-  const otpData = await OTP.findOne({ email });
-
-  // 2. Check if OTP matches and hasn't expired
-  if (!otpData) return res.status(403).json({ message: "OTP expired!" });
-  if (otpData.otp != otp)
-    return res.status(403).json({ message: "Wrong OTP!" });
-
-  // 3. Mark user as verified if they exist
-  const user = await User.findOneAndUpdate(
-    { email },
-    { isVerified: true },
-    { returnDocument: "after" },
-  );
-
-  // Mark OTP as verified (so the register endpoint can confirm it)
-  await OTP.updateOne({ _id: otpData._id }, { $set: { isVerified: true } });
-
-  // 4. Return success
-  return res.status(200).json({ message: "OTP verified successfully" });
-};
+export async function verifyOtp(req, res, next) {
+  try {
+    const result = await otpService.verifyOtpLogic({ email: req.body.email, otp: req.body.otp });
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json(error.details ? { error: error.details } : { error: error.message || error });
+    }
+    next(error);
+  }
+}

@@ -1,6 +1,6 @@
 import { sanitize } from "../utils/sanitize.js";
+import { getSystemConfigHelper } from "../services/systemConfig.service.js";
 import Directory from "../models/directoryModel.js";
-import { getSystemConfigHelper } from "../controllers/systemConfigController.js";
 
 /**
  * Enforces per-file size limit and user storage quota.

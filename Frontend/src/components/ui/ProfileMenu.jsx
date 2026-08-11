@@ -264,6 +264,7 @@ export default function ProfileMenu({
       desc: "Manage subscription",
       onClick: () => {
         setIsOpen(false);
+        navigate("/dashboard/billing");
       },
       gradient: "from-amber-500 to-orange-500",
     },

@@ -1,159 +1,75 @@
-import { rm } from "node:fs/promises";
-import path from "node:path";
-import Directory from "../models/directoryModel.js";
-import File from "../models/fileModel.js";
-import Session from "../models/sessionModel.js";
-import User from "../models/userModel.js";
-import { invalidateUserSessions } from "../databases/redis.js";
-import { BACKEND_URL } from "../config/config.js";
-import { deleteFromB2 } from "../services/s3.js";
+import * as systemUsersService from '../services/systemUsers.service.js';
 
-const hierarchy = ["User", "Manager", "Admin", "Owner"];
-const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
-
-export const getAllSystemUsers = async (req, res) => {
-  console.log("GET /users called");
-
-  if (!req.user?.role || req.user.role === "User") {
-    return res.status(403).json({ error: "Access denied", redirect: "/" });
-  }
-  const allUsers = await User.find().populate("profilepic");
-  const allSessions = await Session.find().lean();
-  const allSessionsUserId = allSessions.map(({ userId }) => userId.toString());
-  const allSessionsUserIdSet = new Set(allSessionsUserId);
-
-  console.log(allUsers);
-
-  const hierarchy = ["User", "Manager", "Admin", "Owner"];
-  const userHierarchy = hierarchy.indexOf(req.user.role ?? "User");
-
-  const yourAuthority = hierarchy.slice(0, userHierarchy);
-
-  const transformedUsers = allUsers.map(
-    ({ _id, name, role, email, status, profilepic, rootDirId }) => ({
-      _id,
-      name,
-      role,
-      email,
-      avatar: name.slice(0, 1),
-      profilepic: profilepic
-        ? profilepic.externalUrl
-          ? profilepic.externalUrl
-          : `${BACKEND_URL}/user/profilepic?id=${profilepic._id}`
-        : null,
-      status: status || "Active",
-      yourAuthority,
-      rootDirId: rootDirId?.toString() || null,
-      isLoggedIn: allSessionsUserIdSet.has(_id.toString()),
-    }),
-  );
-
-  console.log(transformedUsers);
-
-  res.status(200).json(transformedUsers);
-};
-
-export const deleteSystemUser = async (req, res) => {
-  const { deleteType } = req.body;
-  const { id } = req.params;
-
-  console.log(deleteType);
-
-  if (req.user.id === id)
-    return res
-      .status(403)
-      .json({ message: `You cannot logout yourself from here` });
-
-  const userToDelete = await User.findOne({ _id: id });
-  const newRoleHierarchy = hierarchy.indexOf(userToDelete.role);
-  const userHierarchy = hierarchy.indexOf(req.user.role);
-  console.log(userHierarchy, newRoleHierarchy);
-
-  if (newRoleHierarchy < userHierarchy && userHierarchy >= 2) {
-    await Session.deleteMany({ userId: id });
-    await invalidateUserSessions(id);
-    if (deleteType === "soft") {
-      userToDelete.status = "Deleted";
-      await userToDelete.save();
-      console.log("Doing Soft Delete");
-      return res.status(200).json({ message: "Delete request logged" });
+export async function getAllSystemUsers(req, res, next) {
+  try {
+    const result = await systemUsersService.getAllSystemUsersLogic({ requestingUser: req.user });
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error.status) {
+      if (error.status === 403 && error.redirect) {
+        return res.status(403).json({ error: error.message, redirect: error.redirect });
+      }
+      return res.status(error.status).json(error.details ? { error: error.details } : { error: error.message || error });
     }
+    next(error);
+  }
+}
 
-    const files = await File.find({ userId: id });
-
-    for (const file of files) {
-      await deleteFromB2({ key: `${file._id.toString()}${file.extension}` });
-      await deleteFromB2({ key: `thumbnails/${file._id.toString()}.jpg` });
+export async function deleteSystemUser(req, res, next) {
+  try {
+    const result = await systemUsersService.deleteSystemUserLogic({ 
+      targetId: req.params.id, 
+      deleteType: req.body.deleteType, 
+      requestingUser: req.user 
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json(error.details ? { error: error.details } : { error: error.message || error });
     }
-
-    // Delete from DB
-    await File.deleteMany({ userId: id });
-    await User.deleteMany({ _id: id });
-    await Session.deleteMany({ userId: id });
-    await invalidateUserSessions(id);
-    await Directory.deleteMany({ userId: id });
-
-    console.log("Doing hard delete");
-    return res.status(200).json({ message: "Delete request logged" });
+    next(error);
   }
-  return res.status(403).json({ message: "Not Authorised" });
-};
+}
 
-export const forceLogoutUser = async (req, res) => {
-  const { id } = req.params;
-
-  if (req.user.id === id)
-    return res
-      .status(403)
-      .json({ message: `You cannot logout yourself from here` });
-
-  const userToLogout = await User.findOne({ _id: id });
-  const newRoleHierarchy = hierarchy.indexOf(userToLogout.role);
-  const userHierarchy = hierarchy.indexOf(req.user.role);
-
-  if (newRoleHierarchy < userHierarchy && userHierarchy >= 1) {
-    await Session.deleteMany({ userId: id });
-    await invalidateUserSessions(id);
-    return res.status(200).json({ message: "Role update request logged" });
+export async function forceLogoutUser(req, res, next) {
+  try {
+    const result = await systemUsersService.forceLogoutUserLogic({ 
+      targetId: req.params.id, 
+      requestingUser: req.user 
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json(error.details ? { error: error.details } : { error: error.message || error });
+    }
+    next(error);
   }
+}
 
-  return res.status(403).json({ message: "Not Authorised" });
-};
-
-export const updateSystemUserRole = async (req, res) => {
-  const { role, userId } = req.body;
-
-  if (req.user.id === userId)
-    return res
-      .status(403)
-      .json({ message: `You cannot change your own roles` });
-
-  const userUpdate = await User.findOne({ _id: userId });
-
-  const newRoleHierarchy = hierarchy.indexOf(role);
-  const userHierarchy = hierarchy.indexOf(req.user.role);
-  const userToUpdateHierarchy = hierarchy.indexOf(userUpdate.role);
-
-  if (
-    newRoleHierarchy < userHierarchy &&
-    userToUpdateHierarchy < userHierarchy
-  ) {
-    userUpdate.role = role;
-    await userUpdate.save();
-    await invalidateUserSessions(userId);
-    return res.status(200).json({ message: "Role update request logged" });
+export async function updateSystemUserRole(req, res, next) {
+  try {
+    const result = await systemUsersService.updateSystemUserRoleLogic({ 
+      targetId: req.body.userId, 
+      newRole: req.body.role, 
+      requestingUser: req.user 
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json(error.details ? { error: error.details } : { error: error.message || error });
+    }
+    next(error);
   }
-  return res.status(403).json({ message: `Not Authorised` });
-};
+}
 
-export const reactivateSystemUser = async (req, res) => {
-  const { id } = req.params;
-
-  if (req.user.role !== "Owner")
-    return res.status(403).json({ message: `Not Authorised` });
-  const userToReactivate = await User.findOne({ _id: id });
-  userToReactivate.status = "Active";
-  await userToReactivate.save();
-  await invalidateUserSessions(id);
-  return res.status(200).json({ message: "Reactivate request logged" });
-};
+export async function reactivateSystemUser(req, res, next) {
+  try {
+    const result = await systemUsersService.reactivateSystemUserLogic({ 
+      targetId: req.params.id, 
+      requestingUser: req.user 
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}

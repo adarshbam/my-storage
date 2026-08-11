@@ -26,6 +26,7 @@ import Footer from "./components/sections/Footer";
 const DashboardLayout = lazy(() => import("./layouts/DashboardLayout"));
 const FileBrowser = lazy(() => import("./components/drive/FileBrowser"));
 const TrashView = lazy(() => import("./components/drive/TrashView"));
+const BillingPlansPage = lazy(() => import("./pages/BillingPlansPage"));
 
 function LandingPage() {
   return (
@@ -147,6 +148,7 @@ function App() {
                     element={<FileBrowser specialView="github-repo" />}
                   />
                   <Route path="trash" element={<TrashView />} />
+                  <Route path="billing" element={<BillingPlansPage />} />
                 </Route>
               </Route>
             </Routes>
