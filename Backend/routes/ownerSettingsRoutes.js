@@ -5,6 +5,7 @@ import {
   getOwnerSettings,
   updateGlobalLimits,
   updatePlanTiers,
+  updatePlanTierActive,
   createPlanTier,
   updateFeatures,
   updateTierConfigurations,
@@ -23,7 +24,10 @@ router.post("/global", checkAuth, updateGlobalLimits);
 router.post("/tier", checkAuth, createPlanTier);
 router.post("/tiers/create", checkAuth, createPlanTier);
 
-// PATCH /owner-settings/tiers — Update plan tiers
+// PATCH /owner-settings/tier/active — Toggle plan tier active state
+router.patch("/tier/active", checkAuth, updatePlanTierActive);
+
+// PATCH /owner-settings/tiers — Update all plan tiers
 router.patch("/tiers", checkAuth, updatePlanTiers);
 
 // PATCH /owner-settings/features — Update feature catalogue

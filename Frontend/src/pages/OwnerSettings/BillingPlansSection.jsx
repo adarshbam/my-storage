@@ -1,7 +1,6 @@
 import {
   CreditCard,
   Zap,
-  Power,
   Layers,
   HardDrive,
   Key,
@@ -117,22 +116,6 @@ export default function BillingPlansSection({
                     {plan.period}
                   </span>
                 </div>
-
-                {/* Active Toggle Switch */}
-                <button
-                  type="button"
-                  onClick={() => onUpdatePlan(plan._id, "active", !plan.active)}
-                  className={`w-11 h-6 shrink-0 rounded-full p-1 transition-colors duration-200 flex items-center ${
-                    plan.active ? "bg-amber-500" : "bg-slate-700"
-                  }`}
-                  title={plan.active ? "Deactivate Plan" : "Activate Plan"}
-                >
-                  <div
-                    className={`w-4 h-4 rounded-full bg-white transition-transform duration-200 ${
-                      plan.active ? "translate-x-5" : "translate-x-0"
-                    }`}
-                  />
-                </button>
               </div>
 
               {/* Form Controls inside Card */}

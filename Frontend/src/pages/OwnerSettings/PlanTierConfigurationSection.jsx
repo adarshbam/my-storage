@@ -1,11 +1,37 @@
-import { Grid, Check, X, ShieldCheck, Layers, Sliders, ToggleLeft, Hash, HardDrive, Clock } from "lucide-react";
+import {
+  Grid,
+  Check,
+  X,
+  ShieldCheck,
+  Layers,
+  Sliders,
+  ToggleLeft,
+  Hash,
+  HardDrive,
+  Clock,
+} from "lucide-react";
 import { useState } from "react";
+
+export const accentBadgeColors = {
+  emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  rose: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+  sky: "bg-sky-500/10 text-sky-400 border-sky-500/20",
+  amber: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  indigo: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+  cyan: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  teal: "bg-teal-500/10 text-teal-400 border-teal-500/20",
+  pink: "bg-pink-500/10 text-pink-400 border-pink-500/20",
+  violet: "bg-violet-500/10 text-violet-400 border-violet-500/20",
+  blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+};
 
 export const tierBadgeColors = {
   "free-trial": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   novice: "bg-purple-500/10 text-purple-400 border-purple-500/20",
   professional: "bg-rose-500/10 text-rose-400 border-rose-500/20",
   ultimate: "bg-sky-500/10 text-sky-400 border-sky-500/20",
+  extreme: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
 };
 
 export default function PlanTierConfigurationSection({
@@ -26,7 +52,23 @@ export default function PlanTierConfigurationSection({
     setTimeout(() => setSavedMessage(false), 2000);
   };
 
+  const getBadgeStyle = (tierSlug) => {
+    const tierObj = planTiers.find((t) => t.slug === tierSlug);
+    if (tierObj?.accentColor && accentBadgeColors[tierObj.accentColor]) {
+      return accentBadgeColors[tierObj.accentColor];
+    }
+    if (tierBadgeColors[tierSlug]) {
+      return tierBadgeColors[tierSlug];
+    }
+    const colorKeys = Object.keys(accentBadgeColors);
+    const sum = tierSlug
+      .split("")
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return accentBadgeColors[colorKeys[sum % colorKeys.length]];
+  };
+
   const tierList = planTiers.map((t) => t.slug);
+  // console.log(tierList, planTiers);
 
   const rulesList = [
     {
@@ -69,15 +111,19 @@ export default function PlanTierConfigurationSection({
       key: "deleteFilesAfterExpiry",
       label: "Delete Files After Expiry",
       type: "text",
-      description: "Auto file deletion policy after share expiration (e.g. 60 days, Never).",
+      description:
+        "Auto file deletion policy after share expiration (e.g. 60 days, Never).",
     },
     {
       key: "versionHistoryDays",
       label: "Version History Retention",
       type: "text",
-      description: "Days of file version history retained (e.g. 30, 90, 365, Unlimited).",
+      description:
+        "Days of file version history retained (e.g. 30, 90, 365, Unlimited).",
     },
   ];
+
+  console.log(tierRuleConfigs, tierFeatureConfigs);
 
   const getRuleValue = (tierConfig, ruleKey) => {
     if (!tierConfig) return undefined;
@@ -103,7 +149,8 @@ export default function PlanTierConfigurationSection({
               Plan Tier Configuration
             </h2>
             <p className="text-xs text-slate-500 dark:text-white/50 font-medium">
-              Configure feature permissions and operational rules matrices per plan tier.
+              Configure feature permissions and operational rules matrices per
+              plan tier.
             </p>
           </div>
         </div>
@@ -161,12 +208,14 @@ export default function PlanTierConfigurationSection({
                   Feature / Capability
                 </th>
                 {tierList.map((tier) => (
-                  <th key={tier} className="py-4 px-6 text-center text-xs font-black">
+                  <th
+                    key={tier}
+                    className="py-4 px-6 text-center text-xs font-black"
+                  >
                     <span
-                      className={`inline-block px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider border ${
-                        tierBadgeColors[tier] ||
-                        "bg-slate-500/10 text-slate-300 border-slate-500/20"
-                      }`}
+                      className={`inline-block px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider border ${getBadgeStyle(
+                        tier,
+                      )}`}
                     >
                       {tier}
                     </span>
@@ -192,12 +241,15 @@ export default function PlanTierConfigurationSection({
                   </td>
 
                   {tierList.map((tier) => {
-                    const isEnabled = (tierFeatureConfigs?.[tier] || []).includes(
-                      feature.key
-                    );
+                    const isEnabled = (
+                      tierFeatureConfigs?.[tier] || []
+                    ).includes(feature.key);
 
                     return (
-                      <td key={tier} className="py-4 px-6 text-center align-middle">
+                      <td
+                        key={tier}
+                        className="py-4 px-6 text-center align-middle"
+                      >
                         <button
                           type="button"
                           onClick={() => onToggleTierFeature(tier, feature.key)}
@@ -234,12 +286,14 @@ export default function PlanTierConfigurationSection({
                   Operational Rule
                 </th>
                 {tierList.map((tier) => (
-                  <th key={tier} className="py-4 px-6 text-center text-xs font-black min-w-[140px]">
+                  <th
+                    key={tier}
+                    className="py-4 px-6 text-center text-xs font-black min-w-[140px]"
+                  >
                     <span
-                      className={`inline-block px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider border ${
-                        tierBadgeColors[tier] ||
-                        "bg-slate-500/10 text-slate-300 border-slate-500/20"
-                      }`}
+                      className={`inline-block px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider border ${getBadgeStyle(
+                        tier,
+                      )}`}
                     >
                       {tier}
                     </span>
@@ -267,11 +321,14 @@ export default function PlanTierConfigurationSection({
                   {tierList.map((tier) => {
                     const currentRuleVal = getRuleValue(
                       tierRuleConfigs?.[tier],
-                      rule.key
+                      rule.key,
                     );
 
                     return (
-                      <td key={tier} className="py-4 px-6 text-center align-middle">
+                      <td
+                        key={tier}
+                        className="py-4 px-6 text-center align-middle"
+                      >
                         {/* Control type: Boolean switch */}
                         {rule.type === "boolean" && (
                           <button
@@ -285,7 +342,9 @@ export default function PlanTierConfigurationSection({
                           >
                             <div
                               className={`w-4 h-4 rounded-full bg-white transition-transform duration-200 ${
-                                currentRuleVal ? "translate-x-5" : "translate-x-0"
+                                currentRuleVal
+                                  ? "translate-x-5"
+                                  : "translate-x-0"
                               }`}
                             />
                           </button>
@@ -301,7 +360,7 @@ export default function PlanTierConfigurationSection({
                               onUpdateTierRule(
                                 tier,
                                 rule.key,
-                                Number(e.target.value)
+                                Number(e.target.value),
                               )
                             }
                             className="w-20 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-center text-slate-900 dark:text-white font-bold focus:outline-none focus:border-emerald-500/50"
@@ -315,26 +374,28 @@ export default function PlanTierConfigurationSection({
                               type="number"
                               min="1"
                               value={
-                                (tierRuleConfigs[tier] || {}).maxUploadSizeVal ?? 5
+                                (tierRuleConfigs[tier] || {})
+                                  .maxUploadSizeVal ?? 5
                               }
                               onChange={(e) =>
                                 onUpdateTierRule(
                                   tier,
                                   "maxUploadSizeVal",
-                                  Number(e.target.value)
+                                  Number(e.target.value),
                                 )
                               }
                               className="w-14 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-center text-slate-900 dark:text-white font-bold focus:outline-none focus:border-emerald-500/50"
                             />
                             <select
                               value={
-                                (tierRuleConfigs[tier] || {}).maxUploadSizeUnit ?? "GB"
+                                (tierRuleConfigs[tier] || {})
+                                  .maxUploadSizeUnit ?? "GB"
                               }
                               onChange={(e) =>
                                 onUpdateTierRule(
                                   tier,
                                   "maxUploadSizeUnit",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               className="bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-1.5 py-1.5 text-slate-900 dark:text-white font-bold text-[11px] focus:outline-none focus:border-emerald-500/50"

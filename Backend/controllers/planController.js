@@ -6,7 +6,7 @@ import PlanTier from "../models/planTierModel.js";
 import SystemConfig from "../models/systemConfigModel.js";
 
 export const createPlan = async (req, res, next) => {
-  const { type, amount, storage, period, currency } = req.body;
+  const { slug, amount, storage, period, currency } = req.body;
 
   console.log(req.body);
 
@@ -16,7 +16,7 @@ export const createPlan = async (req, res, next) => {
   try {
     const planCurrency = (currency || "INR").toUpperCase();
     const existingPlan = await BillingPlan.findOne({
-      type,
+      slug,
       amount,
       period,
     });
@@ -40,7 +40,7 @@ export const createPlan = async (req, res, next) => {
       period: period.toLowerCase(),
       interval: 1,
       item: {
-        name: `${type} - ${period}`,
+        name: `${slug} - ${period}`,
         amount: rzAmount,
         currency: "INR",
       },
@@ -48,11 +48,11 @@ export const createPlan = async (req, res, next) => {
 
     console.log(newPlan);
 
-    console.log(type, period);
+    console.log(slug, period);
 
-    const disablingPlans = await Plan.updateMany(
+    const disablingPlans = await BillingPlan.updateMany(
       {
-        type,
+        slug,
         period,
       },
       {
@@ -64,7 +64,7 @@ export const createPlan = async (req, res, next) => {
 
     const plan = await BillingPlan.create({
       razorpayPlanId: newPlan.id,
-      type,
+      slug,
       amount,
       currency: planCurrency,
       period,
@@ -159,8 +159,6 @@ export const getOwnerSettings = async (req, res, next) => {
       .lean();
     const billingPlans = await BillingPlan.find({ active: true }).lean();
 
-    console.log(planTierConfigurations);
-
     const tierFeatureConfigs = {};
     const tierRuleConfigs = {};
 
@@ -181,6 +179,7 @@ export const getOwnerSettings = async (req, res, next) => {
       features,
       tierFeatureConfigs,
       tierRuleConfigs,
+      tiersConfigs: planTierConfigurations,
     });
   } catch (err) {
     console.error("[OwnerSettings] Error:", err.message);
@@ -253,28 +252,108 @@ export const updatePlans = async (req, res, next) => {
       return res.status(400).json({ error: "Plans array is required" });
     }
 
-    const bulkOps = plans.map((p) => ({
-      updateOne: {
-        filter: { _id: p._id },
-        update: {
-          $set: {
+    const updatedPlans = await Promise.all(
+      plans.map(async (p) => {
+        const planCurrency = (p.currency || "INR").toUpperCase();
+        const numAmount = Number(p.amount) || 0;
+        const numStorage = Number(p.storage) || 0;
+
+        // 1. Fetch current document to detect changes
+        const currentDoc = p._id ? await BillingPlan.findById(p._id) : null;
+
+        const isAmountChanged = !currentDoc || currentDoc.amount !== numAmount;
+        const isPeriodChanged = !currentDoc || currentDoc.period !== p.period;
+        const isCurrencyChanged =
+          !currentDoc || currentDoc.currency !== planCurrency;
+        const hasRazorpayPlan =
+          currentDoc &&
+          currentDoc.razorpayPlanId &&
+          currentDoc.razorpayPlanId.trim() !== "";
+
+        let rzPlanId = currentDoc?.razorpayPlanId;
+
+        // 2. If amount, period, or currency changed, or missing razorpayPlanId
+        if (
+          isAmountChanged ||
+          isPeriodChanged ||
+          isCurrencyChanged ||
+          !hasRazorpayPlan
+        ) {
+          // Check if an existing plan already has this exact configuration and Razorpay Plan ID
+          const existingMatchingPlan = await BillingPlan.findOne({
             slug: p.slug,
-            amount: p.amount,
-            currency: p.currency,
-            storage: p.storage,
+            amount: numAmount,
             period: p.period,
-            active: p.active,
-          },
-        },
-      },
-    }));
+            currency: planCurrency,
+            razorpayPlanId: { $exists: true, $ne: "" },
+          });
 
-    await BillingPlan.bulkWrite(bulkOps);
-    const updatedBillingPlans = await BillingPlan.find({ active: true }).lean();
+          if (existingMatchingPlan?.razorpayPlanId) {
+            rzPlanId = existingMatchingPlan.razorpayPlanId;
+          } else {
+            // Create a new Razorpay Plan
+            const zeroDecimalCurrencies = ["JPY", "KRW"];
+            const rzAmount = zeroDecimalCurrencies.includes(planCurrency)
+              ? Math.round(numAmount)
+              : Math.round(numAmount * 100);
 
-    return res.json(updatedBillingPlans);
+            try {
+              const newRzPlan = await rzInstance.plans.create({
+                period: p.period.toLowerCase(),
+                interval: 1,
+                item: {
+                  name: `${p.slug} - ${p.period}`,
+                  amount: rzAmount,
+                  currency: planCurrency,
+                },
+              });
+              rzPlanId = newRzPlan.id;
+              console.log(
+                `[updatePlans] Created new Razorpay plan for ${p.slug} (${p.period}):`,
+                rzPlanId,
+              );
+            } catch (rzErr) {
+              console.error(
+                `[updatePlans] Razorpay plan creation error for ${p.slug}:`,
+                rzErr?.error?.description || rzErr.message || rzErr,
+              );
+            }
+          }
+        }
+
+        // 3. Update the BillingPlan in MongoDB
+        const updateData = {
+          slug: p.slug,
+          amount: numAmount,
+          currency: planCurrency,
+          storage: numStorage,
+          period: p.period,
+        };
+
+        if (rzPlanId) {
+          updateData.razorpayPlanId = rzPlanId;
+        }
+        if (p.active !== undefined) {
+          updateData.active = p.active;
+        }
+
+        const filter = p._id
+          ? { _id: p._id }
+          : { slug: p.slug, period: p.period };
+
+        const updatedDoc = await BillingPlan.findOneAndUpdate(
+          filter,
+          { $set: updateData },
+          { returnDocument: "after", upsert: true },
+        ).lean();
+
+        return updatedDoc;
+      }),
+    );
+
+    return res.json(updatedPlans);
   } catch (err) {
-    console.error("[updatePlans] Error:", err.message);
+    console.error("[updatePlans] Error:", err?.error || err.message || err);
     next(err);
   }
 };
@@ -287,8 +366,7 @@ export const updatePlanTiers = async (req, res, next) => {
       });
     }
 
-    const planTiers = req.body;
-    console.log(planTiers);
+    const planTiers = req.body.tiers || (Array.isArray(req.body) ? req.body : []);
 
     const bulkOps = planTiers.map((p) => ({
       updateOne: {
@@ -300,18 +378,74 @@ export const updatePlanTiers = async (req, res, next) => {
             description: p.description,
             badge: p.badge,
             accentColor: p.accentColor,
-            active: p.active,
           },
         },
       },
     }));
 
-    await PlanTier.bulkWrite(bulkOps);
-    const updatedPlanTiers = await PlanTier.find().lean();
+    if (bulkOps.length > 0) {
+      await PlanTier.bulkWrite(bulkOps);
+    }
 
-    return res.json(updatedPlanTiers);
+    return res.json(planTiers);
   } catch (err) {
     console.error("[updatePlanTiers] Error:", err.message);
+    next(err);
+  }
+};
+
+export const updatePlanTierActive = async (req, res, next) => {
+  try {
+    if (req.user?.role !== "Owner") {
+      return res.status(403).json({
+        error: "Access denied. Only Owners can update plan tiers.",
+      });
+    }
+
+    console.log("[updatePlanTierActive] req.body:", req.body);
+
+    const { tierId, slug, active } = req.body;
+
+    const filter = tierId
+      ? { _id: tierId }
+      : slug
+        ? { slug }
+        : req.body._id
+          ? { _id: req.body._id }
+          : null;
+
+    if (!filter) {
+      return res
+        .status(400)
+        .json({ error: "tierId, _id, or slug is required" });
+    }
+
+    const updatedTier = await PlanTier.findOneAndUpdate(
+      filter,
+      { $set: { active } },
+      { returnDocument: "after" },
+    ).lean();
+
+    if (!updatedTier) {
+      return res.status(404).json({ error: "Plan tier not found." });
+    }
+
+    // Also update all associated billing plans active status
+    await BillingPlan.updateMany(
+      { slug: updatedTier.slug },
+      { $set: { active } },
+    );
+
+    const updatedBillingPlans = await BillingPlan.find({
+      slug: updatedTier.slug,
+    }).lean();
+
+    return res.json({
+      updatedTier,
+      updatedBillingPlans,
+    });
+  } catch (err) {
+    console.error("[updatePlanTierActive] Error:", err.message);
     next(err);
   }
 };
@@ -324,8 +458,7 @@ export const updateFeatures = async (req, res, next) => {
       });
     }
 
-    const features = req.body;
-    console.log(features);
+    const features = req.body.features || (Array.isArray(req.body) ? req.body : []);
 
     const bulkOps = features.map((f) => ({
       updateOne: {
@@ -342,10 +475,11 @@ export const updateFeatures = async (req, res, next) => {
       },
     }));
 
-    await Feature.bulkWrite(bulkOps);
-    const updatedFeatures = await Feature.find().lean();
+    if (bulkOps.length > 0) {
+      await Feature.bulkWrite(bulkOps);
+    }
 
-    return res.json(updatedFeatures);
+    return res.json(features);
   } catch (err) {
     console.error("[updateFeatures] Error:", err.message);
     next(err);
@@ -382,7 +516,7 @@ export const updateTierConfigurations = async (req, res, next) => {
       new Set([
         ...Object.keys(tierFeatureConfigs),
         ...Object.keys(tierRuleConfigs),
-      ])
+      ]),
     );
 
     const bulkOps = allSlugs
@@ -426,7 +560,7 @@ export const updateTierConfigurations = async (req, res, next) => {
       const slugKey = config.slug || config.tier?.slug;
       if (slugKey) {
         updatedTierFeatureConfigs[slugKey] = (config.features || []).map((f) =>
-          typeof f === "object" ? f.key : f
+          typeof f === "object" ? f.key : f,
         );
         updatedTierRuleConfigs[slugKey] = config.rules || {};
       }
@@ -450,9 +584,57 @@ export const createPlanTier = async (req, res, next) => {
       });
     }
 
-    console.log("[createPlanTier] req.body:", req.body);
+    const { slug, title, description, badge, accentColor } = req.body;
+    console.log(req.body);
 
-    return res.status(201).json(req.body);
+    const newTier = await PlanTier.create({
+      slug,
+      title,
+      description,
+      badge,
+      accentColor,
+    });
+
+    await BillingPlan.updateMany({ slug }, { active: false });
+
+    const plans = ["Monthly", "Yearly"].map((period) => ({
+      name: `${slug} - ${period}`,
+      period,
+      currency: "INR",
+      amount: 0,
+      storage: 5 * 1024 ** 3,
+    }));
+
+    const razorpayPlans = await Promise.all(
+      plans.map((plan) =>
+        rzInstance.plans.create({
+          period: plan.period.toLowerCase(),
+          interval: 1,
+          item: {
+            name: plan.name,
+            amount: plan.amount,
+            currency: plan.currency,
+          },
+        }),
+      ),
+    );
+
+    const createdBillingPlans = await BillingPlan.create(
+      plans.map((plan, i) => ({
+        razorpayPlanId: razorpayPlans[i].id,
+        slug,
+        amount: plan.amount,
+        currency: plan.currency,
+        period: plan.period,
+        storage: plan.storage,
+        active: true,
+      })),
+    );
+
+    return res.status(201).json({
+      newTier,
+      createdBillingPlans,
+    });
   } catch (err) {
     console.error("[createPlanTier] Error:", err.message);
     next(err);

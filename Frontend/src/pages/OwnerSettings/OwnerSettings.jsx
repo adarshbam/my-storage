@@ -49,13 +49,33 @@ export default function OwnerSettings() {
     const ownerSettings = await res.json();
 
     if (res.ok) {
-      console.log(ownerSettings);
       setLimits(ownerSettings.limits);
       setPlanTiers(ownerSettings.planTiers);
       setBillingPlans(ownerSettings.billingPlans);
       setFeatures(ownerSettings.features);
-      setTierFeatureConfigs(ownerSettings.tierFeatureConfigs);
-      setTierRuleConfigs(ownerSettings.tierRuleConfigs);
+      setTierFeatureConfigs(
+        Object.assign(
+          {},
+          ...ownerSettings.tiersConfigs.flatMap((tier) => {
+            if (!Array.isArray(tier.features)) return { [tier.slug]: [] };
+            return {
+              [tier.slug]: tier.features
+                .filter((feature) => feature.key)
+                .map((feature) => feature.key),
+            };
+          }),
+        ),
+      );
+      setTierRuleConfigs(
+        Object.assign(
+          {},
+          ...ownerSettings.tiersConfigs.flatMap((tier) => {
+            return {
+              [tier.slug]: tier.rules,
+            };
+          }),
+        ),
+      );
     }
   }
 
@@ -111,7 +131,14 @@ export default function OwnerSettings() {
       });
       const data = await res.json();
       if (res.ok) {
-        setBillingPlans(data);
+        if (Array.isArray(data)) {
+          setBillingPlans((prev) =>
+            prev.map((p) => {
+              const updated = data.find((item) => item._id === p._id);
+              return updated ? { ...p, ...updated } : p;
+            }),
+          );
+        }
         showToast("All billing plans saved successfully!");
       } else {
         showToast(data.error || "Failed to save billing plans.");
@@ -135,7 +162,16 @@ export default function OwnerSettings() {
       });
       const data = await res.json();
       if (res.ok) {
-        setPlanTiers(data);
+        if (Array.isArray(data)) {
+          setPlanTiers((prev) =>
+            prev.map((t) => {
+              const updated = data.find(
+                (item) => item._id === t._id || item.slug === t.slug,
+              );
+              return updated ? { ...t, ...updated } : t;
+            }),
+          );
+        }
         showToast("Plan tiers saved successfully!");
       } else {
         showToast(data.error || "Failed to save plan tiers.");
@@ -158,7 +194,14 @@ export default function OwnerSettings() {
       });
       const data = await res.json();
       if (res.ok) {
-        setFeatures(data);
+        if (Array.isArray(data)) {
+          setFeatures((prev) =>
+            prev.map((f) => {
+              const updated = data.find((item) => item._id === f._id);
+              return updated ? { ...f, ...updated } : f;
+            }),
+          );
+        }
         showToast("Feature catalogue saved successfully!");
       } else {
         showToast(data.error || "Failed to save feature catalogue.");
@@ -198,39 +241,70 @@ export default function OwnerSettings() {
   };
 
   // Handlers for state updates
-  const handleUpdateTierDetail = (tierSlug, field, val) => {
+  const handleUpdateTierDetail = async (tierSlug, field, val) => {
     setPlanTiers((prev) =>
       prev.map((tier) =>
         tier.slug === tierSlug ? { ...tier, [field]: val } : tier,
       ),
     );
+
+    if (field === "active") {
+      try {
+        const res = await fetch(`${SERVER_URL}/owner-settings/tier/active`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ slug: tierSlug, active: val }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const { updatedTier, updatedBillingPlans } = data;
+          if (updatedTier) {
+            setPlanTiers((prev) =>
+              prev.map((tier) =>
+                tier.slug === updatedTier.slug
+                  ? { ...tier, ...updatedTier }
+                  : tier,
+              ),
+            );
+          }
+          if (Array.isArray(updatedBillingPlans)) {
+            setBillingPlans((prev) =>
+              prev.map((bp) => {
+                const match = updatedBillingPlans.find(
+                  (ubp) => ubp._id === bp._id || ubp.slug === bp.slug,
+                );
+                return match ? { ...bp, active: match.active } : bp;
+              }),
+            );
+          }
+          showToast(
+            `Plan tier "${tierSlug}" is now ${val ? "active" : "inactive"}.`,
+          );
+        } else {
+          showToast(data.error || "Failed to update tier active status.");
+          setPlanTiers((prev) =>
+            prev.map((tier) =>
+              tier.slug === tierSlug ? { ...tier, active: !val } : tier,
+            ),
+          );
+        }
+      } catch (err) {
+        console.error(
+          "[handleUpdateTierDetail] Error updating tier active:",
+          err,
+        );
+        showToast("Error connecting to server.");
+      }
+    }
   };
 
   const handleCreateNewTier = async (newTier) => {
     const slugKey =
       newTier.slug || newTier.type.toLowerCase().replace(/\s+/g, "-");
     const tierPayload = { ...newTier, slug: slugKey };
-
-    setPlanTiers((prev) => [...prev, tierPayload]);
-    // Initialize empty feature & rule configs for the new tier using slugKey
-    setTierFeatureConfigs((prev) => ({
-      ...prev,
-      [slugKey]: ["secure_storage", "share_links"],
-    }));
-    setTierRuleConfigs((prev) => ({
-      ...prev,
-      [slugKey]: {
-        allowUpload: true,
-        allowDownload: true,
-        allowSharing: true,
-        maxConnectedDevices: 5,
-        maxUploadSizeVal: 5,
-        maxUploadSizeUnit: "GB",
-        uploadSpeedMultiplier: "5x",
-        deleteFilesAfterExpiry: "30 days",
-        versionHistoryDays: "30",
-      },
-    }));
 
     try {
       const res = await fetch(`${SERVER_URL}/owner-settings/tier`, {
@@ -242,8 +316,35 @@ export default function OwnerSettings() {
         body: JSON.stringify(tierPayload),
       });
       const data = await res.json();
-      console.log("[handleCreateNewTier] Server response:", data);
-      showToast(`Created new plan tier "${newTier.title}"!`);
+      if (res.ok) {
+        if (data.newTier) {
+          setPlanTiers((prev) => [...prev, data.newTier]);
+        }
+        if (Array.isArray(data.createdBillingPlans)) {
+          setBillingPlans((prev) => [...prev, ...data.createdBillingPlans]);
+        }
+        setTierFeatureConfigs((prev) => ({
+          ...prev,
+          [slugKey]: ["secure_storage", "share_links"],
+        }));
+        setTierRuleConfigs((prev) => ({
+          ...prev,
+          [slugKey]: {
+            allowUpload: true,
+            allowDownload: true,
+            allowSharing: true,
+            maxConnectedDevices: 5,
+            maxUploadSizeVal: 5,
+            maxUploadSizeUnit: "GB",
+            uploadSpeedMultiplier: "5x",
+            deleteFilesAfterExpiry: "30 days",
+            versionHistoryDays: "30",
+          },
+        }));
+        showToast(`Created new plan tier "${newTier.title}"!`);
+      } else {
+        showToast(data.error || "Failed to create plan tier.");
+      }
     } catch (err) {
       console.error("[handleCreateNewTier] Error:", err);
       showToast(`Created new plan tier "${newTier.title}" locally!`);
@@ -403,7 +504,7 @@ export default function OwnerSettings() {
           {(activeTab === "all" || activeTab === "plans") && (
             <BillingPlansSection
               billingPlans={billingPlans}
-              planTiers={planTiers}
+              planTiers={planTiers.filter((planTier) => planTier.active)}
               onUpdatePlan={handleUpdatePlan}
               onSavePlans={handleSaveBillingPlans}
             />
@@ -429,7 +530,7 @@ export default function OwnerSettings() {
           {(activeTab === "all" || activeTab === "config") && (
             <PlanTierConfigurationSection
               features={features}
-              planTiers={planTiers}
+              planTiers={planTiers.filter((planTier) => planTier.active)}
               tierFeatureConfigs={tierFeatureConfigs}
               tierRuleConfigs={tierRuleConfigs}
               onToggleTierFeature={handleToggleTierFeature}
@@ -441,7 +542,7 @@ export default function OwnerSettings() {
           {(activeTab === "all" || activeTab === "preview") && (
             <PricingLivePreviewSection
               billingPlans={billingPlans}
-              planTiers={planTiers}
+              planTiers={planTiers.filter((planTier) => planTier.active)}
               tierFeatureConfigs={tierFeatureConfigs}
               tierRuleConfigs={tierRuleConfigs}
               features={features}
