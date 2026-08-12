@@ -15,10 +15,17 @@ export const deleteDirectory = (dirId, params = {}) => {
   return apiClient.delete(`/directory/${dirId}${query ? `?${query}` : ''}`);
 };
 
-export const moveItems = (targetDirId, data) => 
-  apiClient.patch(`/directory/${targetDirId || ''}/move`.replace('//', '/'), data);
-export const copyItems = (targetDirId, data) => 
-  apiClient.post(`/directory/${targetDirId || ''}/copy`.replace('//', '/'), data);
+export const moveItems = (targetDirId, data, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  const url = targetDirId ? `/directory/${targetDirId}/move` : '/directory/move';
+  return apiClient.patch(query ? `${url}?${query}` : url, data);
+};
+
+export const copyItems = (targetDirId, data, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  const url = targetDirId ? `/directory/${targetDirId}/copy` : '/directory/copy';
+  return apiClient.post(query ? `${url}?${query}` : url, data);
+};
 
 export const batchDelete = (data) => apiClient.post('/directory/delete-batch', data);
 

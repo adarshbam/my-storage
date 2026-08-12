@@ -667,6 +667,7 @@ export const transferFromVaultLogic = async ({ items, targetFolderId, req }) => 
   const results = [];
 
   const exportItem = async (localItem, driveParentId) => {
+    const itemId = localItem._id || localItem.id;
     if (localItem.type === "directory") {
       // Create folder in Drive
       const response = await drive.files.create({
@@ -680,8 +681,8 @@ export const transferFromVaultLogic = async ({ items, targetFolderId, req }) => 
       const newDriveFolderId = response.data.id;
       
       // Fetch children from local DB
-      const childDirs = await Directory.find({ parentDir: localItem._id }).lean();
-      const childFiles = await File.find({ parentDir: localItem._id }).lean();
+      const childDirs = await Directory.find({ parentDir: itemId }).lean();
+      const childFiles = await File.find({ parentDir: itemId }).lean();
       
       for (const dir of childDirs) {
         await exportItem({ ...dir, type: "directory" }, newDriveFolderId);
@@ -692,9 +693,13 @@ export const transferFromVaultLogic = async ({ items, targetFolderId, req }) => 
       return response.data;
     } else {
       // Get file from B2 and upload to Drive
-      const objectData = await getObjectFromB2(`${localItem._id}${localItem.extension}`);
-      const buffer = Buffer.from(await objectData.arrayBuffer());
-      const stream = Readable.from([buffer]);
+      let ext = localItem.extension;
+      if (!ext) {
+        const fileDoc = await File.findById(itemId).select("extension name").lean();
+        ext = fileDoc?.extension || (localItem.name ? path.extname(localItem.name) : "");
+      }
+      const s3Key = `${itemId}${ext}`;
+      const objectData = await getObjectFromB2({ key: s3Key });
       
       const response = await drive.files.create({
         requestBody: {
@@ -703,7 +708,7 @@ export const transferFromVaultLogic = async ({ items, targetFolderId, req }) => 
         },
         media: {
           mimeType: "application/octet-stream",
-          body: stream,
+          body: objectData.Body,
         },
         fields: "id, name, mimeType, size",
       });

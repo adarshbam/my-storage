@@ -55,6 +55,7 @@ import {
   Clipboard,
 } from "lucide-react";
 
+import { batchDelete } from "../../api/files.api";
 import { useFiles } from "../../hooks/useFiles";
 import { useSelectionBox } from "../../hooks/useSelectionBox";
 import { useClipboard } from "../../hooks/useClipboard";
@@ -105,28 +106,6 @@ export default function FileBrowser({ specialView }) {
   const [error, setError] = useState(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const [detailsItem, setDetailsItem] = useState(null);
-  const [clipboard, setClipboard] = useState(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem("vault_clipboard")) || null;
-    } catch {
-      return null;
-    }
-  });
-
-  const updateClipboard = (data) => {
-    if (data) {
-      sessionStorage.setItem("vault_clipboard", JSON.stringify(data));
-    } else {
-      sessionStorage.removeItem("vault_clipboard");
-    }
-    setClipboard(data);
-  };
-
-  // --- DRAG SELECTION STATE ---
-  const [isDragging, setIsDragging] = useState(false);
-  const [selectionBox, setSelectionBox] = useState(null);
-  const [startPoint, setStartPoint] = useState(null);
-  const containerRef = useRef(null);
 
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -140,6 +119,33 @@ export default function FileBrowser({ specialView }) {
     !!searchSize;
   const isReadOnly = specialView === "shared" || specialView === "admin";
   const ownerId = searchParams.get("ownerId");
+
+  const {
+    clipboard,
+    updateClipboard,
+    handleCopyItem,
+    handleCutItem,
+    handleCopySelected,
+    handleCutSelected,
+    handlePaste,
+  } = useClipboard({
+    folderId,
+    fetchFiles: () => fetchFiles(),
+    specialView,
+    ownerId,
+    isReadOnly,
+    selectedItems,
+    setSelectedItems,
+    driveFolderId,
+    githubPath,
+    user,
+  });
+
+  // --- DRAG SELECTION STATE ---
+  const [isDragging, setIsDragging] = useState(false);
+  const [selectionBox, setSelectionBox] = useState(null);
+  const [startPoint, setStartPoint] = useState(null);
+  const containerRef = useRef(null);
 
   const getBreadcrumbs = () => {
     const list = [];
@@ -234,7 +240,7 @@ export default function FileBrowser({ specialView }) {
       }
     } else if (Array.isArray(dirPath) && dirPath.length > 0) {
       dirPath.forEach(({ _id, name }) => {
-        if (_id === user?.rootDirId || _id === user?.rootDirectoryId) return;
+        if (_id === user?.rootDirId) return;
 
         let pathUrl = `/dashboard/folder/${_id}${ownerParam}`;
         if (specialView === "shared") {
@@ -605,168 +611,6 @@ export default function FileBrowser({ specialView }) {
       });
     }
   };
-
-  const handleCopyItem = (item) => {
-    if (isReadOnly) return;
-    const prepared = {
-      action: "copy",
-      items: [
-        {
-          _id: item._id,
-          name: item.name,
-          type: item.type || (item.extension ? "file" : "directory"),
-          provider: item.provider || "local",
-        },
-      ],
-    };
-    updateClipboard(prepared);
-  };
-
-  const handleCutItem = (item) => {
-    if (isReadOnly) return;
-    const prepared = {
-      action: "cut",
-      items: [
-        {
-          _id: item._id,
-          name: item.name,
-          type: item.type || (item.extension ? "file" : "directory"),
-          provider: item.provider || "local",
-        },
-      ],
-    };
-    updateClipboard(prepared);
-  };
-
-  const handleCopySelected = () => {
-    if (isReadOnly || selectedItems.length === 0) return;
-    const prepared = {
-      action: "copy",
-      items: selectedItems.map((item) => ({
-        _id: item._id,
-        name: item.name,
-        type: item.type || (item.extension ? "file" : "directory"),
-        provider: item.provider || "local",
-      })),
-    };
-    updateClipboard(prepared);
-    setSelectedItems([]);
-  };
-
-  const handleCutSelected = () => {
-    if (isReadOnly || selectedItems.length === 0) return;
-    const prepared = {
-      action: "cut",
-      items: selectedItems.map((item) => ({
-        _id: item._id,
-        name: item.name,
-        type: item.type || (item.extension ? "file" : "directory"),
-        provider: item.provider || "local",
-      })),
-    };
-    updateClipboard(prepared);
-    setSelectedItems([]);
-  };
-
-  const handlePaste = async () => {
-    if (isReadOnly || !clipboard || clipboard.items.length === 0) return;
-
-    const targetFolderId = folderId || ""; // empty if root
-    const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
-
-    // Check provider (only Vault local support)
-    const targetProvider =
-      specialView === "google-drive" || specialView === "google-drive-folder"
-        ? "google_drive"
-        : specialView === "github" || specialView === "github-repo"
-          ? "github"
-          : "local";
-
-    if (targetProvider !== "local") {
-      alert("Copy/Paste is only supported in the local Vault.");
-      return;
-    }
-
-    try {
-      const method = clipboard.action === "cut" ? "PATCH" : "POST";
-      const endpoint = clipboard.action === "cut" ? "move" : "copy";
-
-      const url = `${SERVER_URL}/directory/${targetFolderId}/${endpoint}${ownerParam}`;
-
-      const requestBody = clipboard.items.map((item) => ({
-        id: item._id,
-        type: item.type,
-      }));
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        const result = await res.json().catch(() => ({}));
-        throw new Error(
-          result.message || result.error || "Paste operation failed",
-        );
-      }
-
-      fetchFiles();
-
-      if (clipboard.action === "cut") {
-        updateClipboard(null);
-      }
-
-      setSelectedItems([]);
-    } catch (err) {
-      console.error("Paste failed:", err);
-      alert(err.message || "Failed to paste items");
-    }
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      const activeEl = document.activeElement;
-      if (
-        activeEl &&
-        (activeEl.tagName === "INPUT" ||
-          activeEl.tagName === "TEXTAREA" ||
-          activeEl.isContentEditable)
-      ) {
-        return;
-      }
-
-      // Ctrl + C
-      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
-        if (selectedItems.length > 0) {
-          e.preventDefault();
-          handleCopySelected();
-        }
-      }
-
-      // Ctrl + X
-      if ((e.ctrlKey || e.metaKey) && e.key === "x") {
-        if (selectedItems.length > 0) {
-          e.preventDefault();
-          handleCutSelected();
-        }
-      }
-
-      // Ctrl + V
-      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
-        if (clipboard) {
-          e.preventDefault();
-          handlePaste();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [selectedItems, clipboard, folderId, specialView, ownerId]);
 
   // --- HANDLERS ---
 
@@ -1362,7 +1206,7 @@ export default function FileBrowser({ specialView }) {
         const targetParentDir =
           targetItem.parentDir?._id || targetItem.parentDir;
         finalTargetItem = {
-          _id: targetParentDir || folderId || user?.rootDirectoryId,
+          _id: targetParentDir || folderId || user?.rootDirId,
           provider: targetItem.provider || "local",
         };
       }
@@ -1372,7 +1216,7 @@ export default function FileBrowser({ specialView }) {
 
       const normalizeDirId = (id) => {
         if (!id || id === "root" || id === "undefined" || id === "null") {
-          return (user?.rootDirectoryId || user?.rootDirId)?.toString() || "root";
+          return user?.rootDirId?.toString() || "root";
         }
         if (typeof id === "object" && id._id) {
           return id._id.toString();
@@ -1391,7 +1235,7 @@ export default function FileBrowser({ specialView }) {
       }
 
       // Filter out if target is one of the moved items (can't move folder into itself)
-      if (targetId && itemsToMove.some((i) => i._id === targetId)) return;
+      if (targetId && itemsToMove.some((i) => (i._id || i.id) === targetId)) return;
 
       const sourceProviders = new Set(
         itemsToMove.map((i) => i.provider || "local"),
@@ -1428,7 +1272,7 @@ export default function FileBrowser({ specialView }) {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                items: itemsToMove,
+                items: itemsToMove.map((i) => i._id || i.id),
                 targetId: driveTargetId,
               }),
               credentials: "include",
@@ -1444,18 +1288,19 @@ export default function FileBrowser({ specialView }) {
         if (targetProvider === "local") {
           try {
             const payload = itemsToMove.map((item) => ({
-              id: item._id || item.id,
+              _id: item._id || item.id,
               type: item.type,
             }));
-            await fetch(
-              `${SERVER_URL}/directory/${targetId}/move${ownerParam}`,
-              {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-                credentials: "include",
-              },
-            );
+            const destId = (targetId && targetId !== user?.rootDirId) ? targetId : "";
+            const moveUrl = destId
+              ? `${SERVER_URL}/directory/${destId}/move${ownerParam}`
+              : `${SERVER_URL}/directory/move${ownerParam}`;
+            await fetch(moveUrl, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+              credentials: "include",
+            });
             fetchFiles();
             setSelectedItems([]);
           } catch (err) {
@@ -1471,14 +1316,21 @@ export default function FileBrowser({ specialView }) {
       if (sourceProviders.has("google_drive") && targetProvider === "local") {
         let targetFolderId = targetId;
         if (!targetFolderId || targetFolderId === "root")
-          targetFolderId = user?.rootDirectoryId;
+          targetFolderId = user?.rootDirId;
 
         try {
           await fetch(`${SERVER_URL}/drive/transfer-to-vault${ownerParam}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              items: itemsToMove.filter((i) => i.provider === "google_drive"),
+              items: itemsToMove
+                .filter((i) => i.provider === "google_drive")
+                .map((i) => ({
+                  _id: i._id || i.id,
+                  name: i.name,
+                  mimeType: i.mimeType || "application/octet-stream",
+                  type: i.type,
+                })),
               targetFolderId: targetFolderId,
             }),
             credentials: "include",
@@ -1498,21 +1350,80 @@ export default function FileBrowser({ specialView }) {
           targetDriveFolderId = "root";
 
         try {
-          await fetch(`${SERVER_URL}/drive/transfer-from-vault${ownerParam}`, {
+          const localItems = itemsToMove
+            .filter((i) => !i.provider || i.provider === "local");
+          const res = await fetch(`${SERVER_URL}/drive/transfer-from-vault${ownerParam}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              items: itemsToMove.filter(
-                (i) => !i.provider || i.provider === "local",
-              ),
+              items: localItems.map((i) => ({
+                _id: i._id || i.id,
+                name: i.name,
+                extension: i.extension,
+                size: i.size,
+                type: i.type,
+              })),
               targetDriveFolderId: targetDriveFolderId,
             }),
             credentials: "include",
           });
+          if (res.ok && localItems.length > 0) {
+            await batchDelete(
+              localItems.map((i) => ({
+                _id: i._id || i.id,
+                type: i.type || (i.extension ? "file" : "directory"),
+              }))
+            ).catch(() => {});
+          }
           fetchFiles();
           setSelectedItems([]);
         } catch (err) {
           console.error("Transfer from Vault failed", err);
+        }
+        return;
+      }
+
+      // Vault -> GitHub
+      if ((sourceProviders.has("local") || sourceProviders.has("google_drive")) && targetProvider === "github") {
+        const destGithubPath = finalTargetItem?.githubPath || githubPath;
+        if (!destGithubPath) {
+          alert("Please open a GitHub repository and folder before moving files.");
+          return;
+        }
+
+        try {
+          const localItems = itemsToMove.filter(
+            (i) => !i.provider || i.provider === "local",
+          );
+          if (localItems.length > 0) {
+            const res = await fetch(`${SERVER_URL}/github/transfer-from-vault${ownerParam}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                items: localItems.map((i) => ({
+                  _id: i._id || i.id,
+                  name: i.name,
+                  extension: i.extension,
+                  size: i.size,
+                  type: i.type,
+                })),
+                targetPath: destGithubPath,
+              }),
+              credentials: "include",
+            });
+            if (res.ok) {
+              await batchDelete(
+                localItems.map((i) => ({
+                  _id: i._id || i.id,
+                  type: i.type || (i.extension ? "file" : "directory"),
+                }))
+              ).catch(() => {});
+            }
+            fetchFiles();
+            setSelectedItems([]);
+          }
+        } catch (err) {
+          console.error("Transfer to GitHub failed", err);
         }
         return;
       }
@@ -1574,7 +1485,7 @@ export default function FileBrowser({ specialView }) {
       } else if (specialView === "github-repo") {
         target = { githubPath: githubPath, provider: "github" };
       } else {
-        target = { _id: folderId || user?.rootDirectoryId };
+        target = { _id: folderId || user?.rootDirId };
       }
       handleDrop(e, target);
       return;
@@ -1644,7 +1555,7 @@ export default function FileBrowser({ specialView }) {
                       `/dashboard/github/${parts.slice(0, -1).join("/")}`,
                     );
                   }
-                } else if (data.parentDir === user?.rootDirectoryId) {
+                } else if (data.parentDir === user?.rootDirId) {
                   navigate("/dashboard");
                 } else {
                   navigate(`/dashboard/folder/${data.parentDir}`);
@@ -1659,7 +1570,7 @@ export default function FileBrowser({ specialView }) {
                   handleDrop(e, { id: parentId, provider: "google_drive" });
                 } else if (specialView === "google-drive") {
                   // Dragging from Drive root back to Vault root
-                  handleDrop(e, { id: user?.rootDirectoryId });
+                  handleDrop(e, { id: user?.rootDirId });
                 } else if (specialView === "github-repo") {
                   const parts = (githubPath || "").split("/").filter(Boolean);
                   if (parts.length > 2) {
@@ -1862,6 +1773,7 @@ export default function FileBrowser({ specialView }) {
               id={`file-card-${dir._id}`}
               key={dir._id}
               item={dir}
+              specialView={specialView}
               selected={selectedItems.some((i) => i._id === dir._id)}
               onSelect={(item, e) => handleSelect(item, e)}
               onNavigate={handleNavigate}
@@ -1899,6 +1811,7 @@ export default function FileBrowser({ specialView }) {
               id={`file-card-${file._id}`}
               key={file._id}
               item={file}
+              specialView={specialView}
               selected={selectedItems.some((i) => i._id === file._id)}
               onSelect={(item, e) => handleSelect(item, e)}
               onNavigate={() => {}} // Files don't navigate

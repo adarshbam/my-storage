@@ -48,6 +48,83 @@ const formatRelativeTime = (dateString) => {
   return `${diffYears} years ago`;
 };
 
+const getItemTypeInfo = (item, isDirectory, provider, specialView) => {
+  if (!isDirectory) {
+    return {
+      typeLabel: formatSize(item.size),
+      listLabel: formatSize(item.size),
+      badgeLabel: provider === "local" ? "VAULT NODE" : provider.replace("_", " ").toUpperCase(),
+    };
+  }
+
+  // 1. Vault Root Mount Points (When on Vault root and item is an external integration mount)
+  if (!specialView) {
+    if (provider === "google_drive" || item.name === "Google Drive") {
+      return {
+        typeLabel: "DRIVE LINK",
+        listLabel: "Google Drive Link",
+        badgeLabel: "GOOGLE DRIVE",
+      };
+    }
+    if (provider === "github" || item.name === "Github" || item.name === "GitHub") {
+      return {
+        typeLabel: "GITHUB LINK",
+        listLabel: "GitHub Link",
+        badgeLabel: "GITHUB",
+      };
+    }
+  }
+
+  // 2. GitHub Integration Views
+  if (provider === "github" || specialView === "github" || specialView === "github-repo") {
+    const pathParts = (item.githubPath || "").split("/").filter(Boolean);
+    // Subfolder inside a repository has > 2 segments (e.g. owner/repo/folder)
+    const isSubfolder = specialView === "github-repo" || pathParts.length > 2;
+    if (isSubfolder) {
+      return {
+        typeLabel: "DIRECTORY",
+        listLabel: "Directory",
+        badgeLabel: "GITHUB",
+      };
+    }
+    return {
+      typeLabel: item.private ? "PRIVATE REPO" : "REPOSITORY",
+      listLabel: item.private ? "Private Repository" : "Repository",
+      badgeLabel: "GITHUB",
+    };
+  }
+
+  // 3. Google Drive Integration Views
+  if (provider === "google_drive" || specialView === "google-drive" || specialView === "google-drive-folder") {
+    if (specialView === "google-drive-folder") {
+      return {
+        typeLabel: "SUBFOLDER",
+        listLabel: "Subfolder",
+        badgeLabel: "GOOGLE DRIVE",
+      };
+    }
+    return {
+      typeLabel: "DRIVE FOLDER",
+      listLabel: "Drive Folder",
+      badgeLabel: "GOOGLE DRIVE",
+    };
+  }
+
+  // 4. Local Vault Directories
+  const count =
+    item.itemCount !== undefined
+      ? item.itemCount
+      : item.items !== undefined
+        ? item.items
+        : (item.filesCount || 0) + (item.directoriesCount || 0);
+
+  return {
+    typeLabel: `${count} ITEMS`,
+    listLabel: `${count} Assets`,
+    badgeLabel: "VAULT NODE",
+  };
+};
+
 export default function AssetCard({
   item,
   selected,
@@ -73,6 +150,7 @@ export default function AssetCard({
   onDrop = null,
   isDragOver = false,
   onShare = null,
+  specialView = null,
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -80,6 +158,7 @@ export default function AssetCard({
   const menuRef = useRef(null);
   const provider = item.provider || "local";
   const isDirectory = item.type === "directory" || provider === "shared_drive";
+  const typeInfo = getItemTypeInfo(item, isDirectory, provider, specialView);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -178,23 +257,10 @@ export default function AssetCard({
             {item.name}
           </p>
           <p className="text-white/40 text-xs mt-0.5 truncate flex items-center gap-2">
-            {!isDirectory && <span>{formatSize(item.size)}</span>}
-            {isDirectory && (
-              <span>
-                {item.itemCount !== undefined
-                  ? item.itemCount
-                  : item.items !== undefined
-                    ? item.items
-                    : (item.filesCount || 0) +
-                      (item.directoriesCount || 0)}{" "}
-                Assets
-              </span>
-            )}
-            {provider !== "local" && (
-              <span className="opacity-70">
-                • {provider.replace("_", " ").toUpperCase()}
-              </span>
-            )}
+            <span>{typeInfo.listLabel}</span>
+            <span className="opacity-70">
+              • {typeInfo.badgeLabel}
+            </span>
             {item.openedAt && (
               <span className="text-teal-400 font-semibold font-mono">
                 • Opened {formatRelativeTime(item.openedAt)}
@@ -655,13 +721,11 @@ export default function AssetCard({
           {item.name}
         </h3>
         <div className="flex items-center justify-between text-[11px] font-mono text-white/40 gap-2">
-          <span className="truncate min-w-0">
-            {isDirectory
-              ? `${item.itemCount !== undefined ? item.itemCount : item.items !== undefined ? item.items : (item.filesCount || 0) + (item.directoriesCount || 0)} ITEMS`
-              : formatSize(item.size)}
+          <span className="truncate min-w-0 font-medium">
+            {typeInfo.typeLabel}
           </span>
-          <span className="uppercase whitespace-nowrap shrink-0">
-            {provider === "local" ? "VAULT NODE" : provider.replace("_", " ")}
+          <span className="uppercase whitespace-nowrap shrink-0 tracking-wider text-[10px] text-white/50 bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/5">
+            {typeInfo.badgeLabel}
           </span>
         </div>
         {item.openedAt && (

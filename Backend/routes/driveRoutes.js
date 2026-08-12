@@ -59,9 +59,9 @@ router.patch("/file/:fileId", checkAuth, mediumWriteLimiter, throttle(300, 8, "d
 // Bulk move items
 router.post("/move", checkAuth, mediumWriteLimiter, throttle(300, 8, "drive-move"), validate(moveDriveItemsSchema), moveDriveItems);
 // Cross-provider transfer
-router.post("/transfer-to-vault", checkAuth, heavyOpLimiter, throttle(5000, 1, "drive-transfer-to"), validate(transferToVaultSchema), transferToVault);
+router.post("/transfer-to-vault", checkAuth, mediumWriteLimiter, throttle(500, 6, "drive-transfer-to"), validate(transferToVaultSchema), transferToVault);
 // Cross-provider transfer from Vault to Google Drive
-router.post("/transfer-from-vault", checkAuth, heavyOpLimiter, throttle(5000, 1, "drive-transfer-from"), validate(transferFromVaultSchema), transferFromVault);
+router.post("/transfer-from-vault", checkAuth, mediumWriteLimiter, throttle(500, 6, "drive-transfer-from"), validate(transferFromVaultSchema), transferFromVault);
 
 // ── Folder operations ─────────────────────────────────────────────────────────
 // Create a new folder inside a Drive folder

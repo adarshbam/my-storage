@@ -16,6 +16,7 @@ import {
   moveGithubItems,
   getRepositoryDetails,
   disconnectGithub,
+  transferFromVault,
 } from "../controllers/githubController.js";
 import { validate } from "../middlewares/validationMiddleware.js";
 import {
@@ -32,6 +33,7 @@ import {
   listBranchesSchema,
   searchRepositorySchema,
   moveGithubItemsSchema,
+  transferGithubFromVaultSchema,
 } from "../validators/githubSchema.js";
 import { heavyOpLimiter, mediumWriteLimiter, standardWriteLimiter, searchLimiter } from "../middlewares/rateLimiter.js";
 import throttle from "../utils/throttle.js";
@@ -45,6 +47,9 @@ router.post("/repositories", checkAuth, mediumWriteLimiter, throttle(300, 8, "gh
 
 // disconnect github
 router.post("/disconnect", checkAuth, mediumWriteLimiter, throttle(300, 5, "gh-disconnect"), disconnectGithub);
+
+// transfer from vault
+router.post("/transfer-from-vault", checkAuth, mediumWriteLimiter, throttle(500, 6, "gh-transfer-from"), validate(transferGithubFromVaultSchema), transferFromVault);
 
 // get contents of a specific repo (root)
 router.get("/repositories/:owner/:repo/contents", checkAuth, standardWriteLimiter, throttle(100, 15, "gh-contents"), validate(getRepositoryContentsSchema), getRepositoryContents);

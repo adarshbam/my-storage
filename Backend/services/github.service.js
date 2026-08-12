@@ -1,9 +1,12 @@
 import User from "../models/userModel.js";
 import { sanitize } from "../utils/sanitize.js";
 import Directory from "../models/directoryModel.js";
+import File from "../models/fileModel.js";
 import archiver from "archiver";
+import path from "path";
 import SharedAccess from "../models/sharedAccessModel.js";
 import { invalidateUserSessions } from "../databases/redis.js";
+import { getObjectFromB2 } from "../integrations/storage/s3.client.js";
 
 import { resolveIntegrationOwnerId } from "../utils/integrationHelper.js";
 
@@ -757,4 +760,93 @@ export const getRepositoryDetailsLogic = async ({ owner, repo, req }) => {
 export const moveGithubItemsLogic = async ({ items, req }) => {
   // Mock function, moving items is quite complicated on Github, require multiple API calls.
   return { msg: "Items moved successfully", results: [] };
+};
+
+export const transferFromVaultLogic = async ({ items, targetPath, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const pushToGithub = async (content, fullGithubPath, msg) => {
+    const parts = fullGithubPath.split("/").filter(Boolean);
+    const pushOwner = parts[0];
+    const pushRepo = parts[1];
+    const pushPath = parts.slice(2).join("/");
+
+    let sha;
+    try {
+      const getRes = await fetch(
+        `https://api.github.com/repos/${pushOwner}/${pushRepo}/contents/${pushPath}`,
+        {
+          headers: {
+            Authorization: `Bearer ${githubAccessToken}`,
+            Accept: "application/vnd.github+json",
+          },
+        },
+      );
+      if (getRes.ok) {
+        const fileData = await getRes.json();
+        sha = fileData.sha;
+      }
+    } catch (err) {
+      // ignore
+    }
+
+    const response = await fetch(
+      `https://api.github.com/repos/${pushOwner}/${pushRepo}/contents/${pushPath}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${githubAccessToken}`,
+          Accept: "application/vnd.github+json",
+        },
+        body: JSON.stringify({
+          message: msg,
+          content,
+          ...(sha && { sha }),
+        }),
+      },
+    );
+    return response;
+  };
+
+  const results = [];
+
+  const exportItem = async (localItem, destPath) => {
+    const itemId = localItem._id || localItem.id;
+    if (localItem.type === "directory") {
+      const dirDestPath = `${destPath}/${localItem.name}`;
+      const childDirs = await Directory.find({ parentDir: itemId }).lean();
+      const childFiles = await File.find({ parentDir: itemId }).lean();
+
+      for (const dir of childDirs) {
+        await exportItem({ ...dir, type: "directory" }, dirDestPath);
+      }
+      for (const file of childFiles) {
+        await exportItem({ ...file, type: "file" }, dirDestPath);
+      }
+    } else {
+      let ext = localItem.extension;
+      if (!ext) {
+        const fileDoc = await File.findById(itemId).select("extension name").lean();
+        ext = fileDoc?.extension || (localItem.name ? path.extname(localItem.name) : "");
+      }
+      const s3Key = `${itemId}${ext}`;
+      const objectData = await getObjectFromB2({ key: s3Key });
+      const byteArray = await objectData.Body.transformToByteArray();
+      const buffer = Buffer.from(byteArray);
+      const content = buffer.toString("base64");
+      const fullPath = `${destPath}/${localItem.name}`;
+
+      const res = await pushToGithub(content, fullPath, `Upload ${localItem.name} from Vault`);
+      if (res.ok) {
+        results.push({ name: localItem.name, path: fullPath, status: "transferred" });
+      }
+    }
+  };
+
+  for (const item of items) {
+    await exportItem(item, targetPath);
+  }
+
+  return { msg: "Transfer to GitHub successful", results };
 };

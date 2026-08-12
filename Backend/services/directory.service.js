@@ -1023,8 +1023,8 @@ export const deleteItemsBatchLogic = async ({ items, userId, userRole, permanent
     throw error;
   }
 
-  const fileIds = items.filter((i) => i.type === "file").map((i) => i.id);
-  const dirIds = items.filter((i) => i.type === "directory").map((i) => i.id);
+  const fileIds = items.filter((i) => i.type === "file").map((i) => i._id || i.id);
+  const dirIds = items.filter((i) => i.type === "directory").map((i) => i._id || i.id);
 
   const [files, dirs] = await Promise.all([
     File.find({ _id: { $in: fileIds } })

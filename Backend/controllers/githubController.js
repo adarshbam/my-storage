@@ -260,3 +260,18 @@ export const moveGithubItems = async (req, res, next) => {
     }
   }
 };
+
+export const transferFromVault = async (req, res, next) => {
+  try {
+    const result = await githubService.transferFromVaultLogic({
+      items: req.body.items,
+      targetPath: req.body.targetPath,
+      req,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    if (!res.headersSent) {
+      return res.status(error.statusCode || 500).json({ error: error.message || "Failed to transfer to GitHub" });
+    }
+  }
+};

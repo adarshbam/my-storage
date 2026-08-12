@@ -30,6 +30,10 @@ router.param("dirId", validateIdMiddleware);
 
 router.post("/delete-batch", checkAuth, standardWriteLimiter, throttle(100, 12, "dir-delete-batch"), validate(deleteDirectoryBatchSchema), deleteItemsBatch);
 
+router.patch(["/move", "/:dirId/move"], checkAuth, standardWriteLimiter, throttle(100, 12, "dir-move"), validate(moveDirectorySchema), moveItems);
+
+router.post(["/copy", "/:dirId/copy"], checkAuth, standardWriteLimiter, throttle(100, 12, "dir-copy"), validate(copyDirectorySchema), copyItems);
+
 router.get(["/", "/:dirId"], checkAuth, standardWriteLimiter, throttle(100, 15, "dir-get"), validate(getDirectoryByIdSchema), getDirectoryById);
 
 router.post(["/", "/:parentDirId"], checkAuth, standardWriteLimiter, throttle(100, 15, "dir-create"), validate(createDirectorySchema), createDirectory);
@@ -37,9 +41,5 @@ router.post(["/", "/:parentDirId"], checkAuth, standardWriteLimiter, throttle(10
 router.patch("/:dirId", checkAuth, standardWriteLimiter, throttle(100, 15, "dir-rename"), validate(renameDirectorySchema), renameDirectory);
 
 router.delete("/:dirId", checkAuth, standardWriteLimiter, throttle(100, 12, "dir-delete"), validate(deleteDirectorySchema), deleteDirectory);
-
-router.patch("/:dirId/move", checkAuth, standardWriteLimiter, throttle(100, 12, "dir-move"), validate(moveDirectorySchema), moveItems);
-
-router.post("/:dirId/copy", checkAuth, standardWriteLimiter, throttle(100, 12, "dir-copy"), validate(copyDirectorySchema), copyItems);
 
 export default router;

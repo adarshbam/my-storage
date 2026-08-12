@@ -193,7 +193,7 @@ export const transferFromVault = async (req, res, next) => {
   try {
     const result = await driveService.transferFromVaultLogic({
       items: req.body.items,
-      targetFolderId: req.body.targetFolderId,
+      targetFolderId: req.body.targetDriveFolderId || req.body.targetFolderId || "root",
       req,
     });
     return res.status(200).json(result);

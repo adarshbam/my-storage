@@ -22,6 +22,7 @@ export const getUserProfile = async ({ userId, user }) => {
       role: user.role || "User",
       profilepic: user.profilepic,
       maxStorage: user.maxStorage,
+      rootDirId: user.rootDirId,
       rootDirectoryId: user.rootDirId,
       usedStorage,
       theme: user.theme || "dark",

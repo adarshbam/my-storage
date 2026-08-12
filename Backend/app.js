@@ -29,6 +29,8 @@ import { PORT, CLIENT_URL, SESSION_SECRET } from "./config/config.js";
 
 const app = express();
 
+const isProduction = process.env.NODE_ENV === "production";
+
 app.use(
   helmet({
     // 1. Content Security Policy (CSP) - Extremely strict whitelist
@@ -75,15 +77,17 @@ app.use(
         fontSrc: ["'self'", "data:"],
         objectSrc: ["'none'"],
         baseUri: ["'none'"],
-        upgradeInsecureRequests: [],
+        ...(isProduction ? { upgradeInsecureRequests: [] } : {}),
       },
     },
-    // 2. Strict Transport Security (HSTS) - Enforce HTTPS for 1 year, all subdomains, preload-ready
-    strictTransportSecurity: {
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true,
-    },
+    // 2. Strict Transport Security (HSTS) - Enforce HTTPS for 1 year in production only
+    strictTransportSecurity: isProduction
+      ? {
+          maxAge: 31536000,
+          includeSubDomains: true,
+          preload: true,
+        }
+      : false,
     // 3. X-Frame-Options - Complete Clickjacking protection
     frameguard: {
       action: "deny",

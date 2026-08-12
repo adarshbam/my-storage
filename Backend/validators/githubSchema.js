@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { objectIdSchema } from "./common.js";
+
+const wildcardPathSchema = z.union([z.string(), z.array(z.string())]).optional();
 
 export const createRepositorySchema = {
   body: z.object({
@@ -12,10 +15,13 @@ export const getRepositoryContentsSchema = {
   params: z.object({
     owner: z.string().min(1),
     repo: z.string().min(1),
-    // Wildercard route path will be validated if present
-    "0": z.string().optional(),
-    path: z.string().optional(),
+    "0": wildcardPathSchema,
+    path: wildcardPathSchema,
   }),
+  query: z.object({
+    ref: z.string().optional(),
+    ownerId: z.string().optional(),
+  }).optional(),
 };
 
 export const getRepositoryDetailsSchema = {
@@ -23,30 +29,37 @@ export const getRepositoryDetailsSchema = {
     owner: z.string().min(1),
     repo: z.string().min(1),
   }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
 };
 
 export const getFilesSchema = {
   params: z.object({
     owner: z.string().min(1),
     repo: z.string().min(1),
-    "0": z.string().optional(),
-    path: z.string().optional(),
+    "0": wildcardPathSchema,
+    path: wildcardPathSchema,
   }),
   query: z.object({
     action: z.string().optional(),
     ref: z.string().optional(),
-  }),
+    ownerId: z.string().optional(),
+  }).optional(),
 };
 
 export const createFileSchema = {
   params: z.object({
     owner: z.string().min(1),
     repo: z.string().min(1),
-    "0": z.string().optional(),
-    path: z.string().optional(),
+    "0": wildcardPathSchema,
+    path: wildcardPathSchema,
   }),
   body: z.object({
     content: z.string().optional(),
+  }).optional(),
+  query: z.object({
+    ownerId: z.string().optional(),
   }).optional(),
 };
 
@@ -54,37 +67,45 @@ export const updateFilesSchema = {
   params: z.object({
     owner: z.string().min(1),
     repo: z.string().min(1),
-    "0": z.string().optional(),
-    path: z.string().optional(),
+    "0": wildcardPathSchema,
+    path: wildcardPathSchema,
   }),
   body: z.object({
     content: z.string(),
     sha: z.string().min(1),
   }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
 };
 
 export const deleteFileSchema = {
   params: z.object({
     owner: z.string().min(1),
     repo: z.string().min(1),
-    "0": z.string().optional(),
-    path: z.string().optional(),
+    "0": wildcardPathSchema,
+    path: wildcardPathSchema,
   }),
   body: z.object({
     sha: z.string().min(1),
   }),
+  query: z.object({
+    ref: z.string().optional(),
+    ownerId: z.string().optional(),
+  }).optional(),
 };
 
 export const deleteFolderSchema = {
   params: z.object({
     owner: z.string().min(1),
     repo: z.string().min(1),
-    "0": z.string().optional(),
-    path: z.string().optional(),
+    "0": wildcardPathSchema,
+    path: wildcardPathSchema,
   }),
   query: z.object({
     ref: z.string().optional(),
-  }),
+    ownerId: z.string().optional(),
+  }).optional(),
 };
 
 export const downloadRepositorySchema = {
@@ -94,19 +115,21 @@ export const downloadRepositorySchema = {
   }),
   query: z.object({
     ref: z.string().optional(),
-  }),
+    ownerId: z.string().optional(),
+  }).optional(),
 };
 
 export const downloadFolderSchema = {
   params: z.object({
     owner: z.string().min(1),
     repo: z.string().min(1),
-    "0": z.string().optional(),
-    path: z.string().optional(),
+    "0": wildcardPathSchema,
+    path: wildcardPathSchema,
   }),
   query: z.object({
     ref: z.string().optional(),
-  }),
+    ownerId: z.string().optional(),
+  }).optional(),
 };
 
 export const listBranchesSchema = {
@@ -114,6 +137,9 @@ export const listBranchesSchema = {
     owner: z.string().min(1),
     repo: z.string().min(1),
   }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
 };
 
 export const searchRepositorySchema = {
@@ -125,6 +151,7 @@ export const searchRepositorySchema = {
     q: z.string().min(1, "Search query required"),
     ref: z.string().optional(),
     path: z.string().optional(),
+    ownerId: z.string().optional(),
   }),
 };
 
@@ -138,5 +165,20 @@ export const moveGithubItemsSchema = {
       })
     ),
     targetPath: z.string(),
+  }),
+};
+
+export const transferGithubFromVaultSchema = {
+  body: z.object({
+    items: z.array(
+      z.object({
+        _id: objectIdSchema,
+        name: z.string(),
+        type: z.string().optional(),
+        extension: z.string().optional(),
+        size: z.number().optional(),
+      })
+    ),
+    targetPath: z.string().min(1, "Target GitHub path required"),
   }),
 };
