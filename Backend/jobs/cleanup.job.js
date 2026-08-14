@@ -10,6 +10,7 @@ import {
 } from "@aws-sdk/client-s3";
 
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+const SIXTY_DAYS = 60 * 24 * 60 * 60 * 1000;
 
 export async function cleanFiles() {
   try {
@@ -17,6 +18,62 @@ export async function cleanFiles() {
       "[Cleanup] Starting Backblaze B2 storage and database cleanup...",
     );
     const expiryDate = new Date(Date.now() - THIRTY_DAYS);
+    const noPlanExpiryDate = new Date(Date.now() - SIXTY_DAYS);
+
+    // 0. Identify users who have been in "no-subscription" state for 60+ days and purge their storage assets
+    const expiredNoPlanUsers = await User.find({
+      $or: [
+        { noSubscriptionSince: { $ne: null, $lt: noPlanExpiryDate } },
+        { noPlanSince: { $ne: null, $lt: noPlanExpiryDate } },
+      ],
+    });
+
+    if (expiredNoPlanUsers.length > 0) {
+      console.log(
+        `[Cleanup] Found ${expiredNoPlanUsers.length} users in 'no-plan' state for 60+ days. Purging storage assets...`,
+      );
+      const expiredUserIds = expiredNoPlanUsers.map((u) => u._id);
+
+      // Find all files belonging to these users and delete from Backblaze B2
+      const filesToPurge = await File.find({ userId: { $in: expiredUserIds } });
+      for (const f of filesToPurge) {
+        const fileKey = `${f._id.toString()}${f.extension}`;
+        const thumbKey = `thumbnails/${f._id.toString()}.jpg`;
+        await s3Client
+          .send(
+            new DeleteObjectCommand({
+              Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+              Key: fileKey,
+            }),
+          )
+          .catch(() => {});
+        await s3Client
+          .send(
+            new DeleteObjectCommand({
+              Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+              Key: thumbKey,
+            }),
+          )
+          .catch(() => {});
+      }
+
+      // Delete DB records
+      await File.deleteMany({ userId: { $in: expiredUserIds } });
+      await Trash.deleteMany({ userId: { $in: expiredUserIds } });
+      await Directory.deleteMany({
+        userId: { $in: expiredUserIds },
+        _id: { $nin: expiredNoPlanUsers.map((u) => u.rootDirId) },
+      });
+
+      // Reset root directory size to 0
+      await Directory.updateMany(
+        { _id: { $in: expiredNoPlanUsers.map((u) => u.rootDirId) } },
+        { $set: { size: 0 } },
+      );
+      console.log(
+        `[Cleanup] Successfully purged storage assets for ${expiredNoPlanUsers.length} expired no-plan users.`,
+      );
+    }
 
     // 1. Identify active user IDs
     const userIds = await User.distinct("_id");

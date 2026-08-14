@@ -37,11 +37,16 @@ import {
 } from "../validators/githubSchema.js";
 import { heavyOpLimiter, mediumWriteLimiter, standardWriteLimiter, searchLimiter } from "../middlewares/rateLimiter.js";
 import throttle from "../utils/throttle.js";
+import { loadPlanContext } from "../middlewares/loadPlanContext.js";
+import { requireFeature } from "../middlewares/requireFeature.js";
 
 const router = express.Router();
 
+// Require authenticated session and github_backup feature for all GitHub routes
+router.use(checkAuth, loadPlanContext, requireFeature("github_backup"));
+
 // list of all the repos
-router.get("/repositories", checkAuth, standardWriteLimiter, throttle(100, 15, "gh-repos"), listRepositories);
+router.get("/repositories", standardWriteLimiter, throttle(100, 15, "gh-repos"), listRepositories);
 // create repo
 router.post("/repositories", checkAuth, mediumWriteLimiter, throttle(300, 8, "gh-repo-create"), validate(createRepositorySchema), createRepository);
 

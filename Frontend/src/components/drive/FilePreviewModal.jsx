@@ -19,6 +19,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import Button from "../ui/Button";
 import Editor from "react-simple-code-editor";
+import { usePlan } from "../../context/PlanContext";
 import * as Prism from "prismjs";
 import "prismjs/components/prism-clike";
 import "prismjs/components/prism-javascript";
@@ -38,6 +39,9 @@ import "prismjs/components/prism-json";
 import "prismjs/themes/prism-tomorrow.css"; // Base theme for the editor components
 
 export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
+  const { isNoPlan, rules } = usePlan();
+  const allowEdit = !isNoPlan && (rules?.permissions?.allowUpload ?? true);
+
   const [content, setContent] = useState(null);
   const [editedContent, setEditedContent] = useState("");
   const [loading, setLoading] = useState(false);
@@ -513,9 +517,15 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                 />
               ) : (
                 <h3
-                  className="text-lg font-semibold text-slate-900 dark:text-white truncate cursor-pointer hover:text-[#14b8a6] transition-colors"
-                  title="Double click to rename"
-                  onDoubleClick={() => setIsRenaming(true)}
+                  className={`text-lg font-semibold text-slate-900 dark:text-white truncate ${
+                    allowEdit
+                      ? "cursor-pointer hover:text-[#14b8a6]"
+                      : "cursor-default"
+                  } transition-colors`}
+                  title={allowEdit ? "Double click to rename" : file.name}
+                  onDoubleClick={() => {
+                    if (allowEdit) setIsRenaming(true);
+                  }}
                 >
                   {file.name}
                 </h3>
@@ -533,6 +543,14 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                       ? "DRIVE SECURE RELAY"
                       : "VAULT LOCAL NODE"}
                 </span>
+                {isNoPlan && (
+                  <>
+                    <span className="opacity-50">|</span>
+                    <span className="text-amber-400 font-bold tracking-wider">
+                      READ ONLY
+                    </span>
+                  </>
+                )}
                 {isEditing && (
                   <>
                     <span className="opacity-50">|</span>
@@ -563,7 +581,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                     <Button
                       size="sm"
                       onClick={handleSave}
-                      disabled={saving}
+                      disabled={saving || !allowEdit}
                       className="flex items-center gap-2 bg-[#14b8a6] hover:bg-[#0d9488]"
                     >
                       {saving ? (
@@ -574,7 +592,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                       Save
                     </Button>
                   </div>
-                ) : (
+                ) : allowEdit ? (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -584,7 +602,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                     {saveSuccess ? <Check size={16} /> : <Edit size={16} />}
                     {saveSuccess ? "Saved!" : "Edit"}
                   </Button>
-                )}
+                ) : null}
                 <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1" />
               </>
             )}

@@ -9,7 +9,8 @@ import {
   updatePlanTierActiveLogic,
   updateFeaturesLogic,
   updateTierConfigurationsLogic,
-  createPlanTierLogic
+  createPlanTierLogic,
+  activateFreeTrialLogic,
 } from "../services/plan.service.js";
 
 export const createPlan = async (req, res, next) => {
@@ -50,6 +51,28 @@ export const getAllActivePlans = async (req, res, next) => {
     console.error("[Plan] Error:", err.message);
     if (err.status) res.status(err.status);
     next(err);
+  }
+};
+
+export const getUserPlanContext = async (req, res, next) => {
+  try {
+    return res.status(200).json(req.planContext);
+  } catch (err) {
+    console.error("[getUserPlanContext] Error:", err.message);
+    if (err.status) res.status(err.status);
+    next(err);
+  }
+};
+
+export const activateFreeTrial = async (req, res, next) => {
+  try {
+    const userId = req.user?._id || req.user?.id;
+    const result = await activateFreeTrialLogic({ userId });
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error("[activateFreeTrial] Error:", err.message);
+    const status = err.status || 500;
+    return res.status(status).json({ error: err.message || "Failed to activate Free Trial" });
   }
 };
 

@@ -22,6 +22,7 @@ import {
 } from "../ui/VaultIcons";
 import { motion } from "framer-motion";
 import { SERVER_URL } from "../../lib/api";
+import { usePlan } from "../../context/PlanContext";
 
 const formatRelativeTime = (dateString) => {
   if (!dateString) return "";
@@ -156,6 +157,10 @@ export default function AssetCard({
   const [imageError, setImageError] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
+  const { isNoPlan, rules } = usePlan();
+  const planAllowsMutation = !isNoPlan && (rules?.permissions?.allowUpload ?? true);
+  const effectiveReadOnly = readOnly || !planAllowsMutation;
+
   const provider = item.provider || "local";
   const isDirectory = item.type === "directory" || provider === "shared_drive";
   const typeInfo = getItemTypeInfo(item, isDirectory, provider, specialView);
@@ -324,7 +329,7 @@ export default function AssetCard({
               <Info size={16} />
             </button>
           )}
-          {!isTrash && !readOnly && onRename && (
+          {!isTrash && !effectiveReadOnly && onRename && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -346,7 +351,7 @@ export default function AssetCard({
               <Download size={16} />
             </button>
           )}
-          {!isTrash && !readOnly && onDelete && (
+          {!isTrash && !effectiveReadOnly && onDelete && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -382,7 +387,7 @@ export default function AssetCard({
       onDoubleClick={handleDoubleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      draggable={!readOnly && !isTrash}
+      draggable={!effectiveReadOnly && !isTrash}
       onDragStart={(e) => onDragStart && onDragStart(e, item)}
       onDragOver={(e) => onDragOver && onDragOver(e)}
       onDragLeave={(e) => onDragLeave && onDragLeave(e)}
@@ -589,7 +594,7 @@ export default function AssetCard({
               </button>
             )}
 
-            {!isTrash && !readOnly && onStarred && (
+            {!isTrash && !effectiveReadOnly && onStarred && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -606,7 +611,7 @@ export default function AssetCard({
               </button>
             )}
 
-            {!isTrash && !readOnly && onRename && (
+            {!isTrash && !effectiveReadOnly && onRename && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -618,7 +623,7 @@ export default function AssetCard({
                 Rename
               </button>
             )}
-            {!isTrash && !readOnly && onShare && (
+            {!isTrash && !effectiveReadOnly && onShare && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -630,7 +635,7 @@ export default function AssetCard({
                 Share
               </button>
             )}
-            {!isTrash && !readOnly && onCopy && (
+            {!isTrash && !effectiveReadOnly && onCopy && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -642,7 +647,7 @@ export default function AssetCard({
                 Copy
               </button>
             )}
-            {!isTrash && !readOnly && onCut && (
+            {!isTrash && !effectiveReadOnly && onCut && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -679,11 +684,11 @@ export default function AssetCard({
               </button>
             )}
             {/* Separator */}
-            {((!isTrash && !readOnly && onDelete) ||
+            {((!isTrash && !effectiveReadOnly && onDelete) ||
               (isTrash && onDeleteForever)) && (
               <div className="my-1 mx-3 border-t border-white/[0.08]" />
             )}
-            {!isTrash && !readOnly && onDelete && (
+            {!isTrash && !effectiveReadOnly && onDelete && (
               <button
                 onClick={() => {
                   closeMenu();

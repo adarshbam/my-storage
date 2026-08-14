@@ -1,5 +1,8 @@
 import express from "express";
 import checkAuth from "../middlewares/authMiddleware.js";
+import { loadPlanContext } from "../middlewares/loadPlanContext.js";
+import { requireFeature } from "../middlewares/requireFeature.js";
+import { requireRule } from "../middlewares/requireRule.js";
 import {
   generateShareLink,
   getShareLinks,
@@ -20,8 +23,18 @@ import throttle from "../utils/throttle.js";
 
 const router = express.Router();
 
-// Generate a share link (must be logged in)
-router.post("/link", checkAuth, shareLimiter, throttle(500, 5, "share-generate"), validate(generateShareLinkSchema), generateShareLink);
+// Generate a share link (must be logged in and plan must allow sharing)
+router.post(
+  "/link",
+  checkAuth,
+  loadPlanContext,
+  requireFeature("share_links"),
+  requireRule("allowSharing"),
+  shareLimiter,
+  throttle(500, 5, "share-generate"),
+  validate(generateShareLinkSchema),
+  generateShareLink,
+);
 
 // Retrieve active share links created by the user
 router.get("/links", checkAuth, lightReadLimiter, throttle(100, 15, "share-list"), getShareLinks);

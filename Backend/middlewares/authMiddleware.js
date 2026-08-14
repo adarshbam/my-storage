@@ -65,6 +65,7 @@ async function checkAuth(req, res, next) {
       name: user.name,
       email: user.email,
       maxStorage: user.maxStorage,
+      billingPlan: user.billingPlan ? user.billingPlan.toString() : null,
 
       role: user.role,
       rootDirId: user.rootDirId ? user.rootDirId.toString() : "",

@@ -4,6 +4,8 @@ import Feature from "../models/featureModel.js";
 import PlanTierConfiguration from "../models/planTierConfigurationModel.js";
 import PlanTier from "../models/planTierModel.js";
 import SystemConfig from "../models/systemConfigModel.js";
+import User from "../models/userModel.js";
+import Subscription from "../models/subscriptionModel.js";
 
 export const createPlanLogic = async ({ planData, userId, userRole }) => {
   const { slug, amount, storage, period, currency } = planData;
@@ -592,3 +594,64 @@ export const createPlanTierLogic = async ({ tierData, userRole }) => {
     createdBillingPlans,
   };
 };
+
+export const activateFreeTrialLogic = async ({ userId }) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw Object.assign(new Error("User not found"), { status: 404 });
+  }
+
+  if (user.hasUsedFreeTrial) {
+    throw Object.assign(
+      new Error(
+        "You have already used your 30-day Free Trial. Please select a paid plan.",
+      ),
+      { status: 400 },
+    );
+  }
+
+  // Find the active free trial billing plan
+  const freeTrialPlan =
+    (await BillingPlan.findOne({
+      slug: { $in: ["free-trial", "free-trail"] },
+      active: true,
+    })) ||
+    (await BillingPlan.findOne({
+      amount: 0,
+      active: true,
+    }));
+
+  if (!freeTrialPlan) {
+    throw Object.assign(
+      new Error("Free Trial plan is not currently available."),
+      { status: 404 },
+    );
+  }
+
+  // Create or update subscription record for the Free Trial
+  const subscription = await Subscription.create({
+    userId: user._id,
+    billingPlan: freeTrialPlan._id,
+    razorpaySubscriptionId: `trial_${user._id}_${Date.now()}`,
+    status: "active",
+    amount: 0,
+    isFreeTrial: true,
+  });
+
+  user.subscription = subscription._id;
+  user.hasUsedFreeTrial = true;
+  user.noSubscriptionSince = null;
+  user.noPlanSince = null;
+  if (freeTrialPlan.storage) {
+    user.maxStorage = freeTrialPlan.storage;
+  }
+  await user.save();
+
+  return {
+    success: true,
+    message: "30-Day Free Trial activated successfully!",
+    subscription,
+    billingPlan: freeTrialPlan,
+  };
+};
+

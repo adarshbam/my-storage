@@ -9,6 +9,12 @@ const subscriptionSchema = new mongoose.Schema(
       required: true,
     },
 
+    billingPlan: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "BillingPlan",
+      default: null,
+    },
+
     razorpaySubscriptionId: {
       type: String,
       required: true,
@@ -32,6 +38,11 @@ const subscriptionSchema = new mongoose.Schema(
 
     amount: {
       type: Number,
+    },
+
+    isFreeTrial: {
+      type: Boolean,
+      default: false,
     },
   },
   {

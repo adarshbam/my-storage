@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
-import { X, Copy, Info, AlertTriangle, ShieldAlert, Calendar, Share2, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { X, Copy, Info, AlertTriangle, ShieldAlert, Calendar, Share2, Trash2, Lock } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
 import Button from "../ui/Button";
+import { usePlan } from "../../context/PlanContext";
 
 export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
+  const { hasFeature, isNoPlan } = usePlan();
   const [shareLinks, setShareLinks] = useState([]);
   const [loadingLinks, setLoadingLinks] = useState(false);
   const [generatedLink, setGeneratedLink] = useState("");
@@ -172,15 +175,38 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
             </h3>
 
             <div className="space-y-4">
+              {(!hasFeature("share_links") || isNoPlan) && (
+                <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs rounded-xl flex items-start gap-2.5">
+                  <Lock size={16} className="shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block mb-0.5">Plan Required</span>
+                    <span className="text-white/60">
+                      Generating secure share links requires an active storage plan.{" "}
+                      <Link to="/dashboard/billing" onClick={onClose} className="text-amber-400 font-bold underline">
+                        Upgrade or start trial
+                      </Link>
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div>
-                <label className="block text-[11px] font-bold tracking-wider uppercase text-white/40 mb-1.5">
-                  Expiry Date
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[11px] font-bold tracking-wider uppercase text-white/40">
+                    Expiry Date
+                  </label>
+                  {!hasFeature("expiring_links") && (
+                    <span className="text-[10px] text-white/40 flex items-center gap-1 font-semibold">
+                      <Lock size={10} /> Pro/Novice Feature
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-vault-emerald pointer-events-none" size={16} />
                   <input
                     type="date"
                     value={expiryDate}
+                    disabled={!hasFeature("expiring_links") || !hasFeature("share_links") || isNoPlan}
                     onClick={(e) => {
                       if ('showPicker' in HTMLInputElement.prototype) {
                         e.target.showPicker();
@@ -188,7 +214,7 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
                     }}
                     onChange={(e) => setExpiryDate(e.target.value)}
                     min={new Date().toLocaleDateString('en-CA')}
-                    className="w-full pl-10 pr-4 py-2 bg-black/40 border border-white/10 text-white rounded-xl text-sm focus:border-vault-emerald outline-none transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:invert"
+                    className="w-full pl-10 pr-4 py-2 bg-black/40 border border-white/10 text-white rounded-xl text-sm focus:border-vault-emerald outline-none transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:invert disabled:opacity-40 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -199,11 +225,12 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
                 </label>
                 <select
                   value={selectedPermission}
+                  disabled={!hasFeature("share_links") || isNoPlan}
                   onChange={(e) => {
                     setSelectedPermission(e.target.value);
                     setOwnerAgreed(false);
                   }}
-                  className="w-full px-4 py-2 bg-black/40 border border-white/10 text-white rounded-xl text-sm focus:border-vault-emerald outline-none transition-all cursor-pointer [&>option]:bg-vault-black"
+                  className="w-full px-4 py-2 bg-black/40 border border-white/10 text-white rounded-xl text-sm focus:border-vault-emerald outline-none transition-all cursor-pointer [&>option]:bg-vault-black disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <option value="read">Read Only (Standard)</option>
                   <option value="write">Read & Write (Elevated)</option>
@@ -256,7 +283,7 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
 
               <Button
                 onClick={handleCreateShareLink}
-                disabled={generatingLink || (selectedPermission === "owner" && !ownerAgreed)}
+                disabled={generatingLink || (selectedPermission === "owner" && !ownerAgreed) || !hasFeature("share_links") || isNoPlan}
                 className="w-full py-3"
               >
                 {generatingLink ? "Generating Tokens..." : "Generate Secure Link"}

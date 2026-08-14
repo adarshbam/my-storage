@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import Session from "../models/sessionModel.js";
+import Subscription from "../models/subscriptionModel.js";
 import BillingPlan from "../models/billingPlanModel.js";
 import PlanTier from "../models/planTierModel.js";
 import PlanTierConfiguration from "../models/planTierConfigurationModel.js";
@@ -29,18 +30,24 @@ export async function createSessionAndSetCookies(userId, rootDirId, req, res) {
   const systemConfig = await getSystemConfigHelper();
   const globalDevicesLimit = systemConfig.maxDevicesLimit;
 
-  // Load plan-based device limit directly from DB
+  // Load plan-based device limit directly from Subscription
   let planDevicesLimit = null;
   try {
-    const user = await User.findById(userId).select("billingPlan").lean();
-    if (user?.billingPlan) {
-      const billingPlan = await BillingPlan.findById(user.billingPlan).lean();
-      if (billingPlan?.tier) {
-        const config = await PlanTierConfiguration.findOne({
-          tier: billingPlan.tier,
-        }).lean();
-        planDevicesLimit = config?.rules?.limits?.maxConnectedDevices ?? null;
-      }
+    const user = await User.findById(userId).select("subscription billingPlan").lean();
+    let subscription = null;
+    if (user?.subscription) {
+      subscription = await Subscription.findById(user.subscription).populate("billingPlan").lean();
+    }
+    if (!subscription) {
+      subscription = await Subscription.findOne({
+        userId,
+        status: { $in: ["active", "authenticated", "created"] },
+      }).populate("billingPlan").lean();
+    }
+    const tierId = subscription?.billingPlan?.tier || (user?.billingPlan ? (await BillingPlan.findById(user.billingPlan).lean())?.tier : null);
+    if (tierId) {
+      const config = await PlanTierConfiguration.findOne({ tier: tierId }).lean();
+      planDevicesLimit = config?.rules?.limits?.maxConnectedDevices ?? null;
     }
   } catch (err) {
     console.error("Failed to load plan device limit:", err);

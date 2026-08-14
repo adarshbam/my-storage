@@ -13,8 +13,10 @@ import Directory from "../models/directoryModel.js";
 export const enforceUploadLimit = async (req, res, next) => {
   try {
     const systemConfig = await getSystemConfigHelper();
-    const maxFileSize = systemConfig.maxFileSizeLimit;
-    const planMaxFileSize = req.planContext.rules.limits.maxUploadFileSize;
+    const maxFileSize = systemConfig?.maxFileSizeLimit || 500 * 1024 * 1024;
+    const planLimit = req.planContext?.rules?.limits?.maxUploadFileSize;
+    const planMaxFileSize =
+      planLimit && planLimit > 0 ? planLimit : maxFileSize;
 
     const effectiveLimit = Math.min(maxFileSize, planMaxFileSize);
 
@@ -23,10 +25,11 @@ export const enforceUploadLimit = async (req, res, next) => {
       .select("size")
       .lean();
     const usedStorage = rootDir ? rootDir.size : 0;
-    const maxStorage = Math.min(
-      req.user.maxStorage,
-      req.planContext.rules.limits.storageLimit,
-    );
+    const planStorageLimit = req.planContext?.rules?.limits?.storageLimit;
+    const maxStorage =
+      planStorageLimit && planStorageLimit > 0
+        ? planStorageLimit
+        : req.user?.maxStorage || 5 * 1024 * 1024 * 1024;
 
     // ── Detect request type ──
     // Vault initiate sends JSON body with a numeric `size` field

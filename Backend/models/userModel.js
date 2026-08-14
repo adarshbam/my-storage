@@ -53,6 +53,11 @@ const userSchema = new Schema(
     },
     isVerified: { type: Boolean, default: false },
     theme: { type: String, enum: ["light", "dark"], default: "dark" },
+    billingPlan: { type: Schema.Types.ObjectId, ref: "BillingPlan", default: null },
+    subscription: { type: Schema.Types.ObjectId, ref: "Subscription", default: null },
+    hasUsedFreeTrial: { type: Boolean, default: false },
+    noSubscriptionSince: { type: Date, default: null },
+    noPlanSince: { type: Date, default: null },
   },
   { strict: "throw" },
 );

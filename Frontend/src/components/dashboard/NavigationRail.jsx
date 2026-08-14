@@ -13,10 +13,12 @@ import {
   VaultGitIcon,
 } from "../ui/VaultIcons";
 import { useGoogleLogin } from "@react-oauth/google";
+import { usePlan } from "../../context/PlanContext";
 
 export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
   const location = useLocation();
   const { user, setUser } = useAuth();
+  const { hasFeature } = usePlan();
 
   const isActive = (path, exact = false) => {
     if (exact) return location.pathname === path;
@@ -234,7 +236,6 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
               </Link>
             );
           })}
-
           {/* Divider */}
           <div className="my-4 h-px bg-white/5 mx-4 shrink-0" />
           <div
@@ -242,84 +243,86 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
           >
             Integrations
           </div>
-
           {/* Link Drive — Orange identity */}
-          <button
-            onClick={() =>
-              driveConnected ? disconnectDrive() : connectDrive()
-            }
-            onMouseEnter={() => setHoveredPath("drive")}
-            onMouseLeave={() => setHoveredPath(null)}
-            className={`relative flex items-center h-12 rounded-xl overflow-hidden text-left transition-all duration-300 ${
-              hoveredPath === "drive"
-                ? "bg-linkdrive-accent/10 shadow-[inset_0_0_20px_rgba(255,122,61,0.2)]"
-                : ""
-            }`}
-          >
-            <div
-              className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
-                driveConnected || hoveredPath === "drive"
-                  ? "text-linkdrive-accent"
-                  : "text-white/30"
-              }`}
-              style={
-                driveConnected || hoveredPath === "drive"
-                  ? { filter: "drop-shadow(0 0 6px rgba(255, 122, 61, 0.5))" }
-                  : {}
+          {hasFeature("gdrive_sync") && (
+            <button
+              onClick={() =>
+                driveConnected ? disconnectDrive() : connectDrive()
               }
-            >
-              <VaultDriveIcon size={20} />
-            </div>
-            <span
-              className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
-                driveConnected ? "text-white/80" : "text-white/40"
+              onMouseEnter={() => setHoveredPath("drive")}
+              onMouseLeave={() => setHoveredPath(null)}
+              className={`relative flex items-center h-12 rounded-xl overflow-hidden text-left transition-all duration-300 ${
+                hoveredPath === "drive"
+                  ? "bg-linkdrive-accent/10 shadow-[inset_0_0_20px_rgba(255,122,61,0.2)]"
+                  : ""
               }`}
             >
-              {driveConnected ? "Drive (Linked)" : "Link Drive"}
-            </span>
-            {driveConnected && (
-              <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkdrive-accent shadow-[0_0_6px_rgba(255,122,61,0.6)] opacity-0 md:group-hover:opacity-100 transition-opacity" />
-            )}
-          </button>
-
+              <div
+                className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
+                  driveConnected || hoveredPath === "drive"
+                    ? "text-linkdrive-accent"
+                    : "text-white/30"
+                }`}
+                style={
+                  driveConnected || hoveredPath === "drive"
+                    ? { filter: "drop-shadow(0 0 6px rgba(255, 122, 61, 0.5))" }
+                    : {}
+                }
+              >
+                <VaultDriveIcon size={20} />
+              </div>
+              <span
+                className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
+                  driveConnected ? "text-white/80" : "text-white/40"
+                }`}
+              >
+                {driveConnected ? "Drive (Linked)" : "Link Drive"}
+              </span>
+              {driveConnected && (
+                <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkdrive-accent shadow-[0_0_6px_rgba(255,122,61,0.6)] opacity-0 md:group-hover:opacity-100 transition-opacity" />
+              )}
+            </button>
+          )}
           {/* Link GitHub — Purple identity */}
-          <button
-            onClick={() =>
-              githubConnected ? disconnectGithub() : connectGithub()
-            }
-            onMouseEnter={() => setHoveredPath("github")}
-            onMouseLeave={() => setHoveredPath(null)}
-            className={`relative flex items-center h-12 rounded-xl overflow-hidden text-left transition-all duration-300 ${
-              hoveredPath === "github"
-                ? "bg-linkgit-accent/10 shadow-[inset_0_0_20px_rgba(198,92,255,0.2)]"
-                : ""
-            }`}
-          >
-            <div
-              className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
-                githubConnected || hoveredPath === "github"
-                  ? "text-linkgit-accent"
-                  : "text-white/30"
-              }`}
-              style={
-                githubConnected || hoveredPath === "github"
-                  ? { filter: "drop-shadow(0 0 6px rgba(198, 92, 255, 0.5))" }
-                  : {}
+          {hasFeature("github_backup") && (
+            <button
+              onClick={() =>
+                githubConnected ? disconnectGithub() : connectGithub()
               }
-            >
-              <VaultGitIcon size={20} />
-            </div>
-            <span
-              className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
-                githubConnected ? "text-white/80" : "text-white/40"
+              onMouseEnter={() => setHoveredPath("github")}
+              onMouseLeave={() => setHoveredPath(null)}
+              className={`relative flex items-center h-12 rounded-xl overflow-hidden text-left transition-all duration-300 ${
+                hoveredPath === "github"
+                  ? "bg-linkgit-accent/10 shadow-[inset_0_0_20px_rgba(198,92,255,0.2)]"
+                  : ""
               }`}
             >
-              {githubConnected ? "GitHub (Linked)" : "Link GitHub"}
-            </span>
-            {githubConnected && (
-              <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkgit-accent shadow-[0_0_6px_rgba(198,92,255,0.6)] opacity-0 md:group-hover:opacity-100 transition-opacity" />
-            )}
-          </button>
+              <div
+                className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
+                  githubConnected || hoveredPath === "github"
+                    ? "text-linkgit-accent"
+                    : "text-white/30"
+                }`}
+                style={
+                  githubConnected || hoveredPath === "github"
+                    ? { filter: "drop-shadow(0 0 6px rgba(198, 92, 255, 0.5))" }
+                    : {}
+                }
+              >
+                <VaultGitIcon size={20} />
+              </div>
+              <span
+                className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
+                  githubConnected ? "text-white/80" : "text-white/40"
+                }`}
+              >
+                {githubConnected ? "GitHub (Linked)" : "Link GitHub"}
+              </span>
+              {githubConnected && (
+                <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkgit-accent shadow-[0_0_6px_rgba(198,92,255,0.6)] opacity-0 md:group-hover:opacity-100 transition-opacity" />
+              )}
+            </button>
+          )}
         </div>
 
         {/* Bottom Actions — System Core with Electric Blue */}

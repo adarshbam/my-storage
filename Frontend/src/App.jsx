@@ -1,7 +1,8 @@
 import { Suspense, lazy, useEffect } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./components/ui/ThemeProvider";
 import { AuthProvider } from "./context/AuthContext";
+import { PlanProvider } from "./context/PlanContext";
 import ProtectedRoute from "./components/drive/ProtectedRoute";
 import PublicRoute from "./components/drive/PublicRoute";
 import Login from "./pages/Login";
@@ -81,79 +82,93 @@ function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <AuthProvider>
-        <BrowserRouter>
-          <ScrollToHashElement />
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route
-                path="/shared-access/:token"
-                element={<SharedAccessClaim />}
-              />
-              <Route element={<PublicRoute />}>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-              </Route>
-
-              <Route element={<ProtectedRoute />}>
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/users" element={<Users />} />
-                <Route path="/owner/settings" element={<OwnerSettings />} />
-              </Route>
-
-              <Route path="/dashboard" element={<ProtectedRoute />}>
-                <Route element={<DashboardLayout />}>
-                  <Route index element={<FileBrowser />} />
-                  <Route path="folder/:folderId" element={<FileBrowser />} />
-                  <Route path="search" element={<FileBrowser />} />
-                  <Route
-                    path="shared"
-                    element={<FileBrowser specialView="shared" />}
-                  />
-                  <Route
-                    path="shared/folder/:folderId"
-                    element={<FileBrowser specialView="shared" />}
-                  />
-                  <Route
-                    path="admin/folder/:folderId"
-                    element={<FileBrowser specialView="admin" />}
-                  />
-                  <Route
-                    path="owner/folder/:folderId"
-                    element={<FileBrowser specialView="owner" />}
-                  />
-                  <Route
-                    path="recent"
-                    element={<FileBrowser specialView="recent" />}
-                  />
-                  <Route
-                    path="starred"
-                    element={<FileBrowser specialView="starred" />}
-                  />
-                  <Route
-                    path="google-drive"
-                    element={<FileBrowser specialView="google-drive" />}
-                  />
-                  <Route
-                    path="google-drive/:driveFolderId"
-                    element={<FileBrowser specialView="google-drive-folder" />}
-                  />
-                  <Route
-                    path="github"
-                    element={<FileBrowser specialView="github" />}
-                  />
-                  <Route
-                    path="github/*"
-                    element={<FileBrowser specialView="github-repo" />}
-                  />
-                  <Route path="trash" element={<TrashView />} />
-                  <Route path="billing" element={<BillingPlansPage />} />
+        <PlanProvider>
+          <BrowserRouter>
+            <ScrollToHashElement />
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route
+                  path="/shared-access/:token"
+                  element={<SharedAccessClaim />}
+                />
+                <Route element={<PublicRoute />}>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                 </Route>
-              </Route>
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
+
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/users" element={<Users />} />
+                  <Route path="/owner/settings" element={<OwnerSettings />} />
+                </Route>
+
+                {/* Redirect /billing to /dashboard/billing */}
+                <Route
+                  path="/billing"
+                  element={<Navigate to="/dashboard/billing" replace />}
+                />
+
+                <Route path="/dashboard" element={<ProtectedRoute />}>
+                  <Route element={<DashboardLayout />}>
+                    <Route index element={<FileBrowser />} />
+                    <Route path="folder/:folderId" element={<FileBrowser />} />
+                    <Route path="search" element={<FileBrowser />} />
+                    <Route
+                      path="shared"
+                      element={<FileBrowser specialView="shared" />}
+                    />
+                    <Route
+                      path="shared/folder/:folderId"
+                      element={<FileBrowser specialView="shared" />}
+                    />
+                    <Route
+                      path="admin/folder/:folderId"
+                      element={<FileBrowser specialView="admin" />}
+                    />
+                    <Route
+                      path="owner/folder/:folderId"
+                      element={<FileBrowser specialView="owner" />}
+                    />
+                    <Route
+                      path="recent"
+                      element={<FileBrowser specialView="recent" />}
+                    />
+                    <Route
+                      path="starred"
+                      element={<FileBrowser specialView="starred" />}
+                    />
+                    <Route
+                      path="google-drive"
+                      element={<FileBrowser specialView="google-drive" />}
+                    />
+                    <Route
+                      path="google-drive/:driveFolderId"
+                      element={<FileBrowser specialView="google-drive-folder" />}
+                    />
+                    <Route
+                      path="github"
+                      element={<FileBrowser specialView="github" />}
+                    />
+                    <Route
+                      path="github/*"
+                      element={<FileBrowser specialView="github-repo" />}
+                    />
+                    <Route path="trash" element={<TrashView />} />
+                    <Route path="billing" element={<BillingPlansPage />} />
+                  </Route>
+                </Route>
+
+                {/* Catch-all fallback */}
+                <Route
+                  path="*"
+                  element={<Navigate to="/dashboard" replace />}
+                />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </PlanProvider>
       </AuthProvider>
     </ThemeProvider>
   );

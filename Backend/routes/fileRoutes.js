@@ -37,6 +37,7 @@ import {
 import throttle from "../utils/throttle.js";
 import { enforceUploadLimit } from "../middlewares/enforceUploadLimit.js";
 import { loadPlanContext } from "../middlewares/loadPlanContext.js";
+import { requireRule } from "../middlewares/requireRule.js";
 
 const router = express.Router();
 
@@ -74,7 +75,7 @@ router.get(
   "/starred",
   checkAuth,
   standardWriteLimiter,
-  throttle(50, 12, "file-get"),
+  throttle(50, 15, "starred-all"),
   getAllStarredItems,
 );
 
@@ -82,7 +83,7 @@ router.get(
   "/recent",
   checkAuth,
   standardWriteLimiter,
-  throttle(50, 12, "file-get"),
+  throttle(50, 15, "recent-all"),
   getAllRecentItems,
 );
 
@@ -101,6 +102,8 @@ router.get(
 router.post(
   "/upload-vault/initiate",
   checkAuth,
+  loadPlanContext,
+  requireRule("allowUpload"),
   uploadLimiter,
   throttle(300, 8, "file-upload"),
   validate(uploadVaultInitiateSchema),
@@ -111,10 +114,11 @@ router.post(
 router.post(
   ["/", "/:parentDirId"],
   checkAuth,
+  loadPlanContext,
+  requireRule("allowUpload"),
   uploadLimiter,
   throttle(300, 8, "file-upload"),
   validate(uploadFileSchema),
-  loadPlanContext,
   enforceUploadLimit,
   uploadFile,
 );
@@ -122,6 +126,8 @@ router.post(
 router.patch(
   "/:fileId",
   checkAuth,
+  loadPlanContext,
+  requireRule("allowUpload"),
   standardWriteLimiter,
   throttle(100, 12, "file-rename"),
   validate(renameFileSchema),
@@ -130,6 +136,8 @@ router.patch(
 router.put(
   "/:fileId/save",
   checkAuth,
+  loadPlanContext,
+  requireRule("allowUpload"),
   mediumWriteLimiter,
   throttle(300, 8, "file-save"),
   validate(saveFileSchema),
@@ -138,6 +146,8 @@ router.put(
 router.delete(
   "/:fileId",
   checkAuth,
+  loadPlanContext,
+  requireRule("allowUpload"),
   standardWriteLimiter,
   throttle(100, 12, "file-delete"),
   validate(deleteFileSchema),

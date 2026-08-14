@@ -7,7 +7,11 @@ import ShareLink from "../models/shareLinkModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
 import { invalidateUserSessions } from "../databases/redis.js";
 import { sanitize } from "../utils/sanitize.js";
-import { uploadToB2, deleteFromB2, getObjectFromB2 } from "../integrations/storage/s3.client.js";
+import {
+  uploadToB2,
+  deleteFromB2,
+  getObjectFromB2,
+} from "../integrations/storage/s3.client.js";
 
 export const getUserProfile = async ({ userId, user }) => {
   try {
@@ -94,9 +98,12 @@ export const uploadProfilePicLogic = async ({ userId, req }) => {
       contentType,
     });
 
-    await User.updateOne({ _id: user._id }, { $set: { profilepic: profilePicId } });
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { profilepic: profilePicId } },
+    );
     await invalidateUserSessions(userId);
-    
+
     return { message: "Profile pic updated" };
   } catch (err) {
     console.error("Profile pic upload error:", err);
@@ -106,7 +113,12 @@ export const uploadProfilePicLogic = async ({ userId, req }) => {
   }
 };
 
-export const getProfilePicLogic = async ({ userId, targetUserId, userRole, res }) => {
+export const getProfilePicLogic = async ({
+  userId,
+  targetUserId,
+  userRole,
+  res,
+}) => {
   const profilePicId = targetUserId || userId;
 
   if (!profilePicId) {
@@ -114,7 +126,7 @@ export const getProfilePicLogic = async ({ userId, targetUserId, userRole, res }
     e.status = 404;
     throw e;
   }
-  
+
   const profilePic = await File.findOne({ _id: profilePicId })
     .select("extension externalUrl userId")
     .lean();
@@ -177,16 +189,19 @@ export const storeSearchedItem = async ({ userId, item }) => {
       .lean();
 
     if (!user) {
-        const e = new Error("User not found");
-        e.status = 404;
-        throw e;
+      const e = new Error("User not found");
+      e.status = 404;
+      throw e;
     }
 
     let recentlySearchedItems = user.recentlySearchedItems || [];
 
     if (!searchItem || searchItem.trim() === "") {
       recentlySearchedItems = [];
-      await User.updateOne({ _id: user._id }, { $set: { recentlySearchedItems } });
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { recentlySearchedItems } },
+      );
       return { msg: "Search history cleared", status: 200 };
     }
 
@@ -201,7 +216,10 @@ export const storeSearchedItem = async ({ userId, item }) => {
       recentlySearchedItems = recentlySearchedItems.slice(-5);
     }
 
-    await User.updateOne({ _id: user._id }, { $set: { recentlySearchedItems } });
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { recentlySearchedItems } },
+    );
     return { msg: "Succesfully Stored Searched Item", status: 201 };
   } catch (err) {
     console.error(err);
@@ -238,7 +256,11 @@ export const updateNameLogic = async ({ userId, name }) => {
   return { message: "Name update logged" };
 };
 
-export const updatePasswordLogic = async ({ userId, currentPassword, newPassword }) => {
+export const updatePasswordLogic = async ({
+  userId,
+  currentPassword,
+  newPassword,
+}) => {
   console.log(`Password update request received`, {
     currentPassword,
     password: newPassword,

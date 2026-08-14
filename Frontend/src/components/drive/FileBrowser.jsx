@@ -27,6 +27,8 @@ import "prismjs/themes/prism-tomorrow.css";
 import Modal from "../ui/Modal";
 import AssetCard from "../dashboard/AssetCard";
 import FileDetailsModal from "../dashboard/FileDetailsModal";
+import PlanStatusBanner from "../dashboard/PlanStatusBanner";
+import { usePlan } from "../../context/PlanContext";
 import {
   Upload,
   FolderPlus,
@@ -117,7 +119,12 @@ export default function FileBrowser({ specialView }) {
     !!searchQuery ||
     !!searchExt ||
     !!searchSize;
-  const isReadOnly = specialView === "shared" || specialView === "admin";
+  const { isNoPlan, rules } = usePlan();
+  const planAllowsMutation = !isNoPlan && (rules?.permissions?.allowUpload ?? true);
+  const isReadOnly =
+    specialView === "shared" ||
+    specialView === "admin" ||
+    !planAllowsMutation;
   const ownerId = searchParams.get("ownerId");
 
   const {
@@ -890,8 +897,8 @@ export default function FileBrowser({ specialView }) {
       });
 
       if (!res.ok) {
-        const result = await res.json();
-        throw new Error(result.error || "Operation failed");
+        const result = await res.json().catch(() => ({}));
+        throw new Error(result.error || result.message || "Operation failed");
       }
 
       if (document.fullscreenElement) {
@@ -1513,6 +1520,7 @@ export default function FileBrowser({ specialView }) {
       onDrop={handleZoneDrop}
       onDragOver={handleZoneDragOver}
     >
+      <PlanStatusBanner />
       <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-2 pb-5 mb-5 border-b border-white/5 shrink-0 px-2">
         <div className="flex items-center gap-2 shrink-0">
           {(data.parentDir ||

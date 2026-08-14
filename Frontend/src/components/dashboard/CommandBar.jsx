@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { usePlan } from "../../context/PlanContext";
 import { SERVER_URL } from "../../lib/api";
 import {
   NeuralSearchIcon,
@@ -39,8 +40,25 @@ export default function CommandBar({
   setIsMobileOpen,
 }) {
   const { user, setUser } = useAuth();
+  const { isNoPlan, rules, hasFeature } = usePlan();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const allowUpload = !isNoPlan && (rules?.permissions?.allowUpload ?? true);
+
+  const guardAction = (actionFn, requiresUpload = true) => {
+    if (isNoPlan || (requiresUpload && !allowUpload)) {
+      if (
+        window.confirm(
+          "Your current account is in Read-Only mode (No Active Plan). Would you like to view plans or activate your free trial to unlock this action?",
+        )
+      ) {
+        navigate("/dashboard/billing");
+      }
+      return;
+    }
+    actionFn();
+  };
   const [showRecentSearches, setShowRecentSearches] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [searchScope, setSearchScope] = useState("current");
@@ -118,7 +136,7 @@ export default function CommandBar({
     {
       label: "Share Vault",
       icon: Share2,
-      onClick: openShareModal,
+      onClick: () => guardAction(openShareModal, false),
       color: "#00D4A5", // Emerald
       hoverBg: "hover:bg-[rgba(0,212,165,0.1)]",
       hoverText: "hover:text-vault-emerald",
@@ -127,7 +145,7 @@ export default function CommandBar({
     {
       label: "Upload Asset",
       icon: Upload,
-      onClick: openUploadModal,
+      onClick: () => guardAction(openUploadModal, true),
       color: "#00CFFF", // Cyan
       hoverBg: "hover:bg-[rgba(0,207,255,0.1)]",
       hoverText: "hover:text-pulse-accent",
@@ -136,7 +154,7 @@ export default function CommandBar({
     {
       label: "New Directory",
       icon: FolderPlus,
-      onClick: handleCreateClick,
+      onClick: () => guardAction(handleCreateClick, true),
       color: "#C65CFF", // Purple
       hoverBg: "hover:bg-[rgba(198,92,255,0.1)]",
       hoverText: "hover:text-relay-accent",
@@ -145,7 +163,7 @@ export default function CommandBar({
     {
       label: "New File",
       icon: FilePlus,
-      onClick: handleCreateFileClick,
+      onClick: () => guardAction(handleCreateFileClick, true),
       color: "#FF7A3D", // Orange
       hoverBg: "hover:bg-[rgba(255,122,61,0.1)]",
       hoverText: "hover:text-linkdrive-accent",

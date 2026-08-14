@@ -48,7 +48,7 @@ export const initialPlanTiers = [
 export const initialBillingPlans = [
   {
     period: "Monthly",
-    slug: "free-trail",
+    slug: "free-trial",
     amount: 0,
     currency: "USD",
     storage: 5368709120, // 5 GB
@@ -59,7 +59,7 @@ export const initialBillingPlans = [
   },
   {
     period: "Yearly",
-    slug: "free-trail",
+    slug: "free-trial",
     amount: 0,
     currency: "USD",
     storage: 5368709120, // 5 GB
@@ -430,12 +430,12 @@ const resetToDefaultSettings = async (req, res, next) => {
       razorpayPlanId,
     } = billingPlan;
 
-    const currentPlanTier = await PlanTier.find({ slug });
+    const currentPlanTier = await PlanTier.findOne({ slug });
     console.log(currentPlanTier);
     let currentBillingPlan = await BillingPlan.findOneAndUpdate(
       { slug, period, amount },
       {
-        tier: currentPlanTier._id,
+        tier: currentPlanTier?._id,
         slug,
         amount,
         period,
