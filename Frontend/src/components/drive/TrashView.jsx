@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import AssetCard from "../dashboard/AssetCard";
 import FileDetailsModal from "../dashboard/FileDetailsModal";
+import FileBrowserSkeleton from "./FileBrowserSkeleton";
 
 export default function TrashView() {
   const [items, setItems] = useState([]);
@@ -322,9 +323,7 @@ export default function TrashView() {
       </div>
 
       {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="animate-spin text-blue-500" size={40} />
-        </div>
+        <FileBrowserSkeleton viewMode={viewMode} count={8} />
       ) : (
         <div
           className={`pb-20 relative select-none flex-1 content-start ${

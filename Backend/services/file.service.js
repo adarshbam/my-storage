@@ -25,6 +25,7 @@ import {
 } from "../integrations/storage/s3.client.js";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { updateParentDirectorySize, getDirectoryPath } from "./directory.service.js";
+import { processThumbnailInWorker } from "./workerPool.service.js";
 
 const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 const THUMBNAILS_DIR = path.join(STORAGE_DIR, "thumbnails");
@@ -374,29 +375,43 @@ export const getThumbnailLogic = async ({ fileId, userId, userRole, res }) => {
     throw error;
   }
 
-  // 1. Try to serve from Backblaze B2 first if hasThumbnail is true
+  // 1. Try to serve from Backblaze B2 first if hasThumbnail is true (check WebP first, then legacy JPEG)
   if (file.hasThumbnail) {
     try {
       const s3Params = {
         Bucket: process.env.BACKBLAZE_BUCKET_NAME,
-        Key: `thumbnails/${fileId}.jpg`,
+        Key: `thumbnails/${fileId}.webp`,
       };
       const command = new GetObjectCommand(s3Params);
       const s3Response = await s3Client.send(command);
-      res.setHeader("Content-Type", "image/jpeg");
+      res.setHeader("Content-Type", "image/webp");
+      res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
       return s3Response.Body.pipe(res);
-    } catch (s3Err) {
-      console.warn(
-        "Thumbnail was marked in DB but not found in B2, regenerating on-demand:",
-        s3Err.name,
-      );
+    } catch (webpErr) {
+      // Fallback: check legacy .jpg thumbnail if present
+      try {
+        const legacyParams = {
+          Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+          Key: `thumbnails/${fileId}.jpg`,
+        };
+        const legacyCommand = new GetObjectCommand(legacyParams);
+        const legacyRes = await s3Client.send(legacyCommand);
+        res.setHeader("Content-Type", "image/jpeg");
+        res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+        return legacyRes.Body.pipe(res);
+      } catch (jpgErr) {
+        console.warn(
+          "Thumbnail was marked in DB but not found in B2, regenerating on-demand in worker thread:",
+          jpgErr.name,
+        );
+      }
     }
   }
 
-  // 2. Generate on-demand from Backblaze B2 original file, upload to B2, and send to client
-  const tempThumbnailPath = path.join(THUMBNAILS_DIR, `${fileId}.jpg`);
-
+  // 2. Generate on-demand in Worker Thread purely in-memory (Zero Disk I/O)
   try {
+    let workerResult;
+
     if (imageExtensions.includes(fileExt)) {
       const s3Params = {
         Bucket: process.env.BACKBLAZE_BUCKET_NAME,
@@ -409,59 +424,56 @@ export const getThumbnailLogic = async ({ fileId, userId, userRole, res }) => {
         chunks.push(chunk);
       }
       const buffer = Buffer.concat(chunks);
-      await sharp(buffer, { failOnError: false })
-        .resize(256, 128, { fit: "cover" })
-        .jpeg({ quality: 80 })
-        .toFile(tempThumbnailPath);
+      workerResult = await processThumbnailInWorker({
+        type: "image",
+        buffer,
+        width: 256,
+        height: 144,
+        quality: 75,
+      });
     } else if (videoExtensions.includes(fileExt)) {
       const videoUrl = await createDownloadSignedUrl({
         key: `${fileId}${file.extension}`,
       });
-      await new Promise((resolve, reject) => {
-        ffmpeg(videoUrl)
-          .on("end", resolve)
-          .on("error", reject)
-          .screenshots({
-            timestamps: ["1"],
-            filename: `${fileId}.jpg`,
-            folder: THUMBNAILS_DIR,
-            size: "256x128",
-          });
+      workerResult = await processThumbnailInWorker({
+        type: "video",
+        videoUrl,
+        width: 256,
+        height: 144,
+        quality: 75,
       });
     }
 
-    // Read generated temp thumbnail
-    const thumbnailBuffer = await readFile(tempThumbnailPath);
+    if (workerResult && workerResult.data) {
+      // Upload directly to Backblaze B2 in-memory
+      const uploadCommand = new PutObjectCommand({
+        Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+        Key: `thumbnails/${fileId}.webp`,
+        Body: workerResult.data,
+        ContentType: "image/webp",
+      });
+      await s3Client.send(uploadCommand);
 
-    // Upload to Backblaze B2
-    const uploadCommand = new PutObjectCommand({
-      Bucket: process.env.BACKBLAZE_BUCKET_NAME,
-      Key: `thumbnails/${fileId}.jpg`,
-      Body: thumbnailBuffer,
-      ContentType: "image/jpeg",
-    });
-    await s3Client.send(uploadCommand);
+      // Update database
+      if (isTrash) {
+        await Trash.updateOne(
+          { _id: fileId },
+          { $set: { hasThumbnail: true } },
+        );
+      } else {
+        await File.updateOne({ _id: fileId }, { $set: { hasThumbnail: true } });
+      }
 
-    // Delete local temporary thumbnail immediately
-    await unlink(tempThumbnailPath).catch(() => {});
-
-    // Update database: set hasThumbnail: true
-    if (isTrash) {
-      await Trash.updateOne(
-        { _id: fileId },
-        { $set: { hasThumbnail: true } },
-      );
-    } else {
-      await File.updateOne({ _id: fileId }, { $set: { hasThumbnail: true } });
+      res.setHeader("Content-Type", "image/webp");
+      res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+      return res.send(workerResult.data);
     }
-
-    // Send the newly generated thumbnail buffer
-    res.setHeader("Content-Type", "image/jpeg");
-    return res.send(thumbnailBuffer);
   } catch (genErr) {
-    console.error("Failed on-demand thumbnail generation:", genErr);
-    // Clean up temp file if it was created
-    await unlink(tempThumbnailPath).catch(() => {});
+    console.error("Failed multithreaded on-demand thumbnail generation:", genErr);
+    const error = new Error("Thumbnail not available");
+    error.status = 404;
+    throw error;
+  }
     const error = new Error("Thumbnail not available");
     error.status = 404;
     throw error;
@@ -734,48 +746,36 @@ export const uploadFileLogic = async ({ userId, userRole, parentDirId, rootDirId
 
   try {
     if (imageExtensions.includes(fileExt)) {
-      const thumbBuffer = await sharp(fileBuffer)
-        .resize(256, 128, { fit: "cover" })
-        .jpeg({ quality: 80 })
-        .toBuffer();
+      const workerRes = await processThumbnailInWorker({
+        type: "image",
+        buffer: fileBuffer,
+        width: 256,
+        height: 144,
+        quality: 75,
+      });
       await uploadToB2({
-        key: `thumbnails/${id}.jpg`,
-        body: thumbBuffer,
-        contentType: "image/jpeg",
+        key: `thumbnails/${id}.webp`,
+        body: workerRes.data,
+        contentType: "image/webp",
       });
       hasThumbnail = true;
     } else if (videoExtensions.includes(fileExt)) {
-      const tempVideoPath = path.join(THUMBNAILS_DIR, `temp_${id}${ext}`);
-      const tempThumbPath = path.join(THUMBNAILS_DIR, `${id}.jpg`);
-      try {
-        await writeFile(tempVideoPath, fileBuffer);
-        await new Promise((resolve, reject) => {
-          ffmpeg(tempVideoPath)
-            .on("end", resolve)
-            .on("error", reject)
-            .screenshots({
-              timestamps: ["1"],
-              filename: `${id}.jpg`,
-              folder: THUMBNAILS_DIR,
-              size: "256x128",
-            });
-        });
-        const thumbBuffer = await readFile(tempThumbPath);
-        await uploadToB2({
-          key: `thumbnails/${id}.jpg`,
-          body: thumbBuffer,
-          contentType: "image/jpeg",
-        });
-        hasThumbnail = true;
-      } catch (vErr) {
-        console.error("Video thumbnail generation error:", vErr);
-      } finally {
-        await unlink(tempVideoPath).catch(() => {});
-        await unlink(tempThumbPath).catch(() => {});
-      }
+      const workerRes = await processThumbnailInWorker({
+        type: "video",
+        buffer: fileBuffer,
+        width: 256,
+        height: 144,
+        quality: 75,
+      });
+      await uploadToB2({
+        key: `thumbnails/${id}.webp`,
+        body: workerRes.data,
+        contentType: "image/webp",
+      });
+      hasThumbnail = true;
     }
   } catch (tErr) {
-    console.error("Thumbnail generation error:", tErr);
+    console.error("Multithreaded upload thumbnail generation error:", tErr.message);
   }
 
   const finalSize = actualFileSize || fileSize;

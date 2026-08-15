@@ -290,11 +290,11 @@ export const copyDirectoryRecursive = async (
 export const getDirectoryContents = async ({ dirId, userId, userRole, action, res }) => {
   const req = { user: { id: userId, role: userRole } };
 
-  // Update openedAt timestamp for directory
-  await Directory.updateOne(
+  // Non-blocking openedAt timestamp update (does not delay cache-hit response)
+  Directory.updateOne(
     { _id: dirId },
     { $set: { openedAt: new Date() } },
-  );
+  ).catch((err) => console.error("Error updating openedAt for directory:", err.message));
 
   const cacheKey = `dir:contents:${dirId}`;
 

@@ -7,7 +7,8 @@ import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import Session from "../models/sessionModel.js";
 import OTP from "../models/otpModel.js";
-import { cacheDel, invalidateUserSessions } from "../databases/redis.js";
+import { cacheGet, cacheSet, cacheDel, invalidateUserSessions } from "../databases/redis.js";
+import { uploadToB2 } from "../integrations/storage/s3.client.js";
 
 import { GOOGLE_CLIENT_ID, CLIENT_URL } from "../config/config.js";
 import { sanitize } from "../utils/sanitize.js";
@@ -17,6 +18,88 @@ import { z } from "zod";
 import { loginSchema, registerSchema } from "../validators/authSchema.js";
 
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+/**
+ * Downloads an avatar from an external URL (Google/GitHub) and saves it directly to Backblaze B2.
+ * Returns the created File document ObjectId, or null on failure.
+ */
+export async function saveAvatarUrlToB2(userId, avatarUrl, defaultName = "oauth-profile-pic") {
+  if (!avatarUrl) return null;
+  try {
+    const res = await fetch(avatarUrl);
+    if (!res.ok) {
+      console.warn(`Failed to fetch avatar from ${avatarUrl}: status ${res.status}`);
+      return null;
+    }
+
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    if (!buffer || buffer.length === 0) return null;
+
+    const contentType = res.headers.get("content-type") || "image/jpeg";
+    let ext = ".jpg";
+    if (contentType.includes("png")) ext = ".png";
+    else if (contentType.includes("webp")) ext = ".webp";
+    else if (contentType.includes("gif")) ext = ".gif";
+
+    const profilePicId = new mongoose.Types.ObjectId();
+    const key = `${profilePicId.toString()}${ext}`;
+
+    await uploadToB2({
+      key,
+      body: buffer,
+      contentType,
+    });
+
+    const profilePicFile = await File.create({
+      _id: profilePicId,
+      name: defaultName,
+      userId,
+      parentDir: null,
+      type: "file",
+      extension: ext,
+      size: buffer.length,
+      externalUrl: null,
+    });
+
+    return profilePicFile._id;
+  } catch (err) {
+    console.error("Failed to save OAuth avatar to B2:", err);
+    return null;
+  }
+}
+
+/**
+ * Helper to check if an existing user lacks a valid B2 avatar or has a legacy externalUrl avatar,
+ * and syncs it to B2.
+ */
+export async function syncUserOAuthAvatar(userDoc, avatarUrl, defaultName) {
+  if (!avatarUrl || !userDoc) return;
+  try {
+    let needsUpdate = false;
+    if (!userDoc.profilepic) {
+      needsUpdate = true;
+    } else {
+      const existingFile = await File.findById(userDoc.profilepic).select("externalUrl extension").lean();
+      if (!existingFile || existingFile.externalUrl) {
+        needsUpdate = true;
+        if (existingFile) {
+          await File.deleteOne({ _id: existingFile._id });
+        }
+      }
+    }
+
+    if (needsUpdate) {
+      const newPicId = await saveAvatarUrlToB2(userDoc._id, avatarUrl, defaultName);
+      if (newPicId) {
+        await User.updateOne({ _id: userDoc._id }, { $set: { profilepic: newPicId } });
+        await invalidateUserSessions(userDoc._id.toString());
+      }
+    }
+  } catch (err) {
+    console.error("Failed to sync user OAuth avatar:", err);
+  }
+}
 
 export const registerUserLogic = async ({ name, email, password, req, res }) => {
   const { success, data, error } = registerSchema.safeParse({ name, email, password });
@@ -72,7 +155,7 @@ export const loginUserLogic = async ({ email, password, otp, req, res }) => {
   const { email: vEmail, password: vPassword } = data;
   try {
     const user = await User.findOne({ email: vEmail }).select(
-      "password rootDirId name isVerified status"
+      "password rootDirId name isVerified status twoFactorEnabled"
     );
 
     if (!user) {
@@ -116,6 +199,26 @@ export const loginUserLogic = async ({ email, password, otp, req, res }) => {
       throw e;
     }
 
+    // ── 2FA Interception ──
+    if (user.twoFactorEnabled) {
+      const tempToken = crypto.randomBytes(32).toString("hex");
+      const redisKey = `2fa_login:${tempToken}`;
+      await cacheSet(
+        redisKey,
+        JSON.stringify({
+          userId: user._id.toString(),
+          rootDirId: rootDir._id.toString(),
+        }),
+        300 // 5-minute TTL
+      );
+
+      return {
+        twoFactorRequired: true,
+        tempToken,
+        message: "Two-Factor Authentication required",
+      };
+    }
+
     await createSessionAndSetCookies(user._id, rootDir._id, req, res);
 
     await OTP.deleteMany({ email: vEmail });
@@ -148,7 +251,7 @@ export const authGoogleLogic = async ({ credential, req, res }) => {
     const { name, email, picture } = loginTicket.getPayload();
 
     const existingUser = await User.findOne({ email })
-      .select("rootDirId name status")
+      .select("rootDirId name status profilepic")
       .lean();
 
     if (existingUser) {
@@ -166,6 +269,10 @@ export const authGoogleLogic = async ({ credential, req, res }) => {
         throw e;
       }
 
+      if (picture) {
+        await syncUserOAuthAvatar(existingUser, picture, "google-profile-pic");
+      }
+
       await createSessionAndSetCookies(existingUser._id, rootDir._id, req, res);
 
       return { status: 200, message: `Login successful ${existingUser.name}` };
@@ -175,15 +282,7 @@ export const authGoogleLogic = async ({ credential, req, res }) => {
 
     let profilepicId = null;
     if (picture) {
-      const profilePicFile = await File.create({
-        name: "google-profile-pic",
-        userId: newUserId,
-        parentDir: null,
-        type: "file",
-        extension: "",
-        externalUrl: picture,
-      });
-      profilepicId = profilePicFile._id;
+      profilepicId = await saveAvatarUrlToB2(newUserId, picture, "google-profile-pic");
     }
 
     const { userId, rootDirId } = await createUserWithRootDir({
@@ -305,7 +404,15 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
           provider: "github",
         });
       }
-      user.save();
+
+      if (userData.avatar_url && !user.profilepic) {
+        const newPicId = await saveAvatarUrlToB2(user._id, userData.avatar_url, "github-profile-pic");
+        if (newPicId) {
+          user.profilepic = newPicId;
+        }
+      }
+
+      await user.save();
       await invalidateUserSessions(user._id.toString());
 
       console.log(user);
@@ -313,7 +420,7 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
     }
 
     const existingUser = await User.findOne({ email })
-      .select("rootDirId name status")
+      .select("rootDirId name status profilepic")
       .lean();
 
     if (existingUser) {
@@ -333,6 +440,10 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
         throw e;
       }
 
+      if (userData.avatar_url) {
+        await syncUserOAuthAvatar(existingUser, userData.avatar_url, "github-profile-pic");
+      }
+
       await createSessionAndSetCookies(existingUser._id, rootDir._id, req, res);
       return res.redirect(`${CLIENT_URL}/dashboard`);
     }
@@ -341,15 +452,7 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
 
     let profilepicId = null;
     if (userData.avatar_url) {
-      const profilePicFile = await File.create({
-        name: "github-profile-pic",
-        userId: newUserId,
-        parentDir: null,
-        type: "file",
-        extension: "",
-        externalUrl: userData.avatar_url,
-      });
-      profilepicId = profilePicFile._id;
+      profilepicId = await saveAvatarUrlToB2(newUserId, userData.avatar_url, "github-profile-pic");
     }
 
     const { userId, rootDirId } = await createUserWithRootDir({
@@ -412,9 +515,19 @@ export const logoutAllDevicesLogic = async ({ userId, res }) => {
 };
 
 export const forgotPasswordLogic = async ({ email }) => {
-  console.log(email);
+  if (!email) {
+    return { message: "If an account exists with this email, a reset link has been sent." };
+  }
 
-  const user = await User.findOne({ email });
+  const cleanEmail = email.toLowerCase().trim();
+
+  // Search by primary email OR verified secondary recovery email
+  const user = await User.findOne({
+    $or: [
+      { email: cleanEmail },
+      { secondaryRecoveryEmail: cleanEmail, secondaryRecoveryEmailVerified: true },
+    ],
+  });
 
   if (user) {
     const resetToken = crypto.randomBytes(32).toString("hex");
@@ -431,7 +544,7 @@ export const forgotPasswordLogic = async ({ email }) => {
 
     await sendEmail({
       from: `"Vault" <no-reply@vault.com>`,
-      to: email,
+      to: cleanEmail,
       subject: "Reset Your Vault Password",
       text: `
       We received a request to reset your Vault account password.

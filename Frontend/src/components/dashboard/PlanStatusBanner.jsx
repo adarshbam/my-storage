@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { usePlan } from "../../context/PlanContext";
+import { useAuth } from "../../context/AuthContext";
 import { Sparkles, AlertTriangle, ArrowRight, CheckCircle2, ShieldAlert } from "lucide-react";
+import PhoneVerificationModal from "../auth/PhoneVerificationModal";
+import { getUser } from "../../lib/utils";
 
 export default function PlanStatusBanner() {
+  const { user, setUser } = useAuth();
   const {
     isNoSubscription,
     isNoPlan,
@@ -12,6 +16,7 @@ export default function PlanStatusBanner() {
     activateFreeTrial,
   } = usePlan();
   const [activating, setActivating] = useState(false);
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -19,12 +24,35 @@ export default function PlanStatusBanner() {
   if (!noSub) return null;
 
   const handleActivateTrial = async () => {
+    if (!user?.phoneVerified) {
+      setPhoneModalOpen(true);
+      return;
+    }
+
     setActivating(true);
     setErrorMsg("");
     setSuccessMsg("");
     const res = await activateFreeTrial();
     if (res.success) {
       setSuccessMsg(res.message || "30-Day Free Trial Activated!");
+      await getUser(setUser);
+    } else {
+      setErrorMsg(res.error || "Failed to activate Free Trial");
+    }
+    setActivating(false);
+  };
+
+  const handlePhoneVerificationSuccess = async () => {
+    await getUser(setUser);
+    setPhoneModalOpen(false);
+    // Proceed to trial activation
+    setActivating(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+    const res = await activateFreeTrial();
+    if (res.success) {
+      setSuccessMsg(res.message || "30-Day Free Trial Activated!");
+      await getUser(setUser);
     } else {
       setErrorMsg(res.error || "Failed to activate Free Trial");
     }
@@ -129,6 +157,16 @@ export default function PlanStatusBanner() {
           {successMsg}
         </div>
       )}
+
+      {/* Phone verification modal required for free trial */}
+      <PhoneVerificationModal
+        isOpen={phoneModalOpen}
+        onClose={() => setPhoneModalOpen(false)}
+        onSuccess={handlePhoneVerificationSuccess}
+        title="Verify Phone to Start Free Trial"
+        subtitle="To prevent free trial abuse and secure your vault, please verify your phone number via SMS."
+        purpose="trial"
+      />
     </div>
   );
 }

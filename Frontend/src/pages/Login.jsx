@@ -6,8 +6,9 @@ import { handleGoogleAuth } from "../lib/googleAuth";
 import Button from "../components/ui/Button";
 import GoogleSignInButton from "../components/ui/GoogleSignInButton";
 import AuthLayout from "../layouts/AuthLayout";
-import { Eye, EyeOff, Cloud, Send, Loader2, CheckCircle2, Box } from "lucide-react";
+import { Eye, EyeOff, Cloud, Send, Loader2, CheckCircle2, Box, ShieldCheck, Key, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { verifyTwoFactorLogin } from "../api/auth.api";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -19,6 +20,12 @@ export default function Login() {
   const [otpSent, setOtpSent] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [sendingForgot, setSendingForgot] = useState(false);
+  const [twoFactorRequired, setTwoFactorRequired] = useState(false);
+  const [twoFactorToken, setTwoFactorToken] = useState("");
+  const [twoFactorCode, setTwoFactorCode] = useState(["", "", "", "", "", ""]);
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
+  const [recoveryCodeInput, setRecoveryCodeInput] = useState("");
+  const [verifying2FA, setVerifying2FA] = useState(false);
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
@@ -126,6 +133,90 @@ export default function Login() {
     }
   };
 
+  const handleTwoFactorCodeChange = (index, value) => {
+    if (value.length > 1) return;
+    const newCode = [...twoFactorCode];
+    newCode[index] = value;
+    setTwoFactorCode(newCode);
+
+    if (value && index < 5) {
+      document.getElementById(`2fa-login-code-${index + 1}`)?.focus();
+    }
+  };
+
+  const handleTwoFactorKeyDown = (index, e) => {
+    if (e.key === "Backspace" && !twoFactorCode[index] && index > 0) {
+      document.getElementById(`2fa-login-code-${index - 1}`)?.focus();
+    }
+  };
+
+  const handleTwoFactorPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").trim().slice(0, 6);
+    if (/^\d+$/.test(pasted)) {
+      const newCode = [...twoFactorCode];
+      for (let i = 0; i < pasted.length; i++) {
+        newCode[i] = pasted[i];
+      }
+      setTwoFactorCode(newCode);
+      const nextEmpty = Math.min(pasted.length, 5);
+      document.getElementById(`2fa-login-code-${nextEmpty}`)?.focus();
+    }
+  };
+
+  const handleTwoFactorSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    setVerifying2FA(true);
+
+    const codeToVerify = useRecoveryCode
+      ? recoveryCodeInput.trim()
+      : twoFactorCode.join("");
+
+    if (!codeToVerify) {
+      setError(
+        useRecoveryCode
+          ? "Please enter your recovery code"
+          : "Please enter the complete 6-digit verification code"
+      );
+      setVerifying2FA(false);
+      return;
+    }
+
+    try {
+      const res = await verifyTwoFactorLogin({
+        tempToken: twoFactorToken,
+        code: codeToVerify,
+        isRecoveryCode: useRecoveryCode,
+      });
+
+      if (res.data?.message) {
+        const userRes = await fetch(`${SERVER_URL}/user`, {
+          credentials: "include",
+        });
+
+        if (userRes.ok) {
+          const userInfo = await userRes.json();
+          setUser(userInfo);
+          navigate("/dashboard");
+        } else {
+          setError("Failed to load user session");
+        }
+      } else {
+        setError(res.data?.error || "Invalid verification code");
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.error ||
+          err.message ||
+          "2FA verification failed. Please try again."
+      );
+    } finally {
+      setVerifying2FA(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -139,7 +230,18 @@ export default function Login() {
         credentials: "include",
       });
 
+      const data = await response.json();
+
       if (response.ok) {
+        // ── Check if Two-Factor Authentication is required ──
+        if (data.twoFactorRequired && data.tempToken) {
+          setTwoFactorToken(data.tempToken);
+          setTwoFactorRequired(true);
+          setTwoFactorCode(["", "", "", "", "", ""]);
+          setTimeout(() => document.getElementById("2fa-login-code-0")?.focus(), 300);
+          return;
+        }
+
         const userRes = await fetch(`${SERVER_URL}/user`, {
           credentials: "include",
         });
@@ -152,7 +254,6 @@ export default function Login() {
           setError("Failed to load user data");
         }
       } else {
-        const data = await response.json();
         setError(data.error || "Login failed");
       }
     } catch (err) {
@@ -163,33 +264,152 @@ export default function Login() {
   return (
     <AuthLayout>
       <div className="w-full">
-        {/* Header — logo visible on mobile only (promo panel hidden) */}
-        <div className="flex flex-col items-center mb-8 lg:hidden">
-          <div className="bg-[#01140f] border border-teal-500/30 p-3 rounded-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),inset_0_-2px_4px_rgba(0,0,0,0.8),0_0_15px_rgba(20,184,166,0.3)] mb-5 transition-all duration-300 relative">
-            <Box className="text-[#14b8a6] relative z-10" size={28} />
-          </div>
-        </div>
-        <div className="flex flex-col mb-8 text-center lg:text-left">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Welcome back
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Enter your credentials to access your drive
-          </p>
-        </div>
+        {twoFactorRequired ? (
+          /* ── TWO-FACTOR AUTHENTICATION CHALLENGE ── */
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                <ShieldCheck className="text-emerald-400" size={28} />
+              </div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+                Two-Factor Authentication
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
+                {useRecoveryCode
+                  ? "Enter one of your 12-character emergency recovery codes"
+                  : "Enter the 6-digit code generated by your authenticator app"}
+              </p>
+            </div>
 
-        {error && (
-          <div className="bg-red-500/10 text-red-600 dark:text-red-400 p-3 rounded-xl text-sm mb-6 border border-red-500/20">
-            {error}
-          </div>
-        )}
-        {message && (
-          <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl text-sm mb-6 border border-emerald-500/20">
-            {message}
-          </div>
-        )}
+            {error && (
+              <div className="bg-red-500/10 text-red-600 dark:text-red-400 p-3.5 rounded-xl text-sm border border-red-500/20 font-medium">
+                {error}
+              </div>
+            )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleTwoFactorSubmit} className="space-y-5">
+              {!useRecoveryCode ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2 text-center">
+                    6-Digit Security Code
+                  </label>
+                  <div className="flex gap-2 justify-center py-2" onPaste={handleTwoFactorPaste}>
+                    {twoFactorCode.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        id={`2fa-login-code-${idx}`}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) =>
+                          handleTwoFactorCodeChange(idx, e.target.value.replace(/\D/, ""))
+                        }
+                        onKeyDown={(e) => handleTwoFactorKeyDown(idx, e)}
+                        className="w-11 h-12 text-center text-lg font-black rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all caret-emerald-500"
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+                    Backup Recovery Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={recoveryCodeInput}
+                    onChange={(e) => setRecoveryCodeInput(e.target.value.toUpperCase())}
+                    placeholder="XXXX-XXXX-XXXX"
+                    className="w-full px-4 py-3.5 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono text-center text-base tracking-widest uppercase focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between text-xs pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseRecoveryCode(!useRecoveryCode);
+                    setError("");
+                  }}
+                  className="text-emerald-500 hover:text-emerald-400 font-bold transition-colors inline-flex items-center gap-1.5"
+                >
+                  <Key size={13} />
+                  {useRecoveryCode
+                    ? "Use Authenticator App Code"
+                    : "Lost your device? Use Recovery Code"}
+                </button>
+              </div>
+
+              <div className="pt-2 space-y-3">
+                <Button
+                  type="submit"
+                  disabled={
+                    verifying2FA ||
+                    (!useRecoveryCode && twoFactorCode.join("").length !== 6) ||
+                    (useRecoveryCode && !recoveryCodeInput.trim())
+                  }
+                  className="w-full bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-teal-500/25 transition-all"
+                >
+                  {verifying2FA ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="animate-spin" size={16} /> Verifying…
+                    </span>
+                  ) : (
+                    "Verify & Sign In"
+                  )}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTwoFactorRequired(false);
+                    setTwoFactorToken("");
+                    setError("");
+                  }}
+                  className="w-full py-2.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <ArrowLeft size={13} /> Back to standard login
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        ) : (
+          /* ── STANDARD LOGIN SCREEN ── */
+          <>
+            {/* Header — logo visible on mobile only (promo panel hidden) */}
+            <div className="flex flex-col items-center mb-8 lg:hidden">
+              <div className="bg-[#01140f] border border-teal-500/30 p-3 rounded-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),inset_0_-2px_4px_rgba(0,0,0,0.8),0_0_15px_rgba(20,184,166,0.3)] mb-5 transition-all duration-300 relative">
+                <Box className="text-[#14b8a6] relative z-10" size={28} />
+              </div>
+            </div>
+            <div className="flex flex-col mb-8 text-center lg:text-left">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+                Welcome back
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">
+                Enter your credentials to access your drive
+              </p>
+            </div>
+
+            {error && (
+              <div className="bg-red-500/10 text-red-600 dark:text-red-400 p-3 rounded-xl text-sm mb-6 border border-red-500/20">
+                {error}
+              </div>
+            )}
+            {message && (
+              <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl text-sm mb-6 border border-emerald-500/20">
+                {message}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
           {/* Email + Send OTP */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -397,6 +617,8 @@ export default function Login() {
             Sign up
           </Link>
         </div>
+          </>
+        )}
       </div>
     </AuthLayout>
   );

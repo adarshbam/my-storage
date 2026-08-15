@@ -64,6 +64,11 @@ async function checkAuth(req, res, next) {
       id: user.id,
       name: user.name,
       email: user.email,
+      phone: user.phone || null,
+      phoneVerified: !!user.phoneVerified,
+      secondaryRecoveryEmail: user.secondaryRecoveryEmail || null,
+      secondaryRecoveryEmailVerified: !!user.secondaryRecoveryEmailVerified,
+      twoFactorEnabled: !!user.twoFactorEnabled,
       maxStorage: user.maxStorage,
       billingPlan: user.billingPlan ? user.billingPlan.toString() : null,
 

@@ -12,6 +12,7 @@ import {
   deleteFromB2,
   getObjectFromB2,
 } from "../integrations/storage/s3.client.js";
+import { processThumbnailInWorker } from "./workerPool.service.js";
 
 export const getUserProfile = async ({ userId, user }) => {
   try {
@@ -23,6 +24,11 @@ export const getUserProfile = async ({ userId, user }) => {
     return {
       name: user.name,
       email: user.email,
+      phone: user.phone || null,
+      phoneVerified: !!user.phoneVerified,
+      secondaryRecoveryEmail: user.secondaryRecoveryEmail || null,
+      secondaryRecoveryEmailVerified: !!user.secondaryRecoveryEmailVerified,
+      twoFactorEnabled: !!user.twoFactorEnabled,
       role: user.role || "User",
       profilepic: user.profilepic,
       maxStorage: user.maxStorage,
@@ -89,13 +95,28 @@ export const uploadProfilePicLogic = async ({ userId, req }) => {
     for await (const chunk of req) {
       chunks.push(chunk);
     }
-    const buffer = Buffer.concat(chunks);
-    const contentType = req.headers["content-type"] || "image/png";
+    const rawBuffer = Buffer.concat(chunks);
+    let finalBuffer = rawBuffer;
+    let finalContentType = req.headers["content-type"] || "image/png";
+
+    try {
+      const workerRes = await processThumbnailInWorker({
+        type: "image",
+        buffer: rawBuffer,
+        width: 256,
+        height: 256,
+        quality: 80,
+      });
+      finalBuffer = workerRes.data;
+      finalContentType = "image/webp";
+    } catch (compressErr) {
+      console.warn("Avatar worker compression fallback:", compressErr.message);
+    }
 
     await uploadToB2({
       key: `${profilePicId.toString()}${ext}`,
-      body: buffer,
-      contentType,
+      body: finalBuffer,
+      contentType: finalContentType,
     });
 
     await User.updateOne(
@@ -127,9 +148,22 @@ export const getProfilePicLogic = async ({
     throw e;
   }
 
-  const profilePic = await File.findOne({ _id: profilePicId })
-    .select("extension externalUrl userId")
-    .lean();
+  let profilePic = null;
+  if (mongoose.Types.ObjectId.isValid(profilePicId)) {
+    profilePic = await File.findOne({ _id: profilePicId })
+      .select("extension externalUrl userId")
+      .lean();
+  }
+
+  // If not found by File _id, profilePicId may be a User _id
+  if (!profilePic && mongoose.Types.ObjectId.isValid(profilePicId)) {
+    const userDoc = await User.findById(profilePicId).select("profilepic").lean();
+    if (userDoc?.profilepic) {
+      profilePic = await File.findOne({ _id: userDoc.profilepic })
+        .select("extension externalUrl userId")
+        .lean();
+    }
+  }
 
   if (!profilePic) {
     const e = new Error("Profile pic not found");
@@ -137,7 +171,9 @@ export const getProfilePicLogic = async ({
     throw e;
   }
 
-  if (targetUserId && targetUserId !== userId?.toString()) {
+  // Check ownership / permissions
+  const isOwner = profilePic.userId?.toString() === userId?.toString();
+  if (!isOwner) {
     const hierarchy = ["User", "Manager", "Admin", "Owner"];
     const userRoleIndex = hierarchy.indexOf(userRole || "User");
 
@@ -158,14 +194,39 @@ export const getProfilePicLogic = async ({
     }
   }
 
+  // If legacy externalUrl exists, auto-migrate to B2 on-the-fly
   if (profilePic.externalUrl) {
-    return res.redirect(profilePic.externalUrl);
+    try {
+      const resp = await fetch(profilePic.externalUrl);
+      if (resp.ok) {
+        const arrayBuf = await resp.arrayBuffer();
+        const buf = Buffer.from(arrayBuf);
+        const cType = resp.headers.get("content-type") || "image/jpeg";
+        const ext = cType.includes("png") ? ".png" : (cType.includes("webp") ? ".webp" : ".jpg");
+        const key = `${profilePic._id.toString()}${ext}`;
+        await uploadToB2({
+          key,
+          body: buf,
+          contentType: cType,
+        });
+        await File.updateOne(
+          { _id: profilePic._id },
+          { $set: { extension: ext, externalUrl: null, size: buf.length } }
+        );
+        profilePic.extension = ext;
+        profilePic.externalUrl = null;
+      }
+    } catch (migErr) {
+      console.warn("Failed to auto-migrate legacy externalUrl avatar to B2:", migErr);
+      return res.redirect(profilePic.externalUrl);
+    }
   }
 
   try {
     const s3Response = await getObjectFromB2({
       key: `${profilePic._id.toString()}${profilePic.extension}`,
     });
+    res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
     res.setHeader("Content-Type", s3Response.ContentType || "image/png");
     return s3Response.Body.pipe(res);
   } catch (s3Err) {

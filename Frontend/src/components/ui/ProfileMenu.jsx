@@ -32,11 +32,16 @@ export default function ProfileMenu({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const menuRef = useRef(null);
   const fileInputRef = useRef(null);
   const maxStorage = user.maxStorage || 1024 * 1024 * 500;
   const usedStorage = user.usedStorage || 0;
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setImgError(false);
+  }, [profilePicUrl]);
 
   // Owner configartion settings state
   const [ownerSettingsOpen, setOwnerSettingsOpen] = useState(false);
@@ -294,10 +299,12 @@ export default function ProfileMenu({
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-[#14b8a6] to-[#3b82f6] rounded-full [mask-image:linear-gradient(white,transparent)]" />
           <div className="w-full h-full rounded-full bg-white dark:bg-[#020b08] overflow-hidden flex items-center justify-center relative z-10 border-2 border-white/50 dark:border-white/10 shadow-sm">
-            {profilePicUrl ? (
+            {profilePicUrl && !imgError ? (
               <img
                 src={profilePicUrl}
                 alt="Profile"
+                referrerPolicy="no-referrer"
+                onError={() => setImgError(true)}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
             ) : (
@@ -337,10 +344,12 @@ export default function ProfileMenu({
                     <div className="absolute inset-0 bg-gradient-to-br from-[#14b8a6] to-[#3b82f6] rounded-[1.25rem] blur-md opacity-40 group-hover/avatar:opacity-80 transition-opacity duration-300" />
                     <div className="relative w-16 h-16 rounded-[1.25rem] bg-gradient-to-br from-white to-slate-50 dark:from-[#0f172a] dark:to-[#020b08] p-[2px] shadow-xl">
                       <div className="w-full h-full rounded-[1.1rem] overflow-hidden bg-white dark:bg-[#020b08] flex items-center justify-center relative">
-                        {profilePicUrl ? (
+                        {profilePicUrl && !imgError ? (
                           <img
                             src={profilePicUrl}
                             alt="Profile"
+                            referrerPolicy="no-referrer"
+                            onError={() => setImgError(true)}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover/avatar:scale-110"
                           />
                         ) : (

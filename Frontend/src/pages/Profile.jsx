@@ -9,20 +9,37 @@ import {
   CheckCircle2,
   ArrowLeft,
   X,
+  HardDrive,
+  Sparkles,
+  Smartphone,
+  Mail,
+  ShieldCheck,
+  Key,
+  ShieldAlert,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { SERVER_URL } from "../lib/api";
-import { formatSize } from "../lib/utils";
+import { formatSize, getUser } from "../lib/utils";
+import PhoneVerificationModal from "../components/auth/PhoneVerificationModal";
+import SecondaryRecoveryEmailModal from "../components/auth/SecondaryRecoveryEmailModal";
+import TwoFactorSetupModal from "../components/auth/TwoFactorSetupModal";
+import TwoFactorManageModal from "../components/auth/TwoFactorManageModal";
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const navigate = useNavigate();
 
   const [editNameOpen, setEditNameOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [twoFactorSetupOpen, setTwoFactorSetupOpen] = useState(false);
+  const [twoFactorManageOpen, setTwoFactorManageOpen] = useState(false);
+  const [recoveryEmailOpen, setRecoveryEmailOpen] = useState(false);
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
   const [nameMessage, setNameMessage] = useState(null);
   const [passwordMessage, setPasswordMessage] = useState(null);
+
+  const refreshUser = () => getUser(setUser);
 
   const profilePicUrl = user?.profilepic
     ? `${SERVER_URL}/user/profilepic?id=${user.profilepic}`
@@ -30,44 +47,44 @@ const Profile = () => {
 
   const maxStorage = user?.maxStorage || 1024 * 1024 * 500;
   const usedStorage = user?.usedStorage || 0;
-  const usedPercent = ((usedStorage / maxStorage) * 100).toFixed(1);
+  const usedPercent = Math.min(100, Math.max(0, ((usedStorage / maxStorage) * 100).toFixed(1)));
 
   const roleDescriptions = {
     OWNER: [
-      "Full access to the system",
-      "Manage all users and permissions",
-      "Configure system settings and billing",
-      "Delete and terminate accounts",
+      "Full access to the system and global parameters",
+      "Manage all system users, permissions, and roles",
+      "Configure subscription plans, features, and limits",
+      "Delete and terminate user accounts",
     ],
     ADMIN: [
-      "Manage standard users",
-      "View all analytics and reports",
-      "Cannot change billing or terminate owners",
+      "Manage standard user accounts and permissions",
+      "View system analytics and user data",
+      "Cannot modify owner billing or terminate owner accounts",
     ],
     MANAGER: [
-      "Manage team workflows",
+      "Manage team workflows and file sharing",
       "View department-level data",
       "Limited access to user management",
     ],
     USER: [
-      "Access own files and folders",
-      "Share files with other users",
-      "Manage personal account settings",
+      "Access personal cloud vault files and folders",
+      "Create cryptographic share links for external users",
+      "Manage personal account settings and security",
     ],
   };
 
-  const getRoleStyle = (role) => {
+  const getRoleBadgeStyle = (role) => {
     switch (role?.toUpperCase()) {
       case "OWNER":
-        return "text-purple-500 border-purple-500/30 bg-purple-500/10";
+        return "bg-purple-500/10 text-purple-300 border-purple-500/30";
       case "ADMIN":
-        return "text-pink-500 border-pink-500/30 bg-pink-500/10";
+        return "bg-rose-500/10 text-rose-300 border-rose-500/30";
       case "MANAGER":
-        return "text-amber-500 border-amber-500/30 bg-amber-500/10";
+        return "bg-amber-500/10 text-amber-300 border-amber-500/30";
       case "USER":
-        return "text-[#14b8a6] border-[#14b8a6]/30 bg-[#14b8a6]/10";
+        return "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
       default:
-        return "text-gray-500 border-gray-500/30 bg-gray-500/10";
+        return "bg-white/5 text-white/50 border-white/10";
     }
   };
 
@@ -144,215 +161,368 @@ const Profile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#070709] text-white p-8 relative overflow-hidden font-sans pt-24">
-      {/* Background Gradients */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-[#14b8a6]/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-[40%] right-[-10%] w-[40vw] h-[40vw] bg-[#3b82f6]/10 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen bg-[#030706] text-white p-6 sm:p-8 relative overflow-hidden font-sans pt-20 pb-24">
+      {/* Subtle Atmospheric Gradient Background Orbs */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-emerald-500/10 via-teal-500/5 to-transparent blur-[140px] rounded-full" />
+        <div className="absolute top-1/3 -left-48 w-96 h-96 bg-blue-500/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-10 -right-48 w-96 h-96 bg-purple-500/5 blur-[120px] rounded-full" />
+      </div>
 
-      <div className="max-w-5xl mx-auto relative z-10">
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors group"
-        >
-          <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
-            <ArrowLeft size={18} />
+      <div className="max-w-6xl mx-auto relative z-10 space-y-10">
+        {/* Navigation Top Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="p-2.5 rounded-2xl bg-white/5 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-colors shadow-sm"
+              title="Return to Dashboard"
+            >
+              <ArrowLeft size={18} />
+            </button>
+
+            <div>
+              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1">
+                <User size={14} /> Vault Account Settings
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                Profile & Security
+              </h1>
+              <p className="text-white/50 text-sm font-medium mt-1">
+                Manage your personal information, storage quota, and account security.
+              </p>
+            </div>
           </div>
-          <span className="font-semibold text-sm">Back to Dashboard</span>
-        </button>
-
-        <header className="mb-12">
-          <h1 className="text-5xl font-black mb-4 tracking-tight">
-            Your{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#14b8a6] via-[#10b981] to-[#3b82f6]">
-              Profile
-            </span>
-          </h1>
-          <p className="text-gray-400 text-lg">
-            Manage your personal settings and preferences
-          </p>
-        </header>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Profile Info */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="lg:col-span-2 space-y-8"
-          >
-            {/* Identity Card */}
-            <div className="bg-[#101014] border border-white/5 rounded-3xl p-8 shadow-2xl relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#14b8a6]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-              <div className="flex items-start gap-6 relative z-10">
-                <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0 bg-[#14b8a6]/20 flex items-center justify-center border border-[#14b8a6]/30 shadow-[0_0_20px_rgba(20,184,166,0.15)] relative group/avatar">
+          {/* Left Column: Identity & Storage Cards */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Identity Hero Card */}
+            <div className="rounded-3xl p-6 sm:p-8 bg-vault-surface/80 border border-white/10 backdrop-blur-xl shadow-xl relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 group">
+              <div className="flex items-center gap-6 z-10">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden shrink-0 bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center shadow-lg shadow-emerald-500/10">
                   {profilePicUrl ? (
                     <img
                       src={profilePicUrl}
-                      alt="Profile"
+                      alt={user?.name || "Profile"}
+                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = "none";
+                      }}
                     />
                   ) : (
-                    <span className="text-4xl font-bold text-teal-400 select-none">
+                    <span className="text-2xl sm:text-3xl font-black text-emerald-400 select-none">
                       {user?.name?.[0]?.toUpperCase() ||
                         user?.email?.[0]?.toUpperCase() ||
-                        "A"}
+                        "U"}
                     </span>
                   )}
                 </div>
-                <div className="flex-1 mt-1">
-                  <div className="flex items-center gap-4 mb-2">
-                    <h2 className="text-2xl font-bold text-white tracking-tight">
+
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h2 className="text-2xl font-black text-white tracking-tight truncate">
                       {user?.name}
                     </h2>
                     <button
                       onClick={() => setEditNameOpen(true)}
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                      title="Edit Name"
+                      className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 transition-colors"
+                      title="Edit Display Name"
                     >
                       <Edit2 size={14} />
                     </button>
                   </div>
-                  <p className="text-gray-400 mb-4">{user?.email}</p>
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border tracking-widest bg-[#14b8a6]/10 border-[#14b8a6]/30 text-teal-400">
-                    <Shield size={14} />
-                    {userRole} ACCOUNT
+                  <p className="text-sm text-white/50 font-medium truncate">
+                    {user?.email}
+                  </p>
+                  <div className="pt-2">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getRoleBadgeStyle(
+                        userRole
+                      )}`}
+                    >
+                      <Shield size={12} /> {userRole} ACCOUNT
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Storage Card */}
-            <div className="bg-[#101014] border border-white/5 rounded-3xl p-8 shadow-2xl relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-              <div className="flex items-center justify-between mb-6 relative z-10">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                  <Zap className="text-blue-400" size={20} /> Storage Quota
-                </h3>
-                <span className="text-sm font-bold text-blue-400 bg-blue-400/10 px-3 py-1 rounded-full border border-blue-400/20">
-                  {usedPercent}% Used
+            {/* Storage Quota Card */}
+            <div className="rounded-3xl p-6 sm:p-8 bg-vault-surface/80 border border-white/10 backdrop-blur-xl shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
+                  <HardDrive size={16} className="text-emerald-400" /> Vault Storage Allocation
+                </span>
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                  {usedPercent}% Quota Used
                 </span>
               </div>
-              <div className="relative z-10">
-                <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden mb-3 shadow-inner">
+
+              <div className="space-y-2 pt-2">
+                <div className="w-full h-3 rounded-full bg-white/10 overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${usedPercent}%` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                    className="h-full bg-gradient-to-r from-blue-500 to-teal-400 rounded-full relative"
-                  >
-                    <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:10px_10px] animate-[slide_1s_linear_infinite]" />
-                  </motion.div>
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-teal-400 to-emerald-500 rounded-full"
+                  />
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400 font-medium">{formatSize(usedStorage)} used</span>
-                  <span className="text-gray-500 font-medium">{formatSize(maxStorage)} total</span>
+
+                <div className="flex items-center justify-between text-xs font-semibold text-white/60 pt-1">
+                  <span>Used: {formatSize(usedStorage)}</span>
+                  <span>Total Quota: {formatSize(maxStorage)}</span>
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
 
-          {/* Right Column */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="space-y-8"
-          >
-            {/* Permissions Card */}
-            <div className="bg-[#101014] border border-white/5 rounded-3xl p-8 shadow-2xl relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2 relative z-10">
-                <Shield className="text-purple-400" size={18} /> Role Capabilities
-              </h3>
-              <ul className="space-y-4 relative z-10">
+          {/* Right Column: Capabilities & Security */}
+          <div className="space-y-8">
+            {/* Role Capabilities */}
+            <div className="rounded-3xl p-6 sm:p-8 bg-vault-surface/80 border border-white/10 backdrop-blur-xl shadow-xl space-y-6">
+              <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+                <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300">
+                  <Shield size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Role Capabilities</h3>
+                  <p className="text-xs text-white/40 font-medium">Assigned permissions</p>
+                </div>
+              </div>
+
+              <ul className="space-y-3">
                 {userPermissions.map((perm, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
-                    <CheckCircle2 className="text-purple-400 shrink-0 mt-0.5" size={16} />
+                  <li key={idx} className="flex items-start gap-3 text-xs text-white/80 font-medium">
+                    <CheckCircle2 className="text-emerald-400 shrink-0 mt-0.5" size={15} />
                     <span className="leading-relaxed">{perm}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            {/* Security Card */}
-            <div className="bg-[#101014] border border-white/5 rounded-3xl p-8 shadow-2xl relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2 relative z-10">
-                <Lock className="text-emerald-400" size={18} /> Security
-              </h3>
-              <div className="relative z-10">
+            {/* Account Security */}
+            <div className="rounded-3xl p-6 sm:p-8 bg-vault-surface/80 border border-white/10 backdrop-blur-xl shadow-xl space-y-6">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                    <Lock size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Security & Recovery</h3>
+                    <p className="text-xs text-white/40 font-medium">Authentication, backup emails & phone</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 1. Two-Factor Authentication (TOTP 2FA) */}
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+                      <ShieldCheck size={16} />
+                    </div>
+                    <span className="text-xs font-bold text-white">Two-Factor Authentication</span>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      user?.twoFactorEnabled
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : "bg-white/10 text-white/50 border border-white/10"
+                    }`}
+                  >
+                    {user?.twoFactorEnabled ? "Active" : "Disabled"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  Protect your Vault account by requiring an authenticator app (Google Authenticator, Authy, 1Password) code on login.
+                </p>
+                {user?.twoFactorEnabled ? (
+                  <button
+                    onClick={() => setTwoFactorManageOpen(true)}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 text-white border border-white/10 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Key size={13} /> Manage 2FA / Backup Codes
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setTwoFactorSetupOpen(true)}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-teal-500 to-emerald-500 hover:opacity-95 text-white shadow-md shadow-teal-500/20 transition-all flex items-center justify-center gap-2"
+                  >
+                    <ShieldCheck size={14} /> Enable Two-Factor Auth
+                  </button>
+                )}
+              </div>
+
+              {/* 2. Secondary Recovery Email */}
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-teal-500/10 text-teal-400">
+                      <Mail size={16} />
+                    </div>
+                    <span className="text-xs font-bold text-white">Secondary Recovery Email</span>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      user?.secondaryRecoveryEmailVerified
+                        ? "bg-teal-500/20 text-teal-300 border border-teal-500/30"
+                        : "bg-white/10 text-white/50 border border-white/10"
+                    }`}
+                  >
+                    {user?.secondaryRecoveryEmailVerified ? "Verified" : "Not Set"}
+                  </span>
+                </div>
+                {user?.secondaryRecoveryEmailVerified ? (
+                  <div className="flex items-center justify-between text-xs text-white/80 font-mono bg-black/30 p-2.5 rounded-xl border border-white/5">
+                    <span className="truncate">{user.secondaryRecoveryEmail}</span>
+                    <CheckCircle2 size={14} className="text-teal-400 shrink-0 ml-2" />
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-white/50 leading-relaxed">
+                    Add a verified secondary email to recover your account and receive password resets if you lose access to your primary email.
+                  </p>
+                )}
                 <button
-                  onClick={() => setPasswordOpen(true)}
-                  className="w-full py-3 rounded-xl text-sm font-bold bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-gray-300 hover:text-white flex items-center justify-center gap-2"
+                  onClick={() => setRecoveryEmailOpen(true)}
+                  className="w-full py-2.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 text-white border border-white/10 transition-colors flex items-center justify-center gap-2"
                 >
-                  Set or Change Password
+                  <Mail size={13} /> {user?.secondaryRecoveryEmailVerified ? "Update Recovery Email" : "Set Recovery Email"}
                 </button>
               </div>
+
+              {/* 3. Phone Number Verification (Free Trial & Security) */}
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+                      <Smartphone size={16} />
+                    </div>
+                    <span className="text-xs font-bold text-white">Phone Verification</span>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      user?.phoneVerified
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                    }`}
+                  >
+                    {user?.phoneVerified ? "Verified" : "Unverified"}
+                  </span>
+                </div>
+                {user?.phoneVerified ? (
+                  <div className="flex items-center justify-between text-xs text-white/80 font-mono bg-black/30 p-2.5 rounded-xl border border-white/5">
+                    <span className="truncate">{user.phone}</span>
+                    <CheckCircle2 size={14} className="text-emerald-400 shrink-0 ml-2" />
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-white/50 leading-relaxed">
+                    Verify your phone via SMS to claim your 30-day Free Trial and protect against account takeover.
+                  </p>
+                )}
+                <button
+                  onClick={() => setPhoneModalOpen(true)}
+                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 ${
+                    user?.phoneVerified
+                      ? "bg-white/10 hover:bg-white/15 text-white border border-white/10"
+                      : "bg-gradient-to-r from-teal-500 to-emerald-500 hover:opacity-95 text-white shadow-md shadow-teal-500/20"
+                  }`}
+                >
+                  <Smartphone size={13} /> {user?.phoneVerified ? "Change Phone Number" : "Verify Phone Number"}
+                </button>
+              </div>
+
+              {/* 4. Password */}
+              <button
+                onClick={() => setPasswordOpen(true)}
+                className="w-full py-3 rounded-2xl text-xs font-bold bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-colors flex items-center justify-center gap-2"
+              >
+                <Lock size={14} /> Update Account Password
+              </button>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
 
-      {/* Modals */}
+      {/* ── EDIT DISPLAY NAME MODAL ── */}
       <AnimatePresence>
         {editNameOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
               onClick={() => setEditNameOpen(false)}
             />
+
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-[#101014] border border-[#14b8a6]/20 rounded-3xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-vault-surface border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 overflow-hidden"
             >
-              <form onSubmit={handleUpdateName}>
-                <div className="p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-bold text-white">Edit Name</h3>
-                    <button
-                      type="button"
-                      onClick={() => setEditNameOpen(false)}
-                      className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-400 mb-2">
-                        Display Name
-                      </label>
-                      <input
-                        type="text"
-                        name="name"
-                        defaultValue={user?.name}
-                        required
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#14b8a6]/50 focus:ring-1 focus:ring-[#14b8a6]/50 transition-all"
-                        placeholder="Enter your name"
-                      />
-                    </div>
-                    {nameMessage && (
-                      <div className={`text-sm px-4 py-2 rounded-lg font-medium ${nameMessage.type === "success" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
-                        {nameMessage.text}
-                      </div>
-                    )}
-                  </div>
+              <button
+                type="button"
+                onClick={() => setEditNameOpen(false)}
+                className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                  <User className="text-emerald-400" size={24} />
                 </div>
-                <div className="bg-black/20 p-6 flex justify-end gap-3 border-t border-white/5">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Edit Display Name</h3>
+                  <p className="text-xs text-white/40 uppercase tracking-wider font-semibold">
+                    Profile Configuration
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleUpdateName} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    defaultValue={user?.name}
+                    required
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                    placeholder="Enter your name"
+                  />
+                </div>
+
+                {nameMessage && (
+                  <div
+                    className={`text-xs px-4 py-2.5 rounded-xl font-semibold border ${
+                      nameMessage.type === "success"
+                        ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                        : "bg-rose-500/10 text-rose-300 border-rose-500/30"
+                    }`}
+                  >
+                    {nameMessage.text}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => setEditNameOpen(false)}
-                    className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-xl text-sm font-bold bg-[#14b8a6] hover:bg-[#0d9488] text-white transition-all shadow-[0_0_15px_rgba(20,184,166,0.3)]"
+                    className="px-6 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/20 hover:opacity-95 transition-opacity"
                   >
                     Save Changes
                   </button>
@@ -361,76 +531,95 @@ const Profile = () => {
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
 
+      {/* ── UPDATE PASSWORD MODAL ── */}
+      <AnimatePresence>
         {passwordOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
               onClick={() => setPasswordOpen(false)}
             />
+
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-[#101014] border border-[#14b8a6]/20 rounded-3xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-vault-surface border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 overflow-hidden"
             >
-              <form onSubmit={handleUpdatePassword}>
-                <div className="p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-bold text-white">Security Settings</h3>
-                    <button
-                      type="button"
-                      onClick={() => setPasswordOpen(false)}
-                      className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-400 mb-2">
-                        Current Password (Optional if OAuth)
-                      </label>
-                      <input
-                        type="password"
-                        name="currentPassword"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#14b8a6]/50 focus:ring-1 focus:ring-[#14b8a6]/50 transition-all"
-                        placeholder="Enter current password"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-400 mb-2">
-                        New Password
-                      </label>
-                      <input
-                        type="password"
-                        name="newPassword"
-                        required
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#14b8a6]/50 focus:ring-1 focus:ring-[#14b8a6]/50 transition-all"
-                        placeholder="Enter new password"
-                      />
-                    </div>
-                    {passwordMessage && (
-                      <div className={`text-sm px-4 py-2 rounded-lg font-medium ${passwordMessage.type === "success" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
-                        {passwordMessage.text}
-                      </div>
-                    )}
-                  </div>
+              <button
+                type="button"
+                onClick={() => setPasswordOpen(false)}
+                className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                  <Lock className="text-emerald-400" size={24} />
                 </div>
-                <div className="bg-black/20 p-6 flex justify-end gap-3 border-t border-white/5">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Security Settings</h3>
+                  <p className="text-xs text-white/40 uppercase tracking-wider font-semibold">
+                    Account Password
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    name="currentPassword"
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                    placeholder="Enter current password (if set)"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    name="newPassword"
+                    required
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                    placeholder="Enter new password"
+                  />
+                </div>
+
+                {passwordMessage && (
+                  <div
+                    className={`text-xs px-4 py-2.5 rounded-xl font-semibold border ${
+                      passwordMessage.type === "success"
+                        ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                        : "bg-rose-500/10 text-rose-300 border-rose-500/30"
+                    }`}
+                  >
+                    {passwordMessage.text}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 pt-4">
                   <button
                     type="button"
                     onClick={() => setPasswordOpen(false)}
-                    className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-xl text-sm font-bold bg-[#14b8a6] hover:bg-[#0d9488] text-white transition-all shadow-[0_0_15px_rgba(20,184,166,0.3)]"
+                    className="px-6 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/20 hover:opacity-95 transition-opacity"
                   >
                     Save Password
                   </button>
@@ -440,8 +629,41 @@ const Profile = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ── PHONE VERIFICATION MODAL ── */}
+      <PhoneVerificationModal
+        isOpen={phoneModalOpen}
+        onClose={() => setPhoneModalOpen(false)}
+        onSuccess={refreshUser}
+        title="Verify Phone Number"
+        subtitle="Verify your phone number to secure your account and unlock your 30-day Free Trial eligibility."
+        purpose="security"
+      />
+
+      {/* ── SECONDARY RECOVERY EMAIL MODAL ── */}
+      <SecondaryRecoveryEmailModal
+        isOpen={recoveryEmailOpen}
+        onClose={() => setRecoveryEmailOpen(false)}
+        currentEmail={user?.secondaryRecoveryEmailVerified ? user.secondaryRecoveryEmail : null}
+        onSuccess={refreshUser}
+      />
+
+      {/* ── 2FA SETUP MODAL ── */}
+      <TwoFactorSetupModal
+        isOpen={twoFactorSetupOpen}
+        onClose={() => setTwoFactorSetupOpen(false)}
+        onSuccess={refreshUser}
+      />
+
+      {/* ── 2FA MANAGE MODAL ── */}
+      <TwoFactorManageModal
+        isOpen={twoFactorManageOpen}
+        onClose={() => setTwoFactorManageOpen(false)}
+        onSuccess={refreshUser}
+      />
     </div>
   );
 };
 
 export default Profile;
+

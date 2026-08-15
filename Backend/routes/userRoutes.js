@@ -41,7 +41,7 @@ import throttle from "../utils/throttle.js";
 
 const router = express.Router();
 
-router.get("/", checkAuth, throttle(50, 20, "user-get"), getUser);
+router.get("/", checkAuth, lightReadLimiter, throttle(50, 20, "user-get"), getUser);
 
 router.post("/register", registerLimiter, throttle(2000, 2, "register"), registerUser);
 router.post("/login", loginLimiter, throttle(1500, 3, "login"), loginUser);

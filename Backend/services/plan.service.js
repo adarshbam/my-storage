@@ -6,6 +6,9 @@ import PlanTier from "../models/planTierModel.js";
 import SystemConfig from "../models/systemConfigModel.js";
 import User from "../models/userModel.js";
 import Subscription from "../models/subscriptionModel.js";
+import TrialClaim from "../models/trialClaimModel.js";
+import { hashPhoneNumber } from "../utils/crypto.utils.js";
+import { invalidateUserSessions } from "../databases/redis.js";
 
 export const createPlanLogic = async ({ planData, userId, userRole }) => {
   const { slug, amount, storage, period, currency } = planData;
@@ -595,22 +598,52 @@ export const createPlanTierLogic = async ({ tierData, userRole }) => {
   };
 };
 
-export const activateFreeTrialLogic = async ({ userId }) => {
+export const activateFreeTrialLogic = async ({ userId, req }) => {
   const user = await User.findById(userId);
   if (!user) {
     throw Object.assign(new Error("User not found"), { status: 404 });
   }
 
+  // 1. Mandatory phone verification
+  if (!user.phone || !user.phoneVerified) {
+    const err = new Error("Phone number verification is required to claim the 30-day Free Trial.");
+    err.status = 403;
+    err.code = "PHONE_VERIFICATION_REQUIRED";
+    throw err;
+  }
+
+  // 2. Check if current user has already used trial
   if (user.hasUsedFreeTrial) {
     throw Object.assign(
       new Error(
         "You have already used your 30-day Free Trial. Please select a paid plan.",
       ),
-      { status: 400 },
+      { status: 400, code: "TRIAL_ALREADY_USED" },
     );
   }
 
-  // Find the active free trial billing plan
+  // 3. Atomically claim entitlement for this canonical phone identity
+  const phoneHash = hashPhoneNumber(user.phone);
+  try {
+    await TrialClaim.create({
+      phoneHash,
+      firstClaimedByUserId: user._id,
+      claimedAt: new Date(),
+      claimedIp: req?.ip || req?.headers?.["x-forwarded-for"] || null,
+    });
+  } catch (claimErr) {
+    if (claimErr.code === 11000) {
+      throw Object.assign(
+        new Error(
+          "This phone number has already been used to claim a 30-day Free Trial. Please select a paid plan.",
+        ),
+        { status: 403, code: "TRIAL_ALREADY_CLAIMED" },
+      );
+    }
+    throw claimErr;
+  }
+
+  // 4. Find the active free trial billing plan
   const freeTrialPlan =
     (await BillingPlan.findOne({
       slug: { $in: ["free-trial", "free-trail"] },
@@ -628,7 +661,7 @@ export const activateFreeTrialLogic = async ({ userId }) => {
     );
   }
 
-  // Create or update subscription record for the Free Trial
+  // 5. Create or update subscription record for the Free Trial
   const subscription = await Subscription.create({
     userId: user._id,
     billingPlan: freeTrialPlan._id,
@@ -646,6 +679,7 @@ export const activateFreeTrialLogic = async ({ userId }) => {
     user.maxStorage = freeTrialPlan.storage;
   }
   await user.save();
+  await invalidateUserSessions(user._id.toString());
 
   return {
     success: true,

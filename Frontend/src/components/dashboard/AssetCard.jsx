@@ -23,6 +23,7 @@ import {
 import { motion } from "framer-motion";
 import { SERVER_URL } from "../../lib/api";
 import { usePlan } from "../../context/PlanContext";
+import Skeleton from "../ui/Skeleton";
 
 const formatRelativeTime = (dateString) => {
   if (!dateString) return "";
@@ -155,6 +156,7 @@ export default function AssetCard({
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
   const { isNoPlan, rules } = usePlan();
@@ -434,15 +436,26 @@ export default function AssetCard({
               />
             )
           ) : item.hasThumbnail && !imageError ? (
-            <img
-              src={`${SERVER_URL}/file/${item._id}/thumbnail`}
-              alt="thumbnail"
-              className="w-full h-full object-cover"
-              onError={() => setImageError(true)}
-              crossOrigin="use-credentials"
-              loading="lazy"
-              draggable={false}
-            />
+            <>
+              {!imageLoaded && (
+                <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
+              )}
+              <img
+                src={`${SERVER_URL}/file/${item._id}/thumbnail`}
+                alt="thumbnail"
+                className={`w-full h-full object-cover transition-opacity duration-300 ${
+                  imageLoaded ? "opacity-100" : "opacity-0"
+                }`}
+                onLoad={() => setImageLoaded(true)}
+                onError={() => {
+                  setImageError(true);
+                  setImageLoaded(true);
+                }}
+                crossOrigin="use-credentials"
+                loading="lazy"
+                draggable={false}
+              />
+            </>
           ) : (
             <img
               src={getFileImage(ext)}

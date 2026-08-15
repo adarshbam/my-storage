@@ -29,6 +29,10 @@ const fileSchema = new Schema(
 fileSchema.index({ userId: 1 });
 fileSchema.index({ parentDir: 1 });
 fileSchema.index({ parentDir: 1, userId: 1 });
+fileSchema.index({ userId: 1, starred: 1 });
+fileSchema.index({ userId: 1, createdAt: -1 });
+fileSchema.index({ userId: 1, openedAt: -1 });
+fileSchema.index({ parentDir: 1, name: 1 });
 
 const File = model("File", fileSchema);
 export default File;

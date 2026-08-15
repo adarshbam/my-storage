@@ -29,6 +29,7 @@ import AssetCard from "../dashboard/AssetCard";
 import FileDetailsModal from "../dashboard/FileDetailsModal";
 import PlanStatusBanner from "../dashboard/PlanStatusBanner";
 import { usePlan } from "../../context/PlanContext";
+import FileBrowserSkeleton from "./FileBrowserSkeleton";
 import {
   Upload,
   FolderPlus,
@@ -108,6 +109,7 @@ export default function FileBrowser({ specialView }) {
   const [error, setError] = useState(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const [detailsItem, setDetailsItem] = useState(null);
+  const folderCache = useRef(new Map());
 
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -297,14 +299,25 @@ export default function FileBrowser({ specialView }) {
     };
   }, []);
 
-  const fetchFiles = async () => {
-    setLoading(true);
+  const fetchFiles = async (forceRefresh = false) => {
+    const cacheKey = `${specialView || "drive"}:${folderId || "root"}:${isSearch ? searchQuery || "" : ""}:${selectedBranch || ""}:${driveFolderId || ""}:${githubPath || ""}:${ownerId || ""}`;
+    const cachedEntry = folderCache.current?.get(cacheKey);
+
+    if (cachedEntry && !forceRefresh) {
+      setData(cachedEntry.data);
+      if (cachedEntry.dirName) setDirName(cachedEntry.dirName);
+      if (cachedEntry.dirPath) setDirPath(cachedEntry.dirPath);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     setError(null);
+
+    // Refresh user storage in background without blocking directory load
+    getUser(setUser).catch(() => {});
+
     try {
       let url = joinUrl(SERVER_URL, "directory", folderId || "");
-
-      // Refresh user storage info
-      await getUser(setUser);
 
       if (specialView === "shared") {
         url = folderId
@@ -407,13 +420,19 @@ export default function FileBrowser({ specialView }) {
             }
           });
 
-          setData({
+          const sharedData = {
             directories: dirs,
             files: files,
             parentDir: null,
             parentId: null,
-          });
+          };
+          setData(sharedData);
           setDirName("Shared with me");
+          folderCache.current?.set(cacheKey, {
+            data: sharedData,
+            dirName: "Shared with me",
+            dirPath: "Shared",
+          });
           setLoading(false);
           return;
         }
@@ -447,12 +466,13 @@ export default function FileBrowser({ specialView }) {
           );
         }
 
-        setData({
+        const resolvedData = {
           directories,
           files,
           parentDir: result.parentDir,
           parentId: result.parentId ?? null,
-        });
+        };
+        setData(resolvedData);
 
         // Cache folder names to resolve paths on the client
         try {
@@ -477,26 +497,31 @@ export default function FileBrowser({ specialView }) {
           console.error("Path cache error:", e);
         }
         setDirPath(result.path);
-        setDirName(
+        const resolvedName =
           result.name ||
-            (isSearch
-              ? `Search: ${searchQuery}`
-              : specialView === "shared"
-                ? "Secure Relay"
-                : specialView === "admin"
-                  ? "Admin View"
-                  : specialView === "recent"
-                    ? "Activity Pulse"
-                    : specialView === "starred"
-                      ? "Priority Beacon"
-                      : specialView === "google-drive"
-                        ? "Google Drive"
-                        : specialView === "github"
-                          ? "GitHub"
-                          : specialView === "github-repo"
-                            ? "Repository"
-                            : "Home"),
-        );
+          (isSearch
+            ? `Search: ${searchQuery}`
+            : specialView === "shared"
+              ? "Secure Relay"
+              : specialView === "admin"
+                ? "Admin View"
+                : specialView === "recent"
+                  ? "Activity Pulse"
+                  : specialView === "starred"
+                    ? "Priority Beacon"
+                    : specialView === "google-drive"
+                      ? "Google Drive"
+                      : specialView === "github"
+                        ? "GitHub"
+                        : specialView === "github-repo"
+                          ? "Repository"
+                          : "Home");
+        setDirName(resolvedName);
+        folderCache.current?.set(cacheKey, {
+          data: resolvedData,
+          dirName: resolvedName,
+          dirPath: result.path,
+        });
       } else {
         const errData = await response.json().catch(() => ({}));
         setError(errData.error || "Failed to fetch files from server");
@@ -1742,9 +1767,7 @@ export default function FileBrowser({ specialView }) {
           </p>
         </div>
       ) : loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="animate-spin text-blue-500" size={40} />
-        </div>
+        <FileBrowserSkeleton viewMode={viewMode} count={12} />
       ) : (
         <div
           className={`pb-20 relative select-none flex-1 content-start ${

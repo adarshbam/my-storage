@@ -13,24 +13,76 @@ import {
   activateFreeTrial,
   updatePlans,
 } from "../controllers/planController.js";
+import {
+  lightReadLimiter,
+  subscriptionLimiter,
+  adminLimiter,
+} from "../middlewares/rateLimiter.js";
+import throttle from "../utils/throttle.js";
 
 const router = express.Router();
 
-router.get("/get-active-plans", getAllActivePlans);
+router.get(
+  "/get-active-plans",
+  lightReadLimiter,
+  throttle(100, 20, "plans-active"),
+  getAllActivePlans,
+);
 
 // Get current user plan context with features, rules, limits, tier & billing plan
-router.get("/context", checkAuth, loadPlanContext, getUserPlanContext);
-router.get("/current-plan-context", checkAuth, loadPlanContext, getUserPlanContext);
+router.get(
+  "/context",
+  checkAuth,
+  lightReadLimiter,
+  throttle(50, 20, "plan-context"),
+  loadPlanContext,
+  getUserPlanContext,
+);
+router.get(
+  "/current-plan-context",
+  checkAuth,
+  lightReadLimiter,
+  throttle(50, 20, "plan-context"),
+  loadPlanContext,
+  getUserPlanContext,
+);
 
 // 1-Click Free Trial Activation
-router.post("/activate-free-trial", checkAuth, activateFreeTrial);
+router.post(
+  "/activate-free-trial",
+  checkAuth,
+  subscriptionLimiter,
+  throttle(2000, 2, "plan-trial"),
+  activateFreeTrial,
+);
 
 // Create a new Razorpay Plan (authenticated)
-router.post("/create-plan", checkAuth, validate(createPlanSchema), createPlan);
+router.post(
+  "/create-plan",
+  checkAuth,
+  adminLimiter,
+  throttle(300, 5, "plan-create"),
+  validate(createPlanSchema),
+  createPlan,
+);
 
 // Batch update all plans (authenticated)
-router.patch("/update-plans", checkAuth, validate(updatePlansSchema), updatePlans);
-router.post("/update-plans", checkAuth, validate(updatePlansSchema), updatePlans);
+router.patch(
+  "/update-plans",
+  checkAuth,
+  adminLimiter,
+  throttle(300, 5, "plans-update"),
+  validate(updatePlansSchema),
+  updatePlans,
+);
+router.post(
+  "/update-plans",
+  checkAuth,
+  adminLimiter,
+  throttle(300, 5, "plans-update"),
+  validate(updatePlansSchema),
+  updatePlans,
+);
 
 export default router;
 

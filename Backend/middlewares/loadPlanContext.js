@@ -3,10 +3,36 @@ import Subscription from "../models/subscriptionModel.js";
 import BillingPlan from "../models/billingPlanModel.js";
 import PlanTierConfiguration from "../models/planTierConfigurationModel.js";
 import PlanTier from "../models/planTierModel.js";
+import { cacheGet, cacheSet, cacheDel } from "../databases/redis.js";
+
+export const invalidatePlanContextCache = async (userId) => {
+  if (!userId) return;
+  try {
+    await cacheDel(`plan_context:${userId}`);
+  } catch (err) {
+    console.error(`[invalidatePlanContextCache] Error for ${userId}:`, err.message);
+  }
+};
 
 export const loadPlanContext = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user?.id || req.user?._id).lean();
+    const userId = (req.user?.id || req.user?._id)?.toString();
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    // 0. Redis Cache Fast-Path (<1ms lookup)
+    const cachedPlanContext = await cacheGet(`plan_context:${userId}`);
+    if (cachedPlanContext) {
+      try {
+        req.planContext = JSON.parse(cachedPlanContext);
+        return next();
+      } catch (parseErr) {
+        console.error("[loadPlanContext] Cache parse error:", parseErr);
+      }
+    }
+
+    const user = await User.findById(userId).lean();
     if (!user) {
       return res.status(401).json({ error: "User not found" });
     }
@@ -139,6 +165,7 @@ export const loadPlanContext = async (req, res, next) => {
         },
       };
 
+      await cacheSet(`plan_context:${userId}`, JSON.stringify(req.planContext), 300);
       return next();
     }
 
@@ -200,6 +227,7 @@ export const loadPlanContext = async (req, res, next) => {
       },
     };
 
+    await cacheSet(`plan_context:${userId}`, JSON.stringify(req.planContext), 300);
     next();
   } catch (err) {
     console.error("[loadPlanContext] Error:", err);

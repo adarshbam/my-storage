@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { rzInstance } from "../integrations/razorpay/razorpay.client.js";
 import Subscription from "../models/subscriptionModel.js";
 import BillingPlan from "../models/billingPlanModel.js";
+import User from "../models/userModel.js";
 
 export const createSubscriptionLogic = async ({ planId, userId }) => {
   const billingPlan =

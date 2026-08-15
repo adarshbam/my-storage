@@ -6,10 +6,12 @@ import {
   cancelSubscriptionLogic,
   changePlanLogic
 } from "../services/subscription.service.js";
+import { invalidatePlanContextCache } from "../middlewares/loadPlanContext.js";
 
 export const createSubscription = async (req, res, next) => {
   try {
     const result = await createSubscriptionLogic({ planId: req.body.planId, userId: req.user.id });
+    await invalidatePlanContextCache(req.user.id);
     return res.json(result);
   } catch (err) {
     console.error("[Subscription] Error:", err.message);
@@ -36,6 +38,7 @@ export const getCurrentSubscription = async (req, res, next) => {
 export const pauseSubscription = async (req, res, next) => {
   try {
     const result = await pauseSubscriptionLogic({ subscriptionId: req.params.id, userId: req.user.id });
+    await invalidatePlanContextCache(req.user.id);
     return res.json(result);
   } catch (err) {
     console.error("[pauseSubscription] Error:", err.message);
@@ -47,6 +50,7 @@ export const pauseSubscription = async (req, res, next) => {
 export const resumeSubscription = async (req, res, next) => {
   try {
     const result = await resumeSubscriptionLogic({ subscriptionId: req.params.id, userId: req.user.id });
+    await invalidatePlanContextCache(req.user.id);
     return res.json(result);
   } catch (err) {
     console.error("[resumeSubscription] Error:", err.message);
@@ -62,6 +66,7 @@ export const cancelSubscription = async (req, res, next) => {
       userId: req.user.id,
       cancelAtCycleEnd: req.body.cancelAtCycleEnd
     });
+    await invalidatePlanContextCache(req.user.id);
     return res.json(result);
   } catch (err) {
     console.error("[cancelSubscription] Error:", err.message);
@@ -73,6 +78,7 @@ export const cancelSubscription = async (req, res, next) => {
 export const changePlan = async (req, res, next) => {
   try {
     const result = await changePlanLogic({ targetPlanId: req.body.targetPlanId, userId: req.user.id });
+    await invalidatePlanContextCache(req.user.id);
     return res.json(result);
   } catch (err) {
     console.error("[changePlan] Error:", err.message);

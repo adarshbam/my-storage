@@ -8,9 +8,16 @@ import {
   Edit2,
   Shield,
   Eye,
+  Users as UsersIcon,
+  RefreshCw,
+  Zap,
+  CheckCircle2,
+  ArrowLeft,
+  UserCheck,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import Skeleton from "../components/ui/Skeleton";
 
 const Users = () => {
   const navigate = useNavigate();
@@ -37,9 +44,9 @@ const Users = () => {
       }
     }
   }, [currentUser, authLoading, navigate]);
-  console.log(users);
 
   const fetchUsers = async () => {
+    setLoading(true);
     try {
       const res = await fetch(`${SERVER_URL}/users`, {
         credentials: "include",
@@ -56,7 +63,6 @@ const Users = () => {
   };
 
   const handleForceLogout = async (id) => {
-    console.log(id);
     try {
       const res = await fetch(`${SERVER_URL}/users/${id}/logout`, {
         method: "POST",
@@ -64,6 +70,9 @@ const Users = () => {
       });
       if (res.ok) {
         console.log(`Force logged out user ${id}`);
+        setUsers(
+          users.map((u) => (u._id === id ? { ...u, isLoggedIn: false } : u))
+        );
       }
     } catch (err) {
       console.error("Failed to force logout", err);
@@ -162,27 +171,27 @@ const Users = () => {
     }
   };
 
-  const getRoleStyle = (role) => {
-    switch (role) {
+  const getRoleBadgeStyle = (role) => {
+    switch (role?.toUpperCase()) {
       case "OWNER":
-        return "text-purple-500 border-purple-500/30 bg-purple-500/10";
+        return "bg-purple-500/10 text-purple-300 border-purple-500/30";
       case "ADMIN":
-        return "text-pink-500 border-pink-500/30 bg-pink-500/10";
+        return "bg-rose-500/10 text-rose-300 border-rose-500/30";
       case "MANAGER":
-        return "text-amber-500 border-amber-500/30 bg-amber-500/10";
+        return "bg-amber-500/10 text-amber-300 border-amber-500/30";
       case "USER":
-        return "text-[#14b8a6] border-[#14b8a6]/30 bg-[#14b8a6]/10";
+        return "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
       default:
-        return "text-gray-500 border-gray-500/30 bg-gray-500/10";
+        return "bg-white/5 text-white/50 border-white/10";
     }
   };
 
-  const getStatusStyle = (status) => {
+  const getStatusBadgeStyle = (status) => {
     if (status === "ONLINE")
-      return "text-emerald-400 border-emerald-400/30 bg-emerald-400/10";
+      return "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
     if (status === "TERMINATED" || status === "Deleted")
-      return "text-[#ef4444] border-[#ef4444]/30 bg-[#ef4444]/10";
-    return "text-gray-400 border-gray-400/30 bg-gray-400/10";
+      return "bg-rose-500/10 text-rose-400 border-rose-500/30";
+    return "bg-white/5 text-white/50 border-white/10";
   };
 
   const getDisplayStatus = (u) => {
@@ -192,261 +201,361 @@ const Users = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#070709] text-white p-8 relative overflow-hidden font-sans pt-24">
-      {/* Background Gradients */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-[#3b82f6]/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-[20%] right-[-10%] w-[40vw] h-[40vw] bg-[#14b8a6]/10 rounded-full blur-[120px] pointer-events-none" />
-
-      <div className="max-w-6xl mx-auto relative z-10">
-        <header className="text-center mb-16 pt-8">
-          <h1 className="text-5xl font-black mb-4 tracking-tight">
-            System{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#3b82f6] via-[#6366f1] to-[#a855f7]">
-              Users
-            </span>
-          </h1>
-          <p className="text-gray-400 text-lg mb-8">
-            Manage user access and system permissions
-          </p>
-
-          {currentUser && (
-            <div className="max-w-md mx-auto bg-[#101014] border border-[#3b82f6]/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#3b82f6]/10 to-transparent opacity-50 pointer-events-none" />
-
-              <div className="flex items-center gap-5 relative z-10">
-                <div className="w-20 h-20 rounded-full overflow-hidden shrink-0 bg-[#3b82f6]/20 flex items-center justify-center border border-[#3b82f6]/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-                  {profilePicUrl ? (
-                    <img
-                      src={profilePicUrl}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-2xl font-bold text-white select-none">
-                      {currentUser?.name?.[0]?.toUpperCase() ||
-                        currentUser?.email?.[0]?.toUpperCase() ||
-                        "A"}
-                    </span>
-                  )}
-                </div>
-                <div className="text-left flex-1">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h3 className="text-xl font-bold text-white leading-tight">
-                      {currentUser.name}
-                    </h3>
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border tracking-widest ${getRoleStyle(currentUser.role?.toUpperCase())}`}
-                    >
-                      {currentUser.role?.toUpperCase()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-400 mb-3">
-                    {currentUser.email}
-                  </p>
-                  <div className="inline-flex items-center gap-2 text-xs font-medium text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-md border border-emerald-400/20">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
-                    Current User
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </header>
-
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <AnimatePresence>
-              {users.map((user) => (
-                <motion.div
-                  key={user._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="bg-[#101014] border border-white/5 rounded-2xl p-6 shadow-2xl hover:border-white/10 transition-all duration-300 relative group overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-
-                  <div className="flex items-center gap-4 mb-6 relative z-10">
-                    <div className="w-16 h-16 rounded-full overflow-hidden shrink-0 bg-[#3b82f6]/20 flex items-center justify-center border border-[#3b82f6]/30">
-                      {user.profilepic ? (
-                        <img
-                          src={user.profilepic}
-                          alt="Profile"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-xl font-bold text-white select-none">
-                          {user?.name?.[0]?.toUpperCase() ||
-                            user?.email?.[0]?.toUpperCase() ||
-                            "A"}
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-white leading-tight">
-                        {user.name}
-                      </h3>
-                      <p className="text-xs text-gray-400">{user.email}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 mb-8 relative z-10">
-                    <button
-                      onClick={() =>
-                        user.status !== "TERMINATED" &&
-                        user.status !== "Deleted" &&
-                        openEditRoleModal(user)
-                      }
-                      className={`px-3 py-1 rounded-full text-[10px] font-bold border tracking-widest flex items-center gap-1.5 transition-all ${
-                        user.status === "TERMINATED" ||
-                        user.status === "Deleted"
-                          ? "opacity-50 cursor-not-allowed"
-                          : "hover:brightness-125"
-                      } ${getRoleStyle(user.role)}`}
-                      title={
-                        user.status === "TERMINATED" ||
-                        user.status === "Deleted"
-                          ? "Cannot change role of terminated user"
-                          : "Change Permission"
-                      }
-                      disabled={
-                        user.status === "TERMINATED" ||
-                        user.status === "Deleted"
-                      }
-                    >
-                      {user.role} <Edit2 size={10} />
-                    </button>
-                    <span
-                      className={`px-3 py-1 rounded-full text-[10px] font-bold border tracking-widest ${getStatusStyle(getDisplayStatus(user))}`}
-                    >
-                      {getDisplayStatus(user)}
-                    </span>
-                  </div>
-
-                  {user.status === "TERMINATED" || user.status === "Deleted" ? (
-                    currentUser?.role?.toUpperCase() === "OWNER" ? (
-                      <div className="flex relative z-10">
-                        <button
-                          onClick={() => handleReactivate(user._id)}
-                          className="w-full py-2.5 rounded-xl text-[13px] font-bold bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-500 transition-all hover:shadow-[0_0_15px_rgba(245,158,11,0.2)]"
-                        >
-                          Reactivate Account
-                        </button>
-                      </div>
-                    ) : null
-                  ) : (
-                    <div className="flex gap-3 relative z-10">
-                      {(currentUser?.role?.toUpperCase() === "OWNER" ||
-                        currentUser?.role?.toUpperCase() === "ADMIN") && (
-                        <button
-                          onClick={() =>
-                            navigate(
-                              `/dashboard/${currentUser?.role?.toLowerCase()}/folder/${user.rootDirId}`,
-                            )
-                          }
-                          className="px-3 bg-white/5 hover:bg-[#14b8a6]/10 border border-white/5 hover:border-[#14b8a6]/30 text-gray-300 hover:text-[#14b8a6] rounded-xl transition-all flex items-center justify-center shrink-0"
-                          title={`View ${user.name}'s Drive`}
-                        >
-                          <Eye size={16} />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleForceLogout(user._id)}
-                        disabled={!user.isLoggedIn}
-                        className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold border transition-all ${
-                          user.isLoggedIn
-                            ? "bg-white/5 hover:bg-white/10 border-white/5 text-gray-300 hover:text-white"
-                            : "bg-white/5 border-white/5 text-gray-500 cursor-not-allowed opacity-50"
-                        }`}
-                      >
-                        Force Logout
-                      </button>
-                      <button
-                        onClick={() => openDeleteModal(user)}
-                        className="flex-1 py-2.5 rounded-xl text-[13px] font-bold bg-[#ef4444]/10 hover:bg-[#ef4444]/20 border border-[#ef4444]/20 text-[#ef4444] transition-all hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]"
-                      >
-                        Terminate
-                      </button>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
+    <div className="min-h-screen bg-[#030706] text-white p-6 sm:p-8 relative overflow-hidden font-sans pt-20 pb-24">
+      {/* Subtle Atmospheric Gradient Orbs */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-emerald-500/10 via-teal-500/5 to-transparent blur-[140px] rounded-full" />
+        <div className="absolute top-1/3 -left-48 w-96 h-96 bg-blue-500/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-10 -right-48 w-96 h-96 bg-purple-500/5 blur-[120px] rounded-full" />
       </div>
 
+      <div className="max-w-7xl mx-auto relative z-10 space-y-10">
+        {/* Navigation Top Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="p-2.5 rounded-2xl bg-white/5 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-colors shadow-sm"
+              title="Return to Dashboard"
+            >
+              <ArrowLeft size={18} />
+            </button>
+
+            <div>
+              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1">
+                <UsersIcon size={14} /> Vault System Administration
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                System Users
+              </h1>
+              <p className="text-white/50 text-sm font-medium mt-1">
+                Manage user access, role permissions, and active session controls.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={fetchUsers}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-bold transition-colors self-start sm:self-auto"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            <span>Refresh List</span>
+          </button>
+        </div>
+
+        {/* ── CURRENT USER / OWNER HIGHLIGHT CARD ── */}
+        {currentUser && (
+          <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-vault-surface via-slate-900 to-slate-950 border border-emerald-500/30 shadow-[0_0_40px_rgba(16,185,129,0.1)] relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex items-center gap-5 relative z-10 w-full sm:w-auto">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0 bg-emerald-500/10 border-2 border-emerald-500/40 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+                {profilePicUrl ? (
+                  <img
+                    src={profilePicUrl}
+                    alt={currentUser.name || "Profile"}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <span className="text-xl sm:text-2xl font-black text-emerald-400 select-none">
+                    {currentUser?.name?.[0]?.toUpperCase() ||
+                      currentUser?.email?.[0]?.toUpperCase() ||
+                      "U"}
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    {currentUser.name}
+                  </h2>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getRoleBadgeStyle(
+                      currentUser.role
+                    )}`}
+                  >
+                    {currentUser.role?.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-white/50 font-medium">
+                  {currentUser.email}
+                </p>
+              </div>
+            </div>
+
+            <div className="relative z-10 flex items-center gap-3 w-full sm:w-auto justify-end border-t sm:border-t-0 border-white/10 pt-4 sm:pt-0">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Current User
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* ── USERS GRID ── */}
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-white/40">
+              Registered Accounts ({users.length})
+            </h3>
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-3xl p-6 bg-vault-surface/60 border border-white/10 space-y-4"
+                >
+                  <div className="flex items-center gap-4">
+                    <Skeleton variant="circular" className="w-14 h-14 shrink-0" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-3/4 rounded" />
+                      <Skeleton className="h-3 w-1/2 rounded opacity-60" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2 border-t border-white/5">
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <AnimatePresence>
+                {users.map((user) => {
+                  const displayStatus = getDisplayStatus(user);
+                  const isTerminated =
+                    user.status === "TERMINATED" || user.status === "Deleted";
+                  const userAvatarUrl = user.profilepic
+                    ? `${SERVER_URL}/user/profilepic?id=${user.profilepic}`
+                    : null;
+
+                  return (
+                    <motion.div
+                      key={user._id}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="rounded-3xl p-6 bg-vault-surface/80 border border-white/10 backdrop-blur-xl hover:border-emerald-500/30 shadow-xl transition-all duration-300 flex flex-col justify-between space-y-6 relative overflow-hidden group"
+                    >
+                      {/* Top Row: User Avatar & Basic Info */}
+                      <div>
+                        <div className="flex items-start gap-4 mb-4">
+                          <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-emerald-500/40 transition-colors">
+                            {userAvatarUrl ? (
+                              <img
+                                src={userAvatarUrl}
+                                alt={user.name || "User Avatar"}
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <span className="text-lg font-bold text-white/80 select-none">
+                                {user?.name?.[0]?.toUpperCase() ||
+                                  user?.email?.[0]?.toUpperCase() ||
+                                  "U"}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-lg font-bold text-white truncate tracking-tight">
+                              {user.name}
+                            </h4>
+                            <p className="text-xs text-white/40 truncate font-medium mt-0.5">
+                              {user.email}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Badges Row */}
+                        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-white/5">
+                          <button
+                            onClick={() => !isTerminated && openEditRoleModal(user)}
+                            disabled={isTerminated}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider transition-all ${getRoleBadgeStyle(
+                              user.role
+                            )} ${
+                              isTerminated
+                                ? "opacity-50 cursor-not-allowed"
+                                : "hover:brightness-125"
+                            }`}
+                            title={
+                              isTerminated
+                                ? "Cannot change role of terminated user"
+                                : "Click to edit role permission"
+                            }
+                          >
+                            <span>{user.role}</span>
+                            {!isTerminated && <Edit2 size={10} />}
+                          </button>
+
+                          <span
+                            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getStatusBadgeStyle(
+                              displayStatus
+                            )}`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                displayStatus === "ONLINE"
+                                  ? "bg-emerald-400 animate-pulse"
+                                  : displayStatus === "TERMINATED"
+                                  ? "bg-rose-500"
+                                  : "bg-white/30"
+                              }`}
+                            />
+                            {displayStatus}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Action Controls Row */}
+                      <div className="pt-4 border-t border-white/10">
+                        {isTerminated ? (
+                          currentUser?.role?.toUpperCase() === "OWNER" ? (
+                            <button
+                              onClick={() => handleReactivate(user._id)}
+                              className="w-full py-2.5 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 transition-colors"
+                            >
+                              Reactivate Account
+                            </button>
+                          ) : (
+                            <div className="text-center text-xs text-white/30 font-semibold py-2">
+                              Account Terminated
+                            </div>
+                          )
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            {(currentUser?.role?.toUpperCase() === "OWNER" ||
+                              currentUser?.role?.toUpperCase() === "ADMIN") && (
+                              <button
+                                onClick={() =>
+                                  navigate(
+                                    `/dashboard/${currentUser?.role?.toLowerCase()}/folder/${user.rootDirId}`
+                                  )
+                                }
+                                className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white transition-colors"
+                                title={`View ${user.name}'s Drive`}
+                              >
+                                <Eye size={16} />
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => handleForceLogout(user._id)}
+                              disabled={!user.isLoggedIn}
+                              className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-colors ${
+                                user.isLoggedIn
+                                  ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-300"
+                                  : "bg-white/5 border-white/5 text-white/30 cursor-not-allowed opacity-50"
+                              }`}
+                            >
+                              Force Logout
+                            </button>
+
+                            <button
+                              onClick={() => openDeleteModal(user)}
+                              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors"
+                            >
+                              Terminate
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── TERMINATE / DELETE USER MODAL ── */}
       <AnimatePresence>
         {deleteModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
               onClick={closeDeleteModal}
             />
+
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-[#101014] border border-[#ef4444]/20 rounded-2xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-vault-surface border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 overflow-hidden"
             >
-              <div className="p-6">
-                <div className="w-12 h-12 rounded-full bg-[#ef4444]/10 flex items-center justify-center mb-4 border border-[#ef4444]/20">
-                  <ShieldAlert className="text-[#ef4444]" size={24} />
+              <button
+                onClick={closeDeleteModal}
+                className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shrink-0">
+                  <ShieldAlert className="text-rose-400" size={24} />
                 </div>
-
-                <h3 className="text-xl font-bold text-white mb-2">
-                  Terminate User?
-                </h3>
-                <p className="text-sm text-gray-400 mb-6">
-                  You are about to terminate{" "}
-                  <span className="text-white font-semibold">
-                    {userToDelete?.name}
-                  </span>
-                  . Choose how you want to proceed with this action.
-                </p>
-
-                <div className="space-y-3">
-                  <button
-                    onClick={() => handleDelete("soft")}
-                    className="w-full flex items-center justify-between p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 transition-all group"
-                  >
-                    <div className="text-left">
-                      <div className="text-amber-500 text-sm font-bold mb-1 tracking-wide">
-                        Soft Delete
-                      </div>
-                      <div className="text-xs text-amber-500/70 group-hover:text-amber-500/90">
-                        Deactivates account but keeps data intact
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => handleDelete("hard")}
-                    className="w-full flex items-center justify-between p-4 rounded-xl border border-[#ef4444]/20 bg-[#ef4444]/5 hover:bg-[#ef4444]/10 transition-all group"
-                  >
-                    <div className="text-left">
-                      <div className="text-[#ef4444] text-sm font-bold flex items-center gap-2 mb-1 tracking-wide">
-                        <AlertTriangle size={14} /> Hard Delete
-                      </div>
-                      <div className="text-xs text-[#ef4444]/70 group-hover:text-[#ef4444]/90">
-                        Permanently removes account and all associated data
-                      </div>
-                    </div>
-                  </button>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Terminate User</h3>
+                  <p className="text-xs text-white/40 uppercase tracking-wider font-semibold">
+                    System Permission Action
+                  </p>
                 </div>
               </div>
 
-              <div className="bg-black/20 p-4 flex justify-end">
+              <p className="text-sm text-white/80 mb-6 leading-relaxed">
+                You are about to terminate account access for{" "}
+                <span className="text-white font-bold">{userToDelete?.name}</span>. Select how to apply this deletion.
+              </p>
+
+              <div className="space-y-3 mb-8">
+                <button
+                  onClick={() => handleDelete("soft")}
+                  className="w-full text-left p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 transition-all group"
+                >
+                  <div className="text-amber-300 text-sm font-bold mb-1">
+                    Soft Delete (Deactivate)
+                  </div>
+                  <div className="text-xs text-amber-300/70">
+                    Disables login access while maintaining files and data history.
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleDelete("hard")}
+                  className="w-full text-left p-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 transition-all group"
+                >
+                  <div className="text-rose-400 text-sm font-bold flex items-center gap-2 mb-1">
+                    <AlertTriangle size={14} /> Hard Delete (Purge)
+                  </div>
+                  <div className="text-xs text-rose-400/70">
+                    Permanently deletes user account, permissions, and all associated vault data.
+                  </div>
+                </button>
+              </div>
+
+              <div className="flex justify-end">
                 <button
                   onClick={closeDeleteModal}
-                  className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
                 >
                   Cancel
                 </button>
@@ -456,66 +565,85 @@ const Users = () => {
         )}
       </AnimatePresence>
 
+      {/* ── EDIT ROLE PERMISSIONS MODAL ── */}
       <AnimatePresence>
         {editRoleModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
               onClick={closeEditRoleModal}
             />
+
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-[#101014] border border-[#3b82f6]/20 rounded-2xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-vault-surface border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 overflow-hidden"
             >
-              <div className="p-6">
-                <div className="w-12 h-12 rounded-full bg-[#3b82f6]/10 flex items-center justify-center mb-4 border border-[#3b82f6]/20">
-                  <Shield className="text-[#3b82f6]" size={24} />
+              <button
+                onClick={closeEditRoleModal}
+                className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center shrink-0">
+                  <Shield className="text-purple-300" size={24} />
                 </div>
-
-                <h3 className="text-xl font-bold text-white mb-2">
-                  Change Permission
-                </h3>
-                <p className="text-sm text-gray-400 mb-6">
-                  Select a new role for{" "}
-                  <span className="text-white font-semibold">
-                    {userToEditRole?.name}
-                  </span>
-                  . Hierarchy is: Owner &rarr; Admin &rarr; Manager &rarr; User.
-                </p>
-
-                <div className="space-y-3">
-                  {(userToEditRole?.yourAuthority || []).map((role) => (
-                    <button
-                      key={role}
-                      onClick={() => handleRoleUpdate(role, userToEditRole._id)}
-                      className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all group ${
-                        userToEditRole?.role === role
-                          ? "border-[#3b82f6]/50 bg-[#3b82f6]/10"
-                          : "border-white/5 bg-white/5 hover:bg-white/10"
-                      }`}
-                    >
-                      <div className="text-left">
-                        <div
-                          className={`text-sm font-bold tracking-wide flex items-center gap-2 ${userToEditRole?.role === role ? "text-[#3b82f6]" : "text-gray-300 group-hover:text-white"}`}
-                        >
-                          {role.toUpperCase()}{" "}
-                          {userToEditRole?.role === role && "(Current)"}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+                <div>
+                  <h3 className="text-xl font-bold text-white">Change Role</h3>
+                  <p className="text-xs text-white/40 uppercase tracking-wider font-semibold">
+                    Permission Hierarchy
+                  </p>
                 </div>
               </div>
 
-              <div className="bg-black/20 p-4 flex justify-end">
+              <p className="text-sm text-white/80 mb-6 leading-relaxed">
+                Select a new system permission tier for{" "}
+                <span className="text-white font-bold">{userToEditRole?.name}</span>.
+              </p>
+
+              <div className="space-y-3 mb-8">
+                {(userToEditRole?.yourAuthority || []).map((role) => {
+                  const isCurrentRole = userToEditRole?.role === role;
+                  return (
+                    <button
+                      key={role}
+                      onClick={() => handleRoleUpdate(role, userToEditRole._id)}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left ${
+                        isCurrentRole
+                          ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+                          : "border-white/10 bg-white/5 hover:bg-white/10 text-white/80"
+                      }`}
+                    >
+                      <div>
+                        <span className="text-sm font-bold tracking-wide uppercase block">
+                          {role}
+                        </span>
+                        <span className="text-xs text-white/50">
+                          {role === "OWNER"
+                            ? "Full system control & billing configuration"
+                            : role === "ADMIN"
+                            ? "User administration & data management"
+                            : role === "MANAGER"
+                            ? "Workflow management & team oversight"
+                            : "Standard vault storage access"}
+                        </span>
+                      </div>
+                      {isCurrentRole && <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-end">
                 <button
                   onClick={closeEditRoleModal}
-                  className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
                 >
                   Cancel
                 </button>
@@ -529,3 +657,4 @@ const Users = () => {
 };
 
 export default Users;
+

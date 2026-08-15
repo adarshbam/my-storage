@@ -112,35 +112,36 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div
         className="fixed inset-0 bg-black/80 backdrop-blur-md"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-2xl bg-vault-surface border border-white/10 rounded-2xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] max-h-[85vh] overflow-y-auto overflow-x-hidden scrollbar-none">
+      <div className="relative z-10 w-full max-w-2xl bg-vault-surface border border-white/10 rounded-3xl p-6 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.8)] max-h-[85vh] overflow-y-auto scrollbar-none">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-white/40 hover:text-white bg-black/40 hover:bg-white/10 rounded-lg transition-all"
+          className="absolute top-5 right-5 p-2 text-white/40 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all"
         >
           <X size={18} />
         </button>
 
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2.5 bg-vault-emerald/10 text-vault-emerald rounded-xl border border-vault-emerald/20">
+          <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-2xl border border-emerald-500/20">
             <Share2 size={24} />
           </div>
           <div>
-            <h2 className="text-xl font-bold tracking-wider text-white uppercase">
+            <h2 className="text-xl font-bold tracking-tight text-white uppercase">
               {items.length > 0 ? "Share Items" : "Share Vault"}
             </h2>
           </div>
         </div>
         
-        <p className="text-sm text-white/50 mb-4 ml-[52px]">
-          Create a secure link to grant external users access to {items.length > 0 ? "the selected items" : "your Vault node"}.
+        <p className="text-xs sm:text-sm text-white/50 mb-6">
+          Create a secure cryptographic link to grant external users access to {items.length > 0 ? "the selected items" : "your Vault node"}.
         </p>
+
 
         {items.length > 0 && (
           <div className="mb-6 ml-[52px] bg-white/[0.02] border border-white/5 rounded-xl p-3">

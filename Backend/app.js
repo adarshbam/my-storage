@@ -1,9 +1,13 @@
 import express from "express";
 import cookieParser from "cookie-parser";
+import compression from "compression";
 import directoryRouter from "./routes/directoryRoutes.js";
 import fileRouter from "./routes/fileRoutes.js";
 import trashRouter from "./routes/trashRoutes.js";
 import userRouter from "./routes/userRoutes.js";
+import twoFactorRouter from "./routes/twoFactorRoutes.js";
+import phoneVerificationRouter from "./routes/phoneVerificationRoutes.js";
+import secondaryRecoveryEmailRouter from "./routes/secondaryRecoveryEmailRoutes.js";
 import otpRouter from "./routes/otpRoutes.js";
 import planRouter from "./routes/planRoutes.js";
 import subscriptionRouter from "./routes/subscriptionRoutes.js";
@@ -22,7 +26,7 @@ import { readFileSync } from "fs";
 import "./databases/mongoose.js";
 import { reconcileDirectoryPathsAndSizes } from "./utils/reconcile.js";
 import helmet from "helmet";
-import { startCleanupSchedule } from "./jobs/cleanup.job.js";
+import { startScheduledJobs } from "./jobs/scheduler.js";
 import { AppError } from "./errors/AppError.js";
 
 import { PORT, CLIENT_URL, SESSION_SECRET } from "./config/config.js";
@@ -129,6 +133,7 @@ app.use(
     credentials: true,
   }),
 );
+app.use(compression());
 app.use(cookieParser(SESSION_SECRET));
 app.use(express.json());
 
@@ -136,6 +141,9 @@ app.use("/directory", checkAuth, directoryRouter);
 app.use("/file", checkAuth, fileRouter);
 app.use("/trash", checkAuth, trashRouter);
 app.use("/user", userRouter);
+app.use("/user/2fa", twoFactorRouter);
+app.use("/user/phone", phoneVerificationRouter);
+app.use("/user/secondary-recovery-email", secondaryRecoveryEmailRouter);
 app.use("/otp", otpRouter);
 app.use("/plan", planRouter);
 app.use("/plans", planRouter);
@@ -182,7 +190,7 @@ const sslOptions = {
 
 const httpsServer = https.createServer(sslOptions, app);
 
-startCleanupSchedule();
+startScheduledJobs();
 
 // httpsServer.listen(PORT, () => {
 //   console.log(`HTTPS Server running on port ${PORT}`);

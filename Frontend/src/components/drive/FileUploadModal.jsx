@@ -172,7 +172,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, onFilesSele
 
         <div className="flex justify-end gap-3 pt-6 border-t border-white/5 mt-6">
           <Button
-            variant="ghost"
+            variant="secondary"
             onClick={() => {
               setFiles([]);
               onClose();
@@ -186,7 +186,7 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, onFilesSele
             disabled={files.length === 0}
             className={cn(
               files.length === 0 && "opacity-40 cursor-not-allowed",
-              "px-8 py-3 rounded-xl",
+              "px-8 py-2.5 rounded-xl",
             )}
           >
             Upload {files.length > 0 && `(${files.length})`}
@@ -196,3 +196,4 @@ export default function FileUploadModal({ isOpen, onClose, onUpload, onFilesSele
     </Modal>
   );
 }
+

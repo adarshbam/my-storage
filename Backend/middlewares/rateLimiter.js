@@ -286,3 +286,27 @@ export const webhookLimiter = createLimiter(
   "Too many webhook events. Please slow down.",
   "webhook",
 );
+
+// 18. Phone OTP Limiter: max 6 OTP requests/verifications per 15 minutes
+export const phoneOtpLimiter = createLimiter(
+  15 * 60 * 1000, // 15 minutes
+  6,
+  "Too many phone OTP requests or attempts. Please try again after 15 minutes.",
+  "phone-otp",
+);
+
+// 19. Two-Factor Authentication Limiter: max 10 attempts per 15 minutes
+export const twoFactorLimiter = createLimiter(
+  15 * 60 * 1000, // 15 minutes
+  10,
+  "Too many 2FA verification attempts. Please try again after 15 minutes.",
+  "2fa",
+);
+
+// 20. Recovery Email Limiter: max 6 requests per 15 minutes
+export const recoveryEmailLimiter = createLimiter(
+  15 * 60 * 1000, // 15 minutes
+  6,
+  "Too many recovery email requests. Please try again after 15 minutes.",
+  "recovery-email",
+);

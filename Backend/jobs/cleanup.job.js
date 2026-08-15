@@ -403,8 +403,3 @@ export async function cleanFiles() {
     console.error("[Cleanup] Cleanup error:", err);
   }
 }
-
-export function startCleanupSchedule() {
-  cleanFiles();
-  setInterval(cleanFiles, 24 * 60 * 60 * 1000);
-}
