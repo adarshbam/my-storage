@@ -1,136 +1,114 @@
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, ShieldCheck, Zap } from "lucide-react";
+import { ArrowRight, LockKeyhole, Play, ShieldCheck, Sparkles } from "lucide-react";
+import { VaultLogo } from "../ui/VaultIcons";
 
-const Hero = () => {
+const trustPoints = ["Encrypted before upload", "Free 10 GB vault", "No credit card"];
+
+function VaultSignal() {
+  const showArchitecture = () => {
+    document.getElementById("security")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center pt-40 pb-20 overflow-hidden bg-[#011a14] perspective-[2000px] -mt-[80px]">
-      
-      {/* 
-        THE 3D VAULT CUBE
-        A pure CSS 3D cube that rotates continuously. Truly observable in 3D.
-      */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden perspective-[1000px]">
-        {/* Ambient Dark Green & Teal glows */}
-        <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-[#022c22]/80 blur-[150px] rounded-full mix-blend-screen" />
-        <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-[#14b8a6]/10 blur-[150px] rounded-full mix-blend-screen" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(20,184,166,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,0.05)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_20%,transparent_100%)]" />
+    <button
+      type="button"
+      className="vault-hero-visual group"
+      onClick={showArchitecture}
+      aria-label="Explore Vault security architecture"
+    >
+      <span className="vault-visual-topline">
+        <span className="vault-live-dot" /> Live architecture
+        <span className="ml-auto vault-muted normal-case tracking-normal font-medium">Tap to explore</span>
+      </span>
 
-        {/* Responsive wrapper for the 3D cube */}
-        <div className="relative w-[300px] h-[300px] md:w-[500px] md:h-[500px] scale-75 md:scale-100 opacity-60">
-            <motion.div 
-                animate={{ rotateX: [20, 40, 20], rotateY: [0, 360] }}
-                transition={{ rotateY: { duration: 20, repeat: Infinity, ease: "linear" }, rotateX: { duration: 15, repeat: Infinity, ease: "easeInOut" } }}
-                className="relative w-full h-full transform-style-3d"
-                style={{ transformStyle: "preserve-3d" }}
-            >
-                {/* 
-                   Cube Faces 
-                   Size: 500x500 on desktop. translateZ is 250px. 
-                   Using Tailwind classes where possible, inline styles for absolute 3D math.
-                */}
-                {/* Front */}
-                <div className="absolute inset-0 border-[4px] border-[#14b8a6]/40 bg-[#022c22]/30 backdrop-blur-md shadow-[inset_0_0_100px_rgba(20,184,166,0.2)] flex items-center justify-center" style={{ transform: "translateZ(150px) md:translateZ(250px)" }}>
-                    <div className="w-1/2 h-1/2 border border-[#14b8a6]/50 rounded-full animate-ping opacity-20" />
-                </div>
-                {/* Back */}
-                <div className="absolute inset-0 border-[4px] border-[#14b8a6]/20 bg-[#022c22]/20 backdrop-blur-sm shadow-[inset_0_0_100px_rgba(20,184,166,0.1)] flex items-center justify-center" style={{ transform: "rotateY(180deg) translateZ(150px) md:translateZ(250px)" }}>
-                    <ShieldCheck className="text-[#14b8a6]/30 w-32 h-32" />
-                </div>
-                {/* Left */}
-                <div className="absolute inset-0 border-[4px] border-[#14b8a6]/30 bg-[#022c22]/20 backdrop-blur-sm" style={{ transform: "rotateY(-90deg) translateZ(150px) md:translateZ(250px)" }}>
-                     {/* Decorative lines */}
-                     <div className="absolute top-10 left-10 right-10 h-2 bg-[#14b8a6]/20" />
-                     <div className="absolute bottom-10 left-10 right-10 h-2 bg-[#14b8a6]/20" />
-                </div>
-                {/* Right */}
-                <div className="absolute inset-0 border-[4px] border-[#14b8a6]/30 bg-[#022c22]/20 backdrop-blur-sm" style={{ transform: "rotateY(90deg) translateZ(150px) md:translateZ(250px)" }}>
-                     <div className="absolute inset-10 border-2 border-dashed border-[#14b8a6]/20 rounded-full animate-[spin_10s_linear_infinite]" />
-                </div>
-                {/* Top */}
-                <div className="absolute inset-0 border-[4px] border-[#14b8a6]/50 bg-[#14b8a6]/10 backdrop-blur-md shadow-[0_0_100px_rgba(20,184,166,0.5)]" style={{ transform: "rotateX(90deg) translateZ(150px) md:translateZ(250px)" }}>
-                     <div className="w-full h-full bg-[radial-gradient(circle_at_center,rgba(20,184,166,0.8)_0%,transparent_50%)] animate-pulse" />
-                </div>
-                {/* Bottom */}
-                <div className="absolute inset-0 border-[4px] border-[#14b8a6]/10 bg-[#022c22]/40 backdrop-blur-sm shadow-[0_100px_200px_rgba(0,0,0,0.8)]" style={{ transform: "rotateX(-90deg) translateZ(150px) md:translateZ(250px)" }}>
-                </div>
-            </motion.div>
-        </div>
-      </div>
+      <svg viewBox="0 0 600 420" role="img" aria-label="Illustrated encrypted vault network" className="vault-signal-svg">
+        <defs>
+          <linearGradient id="vault-beam" x1="0" x2="1">
+            <stop offset="0" stopColor="currentColor" stopOpacity="0" />
+            <stop offset="0.5" stopColor="currentColor" stopOpacity="0.9" />
+            <stop offset="1" stopColor="currentColor" stopOpacity="0" />
+          </linearGradient>
+          <radialGradient id="vault-core">
+            <stop offset="0" stopColor="currentColor" stopOpacity="0.34" />
+            <stop offset="1" stopColor="currentColor" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <g className="vault-signal-grid" opacity="0.28">
+          {[80, 150, 220, 290, 360, 430, 500].map((x) => <line key={`v-${x}`} x1={x} y1="42" x2={x} y2="380" />)}
+          {[74, 142, 210, 278, 346].map((y) => <line key={`h-${y}`} x1="44" y1={y} x2="556" y2={y} />)}
+        </g>
+        <circle className="vault-signal-aura" cx="300" cy="210" r="162" fill="url(#vault-core)" />
+        <path className="vault-signal-connection" d="M120 292 205 243 300 286 394 218 488 266" />
+        <path className="vault-signal-connection vault-signal-connection-soft" d="M122 134 204 183 300 138 397 190 486 130" />
+        <path className="vault-signal-beam" d="M67 211H532" stroke="url(#vault-beam)" />
+        {[
+          [120, 292], [205, 243], [394, 218], [488, 266], [122, 134], [204, 183], [397, 190], [486, 130],
+        ].map(([cx, cy], index) => (
+          <g key={`${cx}-${cy}`} className="vault-signal-node" style={{ animationDelay: `${index * 90}ms` }}>
+            <circle cx={cx} cy={cy} r="15" />
+            <circle cx={cx} cy={cy} r="4" fill="currentColor" />
+          </g>
+        ))}
+        <g className="vault-signal-core">
+          <path d="M300 114 372 154v112l-72 40-72-40V154l72-40Z" />
+          <path d="m228 154 72 42 72-42M300 196v110" />
+          <path d="M300 168a25 25 0 0 1 25 25v13a16 16 0 0 1-8 14v18h-34v-18a16 16 0 0 1-8-14v-13a25 25 0 0 1 25-25Z" />
+          <circle cx="300" cy="208" r="5" fill="currentColor" />
+        </g>
+      </svg>
 
-      <div className="container mx-auto px-6 relative z-20 text-center mt-auto md:mt-24 mb-12">
-        <motion.div 
-            initial={{ opacity: 0, y: 30 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }} 
-            className="max-w-5xl mx-auto"
-        >
-          {/* Status Badge */}
-          <div className="inline-flex items-center gap-3 p-1.5 pr-5 mb-10 rounded-full bg-[#01140f] border-t border-teal-500/30 border-b border-black/50 shadow-[inset_0_1px_2px_rgba(255,255,255,0.1),0_10px_20px_rgba(0,0,0,0.5)] relative overflow-hidden group hover:border-teal-400/60 transition-all duration-300">
-            <span className="bg-gradient-to-b from-[#14b8a6] to-[#0f766e] text-white text-[10px] md:text-xs font-black px-3.5 py-1.5 rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_0_15px_rgba(20,184,166,0.4)] relative z-10 tracking-widest uppercase border-t border-teal-300/50 border-b border-black/30">
-              System Online
-            </span>
-            <span className="flex items-center text-[12px] md:text-sm font-bold text-white/80 gap-2 relative z-10">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse" />
-              1024 MB Free Vault Ready
-            </span>
-          </div>
+      <span className="vault-visual-footer">
+        <span className="flex items-center gap-2"><ShieldCheck size={15} /> Zero-knowledge relay</span>
+        <span>Node 01 / Secure</span>
+      </span>
+    </button>
+  );
+}
 
-          {/* Holographic Headline */}
-          <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter text-white mb-8 leading-[1.05] drop-shadow-2xl">
-            The Ultimate <br />
-            <span className="relative inline-block">
-                <span className="absolute inset-0 bg-gradient-to-r from-[#14b8a6] via-[#10b981] to-[#14b8a6] blur-2xl opacity-40 animate-pulse" />
-                <span className="relative bg-gradient-to-b from-white via-white to-[#14b8a6]/70 bg-clip-text text-transparent">
-                    Digital Vault.
-                </span>
-            </span>
+export default function Hero() {
+  return (
+    <section className="vault-section vault-grid pt-36 md:pt-44 overflow-hidden">
+      <div className="vault-section-shell grid items-center gap-12 lg:grid-cols-[1.02fr_.98fr]">
+        <div className="relative z-10 max-w-2xl">
+          <div className="vault-kicker"><span className="vault-kicker-dot" /> Built for the files that matter</div>
+          <h1 className="vault-title">
+            Your digital life,<br />
+            <span className="vault-title-accent">held with care.</span>
           </h1>
-
-          <p className="text-xl md:text-2xl text-teal-100/60 max-w-2xl mx-auto mb-14 font-medium leading-relaxed drop-shadow-md">
-            High-performance cloud. Zero-knowledge encryption. Global access. Drop your files into the most secure architecture ever built.
+          <p className="vault-copy max-w-xl">
+            Vault brings files, media, backups, and private sharing into one encrypted place that feels calm, fast, and entirely yours.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Link to="/register" className="w-full sm:w-auto">
-                <button className="relative w-full sm:w-auto px-10 py-5 rounded-full text-lg font-bold tracking-wide transition-all duration-300 bg-gradient-to-b from-[#14b8a6] to-[#0f766e] text-white border-t border-teal-300/50 border-b border-black/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_10px_30px_rgba(20,184,166,0.4)] flex items-center justify-center gap-3 overflow-hidden hover:scale-105 active:scale-95 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_15px_40px_rgba(20,184,166,0.6)] group">
-                    <Zap className="text-white drop-shadow-md" size={20} fill="currentColor" />
-                    Open Your Vault
-                    <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
-                </button>
+          <div className="mt-8 flex flex-col sm:flex-row gap-3">
+            <Link to="/register" className="vault-button px-5 py-3.5 text-sm">
+              Start your free vault <ArrowRight size={17} />
             </Link>
-            
-            <a href="#features" className="w-full sm:w-auto">
-              <button className="w-full sm:w-auto px-10 py-5 text-lg rounded-full font-bold text-white bg-[#01140f] border-t border-teal-500/30 border-b border-black/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_20px_rgba(0,0,0,0.5)] hover:bg-[#021f17] hover:border-teal-400/50 transition-all duration-300 flex items-center justify-center gap-3 group hover:-translate-y-0.5 active:translate-y-0.5">
-                <ShieldCheck size={20} className="text-teal-500 group-hover:text-emerald-400 transition-colors drop-shadow-md" />
-                Explore Architecture
-              </button>
+            <a href="#features" className="vault-button-secondary px-5 py-3.5 text-sm">
+              <Play size={16} fill="currentColor" /> See how it works
             </a>
           </div>
-        </motion.div>
-      </div>
 
-      {/* Tailwind arbitrary values injection for responsive translateZ since CSS vars inside transform are tricky with TW */}
-      <style>{`
-        @media (max-width: 768px) {
-            .transform-style-3d > div:nth-child(1) { transform: translateZ(150px); }
-            .transform-style-3d > div:nth-child(2) { transform: rotateY(180deg) translateZ(150px); }
-            .transform-style-3d > div:nth-child(3) { transform: rotateY(-90deg) translateZ(150px); }
-            .transform-style-3d > div:nth-child(4) { transform: rotateY(90deg) translateZ(150px); }
-            .transform-style-3d > div:nth-child(5) { transform: rotateX(90deg) translateZ(150px); }
-            .transform-style-3d > div:nth-child(6) { transform: rotateX(-90deg) translateZ(150px); }
-        }
-        @media (min-width: 769px) {
-            .transform-style-3d > div:nth-child(1) { transform: translateZ(250px); }
-            .transform-style-3d > div:nth-child(2) { transform: rotateY(180deg) translateZ(250px); }
-            .transform-style-3d > div:nth-child(3) { transform: rotateY(-90deg) translateZ(250px); }
-            .transform-style-3d > div:nth-child(4) { transform: rotateY(90deg) translateZ(250px); }
-            .transform-style-3d > div:nth-child(5) { transform: rotateX(90deg) translateZ(250px); }
-            .transform-style-3d > div:nth-child(6) { transform: rotateX(-90deg) translateZ(250px); }
-        }
-      `}</style>
+          <div className="mt-9 flex flex-wrap gap-x-5 gap-y-3">
+            {trustPoints.map((point) => (
+              <span className="flex items-center gap-2 text-sm vault-muted" key={point}>
+                <LockKeyhole size={14} className="vault-accent-text" /> {point}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative z-10 mx-auto w-full max-w-[35rem] lg:max-w-none">
+          <VaultSignal />
+          <div className="vault-hero-float-card vault-hero-float-left">
+            <VaultLogo size={22} className="vault-accent-text" />
+            <span><strong>Private by default</strong><small>Keys stay with you</small></span>
+          </div>
+          <div className="vault-hero-float-card vault-hero-float-right">
+            <Sparkles size={17} className="vault-accent-text" />
+            <span><strong>1,024 MB ready</strong><small>Free encrypted storage</small></span>
+          </div>
+        </div>
+      </div>
     </section>
   );
-};
-
-export default Hero;
+}
