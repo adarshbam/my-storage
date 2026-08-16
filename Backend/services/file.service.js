@@ -474,10 +474,10 @@ export const getThumbnailLogic = async ({ fileId, userId, userRole, res }) => {
     error.status = 404;
     throw error;
   }
-    const error = new Error("Thumbnail not available");
-    error.status = 404;
-    throw error;
-  }
+
+  const error = new Error("Thumbnail not available");
+  error.status = 404;
+  throw error;
 };
 
 export const getFileLogic = async ({ fileId, userId, userRole, range, action, res }) => {
