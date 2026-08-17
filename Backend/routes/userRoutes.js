@@ -41,7 +41,7 @@ import throttle from "../utils/throttle.js";
 
 const router = express.Router();
 
-router.get("/", checkAuth, lightReadLimiter, throttle(50, 20, "user-get"), getUser);
+router.get("/", checkAuth, lightReadLimiter, getUser);
 
 router.post("/register", registerLimiter, throttle(2000, 2, "register"), registerUser);
 router.post("/login", loginLimiter, throttle(1500, 3, "login"), loginUser);
@@ -75,11 +75,10 @@ router.get(
   "/profilepic",
   checkAuth,
   lightReadLimiter,
-  throttle(50, 20, "profilepic-get"),
   validate(getProfilePicSchema),
   getProfilePic,
 );
-router.get("/searchedItems", checkAuth, lightReadLimiter, throttle(50, 20, "searched-get"), getSearchedItems);
+router.get("/searchedItems", checkAuth, lightReadLimiter, getSearchedItems);
 router.post(
   "/searchedItems",
   checkAuth,

@@ -24,6 +24,7 @@ import { motion } from "framer-motion";
 import { SERVER_URL } from "../../lib/api";
 import { usePlan } from "../../context/PlanContext";
 import Skeleton from "../ui/Skeleton";
+import { prefetchFileContent } from "../../lib/fileCache";
 
 const formatRelativeTime = (dateString) => {
   if (!dateString) return "";
@@ -218,7 +219,10 @@ export default function AssetCard({
         id={`file-card-${item._id}`}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
-        onMouseEnter={() => setIsHovered(true)}
+        onMouseEnter={() => {
+          setIsHovered(true);
+          if (!isDirectory && item) prefetchFileContent(item);
+        }}
         onMouseLeave={() => setIsHovered(false)}
         draggable={!readOnly && !isTrash}
         onDragStart={(e) => onDragStart && onDragStart(e, item)}
@@ -387,7 +391,10 @@ export default function AssetCard({
       id={`file-card-${item._id}`}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={() => {
+        setIsHovered(true);
+        if (!isDirectory && item) prefetchFileContent(item);
+      }}
       onMouseLeave={() => setIsHovered(false)}
       draggable={!effectiveReadOnly && !isTrash}
       onDragStart={(e) => onDragStart && onDragStart(e, item)}

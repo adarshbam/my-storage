@@ -11,6 +11,7 @@ import {
 import getFileImage from "../../lib/FileImages";
 import { formatSize } from "../../lib/utils";
 import { SERVER_URL } from "../../lib/api";
+import { prefetchFileContent } from "../../lib/fileCache";
 
 export default function FileCard({
   item,
@@ -116,6 +117,9 @@ export default function FileCard({
         onSelect(item, e);
       }}
       onDoubleClick={handleDoubleClick}
+      onMouseEnter={() => {
+        if (type !== "directory" && item) prefetchFileContent(item);
+      }}
       draggable={!readOnly}
       onDragStart={readOnly ? undefined : (e) => onDragStart(e, item)}
       onDragOver={readOnly ? undefined : (e) => onDragOver(e, item)}

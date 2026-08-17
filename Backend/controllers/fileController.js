@@ -44,6 +44,7 @@ export const getFileById = async (req, res, next) => {
       userRole: req.user.role,
       range: req.headers.range,
       action: req.query.action,
+      ifNoneMatch: req.headers["if-none-match"],
       res
     });
   } catch (error) {

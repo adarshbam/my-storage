@@ -68,9 +68,12 @@ import { useContextMenu } from "../../hooks/useContextMenu";
 import SelectionBox from "./SelectionBox";
 import EmptyState from "./EmptyState";
 import FileOperationModals from "./FileOperationModals";
+import FilePreviewSkeleton from "./FilePreviewSkeleton";
+import { prefetchFileContent } from "../../lib/fileCache";
 
-// Lazy load the preview modal since it contains heavy syntax highlighter dependencies
-const FilePreviewModal = lazy(() => import("./FilePreviewModal"));
+// Preload the preview modal module immediately in the background for zero-delay instant opening
+const filePreviewPromise = import("./FilePreviewModal");
+const FilePreviewModal = lazy(() => filePreviewPromise);
 
 export default function FileBrowser({ specialView }) {
   const params = useParams();
@@ -2358,7 +2361,7 @@ export default function FileBrowser({ specialView }) {
         />
       )}
 
-      <Suspense fallback={null}>
+      <Suspense fallback={<FilePreviewSkeleton type="modal-shell" />}>
         {!!previewFile && (
           <FilePreviewModal
             file={previewFile}

@@ -22,7 +22,7 @@ import {
   copyDirectorySchema,
   deleteDirectoryBatchSchema,
 } from "../validators/directorySchema.js";
-import { standardWriteLimiter } from "../middlewares/rateLimiter.js";
+import { standardWriteLimiter, directoryReadLimiter } from "../middlewares/rateLimiter.js";
 import throttle from "../utils/throttle.js";
 
 const router = express.Router();
@@ -63,11 +63,11 @@ router.post(
   copyItems,
 );
 
+// High-speed directory fetching with zero artificial delay & 1,000 req/min limit
 router.get(
   ["/", "/:dirId"],
   checkAuth,
-  standardWriteLimiter,
-  throttle(100, 15, "dir-get"),
+  directoryReadLimiter,
   validate(getDirectoryByIdSchema),
   getDirectoryById,
 );

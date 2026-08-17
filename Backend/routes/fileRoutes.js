@@ -32,6 +32,7 @@ import {
   thumbnailLimiter,
   uploadLimiter,
   standardWriteLimiter,
+  directoryReadLimiter,
   mediumWriteLimiter,
 } from "../middlewares/rateLimiter.js";
 import throttle from "../utils/throttle.js";
@@ -49,7 +50,6 @@ router.get(
   "/search",
   checkAuth,
   searchLimiter,
-  throttle(200, 10, "file-search"),
   validate(searchSchema),
   search,
 );
@@ -58,7 +58,6 @@ router.get(
   "/:fileId/thumbnail",
   checkAuth,
   thumbnailLimiter,
-  throttle(50, 20, "thumbnail"),
   validate(getThumbnailSchema),
   getThumbnail,
 );
@@ -74,24 +73,21 @@ router.post(
 router.get(
   "/starred",
   checkAuth,
-  standardWriteLimiter,
-  throttle(50, 15, "starred-all"),
+  directoryReadLimiter,
   getAllStarredItems,
 );
 
 router.get(
   "/recent",
   checkAuth,
-  standardWriteLimiter,
-  throttle(50, 15, "recent-all"),
+  directoryReadLimiter,
   getAllRecentItems,
 );
 
 router.get(
   "/:fileId",
   checkAuth,
-  standardWriteLimiter,
-  throttle(50, 12, "file-get"),
+  directoryReadLimiter,
   validate(getFileByIdSchema),
   getFileById,
 );

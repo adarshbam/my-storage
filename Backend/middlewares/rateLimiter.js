@@ -207,31 +207,39 @@ export const uploadLimiter = createLimiter(
   "upload",
 );
 
-// 8. Search Limiter: max 30 searches per 15 minutes
-export const searchLimiter = createLimiter(
-  15 * 60 * 1000, // 15 minutes
-  30,
-  "Too many search queries. Please try again after 15 minutes.",
-  "search",
+// 8. Directory & File Read Limiter: max 1000 requests per 1 minute (ultra fast, high throughput for navigation & listings)
+export const directoryReadLimiter = createLimiter(
+  60 * 1000, // 1 minute window
+  1000,
+  "Too many directory read requests. Please try again after 1 minute.",
+  "dir-read",
 );
 
-// 9. Thumbnail Limiter: max 100 requests per 15 minutes (must be fast for UI)
-export const thumbnailLimiter = createLimiter(
-  15 * 60 * 1000, // 15 minutes
-  100,
-  "Too many thumbnail requests. Please try again after 15 minutes.",
-  "thumbnail",
-);
-
-// 10. Light Read Limiter: max 100 / 15min (user info, profile pic GET, searched items, theme)
+// 9. Light Read Limiter: max 300 / 1min (user info, profile pic GET, searched items, theme)
 export const lightReadLimiter = createLimiter(
-  15 * 60 * 1000, // 15 minutes
-  100,
+  60 * 1000, // 1 minute window
+  300,
   "Too many requests. Please slow down.",
   "light-read",
 );
 
-// 11. Standard Write Limiter: max 60 / 15min (directory CRUD, file rename/delete, get)
+// 10. Thumbnail Limiter: max 600 requests per 1 minute (ultra fast for UI grid previews)
+export const thumbnailLimiter = createLimiter(
+  60 * 1000, // 1 minute window
+  600,
+  "Too many thumbnail requests. Please try again after 1 minute.",
+  "thumbnail",
+);
+
+// 11. Search Limiter: max 150 searches per 1 minute
+export const searchLimiter = createLimiter(
+  60 * 1000, // 1 minute window
+  150,
+  "Too many search queries. Please try again after 1 minute.",
+  "search",
+);
+
+// 12. Standard Write Limiter: max 60 / 15min (directory CRUD, file rename/delete)
 export const standardWriteLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   60,
@@ -239,7 +247,7 @@ export const standardWriteLimiter = createLimiter(
   "std-write",
 );
 
-// 12. Medium Write Limiter: max 30 / 15min (file save, GitHub/Drive write ops)
+// 13. Medium Write Limiter: max 30 / 15min (file save, GitHub/Drive write ops)
 export const mediumWriteLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   30,
@@ -247,7 +255,7 @@ export const mediumWriteLimiter = createLimiter(
   "med-write",
 );
 
-// 13. Share Limiter: max 20 / 15min (share link generation/claiming)
+// 14. Share Limiter: max 20 / 15min (share link generation/claiming)
 export const shareLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   20,
@@ -255,23 +263,23 @@ export const shareLimiter = createLimiter(
   "share",
 );
 
-// 14. Admin Limiter: max 30 / 15min (system user management)
+// 15. Admin Limiter: max 60 / 1min (system user management)
 export const adminLimiter = createLimiter(
-  15 * 60 * 1000, // 15 minutes
-  30,
+  60 * 1000, // 1 minute window
+  60,
   "Too many admin operations. Please slow down.",
   "admin",
 );
 
-// 15. Profile Pic Upload Limiter: max 15 / 15min (sharp image processing)
+// 16. Profile Pic Upload Limiter: max 30 / 1min (image processing)
 export const profilePicLimiter = createLimiter(
-  15 * 60 * 1000, // 15 minutes
-  15,
+  60 * 1000, // 1 minute window
+  30,
   "Too many profile picture uploads. Please slow down.",
   "profile-pic",
 );
 
-// 16. Subscription Limiter: max 5 / 15min (Razorpay API calls are expensive)
+// 17. Subscription Limiter: max 5 / 15min (Razorpay API calls are expensive)
 export const subscriptionLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   5,
@@ -279,7 +287,7 @@ export const subscriptionLimiter = createLimiter(
   "subscription",
 );
 
-// 17. Webhook Limiter: max 100 / 15min (Razorpay sends events — generous limit)
+// 18. Webhook Limiter: max 100 / 15min (Razorpay sends events — generous limit)
 export const webhookLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   100,
@@ -287,7 +295,7 @@ export const webhookLimiter = createLimiter(
   "webhook",
 );
 
-// 18. Phone OTP Limiter: max 6 OTP requests/verifications per 15 minutes
+// 19. Phone OTP Limiter: max 6 OTP requests/verifications per 15 minutes
 export const phoneOtpLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   6,
@@ -295,7 +303,7 @@ export const phoneOtpLimiter = createLimiter(
   "phone-otp",
 );
 
-// 19. Two-Factor Authentication Limiter: max 10 attempts per 15 minutes
+// 20. Two-Factor Authentication Limiter: max 10 attempts per 15 minutes
 export const twoFactorLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   10,
@@ -303,7 +311,7 @@ export const twoFactorLimiter = createLimiter(
   "2fa",
 );
 
-// 20. Recovery Email Limiter: max 6 requests per 15 minutes
+// 21. Recovery Email Limiter: max 6 requests per 15 minutes
 export const recoveryEmailLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   6,

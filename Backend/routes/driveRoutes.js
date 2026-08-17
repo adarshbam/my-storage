@@ -33,6 +33,7 @@ import {
   heavyOpLimiter,
   mediumWriteLimiter,
   standardWriteLimiter,
+  directoryReadLimiter,
   searchLimiter,
 } from "../middlewares/rateLimiter.js";
 import throttle from "../utils/throttle.js";
@@ -72,8 +73,7 @@ router.get(
   checkAuth,
   loadPlanContext,
   requireFeature("gdrive_sync"),
-  standardWriteLimiter,
-  throttle(100, 15, "drive-list"),
+  directoryReadLimiter,
   listDriveFiles,
 );
 // Contents of a specific Drive folder
@@ -82,8 +82,7 @@ router.get(
   checkAuth,
   loadPlanContext,
   requireFeature("gdrive_sync"),
-  standardWriteLimiter,
-  throttle(100, 15, "drive-folder"),
+  directoryReadLimiter,
   validate(listDriveFolderSchema),
   listDriveFolder,
 );
@@ -95,8 +94,7 @@ router.get(
   checkAuth,
   loadPlanContext,
   requireFeature("gdrive_sync"),
-  standardWriteLimiter,
-  throttle(100, 12, "drive-file-get"),
+  directoryReadLimiter,
   validate(getFileFromDriveSchema),
   getFileFromDrive,
 );

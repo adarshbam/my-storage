@@ -85,16 +85,25 @@ export const FileBrowserSkeleton = ({
           </div>
 
           {/* Bottom Content Area */}
-          <div className="p-3.5 space-y-2">
+          <div className="p-4 space-y-2">
             {/* Title Line */}
             <Skeleton className="h-4 w-4/5 rounded" />
-            {/* Subtitle / Size Line */}
-            <Skeleton className="h-3 w-1/2 rounded opacity-60" />
+            {/* Subtitle / Size & Badge Line */}
+            <div className="flex items-center justify-between gap-2">
+              <Skeleton className="h-3 w-2/5 rounded opacity-60" />
+              <Skeleton className="h-4 w-16 rounded-md opacity-40" />
+            </div>
 
-            {/* Bottom Meta Line */}
-            <div className="flex items-center justify-between pt-2 border-t border-white/5">
-              <Skeleton className="h-2.5 w-1/3 rounded opacity-40" />
-              <Skeleton className="w-2 h-2 rounded-full opacity-40" />
+            {/* Bottom Meta Line (Status tags/dots) */}
+            <div className="flex items-center gap-2 pt-1.5 border-t border-white/5">
+              <div className="flex items-center gap-1.5">
+                <Skeleton className="w-1.5 h-1.5 rounded-full opacity-70" />
+                <Skeleton className="h-2.5 w-12 rounded opacity-50" />
+              </div>
+              <div className="flex items-center gap-1.5 ml-2">
+                <Skeleton className="w-1.5 h-1.5 rounded-full opacity-70" />
+                <Skeleton className="h-2.5 w-10 rounded opacity-50" />
+              </div>
             </div>
           </div>
         </div>

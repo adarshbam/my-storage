@@ -10,6 +10,7 @@ import {
   User,
 } from "lucide-react";
 import Button from "../components/ui/Button";
+import Skeleton from "../components/ui/Skeleton";
 
 export default function SharedAccessClaim() {
   const { token } = useParams();
@@ -95,11 +96,21 @@ export default function SharedAccessClaim() {
 
       <div className="relative z-10 w-full max-w-md bg-white/60 dark:bg-white/[0.03] backdrop-blur-2xl border border-black/5 dark:border-white/[0.08] rounded-3xl p-6 sm:p-8 shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <Loader2 className="animate-spin text-[#14b8a6]" size={40} />
-            <p className="text-slate-500 dark:text-slate-400 font-medium">
-              Verifying sharing token...
-            </p>
+          <div className="flex flex-col items-center text-center py-2 space-y-4">
+            <Skeleton variant="circular" className="w-16 h-16 bg-[#14b8a6]/20 mb-2" />
+            <Skeleton className="w-48 h-6 rounded-lg" />
+            <Skeleton className="w-64 h-4 rounded-md opacity-60" />
+            <div className="w-full bg-slate-500/5 dark:bg-white/[0.02] border border-black/5 dark:border-white/[0.04] rounded-2xl p-4 space-y-3 mt-4">
+              <Skeleton className="w-24 h-3 rounded" />
+              <div className="flex items-center gap-3">
+                <Skeleton variant="circular" className="w-8 h-8" />
+                <div className="space-y-1 flex-1">
+                  <Skeleton className="w-32 h-3.5 rounded" />
+                  <Skeleton className="w-20 h-3 rounded opacity-50" />
+                </div>
+              </div>
+            </div>
+            <Skeleton className="w-full h-11 rounded-xl mt-2" />
           </div>
         ) : error ? (
           <div className="flex flex-col items-center text-center py-4">

@@ -480,10 +480,13 @@ export const getThumbnailLogic = async ({ fileId, userId, userRole, res }) => {
   throw error;
 };
 
-export const getFileLogic = async ({ fileId, userId, userRole, range, action, res }) => {
+export const getFileLogic = async ({ fileId, userId, userRole, range, action, ifNoneMatch, res }) => {
   const req = { user: { id: userId, role: userRole } };
-  // Update openedAt timestamp for file
-  await File.updateOne({ _id: fileId }, { $set: { openedAt: new Date() } });
+
+  // Update openedAt timestamp asynchronously without blocking file read response
+  File.updateOne({ _id: fileId }, { $set: { openedAt: new Date() } }).catch((err) =>
+    console.error("openedAt async update failed:", err),
+  );
 
   const file = await File.findOne({ _id: fileId })
     .select("userId name extension path size")
@@ -509,6 +512,21 @@ export const getFileLogic = async ({ fileId, userId, userRole, range, action, re
       const error = new Error("You are not authorized to access this file");
       error.status = 403;
       throw error;
+    }
+  }
+
+  // Fast ETag check for 304 Not Modified
+  const fileEtag = `W/"${fileId}-${file.size || 0}"`;
+  res.setHeader("ETag", fileEtag);
+
+  if (action !== "download") {
+    res.setHeader(
+      "Cache-Control",
+      "private, max-age=3600, stale-while-revalidate=86400",
+    );
+
+    if (!range && ifNoneMatch && ifNoneMatch === fileEtag) {
+      return res.status(304).end();
     }
   }
 

@@ -6,7 +6,6 @@ const trialClaimSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      index: true,
     },
     firstClaimedByUserId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -27,9 +26,6 @@ const trialClaimSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
-
-// Ensure unique index is registered in MongoDB
-trialClaimSchema.index({ phoneHash: 1 }, { unique: true });
 
 const TrialClaim = mongoose.model("TrialClaim", trialClaimSchema);
 export default TrialClaim;

@@ -10,7 +10,6 @@ router.get(
   "/",
   checkAuth,
   lightReadLimiter,
-  throttle(100, 15, "sysconfig-get"),
   getSystemConfig,
 );
 router.patch(

@@ -25,7 +25,6 @@ const router = express.Router();
 router.get(
   "/get-active-plans",
   lightReadLimiter,
-  throttle(100, 20, "plans-active"),
   getAllActivePlans,
 );
 
@@ -34,7 +33,6 @@ router.get(
   "/context",
   checkAuth,
   lightReadLimiter,
-  throttle(50, 20, "plan-context"),
   loadPlanContext,
   getUserPlanContext,
 );
@@ -42,7 +40,6 @@ router.get(
   "/current-plan-context",
   checkAuth,
   lightReadLimiter,
-  throttle(50, 20, "plan-context"),
   loadPlanContext,
   getUserPlanContext,
 );

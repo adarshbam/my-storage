@@ -12,7 +12,6 @@ import Users from "./pages/Users";
 import Profile from "./pages/Profile";
 import OwnerSettings from "./pages/OwnerSettings/OwnerSettings";
 import SharedAccessClaim from "./pages/SharedAccessClaim";
-import Skeleton from "./components/ui/Skeleton";
 
 // Landing Page Components
 import Navbar from "./components/sections/Navbar";
@@ -24,11 +23,11 @@ import PricingSection from "./components/sections/PricingSection";
 import FinalCTA from "./components/sections/FinalCTA";
 import Footer from "./components/sections/Footer";
 
-// Lazy load Dashboard Components to prevent heavy imports (like react-syntax-highlighter) on public pages
-const DashboardLayout = lazy(() => import("./layouts/DashboardLayout"));
-const FileBrowser = lazy(() => import("./components/drive/FileBrowser"));
-const TrashView = lazy(() => import("./components/drive/TrashView"));
-const BillingPlansPage = lazy(() => import("./pages/BillingPlansPage"));
+// Dashboard Components
+import DashboardLayout from "./layouts/DashboardLayout";
+import FileBrowser from "./components/drive/FileBrowser";
+import TrashView from "./components/drive/TrashView";
+import BillingPlansPage from "./pages/BillingPlansPage";
 
 function LandingPage() {
   return (
@@ -55,26 +54,9 @@ function LandingPage() {
   );
 }
 
-// Modern skeleton loading fallback for suspense
+// Clean fallback for route suspense
 const PageLoader = () => (
-  <div className="min-h-screen flex flex-col p-8 bg-[#030706] text-white space-y-6">
-    <div className="flex items-center justify-between pb-4 border-b border-white/5">
-      <div className="flex items-center gap-3">
-        <Skeleton variant="circular" className="w-10 h-10" />
-        <Skeleton className="h-6 w-32 rounded-lg" />
-      </div>
-      <Skeleton className="h-9 w-28 rounded-xl" />
-    </div>
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-        <div key={i} className="aspect-[4/3] rounded-2xl bg-vault-surface/40 border border-white/5 overflow-hidden p-3 flex flex-col justify-between">
-          <Skeleton className="h-5 w-16 rounded-md" />
-          <Skeleton className="h-10 w-10 self-center rounded-xl" />
-          <Skeleton className="h-4 w-3/4 rounded" />
-        </div>
-      ))}
-    </div>
-  </div>
+  <div className="min-h-screen w-full bg-vault-bg" />
 );
 
 function ScrollToHashElement() {

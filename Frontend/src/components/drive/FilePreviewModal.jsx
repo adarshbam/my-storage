@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   X,
   Download,
   FileText,
   FileCode,
   FileAudio,
-  Loader2,
   AlertCircle,
   Image as ImageIcon,
   Edit,
@@ -13,13 +12,23 @@ import {
   Check,
   Maximize,
   Minimize,
+  Copy,
+  CheckCheck,
+  WrapText,
+  FileVideo,
 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import Button from "../ui/Button";
 import Editor from "react-simple-code-editor";
 import { usePlan } from "../../context/PlanContext";
+import FilePreviewSkeleton from "./FilePreviewSkeleton";
+import {
+  getCachedContent,
+  setCachedContent,
+  invalidateCache,
+  isTextOrCode,
+} from "../../lib/fileCache";
+
 import * as Prism from "prismjs";
 import "prismjs/components/prism-clike";
 import "prismjs/components/prism-javascript";
@@ -36,15 +45,149 @@ import "prismjs/components/prism-sql";
 import "prismjs/components/prism-bash";
 import "prismjs/components/prism-markdown";
 import "prismjs/components/prism-json";
-import "prismjs/themes/prism-tomorrow.css"; // Base theme for the editor components
+import "prismjs/themes/prism-tomorrow.css";
+
+const MAX_HIGHLIGHT_LINES = 2500;
+
+/**
+ * Lightweight, GPU-accelerated Code Viewer with line numbers and 0-lag rendering
+ */
+function CodeViewer({ code, language, wrapText = false }) {
+  const [copied, setCopied] = useState(false);
+
+  const lines = useMemo(() => {
+    if (!code) return [];
+    return code.split("\n");
+  }, [code]);
+
+  const isVeryLarge = lines.length > MAX_HIGHLIGHT_LINES;
+
+  const highlightedHtml = useMemo(() => {
+    if (!code) return "";
+    try {
+      const grammar =
+        Prism.languages[language] ||
+        Prism.languages.javascript ||
+        Prism.languages.clike ||
+        Prism.languages.markup;
+
+      // For extraordinarily huge files, highlight safely or fallback to raw escaped text
+      const targetCode = isVeryLarge
+        ? lines.slice(0, MAX_HIGHLIGHT_LINES).join("\n") +
+          `\n\n/* ... Truncated ${lines.length - MAX_HIGHLIGHT_LINES} lines for high performance ... */`
+        : code;
+
+      return Prism.highlight(targetCode, grammar, language);
+    } catch {
+      return code.replace(/[&<>"']/g, (m) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[m]));
+    }
+  }, [code, language, isVeryLarge, lines]);
+
+  const handleCopy = () => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-[#1e1e1e] rounded-xl border border-white/10 shadow-2xl overflow-hidden relative group">
+      {/* Code Header Bar */}
+      <div className="px-4 py-2 bg-[#252526] border-b border-white/5 flex justify-between items-center shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+            <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+            <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+          </div>
+          <span className="text-xs text-slate-400 font-mono">
+            {lines.length} {lines.length === 1 ? "line" : "lines"}
+          </span>
+          <span className="text-[10px] px-2 py-0.5 rounded bg-white/10 text-slate-300 uppercase font-mono tracking-wider">
+            {language}
+          </span>
+        </div>
+
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-medium transition-all"
+          title="Copy code"
+        >
+          {copied ? (
+            <>
+              <CheckCheck size={13} className="text-vault-emerald" />
+              <span className="text-vault-emerald">Copied</span>
+            </>
+          ) : (
+            <>
+              <Copy size={13} />
+              <span>Copy</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Code Viewport with Gutter Line Numbers */}
+      <div className="flex-1 overflow-auto custom-scrollbar flex bg-[#1e1e1e] text-sm font-mono leading-relaxed">
+        {/* Line Numbers Gutter */}
+        <div className="py-4 pl-3 pr-4 select-none text-right text-slate-600 text-xs font-mono border-r border-white/5 bg-[#1a1a1a] shrink-0 min-w-[3.5rem]">
+          {(isVeryLarge ? lines.slice(0, MAX_HIGHLIGHT_LINES + 2) : lines).map(
+            (_, idx) => (
+              <div key={idx} className="h-6 leading-6">
+                {idx + 1}
+              </div>
+            ),
+          )}
+        </div>
+
+        {/* Code Pre Block */}
+        <pre
+          className={`flex-1 py-4 px-4 m-0 overflow-x-auto text-slate-200 ${
+            wrapText ? "whitespace-pre-wrap break-words" : "whitespace-pre"
+          }`}
+          style={{ fontFamily: '"Cascadia Code", "Fira Code", monospace' }}
+        >
+          <code
+            className={`language-${language} text-[13px] leading-6 inline-block w-full`}
+            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+          />
+        </pre>
+      </div>
+
+      {/* Footer Bar */}
+      <div className="px-4 py-1.5 bg-[#007acc] flex justify-between items-center text-[11px] text-white font-medium shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1">
+            <Check size={11} /> UTF-8
+          </span>
+          <span className="opacity-80">Spaces: 2</span>
+        </div>
+        <span className="bg-white/15 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-mono">
+          READ ONLY
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
   const { isNoPlan, rules } = usePlan();
   const allowEdit = !isNoPlan && (rules?.permissions?.allowUpload ?? true);
 
-  const [content, setContent] = useState(null);
-  const [editedContent, setEditedContent] = useState("");
-  const [loading, setLoading] = useState(false);
+  // Check cache immediately on state initialization for instant 0ms mount
+  const initialCached = file?._id ? getCachedContent(file._id) : null;
+
+  const [content, setContent] = useState(initialCached);
+  const [editedContent, setEditedContent] = useState(initialCached || "");
+  const [loading, setLoading] = useState(
+    !initialCached && isTextOrCode(file?.extension),
+  );
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState(null);
@@ -53,11 +196,14 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
   const [currentSha, setCurrentSha] = useState(file?.sha || null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [tempName, setTempName] = useState(file?.name || "");
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [wrapText, setWrapText] = useState(false);
   const modalRef = useRef(null);
 
   useEffect(() => {
     if (file?.sha) setCurrentSha(file.sha);
     if (file?.name) setTempName(file.name);
+    setImgLoaded(false);
   }, [file]);
 
   const handleRenameSubmit = async () => {
@@ -90,6 +236,9 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
       });
 
       if (!res.ok) throw new Error("Rename failed");
+
+      // Invalidate cache on rename
+      invalidateCache(file._id);
 
       // Update the file object in place for the current view
       file.name = tempName.trim();
@@ -126,35 +275,63 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
   useEffect(() => {
     if (!isOpen || !file) return;
 
+    // Reset image loading state
+    setImgLoaded(false);
+
+    // Abort controller for fast network cancellation
+    const abortController = new AbortController();
+
     const fetchContent = async () => {
       // Only fetch content for text/code files
       if (isTextOrCode(file.extension)) {
+        // 1. Check RAM cache first for 0ms instant display
+        const cached = getCachedContent(file._id);
+        if (cached !== null) {
+          setContent(cached);
+          setEditedContent(cached);
+          setLoading(false);
+          setError(null);
+          return;
+        }
+
         setLoading(true);
         setError(null);
+
         try {
-          // Add timestamp to prevent caching
           let url =
             file.provider === "github"
-              ? `${SERVER_URL}/github/file/${file.githubPath.split("/").map(encodeURIComponent).join("/")}?t=${Date.now()}`
+              ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}`
               : file.provider === "google_drive"
-                ? `${SERVER_URL}/drive/file/${file._id}?t=${Date.now()}`
-                : `${SERVER_URL}/file/${file._id}?t=${Date.now()}`;
+                ? `${SERVER_URL}/drive/file/${file._id}`
+                : `${SERVER_URL}/file/${file._id}`;
+
           if (ownerId) {
-            url += `&ownerId=${ownerId}`;
+            url += (url.includes("?") ? "&" : "?") + `ownerId=${ownerId}`;
           }
-          const res = await fetch(url, { credentials: "include" });
+
+          const res = await fetch(url, {
+            credentials: "include",
+            signal: abortController.signal,
+          });
+
           if (!res.ok) throw new Error("Failed to load content");
           const text = await res.text();
+
+          // Store in high-performance RAM cache
+          setCachedContent(file._id, text);
+
           setContent(text);
           setEditedContent(text);
         } catch (err) {
+          if (err.name === "AbortError") return;
           console.error(err);
           setError("Failed to load file content");
         } finally {
           setLoading(false);
         }
       } else {
-        setContent(null); // Reset content for other types
+        setContent(null);
+        setLoading(false);
       }
     };
 
@@ -163,15 +340,16 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
     // Prevent body scroll when modal is open
     document.body.style.overflow = "hidden";
     return () => {
+      abortController.abort();
       document.body.style.overflow = "unset";
     };
-  }, [file, isOpen]);
+  }, [file, isOpen, ownerId]);
 
   if (!isOpen || !file) return null;
 
   let fileUrl =
     file.provider === "github"
-      ? `${SERVER_URL}/github/file/${file.githubPath.split("/").map(encodeURIComponent).join("/")}`
+      ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}`
       : file.provider === "google_drive"
         ? `${SERVER_URL}/drive/file/${file._id}`
         : `${SERVER_URL}/file/${file._id}`;
@@ -185,7 +363,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
     try {
       const isGithub = file.provider === "github";
       let url = isGithub
-        ? `${SERVER_URL}/github/file/${file.githubPath.split("/").map(encodeURIComponent).join("/")}`
+        ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}`
         : `${SERVER_URL}/file/${file._id}/save`;
 
       if (ownerId) {
@@ -222,6 +400,9 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
         setCurrentSha(data.content.sha);
       }
 
+      // Update RAM cache with newly saved content
+      setCachedContent(file._id, editedContent);
+
       setContent(editedContent);
       setIsEditing(false);
       setSaveSuccess(true);
@@ -237,7 +418,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
   const handleDownload = () => {
     let downloadUrl =
       file.provider === "github"
-        ? `${SERVER_URL}/github/file/${file.githubPath.split("/").map(encodeURIComponent).join("/")}?action=download`
+        ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}?action=download`
         : file.provider === "google_drive"
           ? `${SERVER_URL}/drive/file/${file._id}?action=download`
           : `${SERVER_URL}/file/${file._id}?action=download`;
@@ -261,33 +442,6 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
   const isAudio = (ext) =>
     [".mp3", ".wav", ".ogg", ".m4a"].includes(ext?.toLowerCase());
   const isPdf = (ext) => [".pdf"].includes(ext?.toLowerCase());
-  const isTextOrCode = (ext) => {
-    const list = [
-      ".txt",
-      ".md",
-      ".js",
-      ".jsx",
-      ".ts",
-      ".tsx",
-      ".json",
-      ".css",
-      ".html",
-      ".xml",
-      ".yml",
-      ".py",
-      ".java",
-      ".c",
-      ".cpp",
-      ".h",
-      ".sql",
-      ".sh",
-      ".bat",
-      ".log",
-      ".env",
-      ".gitignore",
-    ];
-    return list.includes(ext?.toLowerCase());
-  };
 
   const getLanguage = (ext) => {
     const map = {
@@ -297,11 +451,13 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
       ".tsx": "tsx",
       ".json": "json",
       ".css": "css",
-      ".html": "html",
+      ".html": "markup",
+      ".xml": "markup",
       ".py": "python",
       ".java": "java",
       ".c": "c",
       ".cpp": "cpp",
+      ".h": "c",
       ".sql": "sql",
       ".sh": "bash",
       ".md": "markdown",
@@ -314,12 +470,20 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
 
     if (isImage(ext)) {
       return (
-        <div className="flex items-center justify-center h-full bg-slate-950/50 rounded-lg overflow-hidden">
+        <div className="relative flex items-center justify-center h-full bg-slate-950/50 rounded-2xl overflow-hidden border border-white/5">
+          {!imgLoaded && (
+            <div className="absolute inset-0 z-0">
+              <FilePreviewSkeleton type="image" />
+            </div>
+          )}
           <img
             src={fileUrl}
             alt={file.name}
-            className="max-w-full max-h-full object-contain"
+            className={`max-w-full max-h-full object-contain transition-opacity duration-300 relative z-10 ${
+              imgLoaded ? "opacity-100" : "opacity-0"
+            }`}
             crossOrigin="use-credentials"
+            onLoad={() => setImgLoaded(true)}
           />
         </div>
       );
@@ -327,11 +491,11 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
 
     if (isVideo(ext)) {
       return (
-        <div className="flex items-center justify-center h-full bg-slate-950/50 rounded-lg overflow-hidden">
+        <div className="flex items-center justify-center h-full bg-slate-950/50 rounded-2xl overflow-hidden border border-white/5">
           <video
             src={fileUrl}
             controls
-            className="max-w-full max-h-full"
+            className="max-w-full max-h-full rounded-lg"
             crossOrigin="use-credentials"
           />
         </div>
@@ -342,7 +506,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
       return (
         <iframe
           src={fileUrl}
-          className="w-full h-full rounded-lg bg-white"
+          className="w-full h-full rounded-2xl bg-white border-0"
           title={file.name}
         />
       );
@@ -350,7 +514,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
 
     if (isAudio(ext)) {
       return (
-        <div className="flex items-center justify-center h-full bg-slate-950/50 rounded-lg overflow-hidden">
+        <div className="flex items-center justify-center h-full bg-slate-950/50 rounded-2xl overflow-hidden border border-white/5">
           <audio
             src={fileUrl}
             controls
@@ -362,19 +526,18 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
     }
 
     if (isTextOrCode(ext)) {
-      if (loading)
+      if (loading) {
+        return <FilePreviewSkeleton type="code" fileName={file.name} />;
+      }
+
+      if (error) {
         return (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="animate-spin text-blue-500" size={32} />
+          <div className="flex flex-col items-center justify-center h-64 text-red-400">
+            <AlertCircle size={36} className="mb-2" />
+            <p className="font-medium">{error}</p>
           </div>
         );
-      if (error)
-        return (
-          <div className="flex flex-col items-center justify-center h-64 text-red-500">
-            <AlertCircle size={32} className="mb-2" />
-            <p>{error}</p>
-          </div>
-        );
+      }
 
       if (isEditing) {
         return (
@@ -386,7 +549,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                 <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
                 <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
                 <span className="ml-2 text-xs text-slate-400 font-medium tracking-wide">
-                  {file.name} — Editor
+                  {file.name} — Live Editor
                 </span>
               </div>
               <div className="text-[10px] text-slate-500 font-mono">
@@ -406,14 +569,14 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                       Prism.languages.javascript ||
                       Prism.languages.clike;
                     return Prism.highlight(code, grammar, lang);
-                  } catch (e) {
+                  } catch {
                     return code;
                   }
                 }}
                 padding={24}
                 style={{
                   fontFamily:
-                    '"Cascadia Code", "Fira Code", "Fira Mono", "Source Code Pro", monospace',
+                    '"Cascadia Code", "Fira Code", "Fira Mono", monospace',
                   fontSize: 14,
                   minHeight: "100%",
                   color: "#d4d4d4",
@@ -435,7 +598,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                 <span className="opacity-80">Spaces: 2</span>
               </div>
               <div className="flex items-center gap-4">
-                <span className="bg-white/10 px-2 py-0.5 rounded uppercase tracking-wider">
+                <span className="bg-white/10 px-2 py-0.5 rounded uppercase tracking-wider font-mono">
                   {getLanguage(ext)}
                 </span>
               </div>
@@ -444,26 +607,25 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
         );
       }
 
+      // Fast, lightweight Code Viewer
       return (
-        <div className="h-full overflow-auto rounded-lg border border-slate-700 bg-[#282c34] text-sm relative group">
-          <SyntaxHighlighter
-            language={getLanguage(ext)}
-            style={oneDark}
-            customStyle={{ margin: 0, minHeight: "100%" }}
-            showLineNumbers
-          >
-            {content || ""}
-          </SyntaxHighlighter>
-        </div>
+        <CodeViewer
+          code={content || ""}
+          language={getLanguage(ext)}
+          wrapText={wrapText}
+        />
       );
     }
 
     return (
       <div className="flex flex-col items-center justify-center h-full text-slate-400">
-        <div className="bg-slate-200 dark:bg-slate-800 p-4 rounded-full mb-4">
+        <div className="bg-slate-200 dark:bg-white/[0.04] p-5 rounded-full mb-4 border border-white/5">
           {ext === ".zip" ? <AlertCircle size={32} /> : <FileText size={32} />}
         </div>
-        <p className="text-lg font-medium mb-4">Preview not available</p>
+        <p className="text-lg font-semibold text-white mb-1">Preview not available</p>
+        <p className="text-xs text-white/40 mb-5">
+          Binary format ({ext?.toUpperCase() || "File"}) can be downloaded to view.
+        </p>
         <Button onClick={handleDownload} className="flex items-center gap-2">
           <Download size={16} /> Download File
         </Button>
@@ -473,12 +635,14 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200 ${isFullscreen ? "p-0" : "p-4"}`}
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200 ${
+        isFullscreen ? "p-0" : "p-4"
+      }`}
     >
       {!isFullscreen && <div className="absolute inset-0" onClick={onClose} />}
       <div
         ref={modalRef}
-        className={`relative bg-white/90 dark:bg-vault-surface/90 backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_0_rgba(0,212,165,0.2),0_12px_40px_rgba(0,0,0,0.7),0_0_20px_rgba(0,212,165,0.05)] flex flex-col border border-black/10 dark:border-vault-emerald/20 animate-in zoom-in-95 duration-200 transition-all ${
+        className={`relative bg-white/90 dark:bg-vault-surface/90 backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_0_rgba(0,212,165,0.2),0_12px_40px_rgba(0,0,0,0.7),0_0_20px_rgba(0,212,165,0.05)] flex flex-col border border-black/10 dark:border-vault-emerald/20 animate-in zoom-in-95 duration-150 transition-all ${
           isFullscreen
             ? "w-full h-full rounded-none"
             : "w-full max-w-5xl h-[70vh] rounded-3xl"
@@ -487,11 +651,13 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="p-2 bg-[#14b8a6]/10 rounded-lg text-[#14b8a6]">
+            <div className="p-2 bg-[#14b8a6]/10 rounded-lg text-[#14b8a6] shrink-0">
               {isTextOrCode(file.extension) ? (
                 <FileCode size={20} />
               ) : isAudio(file.extension) ? (
                 <FileAudio size={20} />
+              ) : isVideo(file.extension) ? (
+                <FileVideo size={20} />
               ) : isImage(file.extension) ? (
                 <ImageIcon size={20} />
               ) : (
@@ -562,9 +728,20 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {isTextOrCode(file.extension) && (
+          <div className="flex items-center gap-2 shrink-0">
+            {isTextOrCode(file.extension) && !loading && (
               <>
+                {!isEditing && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setWrapText(!wrapText)}
+                    title={wrapText ? "Disable Word Wrap" : "Enable Word Wrap"}
+                    className={wrapText ? "text-[#14b8a6]" : "text-slate-400"}
+                  >
+                    <WrapText size={16} />
+                  </Button>
+                )}
                 {isEditing ? (
                   <div className="flex items-center gap-2">
                     <Button
@@ -584,12 +761,8 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                       disabled={saving || !allowEdit}
                       className="flex items-center gap-2 bg-[#14b8a6] hover:bg-[#0d9488]"
                     >
-                      {saving ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <Save size={16} />
-                      )}
-                      Save
+                      <Save size={16} />
+                      {saving ? "Saving..." : "Save"}
                     </Button>
                   </div>
                 ) : allowEdit ? (
@@ -597,7 +770,9 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsEditing(true)}
-                    className={`flex items-center gap-2 ${saveSuccess ? "text-[#14b8a6]" : "text-slate-500"}`}
+                    className={`flex items-center gap-2 ${
+                      saveSuccess ? "text-[#14b8a6]" : "text-slate-400 hover:text-white"
+                    }`}
                   >
                     {saveSuccess ? <Check size={16} /> : <Edit size={16} />}
                     {saveSuccess ? "Saved!" : "Edit"}
