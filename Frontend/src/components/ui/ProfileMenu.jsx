@@ -5,23 +5,26 @@ import {
   LogOut,
   User,
   CreditCard,
-  Tag,
   Monitor,
   Camera,
   ShieldCheck,
-  Zap,
   Shield,
-  Settings,
+  Sliders,
   ChevronRight,
-  HardDrive,
   Cloud,
   X,
-  Sliders,
+  Palette,
+  Moon,
+  Sun,
+  Check,
+  Maximize,
+  Minimize,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatSize } from "../../lib/utils";
 import { SERVER_URL } from "../../lib/api";
 import { supportedCountries } from "../../lib/currency";
+import { useTheme } from "./ThemeProvider";
 
 export default function ProfileMenu({
   user,
@@ -31,19 +34,22 @@ export default function ProfileMenu({
   onProfilePicUpload,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [imgError, setImgError] = useState(false);
   const menuRef = useRef(null);
   const fileInputRef = useRef(null);
-  const maxStorage = user.maxStorage || 1024 * 1024 * 500;
-  const usedStorage = user.usedStorage || 0;
+  const maxStorage = user?.maxStorage || 1024 * 1024 * 500;
+  const usedStorage = user?.usedStorage || 0;
   const navigate = useNavigate();
+
+  const { theme, setTheme, accent, setAccent, palettes } = useTheme();
 
   useEffect(() => {
     setImgError(false);
   }, [profilePicUrl]);
 
-  // Owner configartion settings state
+  // Owner configuration settings state
   const [ownerSettingsOpen, setOwnerSettingsOpen] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
@@ -67,25 +73,28 @@ export default function ProfileMenu({
     function handleClickOutside(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setIsOpen(false);
+        setIsPaletteOpen(false);
       }
     }
-    if (isOpen) {
+    if (isOpen || isPaletteOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  }, [isOpen, isPaletteOpen]);
 
   // Close on Escape
   useEffect(() => {
     function handleKey(e) {
-      if (e.key === "Escape") setIsOpen(false);
+      if (e.key === "Escape") {
+        setIsOpen(false);
+        setIsPaletteOpen(false);
+      }
     }
-    if (isOpen) document.addEventListener("keydown", handleKey);
+    if (isOpen || isPaletteOpen) document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [isOpen]);
+  }, [isOpen, isPaletteOpen]);
 
-  // Simulated storage data (you can wire this to a real endpoint later)
-  const usedPercent = ((usedStorage / maxStorage) * 100).toFixed(1);
+  const usedPercent = Math.min(100, Math.max(0, ((usedStorage / maxStorage) * 100))).toFixed(1);
 
   const handleAvatarClick = (e) => {
     e.stopPropagation();
@@ -102,7 +111,6 @@ export default function ProfileMenu({
       }
     } finally {
       setIsUploading(false);
-      // Reset input so re-uploading same file works
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -136,12 +144,12 @@ export default function ProfileMenu({
           const i = Math.floor(Math.log(bytes) / Math.log(k));
           const val = parseFloat((bytes / Math.pow(k, i)).toFixed(2));
           setFileSizeVal(val);
-          setFileSizeUnit(units[i]);
+          setFileSizeUnit(units[i] || "MB");
         }
       } else {
         setConfigError("Failed to fetch system configuration.");
       }
-    } catch (err) {
+    } catch {
       setConfigError("Network error occurred.");
     } finally {
       setLoadingConfig(false);
@@ -166,15 +174,13 @@ export default function ProfileMenu({
       maxStorageVal * Math.pow(k, maxStorageIndex),
     );
 
-    console.log(maxStorageBytes);
-
     try {
       const res = await fetch(`${SERVER_URL}/system-config`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          maxDevicesLimit: devicesLimit,
-          maxFileSizeLimit: maxStorageBytes,
+          maxDevicesLimit: Number(devicesLimit),
+          maxFileSizeLimit: maxFileSizeBytes,
         }),
         credentials: "include",
       });
@@ -188,7 +194,7 @@ export default function ProfileMenu({
       } else {
         setConfigError(data.error || "Failed to update system settings.");
       }
-    } catch (err) {
+    } catch {
       setConfigError("Network error occurred.");
     } finally {
       setSavingConfig(false);
@@ -210,18 +216,26 @@ export default function ProfileMenu({
       const data = await res.json();
       if (res.ok) {
         setConfigSuccess("Plan settings updated successfully!");
-        setTimeout(() => {
-          setOwnerSettingsOpen(false);
-          setConfigSuccess(null);
-        }, 1500);
       } else {
         setConfigError(data.error || "Failed to update Plan settings.");
       }
-    } catch (err) {
+    } catch {
       setConfigError("Network error occurred.");
-    } finally {
-      setSavingConfig(false);
     }
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.error("Fullscreen error:", err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  const toggleMode = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
   };
 
   const menuItems = [
@@ -233,7 +247,6 @@ export default function ProfileMenu({
         setIsOpen(false);
         navigate("/profile");
       },
-      gradient: "from-blue-500 to-indigo-500",
     },
     ...(user && user.role?.toLowerCase() === "owner"
       ? [
@@ -245,7 +258,6 @@ export default function ProfileMenu({
               setIsOpen(false);
               navigate("/owner/settings");
             },
-            gradient: "from-purple-500 to-indigo-500",
           },
         ]
       : []),
@@ -259,7 +271,6 @@ export default function ProfileMenu({
               setIsOpen(false);
               navigate("/users");
             },
-            gradient: "from-emerald-500 to-teal-500",
           },
         ]
       : []),
@@ -271,13 +282,11 @@ export default function ProfileMenu({
         setIsOpen(false);
         navigate("/dashboard/billing");
       },
-      gradient: "from-amber-500 to-orange-500",
     },
   ];
 
   return (
     <div className="relative" ref={menuRef} style={{ zIndex: 9999 }}>
-      {/* Hidden file input for profile pic upload */}
       <input
         type="file"
         ref={fileInputRef}
@@ -286,228 +295,315 @@ export default function ProfileMenu({
         onChange={handleFileSelect}
       />
 
-      {/* Modern Avatar Trigger */}
+      {/* Avatar Trigger Button */}
       <button
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="relative group focus:outline-none"
-        title="Account menu"
+        onClick={() => {
+          setIsOpen((prev) => !prev);
+          setIsPaletteOpen(false);
+        }}
+        className="relative group focus:outline-none flex items-center gap-2"
+        title="Account & Themes"
         id="profile-menu-trigger"
       >
-        <div className="absolute inset-[-4px] bg-gradient-to-r from-[#14b8a6] via-[#3b82f6] to-[#8b5cf6] rounded-full blur-[6px] opacity-0 group-hover:opacity-60 transition-opacity duration-500" />
         <div
-          className={`relative flex items-center justify-center w-11 h-11 rounded-full p-[2px] transition-transform duration-300 ${isOpen ? "scale-95" : "hover:scale-105"}`}
+          className={`relative flex items-center justify-center w-10 h-10 rounded-full p-[2px] transition-all duration-200 ${
+            isOpen || isPaletteOpen ? "ring-2 ring-accent-primary" : "hover:scale-105"
+          }`}
         >
-          <div className="absolute inset-0 bg-gradient-to-tr from-[#14b8a6] to-[#3b82f6] rounded-full [mask-image:linear-gradient(white,transparent)]" />
-          <div className="w-full h-full rounded-full bg-white dark:bg-[#020b08] overflow-hidden flex items-center justify-center relative z-10 border-2 border-white/50 dark:border-white/10 shadow-sm">
+          <div className="w-full h-full rounded-full bg-slate-100 dark:bg-vault-surface overflow-hidden flex items-center justify-center relative border border-slate-200 dark:border-white/10 shadow-sm">
             {profilePicUrl && !imgError ? (
               <img
                 src={profilePicUrl}
                 alt="Profile"
                 referrerPolicy="no-referrer"
                 onError={() => setImgError(true)}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] select-none">
+              <span className="text-xs font-black text-accent-primary select-none">
                 {user?.name?.[0]?.toUpperCase() ||
                   user?.email?.[0]?.toUpperCase() ||
-                  "A"}
+                  "V"}
               </span>
             )}
           </div>
         </div>
       </button>
 
-      {/* Stunning Floating Dropdown */}
+      {/* Dropdown Menu */}
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && !isPaletteOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 15, filter: "blur(10px)" }}
-            animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, scale: 0.95, y: 10, filter: "blur(10px)" }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className="absolute right-0 top-[calc(100%+16px)] w-[380px] origin-top-right perspective-1000"
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="absolute right-0 top-[calc(100%+12px)] w-[340px] origin-top-right"
             style={{ zIndex: 9999 }}
           >
-            <div className="relative rounded-[2rem] overflow-hidden bg-white/60 dark:bg-[#020b08]/80 backdrop-blur-3xl border border-white/40 dark:border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.05)]">
-              {/* Internal ambient glowing blobs */}
-              <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#14b8a6]/20 dark:bg-[#14b8a6]/15 rounded-full blur-[50px] pointer-events-none" />
-              <div className="absolute top-1/2 -left-24 w-48 h-48 bg-[#3b82f6]/15 dark:bg-[#3b82f6]/10 rounded-full blur-[50px] pointer-events-none" />
-
-              {/* Premium Header Profile Section */}
-              <div className="relative p-6 pb-5">
-                <div className="flex items-center gap-5">
+            <div className="rounded-3xl overflow-hidden bg-white/95 dark:bg-vault-surface/95 text-slate-900 dark:text-white backdrop-blur-2xl border border-slate-200 dark:border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]">
+              {/* Header Profile Section */}
+              <div className="p-5 pb-4 border-b border-slate-100 dark:border-white/5">
+                <div className="flex items-center gap-3.5">
                   <div
                     className="relative group/avatar cursor-pointer shrink-0"
                     onClick={handleAvatarClick}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#14b8a6] to-[#3b82f6] rounded-[1.25rem] blur-md opacity-40 group-hover/avatar:opacity-80 transition-opacity duration-300" />
-                    <div className="relative w-16 h-16 rounded-[1.25rem] bg-gradient-to-br from-white to-slate-50 dark:from-[#0f172a] dark:to-[#020b08] p-[2px] shadow-xl">
-                      <div className="w-full h-full rounded-[1.1rem] overflow-hidden bg-white dark:bg-[#020b08] flex items-center justify-center relative">
-                        {profilePicUrl && !imgError ? (
-                          <img
-                            src={profilePicUrl}
-                            alt="Profile"
-                            referrerPolicy="no-referrer"
-                            onError={() => setImgError(true)}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover/avatar:scale-110"
-                          />
+                    <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 flex items-center justify-center relative shadow-sm">
+                      {profilePicUrl && !imgError ? (
+                        <img
+                          src={profilePicUrl}
+                          alt="Profile"
+                          referrerPolicy="no-referrer"
+                          onError={() => setImgError(true)}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-base font-black text-accent-primary select-none">
+                          {user?.name?.[0]?.toUpperCase() || "V"}
+                        </span>
+                      )}
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+                        {isUploading ? (
+                          <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                         ) : (
-                          <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] select-none">
-                            {user?.name?.[0]?.toUpperCase() ||
-                              user?.email?.[0]?.toUpperCase() ||
-                              "A"}
-                          </span>
+                          <Camera className="text-white w-4 h-4" />
                         )}
-                        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-all duration-300">
-                          {isUploading ? (
-                            <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          ) : (
-                            <Camera className="text-white w-6 h-6 transform scale-75 group-hover/avatar:scale-100 transition-transform duration-300 drop-shadow-lg" />
-                          )}
-                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white truncate tracking-tight mb-1">
-                      {user?.name || "User"}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                      {user?.name || "Vault User"}
                     </h3>
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 w-fit">
-                      <ShieldCheck size={12} className="text-[#14b8a6]" />
-                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate max-w-[150px]">
-                        {user?.email || ""}
-                      </p>
+                    <div className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-[11px] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/5">
+                      <ShieldCheck size={11} className="text-accent-primary" />
+                      <span className="truncate max-w-[140px]">{user?.email || ""}</span>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Advanced Storage Widget */}
-              <div className="px-6 py-4 mx-4 mb-4 bg-white/40 dark:bg-black/20 rounded-2xl border border-white/60 dark:border-white/5 relative overflow-hidden group/storage">
-                <div className="absolute inset-0 bg-gradient-to-r from-[#14b8a6]/0 via-[#14b8a6]/5 to-[#3b82f6]/5 opacity-0 group-hover/storage:opacity-100 transition-opacity duration-500" />
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-[#14b8a6]/10 text-[#14b8a6]">
-                        <Cloud size={14} />
-                      </div>
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                        Cloud Storage
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-black px-2 py-1 rounded-md bg-slate-900 dark:bg-white text-white dark:text-slate-900 tracking-wider shadow-sm">
+                {/* Storage Bar */}
+                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/5">
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <span className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
+                      <Cloud size={13} className="text-accent-primary" /> Cloud Storage
+                    </span>
+                    <span className="font-bold text-slate-700 dark:text-slate-300">
                       {usedPercent}%
                     </span>
                   </div>
-
-                  <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden relative">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${usedPercent}%` }}
-                      transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                      className="absolute left-0 top-0 bottom-0 rounded-full bg-gradient-to-r from-[#14b8a6] to-[#3b82f6]"
-                    >
-                      <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.4)_50%,transparent_100%)] w-full h-full animate-[shimmer_2s_infinite]" />
-                    </motion.div>
+                  <div className="w-full h-1.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-accent-primary rounded-full transition-all duration-500"
+                      style={{ width: `${usedPercent}%` }}
+                    />
                   </div>
-
-                  <div className="flex items-center justify-between mt-2.5">
-                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                      <span className="text-slate-800 dark:text-slate-200">
-                        {formatSize(usedStorage)}
-                      </span>{" "}
-                      used
-                    </p>
-                    <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
-                      {formatSize(maxStorage)}
-                    </p>
+                  <div className="flex justify-between text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-mono">
+                    <span>{formatSize(usedStorage)} used</span>
+                    <span>{formatSize(maxStorage)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Action Menu Items */}
-              <div className="px-4 pb-2 space-y-1 relative z-10">
-                {menuItems.map((item, idx) => (
-                  <motion.button
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 + idx * 0.05 }}
+              <div className="p-2 space-y-0.5">
+                {menuItems.map((item) => (
+                  <button
                     key={item.label}
                     onClick={item.onClick}
-                    className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-300 group"
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors text-left group"
                   >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`w-10 h-10 rounded-[14px] flex items-center justify-center bg-gradient-to-br ${item.gradient} bg-opacity-10 dark:bg-opacity-20 shadow-sm relative overflow-hidden`}
-                      >
-                        <div className="absolute inset-0 bg-white/90 dark:bg-[#020b08]/80 m-[1px] rounded-[13px] z-0 transition-colors group-hover:bg-white/40 dark:group-hover:bg-[#020b08]/40" />
-                        <item.icon
-                          size={18}
-                          className="relative z-10 text-slate-700 dark:text-slate-200 group-hover:scale-110 transition-transform duration-300"
-                        />
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 group-hover:text-accent-primary transition-colors">
+                        <item.icon size={16} />
                       </div>
-                      <div className="text-left">
-                        <span className="block text-sm font-bold text-slate-800 dark:text-white mb-0.5 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-slate-800 group-hover:to-slate-500 dark:group-hover:from-white dark:group-hover:to-slate-300 transition-colors">
+                      <div>
+                        <span className="block text-xs font-bold text-slate-800 dark:text-slate-100">
                           {item.label}
                         </span>
-                        <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                        <span className="block text-[10px] text-slate-400 dark:text-slate-400">
                           {item.desc}
                         </span>
                       </div>
                     </div>
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center bg-slate-100 dark:bg-white/5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                      <ChevronRight
-                        size={14}
-                        className="text-slate-600 dark:text-slate-300"
-                      />
-                    </div>
-                  </motion.button>
+                    <ChevronRight size={14} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
                 ))}
               </div>
 
-              {/* Divider */}
-              <div className="h-px w-full bg-gradient-to-r from-transparent via-slate-200 dark:via-white/10 to-transparent my-2" />
+              {/* Quick Toolbar Bar: Dark/Light Mode, Color Palette, Fullscreen */}
+              <div className="p-3 bg-slate-50 dark:bg-black/30 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={toggleMode}
+                    className="p-2 rounded-xl bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/5 transition-all text-xs flex items-center gap-1.5"
+                    title="Toggle Dark/Light Mode"
+                  >
+                    {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+                  </button>
+
+                  <button
+                    onClick={() => setIsPaletteOpen(true)}
+                    className="p-2 rounded-xl bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/5 transition-all text-xs flex items-center gap-1.5"
+                    title="Change Theme Accent"
+                  >
+                    <Palette size={15} className="text-accent-primary" />
+                    <span className="text-[11px] font-bold capitalize">
+                      {accent.replace("-", " ")}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={toggleFullscreen}
+                    className="p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors"
+                    title="Toggle Fullscreen"
+                  >
+                    <Maximize size={15} />
+                  </button>
+                </div>
+              </div>
 
               {/* Sign Out Section */}
-              <div className="p-4 pt-2 space-y-1 relative z-10">
+              <div className="p-2 border-t border-slate-100 dark:border-white/5">
                 <button
                   onClick={() => {
                     setIsOpen(false);
                     onLogout();
                   }}
-                  className="w-full flex items-center gap-4 p-3 rounded-2xl hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-300 group"
+                  className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 transition-colors text-left text-xs font-bold"
                   id="profile-menu-signout"
                 >
-                  <div className="w-10 h-10 rounded-[14px] flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-300">
-                    <LogOut size={18} />
-                  </div>
-                  <span className="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-                    Sign Out
-                  </span>
+                  <LogOut size={15} />
+                  <span>Sign Out</span>
                 </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      {/* ─────────────────────────────────────────────────────────────
+          11-COLOR THEME CUSTOMIZER DRAWER / POPOVER
+          Matches the visual reference design precisely!
+          ───────────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {isPaletteOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="absolute right-0 top-[calc(100%+12px)] w-[340px] origin-top-right"
+            style={{ zIndex: 9999 }}
+          >
+            <div className="rounded-3xl overflow-hidden bg-white/95 dark:bg-[#121614]/95 text-slate-900 dark:text-white backdrop-blur-2xl border border-slate-200 dark:border-white/10 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.6)] flex flex-col max-h-[85vh]">
+              {/* Header */}
+              <div className="p-4.5 px-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
+                    Color theme
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    11 curated presets in Dark & Light
+                  </p>
+                </div>
                 <button
-                  onClick={() => {
-                    setIsOpen(false);
-                    onLogoutAll();
-                  }}
-                  className="w-full flex items-center gap-4 p-3 rounded-2xl hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all duration-300 group"
-                  id="profile-menu-signout-all"
+                  onClick={() => setIsPaletteOpen(false)}
+                  className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-[14px] flex items-center justify-center bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform duration-300">
-                    <Monitor size={18} className="group-hover:animate-pulse" />
-                  </div>
-                  <div className="text-left">
-                    <span className="block text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
-                      Sign Out All Devices
-                    </span>
-                    <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                      Terminate all active sessions
-                    </span>
-                  </div>
+                  <X size={16} />
                 </button>
+              </div>
+
+              {/* Scrollable Palette List */}
+              <div className="p-3 space-y-1.5 overflow-y-auto custom-scrollbar flex-1">
+                {palettes.map((p) => {
+                  const isSelected = accent === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => setAccent(p.id)}
+                      className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all duration-150 text-left border ${
+                        isSelected
+                          ? "bg-slate-100 dark:bg-white/10 border-slate-300 dark:border-white/20 shadow-sm"
+                          : "bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        {/* Swatch Pill / Rounded Rect */}
+                        <div
+                          className="w-8 h-8 rounded-xl shrink-0 shadow-sm border border-black/10 dark:border-white/20"
+                          style={{ backgroundColor: p.swatch }}
+                        />
+                        <div>
+                          <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
+                            {p.name}
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            {p.desc}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isSelected && (
+                        <div className="w-5 h-5 rounded-full bg-accent-primary text-accent-foreground flex items-center justify-center shrink-0">
+                          <Check size={12} strokeWidth={3} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Bottom Reference Footer Toolbar */}
+              <div className="p-3 bg-slate-50 dark:bg-black/40 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                {/* User quick pill */}
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-white/10 flex items-center justify-center text-xs font-bold text-accent-primary">
+                    {user?.name?.[0]?.toUpperCase() || "V"}
+                  </div>
+                  <div className="text-[11px] leading-tight">
+                    <span className="font-bold block text-slate-800 dark:text-slate-200 truncate max-w-[100px]">
+                      {user?.name || "Vault"}
+                    </span>
+                    <span className="text-[9px] text-slate-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                      {user?.role || "Active"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Bottom toggles */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={toggleMode}
+                    className="p-2 rounded-xl bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/5 transition-all"
+                    title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                  >
+                    {theme === "dark" ? <Moon size={14} /> : <Sun size={14} />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsPaletteOpen(false);
+                      setIsOpen(true);
+                    }}
+                    className="p-2 rounded-xl bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/5 transition-all"
+                    title="Account Menu"
+                  >
+                    <User size={14} />
+                  </button>
+                  <button
+                    onClick={toggleFullscreen}
+                    className="p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors"
+                    title="Toggle Fullscreen"
+                  >
+                    <Maximize size={14} />
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -523,37 +619,33 @@ export default function ProfileMenu({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
                 onClick={() => setOwnerSettingsOpen(false)}
               />
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                initial={{ opacity: 0, scale: 0.96, y: 15 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-lg bg-[#0a0a0f] border border-purple-500/20 rounded-[2rem] shadow-[0_25px_60px_-15px_rgba(139,92,246,0.3)] overflow-hidden z-[10001] p-8"
+                exit={{ opacity: 0, scale: 0.96, y: 15 }}
+                className="relative w-full max-w-lg bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden z-[10001] p-6 sm:p-8"
               >
-                {/* Glow effects */}
-                <div className="absolute -top-24 -right-24 w-48 h-48 bg-purple-500/10 rounded-full blur-[50px] pointer-events-none" />
-                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-[50px] pointer-events-none" />
-
-                <div className="flex items-center justify-between mb-6 relative z-10">
+                <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400">
+                    <div className="p-2.5 rounded-xl bg-accent-soft text-accent-primary">
                       <Sliders size={20} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-black text-white tracking-tight">
-                        System Limits
+                      <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                        System Configuration
                       </h3>
-                      <p className="text-xs text-gray-400">
-                        Configure global parameters (Owner Only)
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Global parameters (Owner only)
                       </p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setOwnerSettingsOpen(false)}
-                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                    className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                   >
                     <X size={18} />
                   </button>
@@ -561,29 +653,25 @@ export default function ProfileMenu({
 
                 {loadingConfig ? (
                   <div className="py-12 flex justify-center items-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-primary"></div>
                   </div>
                 ) : (
-                  <form
-                    onSubmit={handleSaveConfig}
-                    className="space-y-6 relative z-10"
-                  >
+                  <form onSubmit={handleSaveConfig} className="space-y-5">
                     {configError && (
-                      <div className="text-sm px-4 py-3 rounded-xl font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                      <div className="text-xs px-4 py-3 rounded-xl font-medium bg-red-500/10 text-red-500 border border-red-500/20">
                         {configError}
                       </div>
                     )}
                     {configSuccess && (
-                      <div className="text-sm px-4 py-3 rounded-xl font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <div className="text-xs px-4 py-3 rounded-xl font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                         {configSuccess}
                       </div>
                     )}
 
                     <div className="space-y-4">
-                      {/* Devices Limit */}
                       <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                          Max Connected Devices Limit
+                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                          Max Devices Limit
                         </label>
                         <input
                           type="number"
@@ -591,19 +679,13 @@ export default function ProfileMenu({
                           onChange={(e) => setDevicesLimit(e.target.value)}
                           required
                           min="1"
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all font-semibold"
-                          placeholder="e.g. 3"
+                          className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-accent-primary text-sm font-semibold"
                         />
-                        <p className="text-[10px] text-gray-500 mt-1">
-                          The maximum number of concurrent device sessions
-                          allowed per user.
-                        </p>
                       </div>
 
-                      {/* Max File Size Limit */}
                       <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                          Max Upload File Size
+                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                          Max File Size Limit
                         </label>
                         <div className="flex gap-2">
                           <input
@@ -613,152 +695,35 @@ export default function ProfileMenu({
                             required
                             min="1"
                             step="any"
-                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all font-semibold"
-                            placeholder="e.g. 50"
+                            className="flex-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-accent-primary text-sm font-semibold"
                           />
                           <select
                             value={fileSizeUnit}
                             onChange={(e) => setFileSizeUnit(e.target.value)}
-                            className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
+                            className="bg-slate-100 dark:bg-vault-panel border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white font-semibold text-sm"
                           >
-                            <option value="B">Bytes (B)</option>
-                            <option value="KB">Kilobytes (KB)</option>
-                            <option value="MB">Megabytes (MB)</option>
-                            <option value="GB">Gigabytes (GB)</option>
-                            <option value="TB">Terabytes (TB)</option>
+                            <option value="B">B</option>
+                            <option value="KB">KB</option>
+                            <option value="MB">MB</option>
+                            <option value="GB">GB</option>
+                            <option value="TB">TB</option>
                           </select>
-                        </div>
-                        <p className="text-[10px] text-gray-500 mt-1">
-                          Maximum file size allowed for uploading. Stored on
-                          backend in bytes.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-6 relative z-10">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400">
-                          <Sliders size={20} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-black text-white tracking-tight">
-                            Plan Settings
-                          </h3>
-                          <p className="text-xs text-gray-400">
-                            Customise Plans (Owner Only)
-                          </p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      {/* Devices Limit */}
-                      <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                          Plan Category
-                        </label>
-                        <select
-                          value={category}
-                          onChange={(e) => setCategory(e.target.value)}
-                          className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
-                        >
-                          <option value="Novice">Novice</option>
-                          <option value="Professional">Professional</option>
-                          <option value="Ultimate">Ultimate</option>
-                        </select>
-                      </div>
-
-                      {/* Max File Size Limit */}
-                      <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                          Storage Limit
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="number"
-                            value={maxStorageVal}
-                            onChange={(e) => setMaxStorageVal(e.target.value)}
-                            required
-                            min="1"
-                            step="any"
-                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all font-semibold"
-                            placeholder="e.g. 50"
-                          />
-                          <select
-                            value={maxStorageUnit}
-                            onChange={(e) => setMaxStorageUnit(e.target.value)}
-                            className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
-                          >
-                            <option value="B">Bytes (B)</option>
-                            <option value="KB">Kilobytes (KB)</option>
-                            <option value="MB">Megabytes (MB)</option>
-                            <option value="GB">Gigabytes (GB)</option>
-                            <option value="TB">Terabytes (TB)</option>
-                          </select>
-                        </div>
-                        <p className="text-[10px] text-gray-500 mt-1">
-                          Maximum storage limit for the user on this plan.
-                          Stored on backend in bytes.
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                          Plan Price
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="number"
-                            value={price}
-                            onChange={(e) => setPrice(e.target.value)}
-                            required
-                            min="1"
-                            step="any"
-                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all font-semibold"
-                            placeholder="e.g. 50"
-                          />
-                          <select
-                            value={currency}
-                            onChange={(e) => setCurrency(e.target.value)}
-                            className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
-                          >
-                            {supportedCountries
-                              .filter((c) => c.currency !== "AUTO")
-                              .map((c) => (
-                                <option key={c.currency} value={c.currency}>
-                                  {c.name}
-                                </option>
-                              ))}
-                          </select>
-                          <select
-                            value={period}
-                            onChange={(e) => setPeriod(e.target.value)}
-                            className="bg-[#101014] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500/50 font-semibold"
-                          >
-                            <option value="Daily">Daily</option>
-                            <option value="Weekly">Weekly</option>
-                            <option value="Monthly">Monthly</option>
-                            <option value="Yearly">Yearly</option>
-                          </select>
-                        </div>
-                        <p className="text-[10px] text-gray-500 mt-1">
-                          Plan price, currency, frequnecy period
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                    <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-white/5">
                       <button
                         type="button"
                         onClick={() => setOwnerSettingsOpen(false)}
-                        className="px-6 py-3 rounded-xl text-sm font-bold text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                        className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={savingConfig}
-                        className="px-6 py-3 rounded-xl text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] disabled:opacity-50"
+                        className="px-5 py-2.5 rounded-xl text-xs font-bold bg-accent-primary text-accent-foreground hover:opacity-90 transition-all disabled:opacity-50"
                       >
                         {savingConfig ? "Saving..." : "Save Settings"}
                       </button>
@@ -771,13 +736,6 @@ export default function ProfileMenu({
         </AnimatePresence>,
         document.body,
       )}
-
-      <style>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
     </div>
   );
 }

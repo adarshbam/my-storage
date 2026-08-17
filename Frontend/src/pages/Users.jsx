@@ -201,21 +201,21 @@ const Users = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#030706] text-white p-6 sm:p-8 relative overflow-hidden font-sans pt-20 pb-24">
+    <div className="min-h-screen bg-vault-bg text-slate-900 dark:text-white p-6 sm:p-8 relative overflow-hidden font-sans pt-20 pb-24">
       {/* Subtle Atmospheric Gradient Orbs */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-emerald-500/10 via-teal-500/5 to-transparent blur-[140px] rounded-full" />
+        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-accent-primary/10 via-accent-soft/5 to-transparent blur-[140px] rounded-full" />
         <div className="absolute top-1/3 -left-48 w-96 h-96 bg-blue-500/5 blur-[120px] rounded-full" />
         <div className="absolute bottom-10 -right-48 w-96 h-96 bg-purple-500/5 blur-[120px] rounded-full" />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10 space-y-10">
         {/* Navigation Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-white/10 pb-6">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate("/dashboard")}
-              className="p-2.5 rounded-2xl bg-white/5 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-colors shadow-sm"
+              className="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white transition-colors shadow-sm"
               title="Return to Dashboard"
             >
               <ArrowLeft size={18} />

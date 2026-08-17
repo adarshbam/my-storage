@@ -649,9 +649,9 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02]">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="p-2 bg-[#14b8a6]/10 rounded-lg text-[#14b8a6] shrink-0">
+            <div className="p-2.5 bg-accent-soft border border-accent-border rounded-xl text-accent-primary shrink-0 shadow-sm">
               {isTextOrCode(file.extension) ? (
                 <FileCode size={20} />
               ) : isAudio(file.extension) ? (
@@ -679,13 +679,13 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                     }
                   }}
                   autoFocus
-                  className="bg-white/10 dark:bg-black/20 border border-[#14b8a6]/50 rounded px-2 py-0.5 text-sm font-medium text-slate-900 dark:text-white outline-none w-full max-w-[200px]"
+                  className="bg-white/10 dark:bg-black/20 border border-accent-primary rounded-xl px-2.5 py-1 text-sm font-semibold text-slate-900 dark:text-white outline-none w-full max-w-[200px]"
                 />
               ) : (
                 <h3
-                  className={`text-lg font-semibold text-slate-900 dark:text-white truncate ${
+                  className={`text-base font-bold text-slate-900 dark:text-white truncate ${
                     allowEdit
-                      ? "cursor-pointer hover:text-[#14b8a6]"
+                      ? "cursor-pointer hover:text-accent-primary"
                       : "cursor-default"
                   } transition-colors`}
                   title={allowEdit ? "Double click to rename" : file.name}
@@ -696,12 +696,12 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                   {file.name}
                 </h3>
               )}
-              <span className="text-[10px] text-slate-500 font-mono flex items-center gap-3">
-                <span className="flex items-center gap-1 text-vault-emerald">
-                  <span className="w-1.5 h-1.5 rounded-full bg-vault-emerald animate-pulse"></span>
+              <span className="text-[10px] text-slate-500 dark:text-white/40 font-mono flex items-center gap-2 mt-0.5">
+                <span className="flex items-center gap-1 text-accent-primary font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse"></span>
                   AES-256 SECURED
                 </span>
-                <span className="opacity-50">|</span>
+                <span className="opacity-40">|</span>
                 <span className="uppercase tracking-wider">
                   {file.provider === "github"
                     ? "GITHUB SECURE RELAY"
@@ -711,16 +711,16 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                 </span>
                 {isNoPlan && (
                   <>
-                    <span className="opacity-50">|</span>
-                    <span className="text-amber-400 font-bold tracking-wider">
+                    <span className="opacity-40">|</span>
+                    <span className="text-amber-500 font-bold tracking-wider">
                       READ ONLY
                     </span>
                   </>
                 )}
                 {isEditing && (
                   <>
-                    <span className="opacity-50">|</span>
-                    <span className="text-[#14b8a6] font-bold tracking-wider">
+                    <span className="opacity-40">|</span>
+                    <span className="text-accent-primary font-bold tracking-wider">
                       LIVE EDIT
                     </span>
                   </>
@@ -737,7 +737,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                     size="sm"
                     onClick={() => setWrapText(!wrapText)}
                     title={wrapText ? "Disable Word Wrap" : "Enable Word Wrap"}
-                    className={wrapText ? "text-[#14b8a6]" : "text-slate-400"}
+                    className={wrapText ? "text-accent-primary" : "text-slate-400"}
                   >
                     <WrapText size={16} />
                   </Button>
@@ -751,7 +751,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                         setIsEditing(false);
                         setEditedContent(content);
                       }}
-                      className="text-slate-500 hover:text-red-500"
+                      className="text-slate-500 hover:text-rose-500"
                     >
                       Cancel
                     </Button>
@@ -759,7 +759,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                       size="sm"
                       onClick={handleSave}
                       disabled={saving || !allowEdit}
-                      className="flex items-center gap-2 bg-[#14b8a6] hover:bg-[#0d9488]"
+                      className="flex items-center gap-2 bg-accent-primary text-accent-foreground"
                     >
                       <Save size={16} />
                       {saving ? "Saving..." : "Save"}
@@ -771,14 +771,14 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                     size="sm"
                     onClick={() => setIsEditing(true)}
                     className={`flex items-center gap-2 ${
-                      saveSuccess ? "text-[#14b8a6]" : "text-slate-400 hover:text-white"
+                      saveSuccess ? "text-accent-primary" : "text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     {saveSuccess ? <Check size={16} /> : <Edit size={16} />}
                     {saveSuccess ? "Saved!" : "Edit"}
                   </Button>
                 ) : null}
-                <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1" />
+                <div className="w-px h-6 bg-slate-200 dark:border-white/10 mx-1" />
               </>
             )}
             <Button
@@ -799,16 +799,16 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
             </Button>
             <button
               onClick={onClose}
-              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="p-2 text-slate-400 hover:text-slate-800 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
         </div>
 
         {/* Content */}
         <div
-          className={`flex-1 overflow-auto bg-slate-50 dark:bg-slate-950/50 ${
+          className={`flex-1 overflow-auto bg-slate-100/50 dark:bg-black/30 ${
             isPdf(file.extension) ? "p-0 overflow-hidden" : "p-4 md:p-6"
           }`}
         >

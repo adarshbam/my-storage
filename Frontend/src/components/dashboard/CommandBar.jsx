@@ -173,7 +173,7 @@ export default function CommandBar({
   ];
 
   return (
-    <header className="h-[64px] shrink-0 vault-glass border-b border-vault-emerald/10 z-50 flex items-center justify-between px-3 sm:px-6 sticky top-0">
+    <header className="h-[64px] shrink-0 bg-white/95 dark:bg-vault-surface/95 backdrop-blur-3xl border-b border-slate-200 dark:border-white/10 z-50 flex items-center justify-between px-3 sm:px-6 sticky top-0 shadow-sm">
       {/* Mobile Search Overlay */}
       {mobileSearchOpen && (
         <div className="absolute top-0 left-0 right-0 bg-[#030706] z-[10000] border-b border-vault-emerald/20 sm:hidden transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
@@ -342,10 +342,10 @@ export default function CommandBar({
         >
           <PanelLeft size={20} />
         </button>
-        <div className="bg-[#01140f] border border-vault-emerald/30 p-1 sm:p-1.5 rounded-xl shadow-glow-green relative group-hover:border-vault-emerald transition-colors">
-          <VaultLogo className="text-vault-emerald" size={18} />
+        <div className="bg-accent-soft border border-accent-border p-1 sm:p-1.5 rounded-xl shadow-sm relative group-hover:border-accent-primary transition-colors">
+          <VaultLogo className="text-accent-primary" size={18} />
         </div>
-        <span className="text-base sm:text-lg font-black tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70 uppercase">
+        <span className="text-base sm:text-lg font-black tracking-widest text-slate-900 dark:text-white uppercase">
           Vault OS
         </span>
       </div>
@@ -353,11 +353,11 @@ export default function CommandBar({
       {/* CENTER: Neural Search */}
       <div className="flex-1 max-w-2xl mx-4 hidden sm:flex justify-center">
         <div className="relative w-full max-w-lg group">
-          <div className="absolute inset-0 bg-vault-emerald/5 rounded-2xl blur-md group-hover:bg-vault-emerald/10 transition-colors" />
-          <div className="relative flex items-center bg-vault-black/80 border border-white/10 rounded-2xl px-4 py-2 hover:border-vault-emerald/30 focus-within:border-vault-emerald/50 focus-within:shadow-[0_0_20px_rgba(0,212,165,0.15)] transition-all">
+          <div className="absolute inset-0 bg-accent-soft rounded-2xl blur-md group-hover:opacity-100 opacity-60 transition-opacity" />
+          <div className="relative flex items-center bg-slate-100/90 dark:bg-vault-black/80 border border-slate-200/90 dark:border-white/10 rounded-2xl px-4 py-2 hover:border-accent-border focus-within:border-accent-primary focus-within:ring-2 focus-within:ring-accent-primary/20 transition-all shadow-sm">
             <NeuralSearchIcon
               size={18}
-              className="text-vault-emerald/70 group-focus-within:text-vault-emerald transition-colors"
+              className="text-accent-primary group-focus-within:text-accent-primary transition-colors"
             />
             <input
               ref={searchInputRef}
@@ -368,7 +368,7 @@ export default function CommandBar({
               onKeyDown={onSearchExecute}
               onFocus={() => setShowRecentSearches(true)}
               onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
-              className="w-full bg-transparent border-none outline-none text-sm text-white px-3 placeholder:text-white/30 font-medium"
+              className="w-full bg-transparent border-none outline-none text-sm text-slate-900 dark:text-white px-3 placeholder:text-slate-400 dark:placeholder:text-white/30 font-medium"
             />
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -456,14 +456,14 @@ export default function CommandBar({
       {/* RIGHT: Quick Actions & Status */}
       <div className="flex items-center gap-3 shrink-0">
         {/* Quick Create Actions — Color-Coded */}
-        <div className="hidden lg:flex items-center gap-1 border-r border-white/10 pr-3 mr-1">
+        <div className="hidden lg:flex items-center gap-1 border-r border-slate-200 dark:border-white/10 pr-3 mr-1">
           {quickActions.map((action) => (
             <button
               key={action.label}
               onClick={() => {
                 action.onClick();
               }}
-              className={`p-2 text-white/50 ${action.hoverText} ${action.hoverBg} ${action.glowHover} rounded-xl transition-all duration-300`}
+              className={`p-2 text-slate-500 dark:text-white/50 ${action.hoverText} ${action.hoverBg} ${action.glowHover} rounded-xl transition-all duration-200`}
               title={action.label}
             >
               <action.icon size={18} />
@@ -475,10 +475,10 @@ export default function CommandBar({
         <div className="lg:hidden relative">
           <button
             onClick={() => setShowMobileMenu(!showMobileMenu)}
-            className={`p-1.5 sm:p-2 rounded-xl transition-all duration-300 ${
+            className={`p-1.5 sm:p-2 rounded-xl transition-all duration-200 ${
               showMobileMenu
-                ? "bg-vault-emerald/10 text-vault-emerald border border-vault-emerald/30"
-                : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"
+                ? "bg-accent-soft text-accent-primary border border-accent-border"
+                : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent"
             }`}
           >
             {showMobileMenu ? <X size={20} /> : <MoreVertical size={20} />}
@@ -486,7 +486,7 @@ export default function CommandBar({
         </div>
 
         {/* Integration Status */}
-        <div className="hidden md:flex items-center gap-2 border-r border-white/10 pr-3 mr-1">
+        <div className="hidden md:flex items-center gap-2 border-r border-slate-200 dark:border-white/10 pr-3 mr-1">
           {user?.integrations?.googleDrive?.connected && (
             <div
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-linkdrive-accent/10 border border-linkdrive-accent/20"

@@ -397,7 +397,7 @@ export default function OwnerSettings() {
   };
 
   return (
-    <div className="min-h-screen text-slate-900 dark:text-white font-sans relative bg-slate-50 dark:bg-[#020b08] transition-colors duration-300 pb-24">
+    <div className="min-h-screen text-slate-900 dark:text-white font-sans relative bg-vault-bg transition-colors duration-300 pb-24">
       {/* Background Glow Orbs */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-b from-purple-500/10 via-teal-500/5 to-transparent blur-[140px] rounded-full" />

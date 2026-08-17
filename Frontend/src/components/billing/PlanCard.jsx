@@ -35,8 +35,7 @@ export default function PlanCard({
 
   const name = plan.type || plan.name || plan.slug || "Vault Storage Plan";
   const isPopular = plan.popular || name.toLowerCase().includes("pro");
-  const isUltimate =
-    plan.isUltimate || name.toLowerCase().includes("ultimate");
+  const isUltimate = plan.isUltimate || name.toLowerCase().includes("ultimate");
 
   // Determine CTA text & state
   let ctaText = "Get Started";
@@ -57,28 +56,7 @@ export default function PlanCard({
     }
   }
 
-  // Accent styling based on plan tier
-  let accentColor = "from-emerald-500 to-teal-500";
-  let textClass = "text-emerald-400";
-  let bgClass = "bg-emerald-500/10";
-  let borderClass = "border-emerald-500/20";
-  let shadowClass = "shadow-emerald-500/10";
-
-  if (name.toLowerCase().includes("pro")) {
-    accentColor = "from-rose-500 to-orange-500";
-    textClass = "text-rose-400";
-    bgClass = "bg-rose-500/10";
-    borderClass = "border-rose-500/30";
-    shadowClass = "shadow-[0_20px_80px_rgba(244,63,94,0.15)]";
-  } else if (isUltimate || name.toLowerCase().includes("ult")) {
-    accentColor = "from-blue-500 to-sky-400";
-    textClass = "text-blue-400";
-    bgClass = "bg-blue-500/15";
-    borderClass = "border-blue-500/30";
-    shadowClass = "shadow-[0_15px_50px_rgba(59,130,246,0.15)]";
-  }
-
-  // Feature rules
+  // Features list
   const maxDevices =
     plan.rules?.maxDevicesLimit ||
     plan.maxDevices ||
@@ -100,30 +78,31 @@ export default function PlanCard({
     "AES-256 Cloud Encryption",
   ];
 
-  const featuresList =
-    plan.features?.length > 0 ? plan.features : defaultFeatures;
+  const featuresList = plan.features?.length > 0 ? plan.features : defaultFeatures;
 
   return (
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
-      className={`relative flex flex-col rounded-3xl p-6 sm:p-8 bg-vault-surface/80 dark:bg-slate-900/80 backdrop-blur-xl border ${
-        isCurrent
-          ? "border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
-          : borderClass
-      } ${shadowClass} overflow-hidden`}
+      className={`relative flex flex-col rounded-3xl p-6 sm:p-8 transition-all duration-300 backdrop-blur-xl border ${
+        isPopular
+          ? "bg-white dark:bg-vault-surface border-accent-primary shadow-xl shadow-accent-glow/20 ring-1 ring-accent-border"
+          : isCurrent
+            ? "bg-white dark:bg-vault-surface border-emerald-500/50 shadow-md ring-1 ring-emerald-500/30"
+            : "bg-white/80 dark:bg-vault-surface/80 border-slate-200 dark:border-white/10 shadow-sm"
+      }`}
     >
       {/* Top Badges */}
-      <div className="flex items-center justify-between mb-4 min-h-[24px]">
+      <div className="flex items-center justify-between mb-4 min-h-[26px]">
         {isPopular ? (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-rose-500 to-orange-500 text-white font-bold text-xs shadow-lg uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-primary text-accent-foreground font-bold text-[11px] shadow-sm uppercase tracking-wider">
             <Sparkles size={12} /> Most Popular
           </span>
         ) : (
           <span />
         )}
         {isCurrent && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold text-xs uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] uppercase tracking-wider">
             <ShieldCheck size={12} /> Active Plan
           </span>
         )}
@@ -131,78 +110,72 @@ export default function PlanCard({
 
       {/* Plan Header */}
       <div className="mb-6">
-        <h3 className="text-2xl font-black text-white mb-2 tracking-tight">
+        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">
           {name}
         </h3>
-        <p className="text-white/50 text-xs font-medium min-h-[32px]">
+        <p className="text-slate-500 dark:text-white/50 text-xs font-medium min-h-[32px] leading-relaxed">
           {plan.description ||
             `${formatSize(planStorage)} of high-speed encrypted cloud vault storage.`}
         </p>
       </div>
 
       {/* Pricing Display */}
-      <div className="flex items-baseline gap-2 mb-6 border-b border-white/10 pb-6">
-        <span className="text-4xl sm:text-5xl font-black text-white tracking-tighter">
+      <div className="flex items-baseline gap-2 mb-6 border-b border-slate-100 dark:border-white/10 pb-6">
+        <span className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
           {formattedPrice}
         </span>
-        <span className="text-white/40 text-sm font-semibold">
+        <span className="text-slate-500 dark:text-white/40 text-xs font-bold uppercase tracking-wider">
           /{isYearly ? "year" : "month"}
         </span>
       </div>
 
-      {/* Storage Quota Warning Banner for Downgrade */}
+      {/* Storage Quota Warning */}
       {isDowngrade && isStorageExceeded && (
-        <div className="mb-6 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-start gap-2.5 text-rose-300 text-xs">
-          <AlertTriangle size={16} className="shrink-0 text-rose-400 mt-0.5" />
+        <div className="mb-6 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-start gap-2.5 text-rose-600 dark:text-rose-300 text-xs">
+          <AlertTriangle size={16} className="shrink-0 text-rose-500 mt-0.5" />
           <div>
             <p className="font-bold">Downgrade unavailable</p>
-            <p className="opacity-80">
-              You currently use {formatSize(currentUsedStorage)}, which exceeds this
-              plan's limit ({formatSize(planStorage)}).
+            <p className="opacity-80 mt-0.5">
+              You currently use {formatSize(currentUsedStorage)}, which exceeds this plan's limit ({formatSize(planStorage)}).
             </p>
           </div>
         </div>
       )}
 
       {/* Features List */}
-      <div className="space-y-3.5 mb-8 flex-1">
-        <div className="text-xs uppercase font-bold text-white/40 tracking-wider mb-2">
+      <div className="space-y-3 mb-8 flex-1">
+        <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/40 tracking-wider mb-2">
           Included Features
         </div>
         {featuresList.map((feature, i) => (
-          <div key={i} className="flex items-start gap-3">
-            <div
-              className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${bgClass} border border-white/10 ${textClass}`}
-            >
+          <div key={i} className="flex items-start gap-2.5">
+            <div className="mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 bg-accent-soft text-accent-primary">
               <Check size={11} strokeWidth={3} />
             </div>
-            <span className="text-sm text-white/80 font-medium leading-relaxed">
+            <span className="text-xs text-slate-700 dark:text-white/80 font-medium leading-relaxed">
               {feature}
             </span>
           </div>
         ))}
       </div>
 
-      {/* Call To Action Button */}
+      {/* CTA Button */}
       <button
-        onClick={() =>
-          !isCurrent && !isStorageExceeded && onSelect && onSelect(plan)
-        }
+        onClick={() => !isCurrent && !isStorageExceeded && onSelect && onSelect(plan)}
         disabled={isCurrent || isStorageExceeded || loading}
-        className={`w-full py-4 rounded-2xl font-bold tracking-wide transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden border ${
+        className={`w-full py-3.5 rounded-2xl font-bold text-xs tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
           isCurrent
-            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 cursor-default"
+            ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 cursor-default"
             : isStorageExceeded
-            ? "bg-white/5 border-white/10 text-white/30 cursor-not-allowed"
-            : `bg-gradient-to-r ${accentColor} text-white shadow-lg hover:opacity-95 active:scale-[0.99]`
+              ? "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/30 cursor-not-allowed"
+              : isPopular
+                ? "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-lg shadow-accent-glow/25"
+                : "bg-slate-900 dark:bg-white hover:opacity-90 text-white dark:text-slate-900 shadow-md"
         }`}
       >
         <span>{loading ? "Processing..." : ctaText}</span>
         {!isCurrent && !isStorageExceeded && !loading && (
-          <ArrowRight
-            size={18}
-            className="transition-transform group-hover:translate-x-1"
-          />
+          <ArrowRight size={15} />
         )}
       </button>
     </motion.div>

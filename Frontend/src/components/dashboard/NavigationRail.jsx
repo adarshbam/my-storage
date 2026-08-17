@@ -172,7 +172,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
         className={`
         fixed md:sticky top-[64px] left-0 h-[calc(100vh-64px)] z-40
         w-[72px] md:hover:w-[240px] group transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
-        bg-vault-black/95 backdrop-blur-3xl border-r border-white/5
+        bg-white/95 dark:bg-vault-surface/95 backdrop-blur-3xl border-r border-slate-200 dark:border-white/5
         flex flex-col overflow-hidden shrink-0
         ${isMobileOpen ? "translate-x-0 !w-[240px]" : "-translate-x-full md:translate-x-0"}
       `}
@@ -194,7 +194,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                 onMouseLeave={() => setHoveredPath(null)}
                 className={`
                   relative flex items-center h-12 rounded-xl overflow-hidden transition-all duration-300
-                  ${lit ? `${item.bgClass} ${item.shadowClass}` : ""}
+                  ${lit ? `${item.bgClass} ${item.shadowClass}` : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"}
                 `}
               >
                 {/* Active Indicator Bar — ONLY when active, not hovered */}
@@ -208,10 +208,10 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                   />
                 )}
 
-                {/* Icon — feature color when lit (hovered or active), neutral gray otherwise */}
+                {/* Icon */}
                 <div
                   className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
-                    lit ? item.accentClass : "text-white/30"
+                    lit ? item.accentClass : "text-slate-400 dark:text-white/30"
                   }`}
                   style={
                     lit ? { filter: `drop-shadow(0 0 8px currentColor)` } : {}
@@ -229,7 +229,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                     isMobileOpen
                       ? "opacity-100"
                       : "opacity-0 md:group-hover:opacity-100"
-                  } ${lit ? "text-white" : "text-white/40 group-hover:text-white/80"}`}
+                  } ${lit ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-white/40 group-hover:text-slate-800 dark:group-hover:text-white/80"}`}
                 >
                   {item.name}
                 </span>
@@ -237,9 +237,9 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
             );
           })}
           {/* Divider */}
-          <div className="my-4 h-px bg-white/5 mx-4 shrink-0" />
+          <div className="my-4 h-px bg-slate-200 dark:bg-white/5 mx-4 shrink-0" />
           <div
-            className={`px-4 mb-2 text-[10px] font-bold tracking-widest text-white/30 uppercase transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"}`}
+            className={`px-4 mb-2 text-[10px] font-bold tracking-widest text-slate-400 dark:text-white/30 uppercase transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"}`}
           >
             Integrations
           </div>
@@ -273,7 +273,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
               </div>
               <span
                 className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
-                  driveConnected ? "text-white/80" : "text-white/40"
+                  driveConnected ? "text-slate-900 dark:text-white/80" : "text-slate-500 dark:text-white/40"
                 }`}
               >
                 {driveConnected ? "Drive (Linked)" : "Link Drive"}
@@ -301,7 +301,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                 className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
                   githubConnected || hoveredPath === "github"
                     ? "text-linkgit-accent"
-                    : "text-white/30"
+                    : "text-slate-400 dark:text-white/30"
                 }`}
                 style={
                   githubConnected || hoveredPath === "github"
@@ -313,7 +313,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
               </div>
               <span
                 className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
-                  githubConnected ? "text-white/80" : "text-white/40"
+                  githubConnected ? "text-slate-900 dark:text-white/80" : "text-slate-500 dark:text-white/40"
                 }`}
               >
                 {githubConnected ? "GitHub (Linked)" : "Link GitHub"}

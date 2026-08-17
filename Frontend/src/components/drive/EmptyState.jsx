@@ -55,9 +55,9 @@ export default function EmptyState({ specialView, isSearch, openUploadModal, set
                 setSelectedExt(".md");
                 setNewFileContent("# New Repository\n\nThis is an empty repository.");
               }}
-              className="mt-4 px-6 py-2 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white rounded-xl hover:shadow-[0_0_20px_rgba(20,184,166,0.3)] transition-all duration-300 flex items-center gap-2"
+              className="mt-4 px-6 py-2.5 bg-accent-primary text-accent-foreground font-bold text-xs uppercase tracking-wider rounded-xl shadow-md shadow-accent-glow/20 hover:opacity-90 transition-all flex items-center gap-2"
             >
-              <Plus size={18} />
+              <Plus size={16} />
               Initialize with README.md
             </button>
           )}

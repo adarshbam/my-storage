@@ -9,6 +9,7 @@ import AuthLayout from "../layouts/AuthLayout";
 import { Eye, EyeOff, Cloud, Send, Loader2, CheckCircle2, Box, ShieldCheck, Key, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { verifyTwoFactorLogin } from "../api/auth.api";
+import { VaultLogo } from "../components/ui/VaultIcons";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -384,36 +385,36 @@ export default function Login() {
           /* ── STANDARD LOGIN SCREEN ── */
           <>
             {/* Header — logo visible on mobile only (promo panel hidden) */}
-            <div className="flex flex-col items-center mb-8 lg:hidden">
-              <div className="bg-[#01140f] border border-teal-500/30 p-3 rounded-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),inset_0_-2px_4px_rgba(0,0,0,0.8),0_0_15px_rgba(20,184,166,0.3)] mb-5 transition-all duration-300 relative">
-                <Box className="text-[#14b8a6] relative z-10" size={28} />
+            <div className="flex flex-col items-center mb-6 lg:hidden">
+              <div className="p-2.5 rounded-2xl bg-accent-soft border border-accent-border text-accent-primary mb-3 shadow-sm">
+                <VaultLogo size={24} />
               </div>
             </div>
-            <div className="flex flex-col mb-8 text-center lg:text-left">
+            <div className="flex flex-col mb-6 text-center lg:text-left">
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
                 Welcome back
               </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1">
-                Enter your credentials to access your drive
+              <p className="text-slate-500 dark:text-slate-400 mt-1 text-xs">
+                Enter your credentials to access your secure vault
               </p>
             </div>
 
             {error && (
-              <div className="bg-red-500/10 text-red-600 dark:text-red-400 p-3 rounded-xl text-sm mb-6 border border-red-500/20">
+              <div className="bg-red-500/10 text-red-600 dark:text-red-400 p-3 rounded-2xl text-xs mb-5 border border-red-500/20 font-medium">
                 {error}
               </div>
             )}
             {message && (
-              <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl text-sm mb-6 border border-emerald-500/20">
+              <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-3 rounded-2xl text-xs mb-5 border border-emerald-500/20 font-medium">
                 {message}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
           {/* Email + Send OTP */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Email
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              Email Address
             </label>
             <div className="flex gap-2">
               <input
@@ -422,7 +423,7 @@ export default function Login() {
                 value={email}
                 onChange={handleEmailChange}
                 disabled={isOtpComplete && otpSent}
-                className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-[#14b8a6]/50 focus:border-[#14b8a6]/50 dark:focus:shadow-[0_0_15px_rgba(20,184,166,0.15)] outline-none transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 min-w-0 px-4 py-2.5 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="name@example.com"
               />
 
@@ -439,20 +440,20 @@ export default function Login() {
                     transition={{ duration: 0.2 }}
                     whileTap={{ scale: 0.95 }}
                     className={`
-                      flex items-center gap-1.5 px-4 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition-all duration-300 overflow-hidden flex-shrink-0
+                      flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition-all duration-200 overflow-hidden flex-shrink-0 cursor-pointer
                       ${
                         otpSent
-                          ? "bg-emerald-500/15 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25"
-                          : "bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white shadow-[0_0_15px_rgba(20,184,166,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] border border-white/20"
+                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                          : "bg-accent-primary text-accent-foreground shadow-md shadow-accent-glow/20"
                       }
                       disabled:opacity-40 disabled:cursor-not-allowed
                     `}
                   >
                     {sendingOtp ? (
-                      <Loader2 className="animate-spin" size={16} />
+                      <Loader2 className="animate-spin" size={15} />
                     ) : (
                       <>
-                        <Send size={14} />
+                        <Send size={13} />
                         {otpSent ? "Resend" : "Send"}
                       </>
                     )}
@@ -463,9 +464,9 @@ export default function Login() {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.85 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center gap-1.5 px-4 py-3 rounded-xl text-sm font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex-shrink-0"
+                    className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex-shrink-0"
                   >
-                    <CheckCircle2 size={16} />
+                    <CheckCircle2 size={15} />
                     Ready
                   </motion.div>
                 )}
@@ -473,21 +474,21 @@ export default function Login() {
             </div>
           </div>
 
-          {/* OTP input — between email and password */}
+          {/* OTP input */}
           <AnimatePresence>
             {otpSent && !isOtpComplete && (
               <motion.div
                 initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                animate={{ opacity: 1, height: "auto", marginTop: 20 }}
+                animate={{ opacity: 1, height: "auto", marginTop: 16 }}
                 exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
                 className="overflow-hidden"
               >
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                   Verification Code
                 </label>
                 <div
-                  className="flex gap-2.5 justify-center"
+                  className="flex gap-2 justify-center"
                   onPaste={handleOtpPaste}
                 >
                   {otp.map((digit, idx) => (
@@ -502,7 +503,7 @@ export default function Login() {
                         handleOtpChange(idx, e.target.value.replace(/\D/, ""))
                       }
                       onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                      className="w-11 h-12 text-center text-lg font-bold rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#14b8a6]/50 focus:border-[#14b8a6]/50 dark:focus:shadow-[0_0_15px_rgba(20,184,166,0.15)] outline-none transition-all duration-300 caret-[#14b8a6]"
+                      className="w-10 h-11 text-center text-base font-bold rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all caret-accent-primary"
                     />
                   ))}
                 </div>
@@ -511,13 +512,13 @@ export default function Login() {
           </AnimatePresence>
 
           <div>
-            <label className="flex text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 justify-between items-center">
+            <label className="flex text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 justify-between items-center">
               <span>Password</span>
               <button
                 type="button"
                 onClick={handleForgotPassword}
                 disabled={sendingForgot}
-                className="text-[#14b8a6] hover:text-[#0d9488] text-sm font-semibold transition-colors disabled:opacity-50"
+                className="text-accent-primary hover:opacity-80 text-xs font-semibold transition-colors disabled:opacity-50 lowercase tracking-normal"
               >
                 {sendingForgot ? "Sending..." : "Forgot password?"}
               </button>
@@ -528,7 +529,7 @@ export default function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 pr-11 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-[#14b8a6]/50 focus:border-[#14b8a6]/50 dark:focus:shadow-[0_0_15px_rgba(20,184,166,0.15)] outline-none transition-all duration-300"
+                className="w-full px-4 py-2.5 pr-11 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all text-sm font-semibold"
                 placeholder="••••••••"
               />
               <button
@@ -536,39 +537,32 @@ export default function Login() {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
 
-          <div className="w-full relative group">
+          <div className="w-full pt-1">
             <Button
               type="submit"
-              disabled={false} // BYPASSED: !isOtpComplete || !otpSent
-              className={`w-full py-3.5 text-[15px]`}
+              className="w-full py-3 text-xs uppercase tracking-wider font-bold"
             >
               Sign In
             </Button>
-            {/* BYPASSED: {(!isOtpComplete || !otpSent) && (
-              <div
-                className="absolute inset-0 z-10 cursor-not-allowed"
-                title="Enter OTP first"
-              />
-            )} */}
           </div>
         </form>
 
         {/* Divider */}
-        <div className="flex items-center gap-4 my-6">
+        <div className="flex items-center gap-4 my-5">
           <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
-          <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
             or
           </span>
           <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
         </div>
 
-        {/* Google Sign In */}
-        <div className="flex flex-col gap-3">
+        {/* Google & GitHub Sign In */}
+        <div className="flex flex-col gap-2.5">
           <GoogleSignInButton
             label="Sign in with Google"
             onSuccess={(response) => {
@@ -583,7 +577,6 @@ export default function Login() {
             onError={() => setError("Google sign-in failed")}
           />
 
-          {/* GitHub Sign In */}
           <button
             type="button"
             onClick={() => {
@@ -591,10 +584,10 @@ export default function Login() {
               const redirectUri = `${SERVER_URL}/user/auth/github`;
               window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user:email`;
             }}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm text-slate-700 dark:text-slate-200 font-semibold text-[15px] hover:bg-slate-50 dark:hover:bg-white/10 transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]"
+            className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-50 dark:hover:bg-white/10 transition-colors"
           >
             <svg
-              className="w-5 h-5 fill-current"
+              className="w-4 h-4 fill-current"
               viewBox="0 0 24 24"
               aria-hidden="true"
             >
@@ -608,11 +601,11 @@ export default function Login() {
           </button>
         </div>
 
-        <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
+        <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
           Don't have an account?{" "}
           <Link
             to="/register"
-            className="text-[#14b8a6] hover:text-[#0d9488] font-semibold transition-colors"
+            className="text-accent-primary hover:opacity-80 font-bold transition-colors"
           >
             Sign up
           </Link>

@@ -14,55 +14,45 @@ const FEATURES = [
     icon: ShieldCheck,
     title: "Military-Grade Encryption",
     desc: "AES-256 bit encryption for all your files at rest and in transit. Your keys, your rules. Zero-knowledge architecture means even we can't see your data.",
-    color: "from-emerald-400 to-teal-500",
-    glowColor: "rgba(16,185,129,0.2)",
-    activeBg: "bg-emerald-500/10",
-    activeBorder: "border-emerald-500/30",
-    textColor: "text-emerald-400",
+    accentClass: "text-emerald-500",
+    bgClass: "bg-emerald-500/10",
+    borderClass: "border-emerald-500/30",
   },
   {
     id: "search",
     icon: Search,
     title: "Neural AI Search",
-    desc: "Find files instantly without remembering names. Our on-device AI recognizes objects, text, and faces in your images to pull up exactly what you need.",
-    color: "from-cyan-400 to-blue-500",
-    glowColor: "rgba(6,182,212,0.2)",
-    activeBg: "bg-cyan-500/10",
-    activeBorder: "border-cyan-500/30",
-    textColor: "text-cyan-400",
+    desc: "Find files instantly without remembering names. Local AI searches file content, tags, and document text to surface what you need in milliseconds.",
+    accentClass: "text-cyan-500",
+    bgClass: "bg-cyan-500/10",
+    borderClass: "border-cyan-500/30",
   },
   {
     id: "backups",
     icon: HardDrive,
     title: "Continuous Backups",
-    desc: "Set it and forget it. Every change is instantly replicated across three geographic regions. Your digital life is completely immune to hardware failure.",
-    color: "from-teal-400 to-emerald-500",
-    glowColor: "rgba(20,184,166,0.2)",
-    activeBg: "bg-teal-500/10",
-    activeBorder: "border-teal-500/30",
-    textColor: "text-teal-400",
+    desc: "Every revision is automatically mirrored across secure data nodes. Your critical files remain permanently protected against local hardware failures.",
+    accentClass: "text-teal-500",
+    bgClass: "bg-teal-500/10",
+    borderClass: "border-teal-500/30",
   },
   {
     id: "sharing",
     icon: Share2,
     title: "Expiring Secure Links",
-    desc: "Share massive files or folders with a single link. Set passwords, view-once permissions, and auto-expiring timers for total control over your shared data.",
-    color: "from-indigo-400 to-purple-500",
-    glowColor: "rgba(99,102,241,0.2)",
-    activeBg: "bg-indigo-500/10",
-    activeBorder: "border-indigo-500/30",
-    textColor: "text-indigo-400",
+    desc: "Share massive files or folders with a single encrypted link. Set passwords, max download limits, and auto-expiring timers for complete control.",
+    accentClass: "text-indigo-500",
+    bgClass: "bg-indigo-500/10",
+    borderClass: "border-indigo-500/30",
   },
   {
     id: "ransomware",
     icon: RefreshCw,
     title: "Ransomware Rescue",
-    desc: "Turn back time. Our immutable version history lets you instantly roll back your entire drive to any second in the last 30 days. Untouchable by malware.",
-    color: "from-lime-400 to-green-500",
-    glowColor: "rgba(132,204,22,0.2)",
-    activeBg: "bg-lime-500/10",
-    activeBorder: "border-lime-500/30",
-    textColor: "text-lime-400",
+    desc: "Instant point-in-time recovery. Immutable version histories let you roll back your entire vault to any state in the last 30 days.",
+    accentClass: "text-amber-500",
+    bgClass: "bg-amber-500/10",
+    borderClass: "border-amber-500/30",
   },
 ];
 
@@ -71,38 +61,38 @@ const FEATURES = [
 const EncryptionVisualizer = () => {
   const [matrix, setMatrix] = useState([]);
   useEffect(() => {
-    const chars = "0123456789ABCDEF!@#$%^&*";
+    const chars = "0123456789ABCDEF!@#$%&*";
     const generate = () =>
-      Array(150)
+      Array(120)
         .fill(0)
         .map(() => chars[Math.floor(Math.random() * chars.length)]);
     setMatrix(generate());
-    const interval = setInterval(() => setMatrix(generate()), 100);
+    const interval = setInterval(() => setMatrix(generate()), 150);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center bg-emerald-950/20">
-      <div className="absolute inset-0 grid grid-cols-[repeat(auto-fit,minmax(20px,1fr))] gap-2 p-8 opacity-20 overflow-hidden mix-blend-screen">
+    <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-slate-950/20">
+      <div className="absolute inset-0 grid grid-cols-[repeat(auto-fit,minmax(24px,1fr))] gap-2 p-6 opacity-20 overflow-hidden select-none">
         {matrix.map((char, i) => (
           <div
             key={i}
-            className="text-emerald-500 font-mono text-xl font-bold text-center leading-none"
+            className="text-accent-primary font-mono text-sm font-bold text-center leading-none"
           >
             {char}
           </div>
         ))}
       </div>
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
+        initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 w-48 h-48 rounded-[2.5rem] bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shadow-[0_0_100px_rgba(16,185,129,0.3)] backdrop-blur-xl"
+        transition={{ duration: 0.4 }}
+        className="relative z-10 w-36 h-36 sm:w-44 sm:h-44 rounded-3xl bg-white/80 dark:bg-vault-surface/80 border border-accent-border flex flex-col items-center justify-center shadow-xl shadow-accent-glow/20 backdrop-blur-xl"
       >
-        <ShieldCheck
-          size={96}
-          className="text-emerald-400 drop-shadow-[0_0_20px_rgba(16,185,129,0.8)]"
-        />
+        <ShieldCheck size={56} className="text-accent-primary mb-2" />
+        <span className="text-[11px] font-mono font-bold tracking-widest text-slate-700 dark:text-white/80 uppercase">
+          AES-256 ACTIVE
+        </span>
       </motion.div>
     </div>
   );
@@ -110,51 +100,50 @@ const EncryptionVisualizer = () => {
 
 const SearchVisualizer = () => {
   return (
-    <div className="relative w-full h-full flex items-center justify-center bg-cyan-950/20">
-      <div className="relative w-80 h-96 bg-cyan-900/10 rounded-[2.5rem] border border-cyan-500/20 p-6 shadow-[0_0_60px_rgba(6,182,212,0.15)] backdrop-blur-md overflow-hidden">
-        {/* Floating image wireframes */}
-        <div className="grid grid-cols-2 gap-4 h-full relative z-0">
-          <div className="space-y-4">
-            <div className="h-32 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 relative overflow-hidden">
-              <motion.div
-                animate={{ opacity: [0, 1, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="absolute inset-4 border border-cyan-400/50 rounded flex items-center justify-center bg-cyan-400/10"
-              >
-                <span className="text-cyan-400 text-[10px] font-bold">
-                  98% Match
-                </span>
-              </motion.div>
+    <div className="relative w-full h-full flex items-center justify-center p-6 bg-slate-950/20">
+      <div className="relative w-full max-w-sm h-72 rounded-2xl bg-white/80 dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 p-5 shadow-lg backdrop-blur-md overflow-hidden flex flex-col justify-between">
+        {/* Mock search items */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-500 flex items-center justify-center text-xs font-bold">
+                JS
+              </div>
+              <span className="text-xs font-bold text-slate-800 dark:text-white truncate">
+                encryption-protocol.ts
+              </span>
             </div>
-            <div className="h-40 bg-cyan-500/5 rounded-2xl border border-cyan-500/10" />
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-500 font-bold font-mono">
+              99% match
+            </span>
           </div>
-          <div className="space-y-4 pt-12">
-            <div className="h-24 bg-cyan-500/5 rounded-2xl border border-cyan-500/10" />
-            <div className="h-36 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 relative overflow-hidden">
-              <motion.div
-                animate={{ opacity: [0, 1, 0] }}
-                transition={{ duration: 2, delay: 1, repeat: Infinity }}
-                className="absolute inset-x-4 top-4 bottom-12 border border-cyan-400/50 rounded flex items-center justify-center bg-cyan-400/10"
-              >
-                <span className="text-cyan-400 text-[10px] font-bold">
-                  Text Found
-                </span>
-              </motion.div>
+
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 rounded-lg bg-accent-soft text-accent-primary flex items-center justify-center text-xs font-bold">
+                PDF
+              </div>
+              <span className="text-xs font-bold text-slate-800 dark:text-white truncate">
+                security-audit-report.pdf
+              </span>
             </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent-soft text-accent-primary font-bold font-mono">
+              Indexed
+            </span>
           </div>
         </div>
 
-        {/* Giant Scanner Line sweeping down and up */}
+        {/* Scan line effect */}
         <motion.div
-          animate={{ y: [-20, 400, -20] }}
-          transition={{ duration: 4, ease: "easeInOut", repeat: Infinity }}
-          className="absolute left-0 right-0 top-0 h-[2px] bg-cyan-300 shadow-[0_0_40px_10px_rgba(6,182,212,0.6)] z-10"
+          animate={{ y: [-10, 260, -10] }}
+          transition={{ duration: 3.5, ease: "easeInOut", repeat: Infinity }}
+          className="absolute left-0 right-0 top-0 h-[2px] bg-cyan-400 shadow-[0_0_15px_#22d3ee] z-20 pointer-events-none"
         />
-        <motion.div
-          animate={{ y: [-20, 400, -20] }}
-          transition={{ duration: 4, ease: "easeInOut", repeat: Infinity }}
-          className="absolute left-0 right-0 top-0 h-32 bg-gradient-to-b from-transparent to-cyan-400/20 z-0 pointer-events-none"
-        />
+
+        <div className="text-[11px] font-mono text-slate-400 dark:text-white/40 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/5">
+          <span>Neural Query Engine</span>
+          <span className="text-cyan-500 font-bold">0.4ms</span>
+        </div>
       </div>
     </div>
   );
@@ -162,52 +151,32 @@ const SearchVisualizer = () => {
 
 const BackupVisualizer = () => {
   return (
-    <div
-      className="relative w-full h-full flex items-center justify-center bg-teal-950/20"
-      style={{ perspective: "1200px" }}
-    >
-      <div
-        className="relative w-64 h-64 flex flex-col items-center justify-center"
-        style={{
-          transformStyle: "preserve-3d",
-          transform: "rotateX(60deg) rotateZ(-45deg)",
-        }}
-      >
-        {[0, 1, 2].map((i) => (
+    <div className="relative w-full h-full flex items-center justify-center p-6 bg-slate-950/20">
+      <div className="flex flex-col gap-3 w-full max-w-sm">
+        {["Primary Node (Frankfurt)", "Secondary Node (N. Virginia)", "Cold Replica (Tokyo)"].map((node, i) => (
           <motion.div
-            key={i}
-            animate={{ z: [0, 20, 0] }}
-            transition={{
-              duration: 4,
-              delay: i * 0.5,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-            className="absolute w-72 h-72 border border-teal-500/40 rounded-[2.5rem] bg-teal-500/5 backdrop-blur-md"
-            style={{
-              transform: `translateZ(${i * -80}px)`,
-              boxShadow:
-                i === 0
-                  ? "inset 0 0 50px rgba(20,184,166,0.2)"
-                  : "0 20px 60px rgba(20,184,166,0.1)",
-            }}
+            key={node}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.15 }}
+            className="flex items-center justify-between p-3.5 rounded-2xl bg-white/80 dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm"
           >
-            {/* Grid pattern on the plate */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(20,184,166,0.15)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,0.15)_1px,transparent_1px)] bg-[size:24px_24px] rounded-[2.5rem] pointer-events-none" />
-
-            {/* Pulsing data nodes */}
-            <div className="absolute top-1/4 left-1/4 w-3 h-3 rounded-full bg-teal-400 shadow-[0_0_20px_#2dd4bf] animate-pulse" />
-            <div
-              className="absolute bottom-1/4 right-1/4 w-3 h-3 rounded-full bg-teal-400 shadow-[0_0_20px_#2dd4bf] animate-pulse"
-              style={{ animationDelay: "1s" }}
-            />
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
+                <HardDrive size={16} />
+              </div>
+              <div className="text-xs font-bold text-slate-800 dark:text-white">
+                {node}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+              <span className="text-[10px] font-mono font-bold text-teal-600 dark:text-teal-400">
+                SYNCED
+              </span>
+            </div>
           </motion.div>
         ))}
-        {/* Vertical beam connecting them */}
-        <div
-          className="absolute w-1.5 h-[240px] bg-gradient-to-b from-teal-400/80 to-transparent shadow-[0_0_30px_#2dd4bf]"
-          style={{ transform: "translateZ(-160px) rotateX(90deg)" }}
-        />
       </div>
     </div>
   );
@@ -215,57 +184,28 @@ const BackupVisualizer = () => {
 
 const SharingVisualizer = () => {
   return (
-    <div
-      className="relative w-full h-full flex items-center justify-center bg-indigo-950/20"
-      style={{ perspective: "1000px" }}
-    >
-      <div
-        className="relative w-96 h-96 flex items-center justify-center"
-        style={{ transformStyle: "preserve-3d", transform: "rotateX(55deg)" }}
-      >
-        {/* Central Node */}
-        <div
-          className="absolute w-24 h-24 rounded-[2rem] bg-indigo-500/20 border border-indigo-400/50 flex items-center justify-center z-20 shadow-[0_0_60px_rgba(99,102,241,0.5)] backdrop-blur-md"
-          style={{ transform: "rotateX(-55deg)" }}
-        >
-          <Share2
-            size={48}
-            className="text-indigo-400 drop-shadow-[0_0_15px_rgba(99,102,241,0.8)]"
-          />
+    <div className="relative w-full h-full flex items-center justify-center p-6 bg-slate-950/20">
+      <div className="relative w-full max-w-sm rounded-2xl bg-white/80 dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 p-5 shadow-lg flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Share2 size={18} className="text-indigo-500" />
+            <span className="text-xs font-bold text-slate-800 dark:text-white">
+              Secure Share Capsule
+            </span>
+          </div>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500 font-mono font-bold">
+            Expiring in 24h
+          </span>
         </div>
 
-        {/* Orbiting rings */}
-        <div className="absolute w-64 h-64 rounded-full border-[3px] border-indigo-500/30 shadow-[inset_0_0_30px_rgba(99,102,241,0.3)]" />
-        <div className="absolute w-96 h-96 rounded-full border-2 border-indigo-500/15" />
+        <div className="p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-xs font-mono text-slate-600 dark:text-white/60 truncate">
+          https://vault.app/s/e7a9b2...
+        </div>
 
-        {/* Moving Data Packets (SVG) */}
-        <svg
-          className="absolute w-full h-full overflow-visible z-10"
-          viewBox="0 0 384 384"
-        >
-          {/* Inner orbit packet */}
-          <motion.circle
-            cx="192"
-            cy="64"
-            r="8"
-            fill="#818cf8"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-            style={{ originX: "192px", originY: "192px" }}
-            className="drop-shadow-[0_0_15px_#818cf8]"
-          />
-          {/* Outer orbit packet */}
-          <motion.circle
-            cx="192"
-            cy="0"
-            r="6"
-            fill="#818cf8"
-            animate={{ rotate: -360 }}
-            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            style={{ originX: "192px", originY: "192px" }}
-            className="drop-shadow-[0_0_12px_#818cf8]"
-          />
-        </svg>
+        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-white/40 pt-2 border-t border-slate-100 dark:border-white/5">
+          <span>Password Protected</span>
+          <span className="text-emerald-500 font-bold">1/1 Access Used</span>
+        </div>
       </div>
     </div>
   );
@@ -273,51 +213,32 @@ const SharingVisualizer = () => {
 
 const RansomwareVisualizer = () => {
   return (
-    <div
-      className="relative w-full h-full flex items-center justify-center bg-lime-950/20"
-      style={{ perspective: "1000px" }}
-    >
-      <motion.div
-        animate={{ rotateY: [0, 8, -8, 0] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="relative w-72 h-96 rounded-[2.5rem] border border-lime-500/40 bg-lime-500/10 p-8 shadow-[0_0_80px_rgba(132,204,22,0.2)] backdrop-blur-md overflow-hidden"
-      >
-        <div className="flex justify-between items-start mb-10">
-          <RefreshCw
-            size={48}
-            className="text-lime-400 drop-shadow-[0_0_10px_rgba(132,204,22,0.8)]"
-          />
-          <div className="px-4 py-1.5 rounded-full bg-lime-500/20 text-lime-400 text-xs font-bold font-mono tracking-widest border border-lime-500/30">
-            RESTORED
+    <div className="relative w-full h-full flex items-center justify-center p-6 bg-slate-950/20">
+      <div className="relative w-full max-w-sm rounded-2xl bg-white/80 dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 p-5 shadow-lg flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <RefreshCw size={18} className="text-amber-500" />
+            <span className="text-xs font-bold text-slate-800 dark:text-white">
+              Time Machine Rollback
+            </span>
           </div>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-mono font-bold">
+            Snapshot OK
+          </span>
         </div>
 
-        {/* Glitch lines overlay */}
-        <motion.div
-          animate={{ opacity: [0, 0.4, 0, 0.8, 0] }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            times: [0, 0.4, 0.5, 0.6, 1],
-          }}
-          className="absolute inset-0 bg-[repeating-linear-gradient(transparent,transparent_2px,rgba(132,204,22,0.3)_2px,rgba(132,204,22,0.3)_4px)] mix-blend-overlay pointer-events-none"
-        />
-
-        {/* Scanning restore effect */}
-        <motion.div
-          animate={{ y: [-100, 400] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="absolute left-0 right-0 h-32 bg-gradient-to-b from-transparent to-lime-400/30 border-b-2 border-lime-400 z-10"
-        />
-
-        <div className="space-y-5 relative z-0">
-          <div className="w-full h-6 bg-lime-500/20 rounded-lg" />
-          <div className="w-5/6 h-6 bg-lime-500/20 rounded-lg" />
-          <div className="w-4/6 h-6 bg-lime-500/20 rounded-lg" />
-          <div className="w-full h-6 bg-lime-500/20 rounded-lg mt-10" />
-          <div className="w-3/4 h-6 bg-lime-500/20 rounded-lg" />
+        <div className="space-y-2">
+          {["Target Snapshot: 10 mins ago", "State: 1,420 Files Restored", "Malware Invalidation: 100%"].map((item, i) => (
+            <div
+              key={i}
+              className="text-xs font-mono text-slate-600 dark:text-white/70 flex items-center gap-2"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              <span>{item}</span>
+            </div>
+          ))}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };
@@ -327,7 +248,6 @@ const RansomwareVisualizer = () => {
 const ScaleSecurity = () => {
   const [activeIndex, setActiveIndex] = useState(0);
 
-  // Auto cycle features
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % FEATURES.length);
@@ -336,125 +256,93 @@ const ScaleSecurity = () => {
   }, []);
 
   return (
-    <div className="w-full bg-transparent py-20 px-4 sm:px-6 lg:px-8 relative z-10">
-      <section
-        id="security"
-        className="max-w-[1400px] mx-auto relative bg-[#050c0a] overflow-hidden rounded-[3rem] border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.6)]"
-      >
-        {/* Big subtle ambient glow behind the section content */}
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] blur-[150px] opacity-[0.15] rounded-full transition-colors duration-1000 pointer-events-none"
-          style={{ backgroundColor: FEATURES[activeIndex].glowColor }}
-        />
+    <section id="security" className="py-24 relative bg-vault-bg overflow-hidden">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 max-w-[1300px]">
+        {/* Section Header */}
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent-soft border border-accent-border text-accent-primary font-bold tracking-wider text-xs uppercase mb-4">
+            <ShieldCheck size={14} /> Zero-Knowledge Architecture
+          </span>
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-5">
+            Security built for <br />
+            <span className="text-accent-primary">uncompromising privacy.</span>
+          </h2>
+          <p className="text-slate-600 dark:text-white/60 text-base sm:text-lg font-medium max-w-xl mx-auto">
+            From client-side cryptography to geo-distributed replicas, Vault is engineered so that only you have the keys to your files.
+          </p>
+        </div>
 
-        <div className="relative z-10 px-8 py-20 md:p-20">
-          <div className="mb-20">
-            <span className="inline-flex items-center gap-2 text-white/50 font-bold tracking-widest text-xs uppercase mb-6">
-              <span className="w-8 h-px bg-white/30" />
-              Zero-Knowledge Architecture
-            </span>
-            <h2 className="text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tight leading-[1.05]">
-              Beyond Standard <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">
-                Security.
-              </span>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-            {/* Left: The Feature List */}
-            <div className="lg:col-span-5 flex flex-col gap-3">
-              {FEATURES.map((feat, idx) => {
-                const isActive = idx === activeIndex;
-                return (
-                  <div
-                    key={feat._id}
-                    onClick={() => setActiveIndex(idx)}
-                    className={`cursor-pointer group relative p-6 rounded-[2rem] transition-all duration-500 ${
-                      isActive
-                        ? `${feat.activeBg} ${feat.activeBorder} border shadow-2xl backdrop-blur-md`
-                        : "hover:bg-white/[0.03] border border-transparent"
-                    }`}
-                  >
-                    <div className="flex items-start gap-6">
-                      <div
-                        className={`mt-1 flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${
-                          isActive
-                            ? `bg-gradient-to-br ${feat.color} shadow-lg text-slate-900 scale-110`
-                            : "bg-white/5 text-white/40 group-hover:text-white/80"
-                        }`}
-                      >
-                        <feat.icon size={24} strokeWidth={isActive ? 2.5 : 2} />
-                      </div>
-                      <div>
-                        <h3
-                          className={`text-2xl md:text-3xl font-bold tracking-tight transition-all duration-500 ${
-                            isActive
-                              ? "text-white"
-                              : "text-white/40 group-hover:text-white/60"
-                          }`}
-                        >
-                          {feat.title}
-                        </h3>
-
-                        <AnimatePresence>
-                          {isActive && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.4, ease: "easeInOut" }}
-                              className="overflow-hidden"
-                            >
-                              <p className="pt-4 text-lg text-white/60 leading-relaxed max-w-md">
-                                {feat.desc}
-                              </p>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
+        {/* Feature Grid with Interactive Showcase */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center rounded-3xl p-4 sm:p-8 bg-slate-50/70 dark:bg-vault-surface/40 border border-slate-200/70 dark:border-white/5">
+          {/* Left Feature Selector Tabs */}
+          <div className="lg:col-span-6 flex flex-col gap-2.5">
+            {FEATURES.map((feat, idx) => {
+              const isActive = idx === activeIndex;
+              const Icon = feat.icon;
+              return (
+                <div
+                  key={feat.id}
+                  onClick={() => setActiveIndex(idx)}
+                  className={`cursor-pointer p-4.5 rounded-2xl transition-all duration-200 border ${
+                    isActive
+                      ? "bg-white dark:bg-vault-surface border-accent-border shadow-md"
+                      : "bg-transparent border-transparent hover:bg-white/60 dark:hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                        isActive
+                          ? "bg-accent-primary text-accent-foreground"
+                          : "bg-slate-200/70 dark:bg-white/5 text-slate-600 dark:text-white/50"
+                      }`}
+                    >
+                      <Icon size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+                        {feat.title}
+                      </h3>
+                      {isActive && (
+                        <p className="text-xs text-slate-600 dark:text-white/60 leading-relaxed max-w-md">
+                          {feat.desc}
+                        </p>
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
+          </div>
 
-            {/* Right: The Monolith Showcase */}
-            <div className="lg:col-span-7 relative w-full aspect-square lg:aspect-[4/3] max-h-[800px] rounded-[3rem] overflow-hidden bg-[#020504] border border-white/10 shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]">
-              {/* Glass glare overlay */}
-              <div className="absolute inset-0 z-30 pointer-events-none rounded-[3rem] border border-white/5" />
-              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent z-30" />
-              <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/5 to-transparent z-30 pointer-events-none" />
+          {/* Right Monolith Visualizer */}
+          <div className="lg:col-span-6 w-full aspect-[4/3] rounded-3xl overflow-hidden bg-slate-100 dark:bg-[#020806] border border-slate-200 dark:border-white/10 relative shadow-inner flex items-center justify-center">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeIndex}
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 w-full h-full"
+              >
+                {activeIndex === 0 && <EncryptionVisualizer />}
+                {activeIndex === 1 && <SearchVisualizer />}
+                {activeIndex === 2 && <BackupVisualizer />}
+                {activeIndex === 3 && <SharingVisualizer />}
+                {activeIndex === 4 && <RansomwareVisualizer />}
+              </motion.div>
+            </AnimatePresence>
 
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeIndex}
-                  initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
-                  animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className="absolute inset-0 w-full h-full"
-                >
-                  {activeIndex === 0 && <EncryptionVisualizer />}
-                  {activeIndex === 1 && <SearchVisualizer />}
-                  {activeIndex === 2 && <BackupVisualizer />}
-                  {activeIndex === 3 && <SharingVisualizer />}
-                  {activeIndex === 4 && <RansomwareVisualizer />}
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Visualizer Footer Bar */}
-              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 px-6 py-3 rounded-full bg-[#0a1411]/80 backdrop-blur-xl border border-white/10 flex items-center gap-4 shadow-2xl">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-white/70 text-xs font-bold tracking-widest uppercase font-mono">
-                  System Active // Node {activeIndex + 1}
-                </span>
-              </div>
+            {/* Footer indicator pill */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-white/90 dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 shadow-md text-[11px] font-mono font-bold text-slate-700 dark:text-white/80 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse" />
+              <span>Node Security Layer // {activeIndex + 1}</span>
             </div>
           </div>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 };
 

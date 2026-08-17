@@ -6,7 +6,7 @@ import {
   EncryptionBadgeIcon,
 } from "../ui/VaultIcons";
 import { SERVER_URL } from "../../lib/api";
-import getFileImage from "../../lib/FileImages";
+import getFileImage, { renderFileIcon } from "../../lib/FileImages";
 
 export default function FileDetailsModal({ item, onClose }) {
   if (!item) return null;
@@ -88,12 +88,7 @@ export default function FileDetailsModal({ item, onClose }) {
                 draggable={false}
               />
             ) : (
-              <img
-                src={getFileImage(ext)}
-                alt="icon"
-                className="w-16 h-16 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
-                draggable={false}
-              />
+              renderFileIcon(ext, { size: 48, className: "drop-shadow-lg" })
             )}
           </div>
 

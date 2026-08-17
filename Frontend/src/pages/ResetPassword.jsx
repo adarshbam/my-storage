@@ -4,6 +4,7 @@ import { SERVER_URL } from "../lib/api";
 import Button from "../components/ui/Button";
 import AuthLayout from "../layouts/AuthLayout";
 import { Eye, EyeOff, CheckCircle2, Box } from "lucide-react";
+import { VaultLogo } from "../components/ui/VaultIcons";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -57,41 +58,41 @@ export default function ResetPassword() {
     <AuthLayout>
       <div className="w-full">
         {/* Header */}
-        <div className="flex flex-col items-center mb-8 lg:hidden">
-          <div className="bg-[#01140f] border border-teal-500/30 p-3 rounded-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),inset_0_-2px_4px_rgba(0,0,0,0.8),0_0_15px_rgba(20,184,166,0.3)] mb-5 transition-all duration-300 relative">
-            <Box className="text-[#14b8a6] relative z-10" size={28} />
+        <div className="flex flex-col items-center mb-6 lg:hidden">
+          <div className="p-2.5 rounded-2xl bg-accent-soft border border-accent-border text-accent-primary mb-3 shadow-sm">
+            <VaultLogo size={24} />
           </div>
         </div>
-        <div className="flex flex-col mb-8 text-center lg:text-left">
+        <div className="flex flex-col mb-6 text-center lg:text-left">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Reset Password
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-xs">
             Enter your new password below
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-500/10 text-red-600 dark:text-red-400 p-3 rounded-xl text-sm mb-6 border border-red-500/20">
+          <div className="bg-red-500/10 text-red-600 dark:text-red-400 p-3 rounded-2xl text-xs mb-5 border border-red-500/20 font-medium">
             {error}
           </div>
         )}
         
         {success ? (
-          <div className="flex flex-col items-center justify-center p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-6 text-center">
-            <CheckCircle2 className="text-emerald-500 mb-3" size={48} />
-            <h3 className="text-lg font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
-              Password Reset
+          <div className="flex flex-col items-center justify-center p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl mb-6 text-center">
+            <CheckCircle2 className="text-emerald-500 mb-3" size={40} />
+            <h3 className="text-base font-bold text-emerald-600 dark:text-emerald-400 mb-1">
+              Password Reset Successful
             </h3>
-            <p className="text-sm text-emerald-600/80 dark:text-emerald-400/80">
+            <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80">
               {success}
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="flex text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 justify-between items-center">
-                <span>New Password</span>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                New Password
               </label>
               <div className="relative">
                 <input
@@ -99,7 +100,7 @@ export default function ResetPassword() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 pr-11 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-[#14b8a6]/50 focus:border-[#14b8a6]/50 dark:focus:shadow-[0_0_15px_rgba(20,184,166,0.15)] outline-none transition-all duration-300"
+                  className="w-full px-4 py-2.5 pr-11 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all text-sm font-semibold"
                   placeholder="••••••••"
                 />
                 <button
@@ -107,7 +108,7 @@ export default function ResetPassword() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
@@ -115,18 +116,18 @@ export default function ResetPassword() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3.5 text-[15px]"
+              className="w-full py-3 text-xs uppercase tracking-wider font-bold"
             >
               {isSubmitting ? "Resetting..." : "Reset Password"}
             </Button>
           </form>
         )}
 
-        <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
+        <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
           Remember your password?{" "}
           <Link
             to="/login"
-            className="text-[#14b8a6] hover:text-[#0d9488] font-semibold transition-colors"
+            className="text-accent-primary hover:opacity-80 font-bold transition-colors"
           >
             Sign in
           </Link>

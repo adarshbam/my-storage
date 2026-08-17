@@ -13,7 +13,7 @@ import {
   Share2,
   Star,
 } from "lucide-react";
-import getFileImage from "../../lib/FileImages";
+import getFileImage, { renderFileIcon } from "../../lib/FileImages";
 import { formatSize } from "../../lib/utils";
 import {
   EncryptionBadgeIcon,
@@ -232,14 +232,14 @@ export default function AssetCard({
         onDragLeave={(e) => onDragLeave && onDragLeave(e)}
         onDrop={(e) => onDrop && onDrop(e, item)}
         className={`
-          group relative flex items-center p-3 rounded-xl border transition-all duration-300
-          ${isDragOver ? "border-orange-400 bg-orange-500/10 shadow-[0_0_20px_rgba(249,115,22,0.25)]" : "border-white/5"}
-          ${selected && !isDragOver ? "bg-white/10 shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]" : !isDragOver ? "hover:bg-white/[0.03]" : ""}
+          vault-card-interactive group relative flex items-center p-3 rounded-2xl border transition-all duration-200 bg-white dark:bg-vault-surface/80 border-slate-200/90 dark:border-white/10 shadow-sm hover:shadow-md
+          ${isDragOver ? "border-orange-400 bg-orange-500/10 shadow-[0_0_20px_rgba(249,115,22,0.25)]" : ""}
+          ${selected && !isDragOver ? "ring-2 ring-accent-primary bg-accent-soft/30 dark:bg-accent-soft/20 border-accent-border shadow-md" : !isDragOver ? "hover:bg-slate-50/90 dark:hover:bg-vault-surface hover:border-slate-300 dark:hover:border-white/20" : ""}
           ${isCut ? "opacity-35" : ""}
         `}
       >
         <div
-          className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl transition-all duration-300 ${
+          className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-2xl transition-all duration-300 ${
             selected || isHovered
               ? envClass.replace("env-glow-", "bg-")
               : "bg-transparent"
@@ -256,40 +256,35 @@ export default function AssetCard({
               <Folder size={20} className="text-vault-emerald" />
             )
           ) : (
-            <img
-              src={getFileImage(ext)}
-              alt="icon"
-              className="w-6 h-6 object-contain drop-shadow-lg"
-              draggable={false}
-            />
+            renderFileIcon(ext, { size: 20 })
           )}
         </div>
 
         <div className="flex-1 min-w-0 pr-4">
-          <p className="text-white font-semibold text-sm truncate">
+          <p className="text-slate-900 dark:text-white font-semibold text-sm truncate">
             {item.name}
           </p>
-          <p className="text-white/40 text-xs mt-0.5 truncate flex items-center gap-2">
+          <p className="text-slate-500 dark:text-white/40 text-xs mt-0.5 truncate flex items-center gap-2">
             <span>{typeInfo.listLabel}</span>
             <span className="opacity-70">
               • {typeInfo.badgeLabel}
             </span>
             {item.openedAt && (
-              <span className="text-teal-400 font-semibold font-mono">
+              <span className="text-teal-600 dark:text-teal-400 font-semibold font-mono">
                 • Opened {formatRelativeTime(item.openedAt)}
               </span>
             )}
           </p>
         </div>
 
-        <div className="hidden md:flex items-center gap-4 text-xs font-mono text-white/30 mr-6">
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-black/40 border border-white/10">
+        <div className="hidden md:flex items-center gap-4 text-xs font-mono text-slate-500 dark:text-white/30 mr-6">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/60">
             <EncryptionBadgeIcon size={12} className="text-vault-emerald" />
             <span>AES-256</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="status-dot status-dot-emerald" />
-            <span className="text-[10px] text-white/50">Encrypted</span>
+            <span className="text-[10px] text-slate-500 dark:text-white/50">Encrypted</span>
           </div>
           {(item.isShared || provider !== "local") && (
             <div className="flex items-center gap-1">
@@ -404,15 +399,15 @@ export default function AssetCard({
       onDragLeave={(e) => onDragLeave && onDragLeave(e)}
       onDrop={(e) => onDrop && onDrop(e, item)}
       className={`
-        group relative flex flex-col rounded-2xl transition-all duration-300 asset-card-hover select-none
+        vault-card-interactive group relative flex flex-col rounded-2xl transition-all duration-200 select-none bg-white dark:bg-vault-surface/80 border border-slate-200/90 dark:border-white/10 shadow-sm hover:shadow-xl dark:hover:shadow-black/60
         ${isDragOver ? "bg-orange-500/10 border-2 border-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.3)] scale-[1.02]" : ""}
-        ${selected && !isDragOver ? `bg-white/[0.08] ${envClass}` : !isDragOver ? "bg-vault-surface/60 border border-white/5" : ""}
-        ${isHovered && !selected && !isDragOver ? `border-white/20 ${envClass}` : ""}
+        ${selected && !isDragOver ? `ring-2 ring-accent-primary bg-accent-soft/30 dark:bg-accent-soft/20 border-accent-border shadow-md` : !isDragOver ? "" : ""}
+        ${isHovered && !selected && !isDragOver ? `border-slate-300 dark:border-white/25 ${envClass}` : ""}
         ${isCut ? "opacity-35" : ""}
       `}
     >
       {/* ── Thumbnail ── (overflow-hidden stays, but menu is outside this div) */}
-      <div className="relative aspect-[4/3] w-full bg-black/40 rounded-t-2xl overflow-hidden border-b border-white/5">
+      <div className="relative aspect-[4/3] w-full bg-slate-50 dark:bg-black/40 rounded-t-2xl overflow-hidden border-b border-slate-200/70 dark:border-white/5">
         {/* Ambient glow */}
         <div
           className={`absolute inset-0 opacity-20 bg-gradient-radial to-transparent ${envClass
@@ -466,12 +461,7 @@ export default function AssetCard({
               />
             </>
           ) : (
-            <img
-              src={getFileImage(ext)}
-              alt="icon"
-              className="w-16 h-16 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
-              draggable={false}
-            />
+            renderFileIcon(ext, { size: 48, className: "drop-shadow-lg" })
           )}
         </div>
 
@@ -589,7 +579,7 @@ export default function AssetCard({
 
         {/* Dropdown — unrestricted, renders from card root level */}
         {showMenu && (
-          <div className="absolute right-0 top-full mt-1.5 w-48 bg-[#111113] border border-white/10 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.8)] z-50 py-1">
+          <div className="absolute right-0 top-full mt-1.5 w-48 bg-white dark:bg-[#111113] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl dark:shadow-[0_12px_40px_rgba(0,0,0,0.8)] z-50 py-1.5 overflow-hidden">
             {/* Open / Preview */}
             {!isTrash && (
               <button
@@ -742,21 +732,21 @@ export default function AssetCard({
 
       <div className="p-4 flex flex-col gap-1 min-w-0">
         <h3
-          className="text-white font-semibold text-sm truncate"
+          className="text-slate-900 dark:text-white font-semibold text-sm truncate"
           title={item.name}
         >
           {item.name}
         </h3>
-        <div className="flex items-center justify-between text-[11px] font-mono text-white/40 gap-2">
+        <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-white/40 gap-2">
           <span className="truncate min-w-0 font-medium">
             {typeInfo.typeLabel}
           </span>
-          <span className="uppercase whitespace-nowrap shrink-0 tracking-wider text-[10px] text-white/50 bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/5">
+          <span className="uppercase whitespace-nowrap shrink-0 tracking-wider text-[10px] text-slate-600 dark:text-white/50 bg-slate-100 dark:bg-white/[0.04] px-1.5 py-0.5 rounded border border-slate-200 dark:border-white/5">
             {typeInfo.badgeLabel}
           </span>
         </div>
         {item.openedAt && (
-          <div className="text-[10px] text-teal-400 font-mono font-semibold tracking-wide mt-0.5">
+          <div className="text-[10px] text-teal-600 dark:text-teal-400 font-mono font-semibold tracking-wide mt-0.5">
             Opened {formatRelativeTime(item.openedAt)}
           </div>
         )}
