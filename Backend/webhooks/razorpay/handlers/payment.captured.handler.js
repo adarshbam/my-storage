@@ -1,5 +1,6 @@
 import Razorpay from "razorpay";
 import User from "../../../models/userModel.js";
+import { paymentSucceeded } from "../../../services/notification.service.js";
 
 export const PLANS = {
   plan_TCC4EtSVu7anNx: {
@@ -23,20 +24,39 @@ export const PLANS = {
 };
 
 export const handlePaymentCaptured = async (payload) => {
-  const { id, plan_id } = payload.payload?.payment?.entity || {};
+  const { id, plan_id, notes, amount, currency } =
+    payload.payload?.payment?.entity || {};
   if (id) {
     try {
-      const payment = await Razorpay.payments.fetch(id);
-      const email = payment.email;
-      if (email && PLANS[plan_id]?.maxStorage) {
-        await User.findOneAndUpdate(
-          { email },
-          { $set: { maxStorage: PLANS[plan_id].maxStorage } },
-        );
+      let user = null;
+      if (notes?.userId) {
+        user = await User.findById(notes.userId);
+      }
+
+      const payment = await Razorpay.payments?.fetch(id).catch(() => null);
+      const email = payment?.email;
+
+      if (!user && email) {
+        user = await User.findOne({ email });
+      }
+
+      if (user && PLANS[plan_id]?.maxStorage) {
+        user.maxStorage = PLANS[plan_id].maxStorage;
+        await user.save();
+      }
+
+      if (user) {
+        await paymentSucceeded({
+          userId: user._id,
+          paymentId: id,
+          amount: amount || payment?.amount || 0,
+          currency: currency || payment?.currency || "INR",
+        }).catch((nErr) => {
+          console.warn("[Webhook] Payment success notification error:", nErr.message);
+        });
       }
     } catch (e) {
       console.warn("[Webhook] Payment fetch note:", e.message);
     }
   }
-  // TODO: Implement comprehensive payment capture, invoice generation & DB log
 };

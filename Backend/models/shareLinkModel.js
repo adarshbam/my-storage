@@ -7,19 +7,27 @@ const shareLinkSchema = new Schema(
     permission: [{ type: String, enum: ["read", "write", "owner"], default: ["read"] }],
     expiresAt: {
       type: Date,
-      default: () => Date.now() + 24 * 60 * 60 * 1000,
-      index: {
-        expires: 0,
-      },
+      default: null,
     },
     createdAt: { type: Date, default: Date.now },
+    isActive: { type: Boolean, default: true },
+    hasPassword: { type: Boolean, default: false },
+    password: { type: String, default: null },
+    accessType: { type: String, enum: ["restricted", "public"], default: "restricted" },
+    title: { type: String, default: "" },
+    views: { type: Number, default: 0 },
+    downloads: { type: Number, default: 0 },
+    maxDownloads: { type: Number, default: null },
     items: {
       type: [
         {
           id: { type: String, required: true },
           type: { type: String, enum: ["file", "directory"], required: true },
-          provider: { type: String, required: true },
+          provider: { type: String, default: "local" },
           name: { type: String, required: true },
+          size: { type: Number, default: 0 },
+          extension: { type: String, default: "" },
+          mimeType: { type: String, default: "" },
         },
       ],
       default: [],

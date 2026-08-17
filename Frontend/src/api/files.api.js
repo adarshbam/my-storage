@@ -56,3 +56,11 @@ export const getRecentItems = (params = {}) => {
   const query = new URLSearchParams(params).toString();
   return apiClient.get(`/file/recent${query ? `?${query}` : ''}`);
 };
+
+export const getShareLinks = () => apiClient.get('/share/links');
+export const createShareLink = (data) => apiClient.post('/share/link', data);
+export const toggleShareLink = (linkId) => apiClient.patch(`/share/link/${linkId}/toggle`);
+export const updateShareLink = (linkId, data) => apiClient.patch(`/share/link/${linkId}`, data);
+export const revokeShareLink = (linkId) => apiClient.delete(`/share/link/${linkId}`);
+export const getSharedDrives = () => apiClient.get('/share/drives');
+

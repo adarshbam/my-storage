@@ -16,6 +16,10 @@ import {
   invalidateUserSessions,
 } from "../databases/redis.js";
 import { createSessionAndSetCookies } from "../utils/authHelpers.js";
+import {
+  securityTwoFactorEnabled,
+  securityTwoFactorDisabled,
+} from "./notification.service.js";
 
 const SETUP_TTL_SECONDS = 600; // 10 minutes
 const LOGIN_2FA_TTL_SECONDS = 300; // 5 minutes
@@ -120,6 +124,11 @@ export async function verifyTwoFactorSetupLogic({ userId, code }) {
 
   await cacheDel(redisKey);
   await invalidateUserSessions(userId.toString());
+
+  // Security notification state update
+  await securityTwoFactorEnabled({ userId }).catch((nErr) => {
+    console.warn("[2FA] Notification trigger error:", nErr.message);
+  });
 
   return {
     success: true,
@@ -278,6 +287,11 @@ export async function disableTwoFactorLogic({ userId, password, totpCode }) {
   await user.save();
 
   await invalidateUserSessions(userId.toString());
+
+  // Security notification state update
+  await securityTwoFactorDisabled({ userId }).catch((nErr) => {
+    console.warn("[2FA] Notification trigger error:", nErr.message);
+  });
 
   return {
     success: true,

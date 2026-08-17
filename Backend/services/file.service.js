@@ -24,7 +24,11 @@ import {
   getObjectFromB2,
 } from "../integrations/storage/s3.client.js";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
-import { updateParentDirectorySize, getDirectoryPath } from "./directory.service.js";
+import {
+  updateParentDirectorySize,
+  getDirectoryPath,
+  populateDirectoryItemCounts,
+} from "./directory.service.js";
 import { processThumbnailInWorker } from "./workerPool.service.js";
 
 const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
@@ -260,11 +264,19 @@ export const searchFiles = async ({ query, ext, maxSize, userId, userRole, rootD
 
       const cachedMeta = cachedMetas[idx];
       if (cachedMeta) {
+        const fCount = Number(cachedMeta.filesCount || 0);
+        const dCount = Number(cachedMeta.directoriesCount || 0);
+        const iCount = Number(cachedMeta.itemCount || 0);
         return {
           ...dir,
+          _id: dirIdStr,
           id: dirIdStr,
+          type: "directory",
           path: sortedPath,
-          itemCount: Number(cachedMeta.itemCount || 0),
+          itemCount: iCount,
+          items: iCount,
+          filesCount: fCount,
+          directoriesCount: dCount,
         };
       }
 
@@ -277,16 +289,23 @@ export const searchFiles = async ({ query, ext, maxSize, userId, userRole, rootD
         "dir:meta:" + dirIdStr,
         {
           size: dir.size || 0,
-          itemCount: itemCount || 0,
+          itemCount: itemCount,
+          filesCount: fileCount,
+          directoriesCount: dirCount,
         },
         600,
       ).catch((err) => console.error("Cache populate error in search:", err));
 
       return {
         ...dir,
+        _id: dirIdStr,
         id: dirIdStr,
+        type: "directory",
         path: sortedPath,
         itemCount: itemCount,
+        items: itemCount,
+        filesCount: fileCount,
+        directoriesCount: dirCount,
       };
     }),
   );
@@ -632,17 +651,45 @@ export const getFileLogic = async ({ fileId, userId, userRole, range, action, if
   }
 };
 
-export const getStarredItems = async () => {
-  const starredFiles = await File.find({ starred: true }).lean();
-  const starredDirectories = await Directory.find({
-    starred: true,
-  }).lean();
+const mediaExts = [
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".webp",
+  ".tiff",
+  ".svg",
+  ".mp4",
+  ".webm",
+  ".mkv",
+  ".avi",
+  ".mov",
+];
 
-  console.log(starredFiles, starredDirectories);
-  const starredItems = starredFiles.concat(starredDirectories);
-  console.log(starredItems);
+export const getStarredItems = async (userId, rootDirId) => {
+  const fileFilter = userId ? { userId, starred: true } : { starred: true };
+  const dirFilter = userId
+    ? { userId, starred: true, ...(rootDirId ? { _id: { $ne: rootDirId } } : {}) }
+    : { starred: true };
 
-  return starredItems;
+  const [starredFiles, starredDirectories] = await Promise.all([
+    File.find(fileFilter).lean(),
+    Directory.find(dirFilter).lean(),
+  ]);
+
+  const populatedDirs = await populateDirectoryItemCounts(starredDirectories);
+
+  const processedFiles = starredFiles.map((file) => {
+    const ext = file.extension ? file.extension.toLowerCase() : "";
+    return {
+      ...file,
+      _id: file._id.toString(),
+      type: "file",
+      hasThumbnail: file.hasThumbnail || mediaExts.includes(ext),
+    };
+  });
+
+  return processedFiles.concat(populatedDirs);
 };
 
 export const setStarredItem = async ({ itemId, type }) => {
@@ -684,21 +731,35 @@ export const setStarredItem = async ({ itemId, type }) => {
 };
 
 export const getRecentItems = async (userId, rootDirId) => {
-  const recentFiles = await File.find({ userId, openedAt: { $ne: null } })
-    .sort({ openedAt: -1 })
-    .limit(10)
-    .lean();
-  const recentDirectories = await Directory.find({
-    userId,
-    openedAt: { $ne: null },
-    _id: { $ne: rootDirId },
-  })
-    .sort({ openedAt: -1 })
-    .limit(10)
-    .lean();
+  const [recentFiles, recentDirectories] = await Promise.all([
+    File.find({ userId, openedAt: { $ne: null } })
+      .sort({ openedAt: -1 })
+      .limit(10)
+      .lean(),
+    Directory.find({
+      userId,
+      openedAt: { $ne: null },
+      ...(rootDirId ? { _id: { $ne: rootDirId } } : {}),
+    })
+      .sort({ openedAt: -1 })
+      .limit(10)
+      .lean(),
+  ]);
 
-  const combined = recentFiles
-    .concat(recentDirectories)
+  const populatedDirs = await populateDirectoryItemCounts(recentDirectories);
+
+  const processedFiles = recentFiles.map((file) => {
+    const ext = file.extension ? file.extension.toLowerCase() : "";
+    return {
+      ...file,
+      _id: file._id.toString(),
+      type: "file",
+      hasThumbnail: file.hasThumbnail || mediaExts.includes(ext),
+    };
+  });
+
+  const combined = processedFiles
+    .concat(populatedDirs)
     .sort((a, b) => new Date(b.openedAt) - new Date(a.openedAt))
     .slice(0, 10);
 

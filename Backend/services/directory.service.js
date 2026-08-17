@@ -18,6 +18,11 @@ import {
 } from "../databases/redis.js";
 import { deleteByParentChain } from "./trash.service.js";
 import { copyInB2 } from "../integrations/storage/s3.client.js";
+import User from "../models/userModel.js";
+import {
+  storageThresholdReached,
+  storageLimitResolved,
+} from "./notification.service.js";
 
 const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 const THUMBNAILS_DIR = path.join(STORAGE_DIR, "thumbnails");
@@ -77,6 +82,44 @@ export const updateParentDirectorySize = async (
           cacheDel("dir:meta:" + id.toString()),
         ]),
       );
+
+      // Check storage threshold on root directory
+      const rootDir = await Directory.findById(path[0])
+        .select("userId size")
+        .lean();
+      if (rootDir && rootDir.userId) {
+        const user = await User.findById(rootDir.userId)
+          .select("maxStorage")
+          .lean();
+        if (user && user.maxStorage) {
+          const usedStorage = rootDir.size;
+          const percentage = Math.floor((usedStorage / user.maxStorage) * 100);
+          if (percentage >= 100) {
+            await storageThresholdReached({
+              userId: rootDir.userId,
+              percentage: 100,
+              usedBytes: usedStorage,
+              maxBytes: user.maxStorage,
+            }).catch(() => {});
+          } else if (percentage >= 90) {
+            await storageThresholdReached({
+              userId: rootDir.userId,
+              percentage: 90,
+              usedBytes: usedStorage,
+              maxBytes: user.maxStorage,
+            }).catch(() => {});
+          } else if (percentage >= 80) {
+            await storageThresholdReached({
+              userId: rootDir.userId,
+              percentage: 80,
+              usedBytes: usedStorage,
+              maxBytes: user.maxStorage,
+            }).catch(() => {});
+          } else {
+            await storageLimitResolved({ userId: rootDir.userId }).catch(() => {});
+          }
+        }
+      }
     } catch (cacheErr) {
       console.error("Failed to clear directory size caches:", cacheErr);
     }
@@ -111,6 +154,113 @@ export const getDirectorySize = async (dirId) => {
   }
 
   return { size, count };
+};
+
+export const populateDirectoryItemCounts = async (directories = []) => {
+  if (!directories || directories.length === 0) return [];
+
+  const dirIds = directories.map((d) => (d && d._id ? d._id : d));
+  const dirIdStrs = dirIds.map((id) => (id ? id.toString() : ""));
+
+  // 1. Try parallel Redis cache fetch for dir:meta:<id>
+  const cachedMetas = await Promise.all(
+    dirIdStrs.map((idStr) =>
+      idStr ? cacheHgetall("dir:meta:" + idStr).catch(() => null) : null,
+    ),
+  );
+
+  // 2. Identify missing IDs
+  const missDirIds = [];
+  directories.forEach((dir, idx) => {
+    const cached = cachedMetas[idx];
+    if (!cached || cached.itemCount === undefined) {
+      const id = dir && dir._id ? dir._id : dir;
+      if (id) missDirIds.push(id);
+    }
+  });
+
+  let filesCountMap = new Map();
+  let dirsCountMap = new Map();
+
+  if (missDirIds.length > 0) {
+    const [filesCounts, dirsCounts] = await Promise.all([
+      File.aggregate([
+        { $match: { parentDir: { $in: missDirIds } } },
+        { $group: { _id: "$parentDir", count: { $sum: 1 } } },
+      ]),
+      Directory.aggregate([
+        { $match: { parentDir: { $in: missDirIds } } },
+        { $group: { _id: "$parentDir", count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    filesCountMap = new Map(
+      filesCounts.map((c) => [c._id.toString(), c.count]),
+    );
+    dirsCountMap = new Map(
+      dirsCounts.map((c) => [c._id.toString(), c.count]),
+    );
+  }
+
+  // 3. Assemble results and populate cache for misses
+  const populated = await Promise.all(
+    directories.map(async (dir, idx) => {
+      const isPlainObject = typeof dir === "object" && dir !== null;
+      const dirObj =
+        dir && dir.toObject
+          ? dir.toObject()
+          : isPlainObject
+            ? { ...dir }
+            : { _id: dir };
+      const dirIdStr = dirObj._id ? dirObj._id.toString() : (dir ? dir.toString() : "");
+      const cached = cachedMetas[idx];
+
+      if (cached && cached.itemCount !== undefined) {
+        const fCount = Number(cached.filesCount || 0);
+        const dCount = Number(cached.directoriesCount || 0);
+        const iCount = Number(cached.itemCount || 0);
+        return {
+          ...dirObj,
+          _id: dirIdStr,
+          type: "directory",
+          filesCount: fCount,
+          directoriesCount: dCount,
+          itemCount: iCount,
+          items: iCount,
+        };
+      }
+
+      const fCount = filesCountMap.get(dirIdStr) || 0;
+      const dCount = dirsCountMap.get(dirIdStr) || 0;
+      const iCount = fCount + dCount;
+
+      // Populate cache asynchronously
+      if (dirIdStr) {
+        cacheHset(
+          "dir:meta:" + dirIdStr,
+          {
+            size: dirObj.size || 0,
+            itemCount: iCount,
+            filesCount: fCount,
+            directoriesCount: dCount,
+          },
+          600,
+        ).catch((err) => console.error("Cache populate error in meta:", err));
+      }
+
+      return {
+        ...dirObj,
+        _id: dirIdStr,
+        type: "directory",
+        filesCount: fCount,
+        directoriesCount: dCount,
+        itemCount: iCount,
+        items: iCount,
+      };
+    }),
+  );
+
+  return populated;
 };
 
 export const getAvailableName = async (
@@ -436,6 +586,7 @@ export const getDirectoryContents = async ({ dirId, userId, userRole, action, re
       path: [...baseSharedPathNames, { name: dir.name }],
       directoriesCount,
       items,
+      itemCount: items,
     };
   });
 

@@ -9,6 +9,7 @@ import Subscription from "../models/subscriptionModel.js";
 import TrialClaim from "../models/trialClaimModel.js";
 import { hashPhoneNumber } from "../utils/crypto.utils.js";
 import { invalidateUserSessions } from "../databases/redis.js";
+import { subscriptionActivated } from "./notification.service.js";
 
 export const createPlanLogic = async ({ planData, userId, userRole }) => {
   const { slug, amount, storage, period, currency } = planData;
@@ -680,6 +681,15 @@ export const activateFreeTrialLogic = async ({ userId, req }) => {
   }
   await user.save();
   await invalidateUserSessions(user._id.toString());
+
+  // Trigger subscription activated notification & resolve past warnings
+  await subscriptionActivated({
+    userId: user._id,
+    subscriptionId: subscription._id,
+    planName: "30-Day Free Trial",
+  }).catch((nErr) => {
+    console.warn("[PlanService] Free trial notification error:", nErr.message);
+  });
 
   return {
     success: true,

@@ -119,7 +119,9 @@ const getItemTypeInfo = (item, isDirectory, provider, specialView) => {
       ? item.itemCount
       : item.items !== undefined
         ? item.items
-        : (item.filesCount || 0) + (item.directoriesCount || 0);
+        : (item.filesCount !== undefined || item.directoriesCount !== undefined)
+          ? (item.filesCount || 0) + (item.directoriesCount || 0)
+          : (item.files?.length || 0) + (item.directories?.length || 0);
 
   return {
     typeLabel: `${count} ITEMS`,

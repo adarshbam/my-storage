@@ -2,6 +2,10 @@ import User from "../models/userModel.js";
 import { generateOtp, hashOtp } from "../utils/crypto.utils.js";
 import sendEmail from "../integrations/email/email.service.js";
 import { cacheGet, cacheSet, cacheDel, invalidateUserSessions } from "../databases/redis.js";
+import {
+  securityRecoveryEmailAdded,
+  securityRecoveryEmailMissing,
+} from "./notification.service.js";
 
 const OTP_TTL_SECONDS = 600; // 10 minutes
 const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
@@ -195,6 +199,11 @@ export async function verifySecondaryRecoveryEmailOtpLogic({ userId, email, otp 
 
   await invalidateUserSessions(userId.toString());
 
+  // Security notification state update
+  await securityRecoveryEmailAdded({ userId, email: cleanEmail }).catch((nErr) => {
+    console.warn("[SecondaryEmail] Notification trigger error:", nErr.message);
+  });
+
   return {
     success: true,
     message: "Secondary recovery email verified and activated successfully!",
@@ -220,6 +229,11 @@ export async function removeSecondaryRecoveryEmailLogic({ userId }) {
   await user.save();
 
   await invalidateUserSessions(userId.toString());
+
+  // Security notification state update
+  await securityRecoveryEmailMissing({ userId }).catch((nErr) => {
+    console.warn("[SecondaryEmail] Notification trigger error:", nErr.message);
+  });
 
   return {
     success: true,

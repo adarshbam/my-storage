@@ -8,6 +8,7 @@ import {
   DeleteObjectsCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+import { fileDeletionScheduled } from "../services/notification.service.js";
 
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 const SIXTY_DAYS = 60 * 24 * 60 * 60 * 1000;
@@ -20,7 +21,35 @@ export async function cleanFiles() {
     const expiryDate = new Date(Date.now() - THIRTY_DAYS);
     const noPlanExpiryDate = new Date(Date.now() - SIXTY_DAYS);
 
-    // 0. Identify users who have been in "no-subscription" state for 60+ days and purge their storage assets
+    // 0a. Send warning notifications to users approaching the 60-day purge deadline
+    const gracePeriodUsers = await User.find({
+      $or: [
+        { noSubscriptionSince: { $ne: null } },
+        { noPlanSince: { $ne: null } },
+      ],
+    }).select("_id noSubscriptionSince noPlanSince").lean();
+
+    for (const u of gracePeriodUsers) {
+      const sinceDate = u.noSubscriptionSince || u.noPlanSince;
+      if (sinceDate) {
+        const daysInactive = Math.floor(
+          (Date.now() - new Date(sinceDate).getTime()) / (24 * 60 * 60 * 1000),
+        );
+        const daysRemaining = Math.max(0, 60 - daysInactive);
+        const purgeDate = new Date(new Date(sinceDate).getTime() + SIXTY_DAYS);
+
+        // Send warnings at key intervals: 30d, 15d, 7d, 3d, 1d
+        if ([30, 15, 7, 3, 1].includes(daysRemaining)) {
+          await fileDeletionScheduled({
+            userId: u._id,
+            daysRemaining,
+            purgeDate,
+          }).catch(() => {});
+        }
+      }
+    }
+
+    // 0b. Identify users who have been in "no-subscription" state for 60+ days and purge their storage assets
     const expiredNoPlanUsers = await User.find({
       $or: [
         { noSubscriptionSince: { $ne: null, $lt: noPlanExpiryDate } },

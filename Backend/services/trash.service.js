@@ -4,10 +4,25 @@ import File from "../models/fileModel.js";
 import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../databases/redis.js";
-import { updateParentDirectorySize } from "./directory.service.js";
+import { updateParentDirectorySize, populateDirectoryItemCounts } from "./directory.service.js";
 import { deleteFromB2, deleteMultipleFromB2 } from "../integrations/storage/s3.client.js";
 
 const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
+
+const mediaExts = [
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".webp",
+  ".tiff",
+  ".svg",
+  ".mp4",
+  ".webm",
+  ".mkv",
+  ".avi",
+  ".mov",
+];
 
 export const getTrashItemsLogic = async (userId) => {
   const trashItems = await Trash.find({ userId })
@@ -15,90 +30,34 @@ export const getTrashItemsLogic = async (userId) => {
     .lean();
 
   const dirItems = trashItems.filter((item) => item.type === "directory");
+  const populatedDirs = await populateDirectoryItemCounts(dirItems);
+  const dirMap = new Map(populatedDirs.map((d) => [d._id.toString(), d]));
 
-  // Check cache in parallel
-  const cachedMetas = await Promise.all(
-    dirItems.map((item) => cacheHgetall("dir:meta:" + item._id.toString())),
-  );
-
-  // Identify cache misses
-  const missDirIds = [];
-  dirItems.forEach((item, idx) => {
-    if (!cachedMetas[idx]) {
-      missDirIds.push(item._id);
+  const itemsWithCount = trashItems.map((item) => {
+    const idStr = item._id.toString();
+    if (item.type === "directory") {
+      const populated = dirMap.get(idStr);
+      return {
+        ...item,
+        id: idStr,
+        _id: idStr,
+        type: "directory",
+        itemCount: populated ? populated.itemCount : 0,
+        items: populated ? populated.itemCount : 0,
+        filesCount: populated ? populated.filesCount : 0,
+        directoriesCount: populated ? populated.directoriesCount : 0,
+        size: populated ? populated.size || 0 : item.size || 0,
+      };
     }
+    const ext = item.extension ? item.extension.toLowerCase() : "";
+    return {
+      ...item,
+      id: idStr,
+      _id: idStr,
+      type: "file",
+      hasThumbnail: item.hasThumbnail || mediaExts.includes(ext),
+    };
   });
-
-  let filesCountMap = new Map();
-  let dirsCountMap = new Map();
-
-  if (missDirIds.length > 0) {
-    const [filesCounts, dirsCounts] = await Promise.all([
-      File.aggregate([
-        { $match: { parentDir: { $in: missDirIds } } },
-        { $group: { _id: "$parentDir", count: { $sum: 1 } } },
-      ]),
-      Directory.aggregate([
-        { $match: { parentDir: { $in: missDirIds } } },
-        { $group: { _id: "$parentDir", count: { $sum: 1 } } },
-      ]),
-    ]);
-
-    filesCountMap = new Map(
-      filesCounts.map((c) => [c._id.toString(), c.count]),
-    );
-    dirsCountMap = new Map(
-      dirsCounts.map((c) => [c._id.toString(), c.count]),
-    );
-  }
-
-  let dirItemIdx = 0;
-  const itemsWithCount = await Promise.all(
-    trashItems.map(async (item) => {
-      if (item.type === "directory") {
-        const dirIdStr = item._id.toString();
-        const cachedMeta = cachedMetas[dirItemIdx];
-        dirItemIdx++;
-
-        if (cachedMeta) {
-          return {
-            ...item,
-            id: dirIdStr,
-            itemCount: Number(cachedMeta.itemCount || 0),
-            filesCount: Number(cachedMeta.filesCount || 0),
-            directoriesCount: Number(cachedMeta.directoriesCount || 0),
-          };
-        }
-
-        const fileCount = filesCountMap.get(dirIdStr) || 0;
-        const dirCount = dirsCountMap.get(dirIdStr) || 0;
-        const itemCount = fileCount + dirCount;
-
-        // Populate cache asynchronously
-        cacheHset(
-          "dir:meta:" + dirIdStr,
-          {
-            size: item.size || 0,
-            itemCount: itemCount,
-            filesCount: fileCount,
-            directoriesCount: dirCount,
-          },
-          600,
-        ).catch((err) =>
-          console.error("Cache populate error in trash:", err),
-        );
-
-        return {
-          ...item,
-          id: dirIdStr,
-          itemCount: itemCount,
-          filesCount: fileCount,
-          directoriesCount: dirCount,
-        };
-      }
-      return { ...item, id: item._id.toString() };
-    }),
-  );
 
   return itemsWithCount;
 };

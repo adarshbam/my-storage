@@ -55,7 +55,7 @@ export const getFileById = async (req, res, next) => {
 
 export const getAllStarredItems = async (req, res, next) => {
   try {
-    const items = await fileService.getStarredItems();
+    const items = await fileService.getStarredItems(req.user.id, req.user.rootDirId);
     return res.status(200).json(items);
   } catch (error) {
     next(error);

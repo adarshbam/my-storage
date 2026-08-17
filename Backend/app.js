@@ -19,6 +19,7 @@ import systemConfigRouter from "./routes/systemConfigRoutes.js";
 import ownerSettingsRouter from "./routes/ownerSettingsRoutes.js";
 import webhookRouter from "./routes/webhookRoutes.js";
 import billingRouter from "./routes/billingRoutes.js";
+import notificationRouter from "./routes/notificationRoutes.js";
 import cors from "cors";
 import checkAuth from "./middlewares/authMiddleware.js";
 import https from "https";
@@ -156,6 +157,7 @@ app.use("/system-config", systemConfigRouter);
 app.use("/owner-settings", ownerSettingsRouter);
 app.use("/webhooks", webhookRouter);
 app.use("/billing", checkAuth, billingRouter);
+app.use("/notifications", checkAuth, notificationRouter);
 
 app.use((err, req, res, next) => {
   if (res.headersSent) {

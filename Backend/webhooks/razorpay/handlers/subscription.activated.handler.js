@@ -1,5 +1,6 @@
 import Subscription from "../../../models/subscriptionModel.js";
 import User from "../../../models/userModel.js";
+import { subscriptionActivated } from "../../../services/notification.service.js";
 
 export async function handleSubscriptionActivated(payload) {
   const entity =
@@ -35,5 +36,16 @@ export async function handleSubscriptionActivated(payload) {
     console.log(
       `[Webhook] User ${subscription.userId} subscription activated successfully.`,
     );
+
+    // Trigger notification and resolve past cancellation/deletion warnings
+    await subscriptionActivated({
+      userId: subscription.userId,
+      subscriptionId: subscription._id,
+      planName: subscription.billingPlan?.slug
+        ? subscription.billingPlan.slug.toUpperCase()
+        : "Vault Storage Plan",
+    }).catch((nErr) => {
+      console.warn("[Webhook] Notification error:", nErr.message);
+    });
   }
 }

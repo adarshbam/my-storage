@@ -1,11 +1,27 @@
 import crypto from "crypto";
+import argon2 from "argon2";
 import ShareLink from "../models/shareLinkModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
 import User from "../models/userModel.js";
+import Directory from "../models/directoryModel.js";
+import File from "../models/fileModel.js";
+import { populateDirectoryItemCounts } from "./directory.service.js";
 import { cacheDel } from "../databases/redis.js";
 import { BACKEND_URL } from "../config/config.js";
+import { s3Client } from "../integrations/storage/s3.client.js";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 
-export const generateShareLinkLogic = async ({ items, permissions, expiresAt, userId }) => {
+export const generateShareLinkLogic = async ({
+  items,
+  permissions,
+  expiresAt,
+  userId,
+  password,
+  hasPassword,
+  accessType,
+  title,
+  maxDownloads,
+}) => {
   // Ensure permission is valid, default to ["read"]
   let cleanPermission = ["read"];
   if (Array.isArray(permissions)) {
@@ -17,22 +33,34 @@ export const generateShareLinkLogic = async ({ items, permissions, expiresAt, us
   }
 
   let cleanItems = [];
-  if (Array.isArray(items)) {
+  if (Array.isArray(items) && items.length > 0) {
+    const itemIds = items.map((i) => String(i.id || i._id));
+    const [foundFiles, foundDirs] = await Promise.all([
+      File.find({ _id: { $in: itemIds } }).select("_id name size extension provider").lean(),
+      Directory.find({ _id: { $in: itemIds } }).select("_id name size provider").lean(),
+    ]);
+
+    const fileMap = new Map(foundFiles.map((f) => [f._id.toString(), f]));
+    const dirMap = new Map(foundDirs.map((d) => [d._id.toString(), d]));
+
     cleanItems = items
-      .map((item) => ({
-        id: String(item.id),
-        type: String(item.type),
-        provider: String(item.provider),
-        name: String(item.name),
-      }))
-      .filter(
-        (item) =>
-          item.id &&
-          item.type &&
-          item.provider &&
-          item.name &&
-          ["file", "directory"].includes(item.type),
-      );
+      .map((item) => {
+        const id = String(item.id || item._id);
+        const type = String(item.type);
+        const fileMeta = fileMap.get(id);
+        const dirMeta = dirMap.get(id);
+
+        return {
+          id,
+          type: ["file", "directory"].includes(type) ? type : "file",
+          provider: String(item.provider || fileMeta?.provider || dirMeta?.provider || "local"),
+          name: String(item.name || fileMeta?.name || dirMeta?.name || "Shared Item"),
+          size: Number(item.size || fileMeta?.size || dirMeta?.size || 0),
+          extension: String(item.extension || fileMeta?.extension || ""),
+          mimeType: String(item.mimeType || ""),
+        };
+      })
+      .filter((item) => item.id && item.type && item.name);
   }
 
   const shareToken = crypto.randomBytes(32).toString("hex");
@@ -41,27 +69,183 @@ export const generateShareLinkLogic = async ({ items, permissions, expiresAt, us
     .update(shareToken)
     .digest("hex");
 
+  let hashedPassword = null;
+  const isProtected = Boolean(hasPassword && password && password.trim().length > 0);
+  if (isProtected) {
+    hashedPassword = await argon2.hash(password.trim());
+  }
+
+  const parsedExpiresAt = expiresAt ? new Date(expiresAt) : null;
+
   const shareLink = await ShareLink.create({
-    userId: userId,
+    userId,
     token: hashedToken,
     permission: cleanPermission,
     items: cleanItems,
-    expiresAt: expiresAt
-      ? new Date(expiresAt)
-      : Date.now() + 24 * 60 * 60 * 1000,
+    expiresAt: parsedExpiresAt,
+    isActive: true,
+    hasPassword: isProtected,
+    password: hashedPassword,
+    accessType: ["restricted", "public"].includes(accessType) ? accessType : "restricted",
+    title: title ? title.trim() : "",
+    maxDownloads: maxDownloads ? Number(maxDownloads) : null,
+    views: 0,
+    downloads: 0,
   });
+
+  const responseLink = shareLink.toObject();
+  delete responseLink.password;
 
   return {
     message: "Share link generated successfully",
     token: shareToken,
+    link: responseLink,
   };
 };
 
 export const getShareLinksLogic = async ({ userId }) => {
-  const shareLinks = await ShareLink.find({ userId: userId }).lean();
+  const [shareLinks, user] = await Promise.all([
+    ShareLink.find({ userId: userId }).sort({ createdAt: -1 }).lean(),
+    User.findById(userId).select("usedStorage rootDirId").lean(),
+  ]);
 
-  // TODO: Fetch active share links for this user from ShareLink collection
-  return { links: shareLinks };
+  const now = new Date();
+
+  // Collect missing file/directory IDs to enrich sizes if needed
+  const fileIds = [];
+  const dirIds = [];
+  shareLinks.forEach((link) => {
+    (link.items || []).forEach((item) => {
+      if (item.type === "file" && (!item.size || !item.extension)) {
+        fileIds.push(item.id);
+      } else if (item.type === "directory" && !item.size) {
+        dirIds.push(item.id);
+      }
+    });
+  });
+
+  let fileMap = new Map();
+  let dirMap = new Map();
+
+  if (fileIds.length > 0) {
+    const files = await File.find({ _id: { $in: fileIds } }).select("_id size extension hasThumbnail").lean();
+    fileMap = new Map(files.map((f) => [f._id.toString(), f]));
+  }
+  if (dirIds.length > 0) {
+    const dirs = await Directory.find({ _id: { $in: dirIds } }).select("_id size").lean();
+    dirMap = new Map(dirs.map((d) => [d._id.toString(), d]));
+  }
+
+  const sanitizedLinks = shareLinks.map((link) => {
+    const isExpired = Boolean(link.expiresAt && new Date(link.expiresAt) < now);
+    const enrichedItems = (link.items || []).map((item) => {
+      if (item.type === "file") {
+        const meta = fileMap.get(item.id);
+        return {
+          ...item,
+          size: item.size || meta?.size || 0,
+          extension: item.extension || meta?.extension || "",
+          hasThumbnail: meta?.hasThumbnail || false,
+        };
+      } else {
+        const meta = dirMap.get(item.id);
+        return {
+          ...item,
+          size: item.size || meta?.size || 0,
+        };
+      }
+    });
+
+    const isWholeVault = !enrichedItems || enrichedItems.length === 0;
+    const computedSize = isWholeVault
+      ? (user?.usedStorage || 0)
+      : enrichedItems.reduce((acc, curr) => acc + (curr.size || 0), 0);
+
+    const { password, ...safeLink } = link;
+    return {
+      ...safeLink,
+      items: enrichedItems,
+      size: computedSize,
+      vaultSize: computedSize,
+      isExpired,
+      hasPassword: Boolean(link.hasPassword),
+    };
+  });
+
+  return { links: sanitizedLinks };
+};
+
+export const toggleShareLinkActiveLogic = async ({ linkId, userId }) => {
+  const sharedLink = await ShareLink.findOne({ _id: linkId, userId });
+  if (!sharedLink) {
+    const err = new Error("Share link not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  sharedLink.isActive = !sharedLink.isActive;
+  await sharedLink.save();
+
+  return {
+    message: `Share link is now ${sharedLink.isActive ? "active" : "disabled"}`,
+    isActive: sharedLink.isActive,
+    linkId: sharedLink._id,
+  };
+};
+
+export const updateShareLinkLogic = async ({ linkId, userId, updateData }) => {
+  const sharedLink = await ShareLink.findOne({ _id: linkId, userId });
+  if (!sharedLink) {
+    const err = new Error("Share link not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (updateData.permission && Array.isArray(updateData.permission)) {
+    const allowed = ["read", "write", "owner"];
+    const filtered = updateData.permission.filter((p) => allowed.includes(p));
+    if (filtered.length > 0) {
+      sharedLink.permission = filtered;
+    }
+  }
+
+  if (updateData.expiresAt !== undefined) {
+    sharedLink.expiresAt = updateData.expiresAt ? new Date(updateData.expiresAt) : null;
+  }
+
+  if (typeof updateData.isActive === "boolean") {
+    sharedLink.isActive = updateData.isActive;
+  }
+
+  if (updateData.accessType && ["restricted", "public"].includes(updateData.accessType)) {
+    sharedLink.accessType = updateData.accessType;
+  }
+
+  if (updateData.title !== undefined) {
+    sharedLink.title = updateData.title ? updateData.title.trim() : "";
+  }
+
+  if (updateData.maxDownloads !== undefined) {
+    sharedLink.maxDownloads = updateData.maxDownloads ? Number(updateData.maxDownloads) : null;
+  }
+
+  if (updateData.hasPassword === false) {
+    sharedLink.hasPassword = false;
+    sharedLink.password = null;
+  } else if (updateData.password && updateData.password.trim().length > 0) {
+    sharedLink.hasPassword = true;
+    sharedLink.password = await argon2.hash(updateData.password.trim());
+  }
+
+  await sharedLink.save();
+
+  const responseLink = sharedLink.toObject();
+  delete responseLink.password;
+
+  return {
+    message: "Share link updated successfully",
+    link: responseLink,
+  };
 };
 
 export const revokeShareLinkLogic = async ({ linkId, userId }) => {
@@ -86,35 +270,236 @@ export const revokeShareLinkLogic = async ({ linkId, userId }) => {
     await cacheDel(`share:${access.userId}:${access.targetUserId}`);
   }
 
-  // TODO: Find the link by ID, set isRevoked to true, and delete associated SharedAccess records
   return {
     message: "Share link and all associated shared access revoked successfully",
   };
 };
 
-export const getShareLinkByTokenLogic = async ({ token }) => {
-  // TODO: Hash the token, find the ShareLink in DB, check expiration/revocation, and populate owner details
+export const getShareLinkByTokenLogic = async ({ token, password }) => {
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
   const shareLink = await ShareLink.findOne({ token: hashedToken });
+
+  if (!shareLink) {
+    const err = new Error("Share link not found or has been revoked");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (!shareLink.isActive) {
+    const err = new Error("This shared link has been disabled by its owner");
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const now = new Date();
+  if (shareLink.expiresAt && new Date(shareLink.expiresAt) < now) {
+    const err = new Error("This shared link has expired");
+    err.statusCode = 410;
+    throw err;
+  }
+
+  if (shareLink.maxDownloads && shareLink.downloads >= shareLink.maxDownloads) {
+    const err = new Error("Download limit for this share link has been reached");
+    err.statusCode = 403;
+    throw err;
+  }
+
   const owner = await User.findById(shareLink.userId).lean();
 
-  // Fake response for UI testing
-  return {
-    owner: {
-      name: owner.name || "John Doe",
-      email: owner.email || "dummy@example.com",
-      profilepic: owner.profilepic
+  const ownerInfo = {
+    name: owner?.name || "Vault Owner",
+    email: owner?.email || "",
+    profilepic: owner?.profilepic
+      ? owner.profilepic.externalUrl
         ? owner.profilepic.externalUrl
-          ? owner.profilepic.externalUrl
-          : `${BACKEND_URL}/user/profilepic?id=${owner.profilepic._id}`
-        : null,
-    },
-    permission: shareLink ? shareLink.permission : ["read"],
-    items: shareLink ? shareLink.items : [],
-    expiresAt: shareLink
-      ? shareLink.expiresAt
-      : new Date(Date.now() + 24 * 60 * 60 * 1000),
+        : `${BACKEND_URL}/user/profilepic?id=${owner.profilepic._id || owner.profilepic}`
+      : null,
   };
+
+  // Check password protection
+  if (shareLink.hasPassword && shareLink.password) {
+    if (!password) {
+      return {
+        requiresPassword: true,
+        hasPassword: true,
+        title: shareLink.title || "Protected Vault Link",
+        owner: ownerInfo,
+        permission: shareLink.permission,
+        expiresAt: shareLink.expiresAt,
+        accessType: shareLink.accessType,
+        itemCount: shareLink.items?.length || 0,
+      };
+    }
+
+    const isValid = await argon2.verify(shareLink.password, password);
+    if (!isValid) {
+      const err = new Error("Invalid password for this shared link");
+      err.statusCode = 401;
+      throw err;
+    }
+  }
+
+  // Increment views asynchronously
+  ShareLink.updateOne({ _id: shareLink._id }, { $inc: { views: 1 } }).catch((e) =>
+    console.error("Async view increment error:", e)
+  );
+
+  // Enrich item metadata
+  let enrichedItems = shareLink.items || [];
+  if (enrichedItems.length > 0) {
+    const fileIds = enrichedItems.filter((i) => i.type === "file").map((i) => i.id);
+    const dirIds = enrichedItems.filter((i) => i.type === "directory").map((i) => i.id);
+
+    const [files, dirs] = await Promise.all([
+      fileIds.length > 0
+        ? File.find({ _id: { $in: fileIds } }).select("_id name size extension hasThumbnail").lean()
+        : [],
+      dirIds.length > 0
+        ? Directory.find({ _id: { $in: dirIds } }).select("_id name size").lean()
+        : [],
+    ]);
+
+    const fileMap = new Map(files.map((f) => [f._id.toString(), f]));
+    const dirMap = new Map(dirs.map((d) => [d._id.toString(), d]));
+
+    enrichedItems = enrichedItems.map((item) => {
+      if (item.type === "file") {
+        const meta = fileMap.get(item.id);
+        return {
+          ...item,
+          name: meta?.name || item.name,
+          size: meta?.size || item.size || 0,
+          extension: meta?.extension || item.extension || "",
+          hasThumbnail: meta?.hasThumbnail || false,
+        };
+      } else {
+        const meta = dirMap.get(item.id);
+        return {
+          ...item,
+          name: meta?.name || item.name,
+          size: meta?.size || item.size || 0,
+        };
+      }
+    });
+  }
+
+  return {
+    requiresPassword: false,
+    hasPassword: Boolean(shareLink.hasPassword),
+    title: shareLink.title || "",
+    owner: ownerInfo,
+    permission: shareLink.permission || ["read"],
+    items: enrichedItems,
+    expiresAt: shareLink.expiresAt,
+    accessType: shareLink.accessType || "restricted",
+    views: (shareLink.views || 0) + 1,
+    downloads: shareLink.downloads || 0,
+    maxDownloads: shareLink.maxDownloads,
+    createdAt: shareLink.createdAt,
+  };
+};
+
+export const verifyShareLinkPasswordLogic = async ({ token, password }) => {
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  const shareLink = await ShareLink.findOne({ token: hashedToken });
+
+  if (!shareLink) {
+    const err = new Error("Share link not found or has been revoked");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (!shareLink.isActive) {
+    const err = new Error("This share link has been disabled by its owner");
+    err.statusCode = 403;
+    throw err;
+  }
+
+  if (!shareLink.hasPassword || !shareLink.password) {
+    return { verified: true, message: "No password required" };
+  }
+
+  const isValid = await argon2.verify(shareLink.password, password);
+  if (!isValid) {
+    const err = new Error("Incorrect password");
+    err.statusCode = 401;
+    throw err;
+  }
+
+  return { verified: true, message: "Password verified successfully" };
+};
+
+export const downloadSharedFileLogic = async ({ token, itemId, password, res }) => {
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  const shareLink = await ShareLink.findOne({ token: hashedToken });
+
+  if (!shareLink) {
+    const err = new Error("Share link not found or has been revoked");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (!shareLink.isActive) {
+    const err = new Error("This shared link has been disabled");
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const now = new Date();
+  if (shareLink.expiresAt && new Date(shareLink.expiresAt) < now) {
+    const err = new Error("This shared link has expired");
+    err.statusCode = 410;
+    throw err;
+  }
+
+  if (shareLink.maxDownloads && shareLink.downloads >= shareLink.maxDownloads) {
+    const err = new Error("Download limit reached");
+    err.statusCode = 403;
+    throw err;
+  }
+
+  if (shareLink.hasPassword && shareLink.password) {
+    if (!password) {
+      const err = new Error("Password is required to download this file");
+      err.statusCode = 401;
+      throw err;
+    }
+    const isValid = await argon2.verify(shareLink.password, password);
+    if (!isValid) {
+      const err = new Error("Incorrect password");
+      err.statusCode = 401;
+      throw err;
+    }
+  }
+
+  const file = await File.findOne({ _id: itemId }).select("_id name size extension path userId").lean();
+  if (!file) {
+    const err = new Error("File not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Increment download count asynchronously
+  ShareLink.updateOne({ _id: shareLink._id }, { $inc: { downloads: 1 } }).catch((e) =>
+    console.error("Async download increment error:", e)
+  );
+
+  const s3Key = `${file._id}${file.extension}`;
+  const s3Params = {
+    Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+    Key: s3Key,
+  };
+
+  const command = new GetObjectCommand(s3Params);
+  const s3Response = await s3Client.send(command);
+
+  res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(file.name)}"`);
+  res.setHeader("Content-Type", s3Response.ContentType || "application/octet-stream");
+  if (file.size) {
+    res.setHeader("Content-Length", file.size);
+  }
+
+  s3Response.Body.pipe(res);
 };
 
 export const claimShareAccessLogic = async ({ token, userId, userRole }) => {
@@ -133,6 +518,19 @@ export const claimShareAccessLogic = async ({ token, userId, userRole }) => {
     throw err;
   }
 
+  if (!shareLink.isActive) {
+    const err = new Error("This share link has been disabled by its owner");
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const now = new Date();
+  if (shareLink.expiresAt && new Date(shareLink.expiresAt) < now) {
+    const err = new Error("This share link has expired");
+    err.statusCode = 410;
+    throw err;
+  }
+
   const sharedAccess = await SharedAccess.updateOne(
     {
       userId: shareLink.userId,
@@ -142,9 +540,7 @@ export const claimShareAccessLogic = async ({ token, userId, userRole }) => {
     {
       $set: {
         permission: shareLink.permission,
-        expiresAt: shareLink.expiresAt
-          ? shareLink.expiresAt
-          : new Date(Date.now() + 24 * 60 * 60 * 1000),
+        expiresAt: shareLink.expiresAt,
         items: shareLink.items || [],
       },
     },
@@ -155,7 +551,6 @@ export const claimShareAccessLogic = async ({ token, userId, userRole }) => {
 
   await cacheDel(`share:${shareLink.userId}:${userId}`);
 
-  // TODO: Validate token, check if user is not the owner, and upsert a SharedAccess record
   return {
     message: "Access granted successfully",
     access: { sharedAccess },
@@ -166,8 +561,90 @@ export const getSharedDrivesLogic = async ({ userId }) => {
   const sharedAccesses = await SharedAccess.find({ targetUserId: userId })
     .populate("userId", "name email profilepic rootDirId")
     .lean();
-  console.log(sharedAccesses);
 
-  // TODO: Fetch all SharedAccess records where targetUserId is the current user, and populate ownerId
-  return { sharedAccesses: sharedAccesses };
+  const dirIdsToFetch = [];
+  const fileIdsToFetch = [];
+
+  sharedAccesses.forEach((access) => {
+    const owner = access.userId;
+    if (!owner) return;
+    if (!access.items || access.items.length === 0) {
+      if (owner.rootDirId) {
+        dirIdsToFetch.push(owner.rootDirId);
+      }
+    } else {
+      access.items.forEach((item) => {
+        if (item.type === "directory") {
+          dirIdsToFetch.push(item.id);
+        } else if (item.type === "file") {
+          fileIdsToFetch.push(item.id);
+        }
+      });
+    }
+  });
+
+  let dirMetaMap = new Map();
+  if (dirIdsToFetch.length > 0) {
+    const dirs = await Directory.find({ _id: { $in: dirIdsToFetch } })
+      .select("_id size name provider")
+      .lean();
+    const populatedDirs = await populateDirectoryItemCounts(dirs);
+    dirMetaMap = new Map(populatedDirs.map((d) => [d._id.toString(), d]));
+  }
+
+  let fileMetaMap = new Map();
+  if (fileIdsToFetch.length > 0) {
+    const files = await File.find({ _id: { $in: fileIdsToFetch } })
+      .select("_id size extension hasThumbnail name provider")
+      .lean();
+    fileMetaMap = new Map(files.map((f) => [f._id.toString(), f]));
+  }
+
+  const enrichedAccesses = sharedAccesses.map((access) => {
+    const owner = access.userId;
+    if (!owner) return access;
+
+    if (!access.items || access.items.length === 0) {
+      const rootDirMeta = owner.rootDirId
+        ? dirMetaMap.get(owner.rootDirId.toString())
+        : null;
+      return {
+        ...access,
+        itemCount: rootDirMeta ? rootDirMeta.itemCount : 0,
+        items: rootDirMeta ? rootDirMeta.itemCount : 0,
+        filesCount: rootDirMeta ? rootDirMeta.filesCount : 0,
+        directoriesCount: rootDirMeta ? rootDirMeta.directoriesCount : 0,
+        size: rootDirMeta ? rootDirMeta.size || 0 : 0,
+      };
+    }
+
+    const enrichedItems = (access.items || []).map((item) => {
+      if (item.type === "directory") {
+        const meta = dirMetaMap.get(item.id.toString());
+        return {
+          ...item,
+          size: meta ? meta.size || 0 : 0,
+          itemCount: meta ? meta.itemCount : 0,
+          items: meta ? meta.itemCount : 0,
+          filesCount: meta ? meta.filesCount : 0,
+          directoriesCount: meta ? meta.directoriesCount : 0,
+        };
+      } else {
+        const meta = fileMetaMap.get(item.id.toString());
+        return {
+          ...item,
+          size: meta ? meta.size || 0 : 0,
+          extension: meta ? meta.extension : "",
+          hasThumbnail: meta ? meta.hasThumbnail : false,
+        };
+      }
+    });
+
+    return {
+      ...access,
+      items: enrichedItems,
+    };
+  });
+
+  return { sharedAccesses: enrichedAccesses };
 };

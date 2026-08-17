@@ -28,6 +28,7 @@ import Modal from "../ui/Modal";
 import AssetCard from "../dashboard/AssetCard";
 import FileDetailsModal from "../dashboard/FileDetailsModal";
 import PlanStatusBanner from "../dashboard/PlanStatusBanner";
+import SecureRelayView from "../relay/SecureRelayView";
 import { usePlan } from "../../context/PlanContext";
 import FileBrowserSkeleton from "./FileBrowserSkeleton";
 import {
@@ -1541,6 +1542,15 @@ export default function FileBrowser({ specialView }) {
   };
 
   const breadcrumbs = getBreadcrumbs();
+
+  if (specialView === "shared" && !folderId) {
+    return (
+      <div className="flex-1 flex flex-col relative">
+        <PlanStatusBanner />
+        <SecureRelayView openShareModal={openShareModal} />
+      </div>
+    );
+  }
 
   return (
     <div

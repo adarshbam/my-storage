@@ -13,6 +13,7 @@ import {
   VaultGitIcon,
 } from "../ui/VaultIcons";
 import ProfileMenu from "../ui/ProfileMenu";
+import NotificationBell from "../notifications/NotificationBell";
 import {
   Search,
   Bell,
@@ -505,10 +506,7 @@ export default function CommandBar({
         </div>
 
         {/* Notifications */}
-        <button className="relative p-2 text-white/50 hover:text-white transition-colors">
-          <Bell size={20} />
-          <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-danger-accent border-2 border-vault-surface rounded-full" />
-        </button>
+        <NotificationBell />
 
         {/* Profile */}
         <ProfileMenu

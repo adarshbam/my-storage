@@ -4,6 +4,7 @@ import { normalizePhoneNumber } from "../utils/phone.utils.js";
 import { generateOtp, hashOtp, hashPhoneNumber } from "../utils/crypto.utils.js";
 import { sendSms } from "../integrations/sms/sms.service.js";
 import { cacheGet, cacheSet, cacheDel, invalidateUserSessions } from "../databases/redis.js";
+import { securityPhoneVerified } from "./notification.service.js";
 
 const OTP_TTL_SECONDS = 600; // 10 minutes
 const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
@@ -156,6 +157,11 @@ export async function verifyPhoneOtpLogic({ userId, rawPhone, otp, defaultCountr
 
   // Invalidate Redis session cache so updated user is reflected immediately
   await invalidateUserSessions(userId.toString());
+
+  // Security notification state update
+  await securityPhoneVerified({ userId, phone: canonicalPhone }).catch((nErr) => {
+    console.warn("[PhoneVerification] Notification trigger error:", nErr.message);
+  });
 
   return {
     success: true,

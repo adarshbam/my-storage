@@ -238,7 +238,7 @@ export default function FileCard({
                 {formatSize(item.size)}
                 {` `}
                 {type === "directory" &&
-                  `${item.itemCount !== undefined ? item.itemCount : (item.files?.length || 0) + (item.directories?.length || 0)} items`}
+                  `${item.itemCount !== undefined ? item.itemCount : item.items !== undefined ? item.items : (item.filesCount !== undefined || item.directoriesCount !== undefined) ? (item.filesCount || 0) + (item.directoriesCount || 0) : (item.files?.length || 0) + (item.directories?.length || 0)} items`}
               </>
             )}
           </p>
@@ -250,7 +250,7 @@ export default function FileCard({
             (item.provider === "google_drive" || item.provider === "github")
               ? null
               : type === "directory"
-                ? `${item.itemCount !== undefined ? item.itemCount : (item.files?.length || 0) + (item.directories?.length || 0)} items`
+                ? `${item.itemCount !== undefined ? item.itemCount : item.items !== undefined ? item.items : (item.filesCount !== undefined || item.directoriesCount !== undefined) ? (item.filesCount || 0) + (item.directoriesCount || 0) : (item.files?.length || 0) + (item.directories?.length || 0)} items`
                 : formatSize(item.size)}
           </div>
           <div className="text-xs text-slate-400 text-right pr-4 truncate">

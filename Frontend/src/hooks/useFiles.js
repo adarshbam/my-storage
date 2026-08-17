@@ -50,8 +50,11 @@ export function useFiles({ folderId, specialView, isSearch, searchQuery, searchE
                 ownerEmail: owner.email,
                 provider: "shared_drive",
                 userId: owner._id,
-                itemCount: 0,
-                size: 0,
+                itemCount: access.itemCount ?? 0,
+                items: access.itemCount ?? access.items ?? 0,
+                filesCount: access.filesCount ?? 0,
+                directoriesCount: access.directoriesCount ?? 0,
+                size: access.size ?? 0,
               });
             } else {
               access.items.forEach((item) => {
@@ -63,7 +66,13 @@ export function useFiles({ folderId, specialView, isSearch, searchQuery, searchE
                   provider: item.provider || "local",
                   isShared: true,
                   ownerEmail: owner.email,
-                  size: 0,
+                  size: item.size ?? 0,
+                  itemCount: item.itemCount ?? 0,
+                  items: item.itemCount ?? item.items ?? 0,
+                  filesCount: item.filesCount ?? 0,
+                  directoriesCount: item.directoriesCount ?? 0,
+                  hasThumbnail: item.hasThumbnail,
+                  extension: item.extension,
                 };
                 if (item.type === "directory") {
                   dirs.push(mapped);

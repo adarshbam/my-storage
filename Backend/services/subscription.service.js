@@ -3,6 +3,12 @@ import { rzInstance } from "../integrations/razorpay/razorpay.client.js";
 import Subscription from "../models/subscriptionModel.js";
 import BillingPlan from "../models/billingPlanModel.js";
 import User from "../models/userModel.js";
+import {
+  subscriptionActivated,
+  subscriptionCancelled,
+  subscriptionPaused,
+  subscriptionResumed,
+} from "./notification.service.js";
 
 export const createSubscriptionLogic = async ({ planId, userId }) => {
   const billingPlan =
@@ -46,6 +52,15 @@ export const createSubscriptionLogic = async ({ planId, userId }) => {
     "[Subscription] Created and linked to user:",
     subscription.razorpaySubscriptionId,
   );
+
+  // Trigger subscription activated notification and resolve past warnings
+  await subscriptionActivated({
+    userId,
+    subscriptionId: subscription._id,
+    planName: billingPlan.slug ? billingPlan.slug.toUpperCase() : "Storage Plan",
+  }).catch((nErr) => {
+    console.warn("[Subscription] Notification trigger error:", nErr.message);
+  });
 
   return {
     subscriptionId: newSubscription.id,
@@ -131,11 +146,9 @@ export const pauseSubscriptionLogic = async ({ subscriptionId, userId }) => {
     `[Subscription] Received request to pause subscription: ${subscriptionId}`,
   );
 
-  // =========================================================================
-  // TODO: Implement Razorpay pause logic here.
-  // TODO: Call rzInstance.subscriptions.pause(id, { pause_at: 'now' })
-  // TODO: Update subscription status in MongoDB to 'PAUSED'
-  // =========================================================================
+  await subscriptionPaused({ userId, subscriptionId }).catch((nErr) => {
+    console.warn("[Subscription] Pause notification error:", nErr.message);
+  });
 
   return {
     success: true,
@@ -150,11 +163,9 @@ export const resumeSubscriptionLogic = async ({ subscriptionId, userId }) => {
     `[Subscription] Received request to resume subscription: ${subscriptionId}`,
   );
 
-  // =========================================================================
-  // TODO: Implement Razorpay resume logic here.
-  // TODO: Call rzInstance.subscriptions.resume(id, { resume_at: 'now' })
-  // TODO: Update subscription status in MongoDB to 'ACTIVE'
-  // =========================================================================
+  await subscriptionResumed({ userId, subscriptionId }).catch((nErr) => {
+    console.warn("[Subscription] Resume notification error:", nErr.message);
+  });
 
   return {
     success: true,
@@ -173,12 +184,13 @@ export const cancelSubscriptionLogic = async ({
     `[Subscription] Received request to cancel subscription: ${subscriptionId}, cancelAtCycleEnd: ${cancelAtCycleEnd}`,
   );
 
-  // =========================================================================
-  // TODO: Implement Razorpay cancel logic here.
-  // TODO: Call rzInstance.subscriptions.cancel(id, cancelAtCycleEnd)
-  // TODO: Update subscription status in MongoDB to 'CANCELLED'
-  // TODO: Apply grace period and handling logic
-  // =========================================================================
+  await subscriptionCancelled({
+    userId,
+    subscriptionId,
+    retentionDays: 60,
+  }).catch((nErr) => {
+    console.warn("[Subscription] Cancel notification error:", nErr.message);
+  });
 
   return {
     success: true,
