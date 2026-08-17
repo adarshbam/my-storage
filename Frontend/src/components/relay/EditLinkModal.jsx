@@ -93,21 +93,21 @@ export default function EditLinkModal({ isOpen, onClose, link, onUpdated }) {
         className="fixed inset-0 bg-black/80 backdrop-blur-md"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-lg bg-vault-surface border border-white/10 rounded-3xl p-6 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.8)] max-h-[90vh] overflow-y-auto custom-scrollbar">
+      <div className="relative z-10 w-full max-w-lg bg-white dark:bg-vault-surface text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 text-white/40 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all"
+          className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl transition-all"
         >
           <X size={16} />
         </button>
 
-        <h2 className="text-lg font-bold text-white uppercase tracking-tight mb-1 flex items-center gap-2">
-          <Key size={18} className="text-vault-emerald" />
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-1 flex items-center gap-2">
+          <Key size={18} className="text-accent-primary" />
           Edit Link Settings
         </h2>
-        <p className="text-xs text-white/50 mb-5">
+        <p className="text-xs text-slate-500 dark:text-white/50 mb-5">
           Modify permissions, password protection, and access rules for this relay node.
         </p>
 
@@ -115,7 +115,7 @@ export default function EditLinkModal({ isOpen, onClose, link, onUpdated }) {
           
           {/* Title / Alias */}
           <div>
-            <label className="block text-[11px] font-bold tracking-wider uppercase text-white/40 mb-1.5">
+            <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-white/40 mb-1.5">
               Custom Link Label (Optional)
             </label>
             <input
@@ -123,13 +123,13 @@ export default function EditLinkModal({ isOpen, onClose, link, onUpdated }) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Project Delivery Assets"
-              className="w-full px-3.5 py-2 bg-black/40 border border-white/10 text-white rounded-xl text-sm focus:border-vault-emerald outline-none transition-all"
+              className="w-full px-3.5 py-2 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl text-sm focus:border-accent-primary outline-none transition-all shadow-sm"
             />
           </div>
 
           {/* Security Clearance */}
           <div>
-            <label className="block text-[11px] font-bold tracking-wider uppercase text-white/40 mb-1.5">
+            <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-white/40 mb-1.5">
               Security Clearance
             </label>
             <select
@@ -138,7 +138,7 @@ export default function EditLinkModal({ isOpen, onClose, link, onUpdated }) {
                 setPermission(e.target.value);
                 setOwnerAgreed(false);
               }}
-              className="w-full px-3.5 py-2 bg-black/40 border border-white/10 text-white rounded-xl text-sm focus:border-vault-emerald outline-none transition-all cursor-pointer [&>option]:bg-vault-black"
+              className="w-full px-3.5 py-2 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl text-sm focus:border-accent-primary outline-none transition-all cursor-pointer [&>option]:bg-white dark:[&>option]:bg-vault-black shadow-sm"
             >
               <option value="read">Read Only (Standard)</option>
               <option value="write">Read & Write (Elevated)</option>
@@ -225,31 +225,31 @@ export default function EditLinkModal({ isOpen, onClose, link, onUpdated }) {
 
           {/* Expiry Date */}
           <div>
-            <label className="block text-[11px] font-bold tracking-wider uppercase text-white/40 mb-1.5">
+            <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-white/40 mb-1.5">
               Expiration Date
             </label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-vault-emerald pointer-events-none" size={15} />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-accent-primary pointer-events-none" size={15} />
               <input
                 type="date"
                 value={expiryDate}
                 onChange={(e) => setExpiryDate(e.target.value)}
                 min={new Date().toLocaleDateString('en-CA')}
-                className="w-full pl-9 pr-3 py-2 bg-black/40 border border-white/10 text-white rounded-xl text-sm focus:border-vault-emerald outline-none [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl text-sm focus:border-accent-primary outline-none cursor-pointer shadow-sm"
               />
             </div>
           </div>
 
           {/* Active Status Switch */}
-          <div className="flex items-center justify-between p-3 bg-black/20 border border-white/5 rounded-xl">
-            <span className="text-xs font-semibold text-white/70">Link Active Status</span>
+          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/5 rounded-xl">
+            <span className="text-xs font-semibold text-slate-700 dark:text-white/70">Link Active Status</span>
             <button
               type="button"
               onClick={() => setIsActive(!isActive)}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all border ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                 isActive
-                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                  : "bg-white/5 text-white/40 border-white/10"
+                  ? "bg-accent-soft text-accent-primary border-accent-border font-bold shadow-sm"
+                  : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/40 border-slate-200 dark:border-white/10"
               }`}
             >
               {isActive ? "Active (Accessible)" : "Disabled (Blocked)"}
@@ -261,7 +261,7 @@ export default function EditLinkModal({ isOpen, onClose, link, onUpdated }) {
             <button
               type="button"
               onClick={onClose}
-              className="w-1/3 py-2.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-xl text-xs font-bold transition-colors"
+              className="w-1/3 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white/60 hover:text-slate-900 dark:hover:text-white rounded-xl text-xs font-bold transition-colors"
             >
               Cancel
             </button>

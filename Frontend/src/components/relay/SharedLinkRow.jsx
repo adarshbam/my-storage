@@ -58,9 +58,9 @@ function getItemVisual(item, items = []) {
   if (singleItem.type === "directory") {
     return {
       Icon: Folder,
-      bg: "bg-vault-emerald/10",
-      text: "text-vault-emerald",
-      border: "border-vault-emerald/25",
+      bg: "bg-accent-soft",
+      text: "text-accent-primary",
+      border: "border-accent-border",
     };
   }
 
@@ -171,9 +171,9 @@ export default function SharedLinkRow({
   return (
     <div className={`group px-4 py-3.5 rounded-2xl border transition-all duration-200 flex items-center justify-between gap-4 ${
       isActive
-        ? "bg-vault-surface/70 hover:bg-vault-surface border-white/5 hover:border-vault-emerald/25"
-        : "bg-vault-surface/30 border-white/5 opacity-60 hover:opacity-100"
-    }`}>
+        ? "bg-white dark:bg-vault-surface/70 hover:bg-slate-50 dark:hover:bg-vault-surface border-slate-200 dark:border-white/5 hover:border-accent-border shadow-sm hover:shadow-md"
+        : "bg-slate-50 dark:bg-vault-surface/30 border-slate-200 dark:border-white/5 opacity-60 hover:opacity-100"
+    } vault-card-interactive text-slate-900 dark:text-white`}>
       {/* Left: Icon & Title & Meta */}
       <div className="flex items-center gap-3.5 min-w-0 flex-1">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${visual.bg} ${visual.text} ${visual.border}`}>
@@ -182,11 +182,11 @@ export default function SharedLinkRow({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-sm text-white truncate" title={displayName}>
+            <span className="font-bold text-sm text-slate-900 dark:text-white truncate" title={displayName}>
               {displayName}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-white/40 font-medium mt-0.5">
+          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-white/40 font-medium mt-0.5">
             <span>{formattedSize}</span>
             <span>•</span>
             <span>{formattedDate}</span>
@@ -197,60 +197,38 @@ export default function SharedLinkRow({
       {/* Middle: Badges */}
       <div className="hidden md:flex items-center gap-1.5 shrink-0">
         {isExpired ? (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
             <Clock size={10} /> Expired
           </span>
         ) : link.isActive ? (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
             <Globe size={10} /> Active
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-white/5 text-white/40 border border-white/10">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/40 border border-slate-200 dark:border-white/10">
             <Ban size={10} /> Disabled
           </span>
         )}
 
         {link.accessType === "public" ? (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/20">
             Public
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/10 text-purple-300 border border-purple-500/20">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
             Restricted
           </span>
         )}
 
-        {link.hasPassword && (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/20">
-            <Lock size={10} /> Password
-          </span>
-        )}
-
-        {permissionType === "owner" ? (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-danger-accent/10 text-danger-accent border border-danger-accent/20">
-            Admin
-          </span>
-        ) : permissionType === "write" ? (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-media-accent/10 text-media-accent border border-media-accent/20">
-            Write
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-document-accent/10 text-document-accent border border-document-accent/20">
-            Read
-          </span>
-        )}
-      </div>
-
-      {/* Metrics */}
-      <div className="hidden lg:flex items-center gap-4 text-xs text-white/40 font-mono shrink-0">
-        <div className="flex items-center gap-1" title="Views">
-          <Eye size={12} className="text-white/30" />
-          <span>{link.views || 0}</span>
-        </div>
-        <div className="flex items-center gap-1" title="Downloads">
-          <Download size={12} className="text-white/30" />
-          <span>{link.downloads || 0}</span>
-        </div>
+        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+          permissionType === "owner"
+            ? "bg-danger-accent/10 text-danger-accent border border-danger-accent/20"
+            : permissionType === "write"
+            ? "bg-media-accent/10 text-media-accent border border-media-accent/20"
+            : "bg-document-accent/10 text-document-accent border border-document-accent/20"
+        }`}>
+          {permissionType === "owner" ? "Admin" : permissionType === "write" ? "Write" : "Read"}
+        </span>
       </div>
 
       {/* Right Actions */}
@@ -259,8 +237,8 @@ export default function SharedLinkRow({
           onClick={handleCopy}
           className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 border ${
             copied
-              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-              : "bg-vault-emerald/10 hover:bg-vault-emerald/20 text-vault-emerald border-vault-emerald/25"
+              ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/40"
+              : "bg-accent-soft hover:bg-accent-soft/80 text-accent-primary border-accent-border"
           }`}
         >
           {copied ? <Check size={13} /> : <Copy size={13} />}
@@ -271,15 +249,15 @@ export default function SharedLinkRow({
           onClick={() => onToggleActive(link._id)}
           className={`p-1.5 rounded-xl border transition-all ${
             link.isActive
-              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
-              : "bg-white/5 text-white/30 border-white/10"
+              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
+              : "bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-white/30 border-slate-200 dark:border-white/10"
           }`}
           title={link.isActive ? "Disable Link" : "Activate Link"}
         >
           <div className={`w-5 h-3 rounded-full p-0.5 transition-colors ${
-            link.isActive ? "bg-emerald-500" : "bg-white/20"
+            link.isActive ? "bg-emerald-500" : "bg-slate-300 dark:bg-white/20"
           }`}>
-            <div className={`w-2 h-2 rounded-full bg-black transition-transform ${
+            <div className={`w-2 h-2 rounded-full bg-white dark:bg-black transition-transform ${
               link.isActive ? "translate-x-2" : "translate-x-0"
             }`} />
           </div>
@@ -287,7 +265,7 @@ export default function SharedLinkRow({
 
         <button
           onClick={handleOpenLink}
-          className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white border border-white/10 transition-colors"
+          className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 transition-colors"
           title="Open in new tab"
         >
           <ExternalLink size={13} />
@@ -297,7 +275,7 @@ export default function SharedLinkRow({
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="p-1.5 text-white/40 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
           >
             <MoreVertical size={15} />
           </button>
@@ -308,15 +286,15 @@ export default function SharedLinkRow({
                 className="fixed inset-0 z-20"
                 onClick={() => setMenuOpen(false)}
               />
-              <div className="absolute right-0 top-7 z-30 w-44 bg-vault-panel/95 backdrop-blur-xl border border-white/10 rounded-2xl p-1.5 shadow-2xl space-y-0.5 animate-fade-in">
+              <div className="absolute right-0 top-7 z-30 w-44 bg-white dark:bg-vault-panel/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-1.5 shadow-2xl space-y-0.5 animate-fade-in text-slate-900 dark:text-white">
                 <button
                   onClick={() => {
                     setMenuOpen(false);
                     onEdit(link);
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors text-left"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors text-left"
                 >
-                  <Edit2 size={13} className="text-vault-emerald" />
+                  <Edit2 size={13} className="text-accent-primary" />
                   Edit Settings
                 </button>
                 <button
@@ -324,7 +302,7 @@ export default function SharedLinkRow({
                     setMenuOpen(false);
                     onShowQR(shareUrl, displayName);
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors text-left"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors text-left"
                 >
                   <QrCode size={13} className="text-pulse-accent" />
                   Show QR Code

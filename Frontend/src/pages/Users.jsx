@@ -222,13 +222,13 @@ const Users = () => {
             </button>
 
             <div>
-              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1">
+              <div className="flex items-center gap-2 text-accent-primary text-xs font-bold uppercase tracking-widest mb-1">
                 <UsersIcon size={14} /> Vault System Administration
               </div>
-              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+              <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
                 System Users
               </h1>
-              <p className="text-white/50 text-sm font-medium mt-1">
+              <p className="text-slate-500 dark:text-white/50 text-sm font-medium mt-1">
                 Manage user access, role permissions, and active session controls.
               </p>
             </div>
@@ -237,7 +237,7 @@ const Users = () => {
           <button
             onClick={fetchUsers}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-bold transition-colors self-start sm:self-auto"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white text-xs font-bold transition-colors self-start sm:self-auto"
           >
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             <span>Refresh List</span>
@@ -246,11 +246,11 @@ const Users = () => {
 
         {/* ── CURRENT USER / OWNER HIGHLIGHT CARD ── */}
         {currentUser && (
-          <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-vault-surface via-slate-900 to-slate-950 border border-emerald-500/30 shadow-[0_0_40px_rgba(16,185,129,0.1)] relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="rounded-3xl p-6 sm:p-8 bg-white dark:bg-gradient-to-br dark:from-vault-surface dark:via-slate-900 dark:to-slate-950 border border-slate-200 dark:border-accent-border/30 shadow-md relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-6 text-slate-900 dark:text-white">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-accent-soft/20 rounded-full blur-3xl pointer-events-none" />
 
             <div className="flex items-center gap-5 relative z-10 w-full sm:w-auto">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0 bg-emerald-500/10 border-2 border-emerald-500/40 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0 bg-accent-soft border-2 border-accent-border flex items-center justify-center shadow-accent-glow-sm">
                 {profilePicUrl ? (
                   <img
                     src={profilePicUrl}
@@ -262,7 +262,7 @@ const Users = () => {
                     }}
                   />
                 ) : (
-                  <span className="text-xl sm:text-2xl font-black text-emerald-400 select-none">
+                  <span className="text-xl sm:text-2xl font-black text-accent-primary select-none">
                     {currentUser?.name?.[0]?.toUpperCase() ||
                       currentUser?.email?.[0]?.toUpperCase() ||
                       "U"}
@@ -272,7 +272,7 @@ const Users = () => {
 
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                     {currentUser.name}
                   </h2>
                   <span
@@ -283,15 +283,15 @@ const Users = () => {
                     {currentUser.role?.toUpperCase()}
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-white/50 font-medium">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-white/50 font-medium">
                   {currentUser.email}
                 </p>
               </div>
             </div>
 
-            <div className="relative z-10 flex items-center gap-3 w-full sm:w-auto justify-end border-t sm:border-t-0 border-white/10 pt-4 sm:pt-0">
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="relative z-10 flex items-center gap-3 w-full sm:w-auto justify-end border-t sm:border-t-0 border-slate-200 dark:border-white/10 pt-4 sm:pt-0">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-soft border border-accent-border text-accent-primary text-xs font-bold uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />
                 Current User
               </span>
             </div>
@@ -345,12 +345,12 @@ const Users = () => {
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="rounded-3xl p-6 bg-vault-surface/80 border border-white/10 backdrop-blur-xl hover:border-emerald-500/30 shadow-xl transition-all duration-300 flex flex-col justify-between space-y-6 relative overflow-hidden group"
+                      className="rounded-3xl p-6 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 backdrop-blur-xl hover:border-accent-border shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-6 relative overflow-hidden group text-slate-900 dark:text-white"
                     >
                       {/* Top Row: User Avatar & Basic Info */}
                       <div>
                         <div className="flex items-start gap-4 mb-4">
-                          <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-emerald-500/40 transition-colors">
+                          <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center group-hover:border-accent-border transition-colors">
                             {userAvatarUrl ? (
                               <img
                                 src={userAvatarUrl}
@@ -363,7 +363,7 @@ const Users = () => {
                                 }}
                               />
                             ) : (
-                              <span className="text-lg font-bold text-white/80 select-none">
+                              <span className="text-lg font-bold text-slate-800 dark:text-white/80 select-none">
                                 {user?.name?.[0]?.toUpperCase() ||
                                   user?.email?.[0]?.toUpperCase() ||
                                   "U"}
@@ -372,10 +372,10 @@ const Users = () => {
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-lg font-bold text-white truncate tracking-tight">
+                            <h4 className="text-lg font-bold text-slate-900 dark:text-white truncate tracking-tight">
                               {user.name}
                             </h4>
-                            <p className="text-xs text-white/40 truncate font-medium mt-0.5">
+                            <p className="text-xs text-slate-500 dark:text-white/40 truncate font-medium mt-0.5">
                               {user.email}
                             </p>
                           </div>
@@ -616,15 +616,15 @@ const Users = () => {
                       onClick={() => handleRoleUpdate(role, userToEditRole._id)}
                       className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left ${
                         isCurrentRole
-                          ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
-                          : "border-white/10 bg-white/5 hover:bg-white/10 text-white/80"
+                          ? "border-accent-border bg-accent-soft text-accent-primary"
+                          : "border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-800 dark:text-white/80"
                       }`}
                     >
                       <div>
                         <span className="text-sm font-bold tracking-wide uppercase block">
                           {role}
                         </span>
-                        <span className="text-xs text-white/50">
+                        <span className="text-xs text-slate-500 dark:text-white/50">
                           {role === "OWNER"
                             ? "Full system control & billing configuration"
                             : role === "ADMIN"
@@ -634,7 +634,7 @@ const Users = () => {
                             : "Standard vault storage access"}
                         </span>
                       </div>
-                      {isCurrentRole && <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />}
+                      {isCurrentRole && <CheckCircle2 size={18} className="text-accent-primary shrink-0" />}
                     </button>
                   );
                 })}
@@ -643,7 +643,7 @@ const Users = () => {
               <div className="flex justify-end">
                 <button
                   onClick={closeEditRoleModal}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors border border-slate-200 dark:border-white/10"
                 >
                   Cancel
                 </button>

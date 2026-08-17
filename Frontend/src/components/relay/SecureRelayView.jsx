@@ -382,16 +382,16 @@ export default function SecureRelayView({ openShareModal }) {
     <div className="w-full flex-1 flex flex-col space-y-6 pb-20">
       
       {/* ── Header Section (Matching Design Reference) ── */}
-      <div className="bg-vault-surface/90 border border-white/5 rounded-3xl p-6 sm:p-7 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+      <div className="bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/5 rounded-3xl p-6 sm:p-7 shadow-sm text-slate-900 dark:text-white">
         
         {/* Top Tag & Title Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             {/* LINK MANAGEMENT / INCOMING RELAYS BADGE */}
             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold tracking-widest uppercase mb-2 shadow-sm ${
               activeTab === "outgoing"
-                ? "bg-relay-accent/10 border border-relay-accent/20 text-relay-accent shadow-[0_0_12px_rgba(126,134,255,0.15)]"
-                : "bg-purple-500/10 border border-purple-500/20 text-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.15)]"
+                ? "bg-relay-accent/10 border border-relay-accent/20 text-relay-accent"
+                : "bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400"
             }`}>
               <Share2 size={13} />
               <span>{activeTab === "outgoing" ? "Link Management" : "Incoming Relays"}</span>
@@ -399,17 +399,17 @@ export default function SecureRelayView({ openShareModal }) {
 
             {/* Title & Count */}
             <div className="flex items-baseline gap-3">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
                 {activeTab === "outgoing" ? "Your Shared Links" : "Shared With You"}
               </h1>
-              <span className="text-sm font-semibold text-white/40 font-mono">
+              <span className="text-sm font-semibold text-slate-400 dark:text-white/40 font-mono">
                 {loadingLinks || loadingIncoming ? "..." : `${currentCount} items`}
               </span>
             </div>
           </div>
 
           {/* Tab Switcher: Your Shared Links vs Shared With Me */}
-          <div className="flex items-center bg-black/40 border border-white/10 rounded-2xl p-1 shrink-0">
+          <div className="flex items-center bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl p-1 shrink-0">
             <button
               onClick={() => {
                 setActiveTab("outgoing");
@@ -417,13 +417,13 @@ export default function SecureRelayView({ openShareModal }) {
               }}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 ${
                 activeTab === "outgoing"
-                  ? "bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.3)]"
-                  : "text-white/50 hover:text-white"
+                  ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
+                  : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <span>Shared Links</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                activeTab === "outgoing" ? "bg-black/20 text-black" : "bg-white/10 text-white/60"
+                activeTab === "outgoing" ? "bg-black/20 text-current" : "bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-white/60"
               }`}>
                 {links.length}
               </span>
@@ -435,40 +435,64 @@ export default function SecureRelayView({ openShareModal }) {
               }}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 ${
                 activeTab === "incoming"
-                  ? "bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.3)]"
-                  : "text-white/50 hover:text-white"
+                  ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
+                  : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <span>Shared With Me</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                activeTab === "incoming" ? "bg-black/20 text-black" : "bg-white/10 text-white/60"
+                activeTab === "incoming" ? "bg-black/20 text-current" : "bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-white/60"
               }`}>
                 {effectiveIncomingDrives.length}
               </span>
             </button>
           </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Quick Refresh Button */}
+            <button
+              onClick={refreshCurrentTab}
+              disabled={loading}
+              className="p-2.5 rounded-2xl bg-slate-100 dark:bg-vault-surface border border-slate-200 dark:border-white/10 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/5 transition-all shadow-sm active:scale-95 disabled:opacity-40"
+              title="Refresh Data"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            </button>
+
+            {/* Create Link CTA */}
+            {activeTab === "outgoing" && (
+              <Button
+                onClick={() => setCreateModalOpen(true)}
+                className="flex-1 sm:flex-initial py-2.5 px-4 text-xs font-bold shadow-accent-glow flex items-center justify-center gap-2 shrink-0"
+              >
+                <Plus size={15} />
+                <span>New Link</span>
+              </Button>
+            )}
+          </div>
         </div>
+      </div>
 
         {/* ── Controls Row: Search + Status/Clearance Filter Pills + Sort + View Switch (Active on BOTH tabs) ── */}
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 pt-4 border-t border-white/5">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-3xl p-3 sm:p-4 shadow-sm backdrop-blur-xl">
           
           {/* Search Input */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1">
             <Search
               size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40"
             />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={activeTab === "outgoing" ? "Search files, links, or tokens..." : "Search shared vaults, owners, or files..."}
-              className="w-full pl-10 pr-9 py-2.5 bg-black/40 border border-white/10 text-white placeholder-white/30 rounded-2xl text-xs sm:text-sm focus:border-vault-emerald focus:ring-1 focus:ring-vault-emerald/30 outline-none transition-all"
+              className="w-full pl-10 pr-9 py-2.5 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 rounded-2xl text-xs sm:text-sm focus:border-accent-primary focus:ring-1 focus:ring-accent-border/30 outline-none transition-all shadow-sm"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30 hover:text-slate-900 dark:hover:text-white"
               >
                 <X size={14} />
               </button>
@@ -480,13 +504,13 @@ export default function SecureRelayView({ openShareModal }) {
             
             {/* Filter Pills Group for Outgoing Links */}
             {activeTab === "outgoing" ? (
-              <div className="flex items-center bg-black/40 border border-white/10 rounded-2xl p-1">
+              <div className="flex items-center bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl p-1">
                 <button
                   onClick={() => setStatusFilter("all")}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                     statusFilter === "all"
-                      ? "bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.3)]"
-                      : "text-white/50 hover:text-white"
+                      ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
+                      : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   All Links
@@ -495,8 +519,8 @@ export default function SecureRelayView({ openShareModal }) {
                   onClick={() => setStatusFilter("active")}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                     statusFilter === "active"
-                      ? "bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.3)]"
-                      : "text-white/50 hover:text-white"
+                      ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
+                      : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   Active
@@ -505,8 +529,8 @@ export default function SecureRelayView({ openShareModal }) {
                   onClick={() => setStatusFilter("protected")}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                     statusFilter === "protected"
-                      ? "bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.3)]"
-                      : "text-white/50 hover:text-white"
+                      ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
+                      : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   Protected
@@ -515,8 +539,8 @@ export default function SecureRelayView({ openShareModal }) {
                   onClick={() => setStatusFilter("expired")}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                     statusFilter === "expired"
-                      ? "bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.3)]"
-                      : "text-white/50 hover:text-white"
+                      ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
+                      : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   Expired
@@ -524,13 +548,13 @@ export default function SecureRelayView({ openShareModal }) {
               </div>
             ) : (
               /* Filter Pills Group for Incoming Shared Drives */
-              <div className="flex items-center bg-black/40 border border-white/10 rounded-2xl p-1">
+              <div className="flex items-center bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl p-1">
                 <button
                   onClick={() => setIncomingFilter("all")}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                     incomingFilter === "all"
-                      ? "bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.3)]"
-                      : "text-white/50 hover:text-white"
+                      ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
+                      : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   All Relays
@@ -567,16 +591,15 @@ export default function SecureRelayView({ openShareModal }) {
                 </button>
               </div>
             )}
-
             {/* Sort Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-black/40 hover:bg-black/60 border border-white/10 text-white/80 hover:text-white text-xs font-semibold transition-all"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-100 dark:bg-black/40 hover:bg-slate-200 dark:hover:bg-black/60 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white text-xs font-semibold transition-all shadow-sm"
               >
-                <ArrowUpDown size={13} className="text-vault-emerald" />
+                <ArrowUpDown size={13} className="text-accent-primary" />
                 <span>{sortLabels[sortBy] || "Sort"}</span>
-                <ChevronDown size={13} className="text-white/40" />
+                <ChevronDown size={13} className="text-slate-400 dark:text-white/40" />
               </button>
 
               {sortDropdownOpen && (
@@ -585,7 +608,7 @@ export default function SecureRelayView({ openShareModal }) {
                     className="fixed inset-0 z-20"
                     onClick={() => setSortDropdownOpen(false)}
                   />
-                  <div className="absolute right-0 top-11 z-30 w-44 bg-vault-panel/95 backdrop-blur-xl border border-white/10 rounded-2xl p-1.5 shadow-2xl space-y-0.5 animate-fade-in">
+                  <div className="absolute right-0 top-11 z-30 w-44 bg-white dark:bg-vault-panel/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-1.5 shadow-2xl space-y-0.5 animate-fade-in text-slate-900 dark:text-white">
                     {Object.entries(sortLabels).map(([key, label]) => (
                       <button
                         key={key}
@@ -595,8 +618,8 @@ export default function SecureRelayView({ openShareModal }) {
                         }}
                         className={`w-full px-3 py-2 text-xs font-medium rounded-xl text-left transition-colors ${
                           sortBy === key
-                            ? "bg-vault-emerald/20 text-vault-emerald font-bold"
-                            : "text-white/70 hover:text-white hover:bg-white/5"
+                            ? "bg-accent-soft text-accent-primary font-bold"
+                            : "text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
                         }`}
                       >
                         {label}
@@ -608,13 +631,13 @@ export default function SecureRelayView({ openShareModal }) {
             </div>
 
             {/* Grid / List View Toggle */}
-            <div className="flex items-center bg-black/40 border border-white/10 rounded-2xl p-1">
+            <div className="flex items-center bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl p-1">
               <button
                 onClick={() => setViewMode("list")}
                 className={`p-2 rounded-xl transition-all ${
                   viewMode === "list"
-                    ? "bg-white/10 text-white"
-                    : "text-white/40 hover:text-white"
+                    ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm"
+                    : "text-slate-500 dark:text-white/40 hover:text-slate-900 dark:hover:text-white"
                 }`}
                 title="List view"
               >
@@ -624,20 +647,16 @@ export default function SecureRelayView({ openShareModal }) {
                 onClick={() => setViewMode("grid")}
                 className={`p-2 rounded-xl transition-all ${
                   viewMode === "grid"
-                    ? "bg-white/10 text-white"
-                    : "text-white/40 hover:text-white"
+                    ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm"
+                    : "text-slate-500 dark:text-white/40 hover:text-slate-900 dark:hover:text-white"
                 }`}
                 title="Grid view"
               >
-                <LayoutGrid size={15} />
+                <Grid size={15} />
               </button>
             </div>
-
           </div>
-
         </div>
-
-      </div>
 
       {/* ── Main Content Area ── */}
       {activeTab === "outgoing" ? (
@@ -670,8 +689,8 @@ export default function SecureRelayView({ openShareModal }) {
             </div>
           ) : filteredLinks.length === 0 ? (
             /* Empty State */
-            <div className="flex flex-col items-center justify-center text-center p-12 bg-vault-surface/40 border border-dashed border-white/10 rounded-3xl space-y-4">
-              <div className="w-16 h-16 rounded-3xl bg-vault-emerald/10 text-vault-emerald border border-vault-emerald/20 flex items-center justify-center shadow-[0_0_20px_rgba(0,212,165,0.15)]">
+            <div className="flex flex-col items-center justify-center text-center p-12 bg-white/60 dark:bg-vault-surface/40 border border-dashed border-slate-200 dark:border-white/10 rounded-3xl space-y-4 shadow-sm">
+              <div className="w-16 h-16 rounded-3xl bg-accent-soft text-accent-primary border border-accent-border flex items-center justify-center shadow-accent-glow-sm">
                 <Share2 size={28} />
               </div>
               <div>
@@ -973,7 +992,7 @@ export default function SecureRelayView({ openShareModal }) {
       {/* ── Floating Action Button (+) ── */}
       <button
         onClick={() => openShareModal && openShareModal([])}
-        className="fixed bottom-7 right-7 z-30 w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.5)] hover:scale-105 active:scale-95 transition-all duration-300 group"
+        className="fixed bottom-7 right-7 z-30 w-14 h-14 rounded-full bg-accent-primary hover:opacity-90 text-accent-foreground flex items-center justify-center shadow-accent-glow hover:scale-105 active:scale-95 transition-all duration-300 group"
         title="Create New Share Link"
       >
         <Plus size={26} className="group-hover:rotate-90 transition-transform duration-300 font-bold" />

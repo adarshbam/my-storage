@@ -258,7 +258,7 @@ export default function SharedAccessClaim() {
           /* Unlocked Content / Shared Vault View */
           <div className="flex flex-col">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-accent-soft text-accent-primary border border-accent-border flex items-center justify-center shrink-0 shadow-accent-glow-sm">
                 <Share2 size={22} />
               </div>
               <div className="overflow-hidden">
@@ -275,7 +275,7 @@ export default function SharedAccessClaim() {
 
             {/* Owner Details Card */}
             <div className="bg-black/30 border border-white/5 rounded-2xl p-3 mb-5 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-vault-emerald/10 text-vault-emerald border border-vault-emerald/20 flex items-center justify-center overflow-hidden">
+              <div className="w-9 h-9 rounded-xl bg-accent-soft text-accent-primary border border-accent-border flex items-center justify-center overflow-hidden">
                 {linkData?.owner?.profilepic ? (
                   <img
                     src={linkData.owner.profilepic}
@@ -323,7 +323,7 @@ export default function SharedAccessClaim() {
                       {item.type === "file" && (
                         <button
                           onClick={() => handleDownload(item.id || item._id)}
-                          className="px-2.5 py-1.5 rounded-lg bg-vault-emerald/10 hover:bg-vault-emerald/20 text-vault-emerald text-xs font-semibold flex items-center gap-1 transition-colors shrink-0"
+                          className="px-2.5 py-1.5 rounded-lg bg-accent-soft hover:bg-accent-soft/80 text-accent-primary text-xs font-semibold flex items-center gap-1 transition-colors shrink-0"
                           title="Download file"
                         >
                           <Download size={13} />
@@ -352,7 +352,7 @@ export default function SharedAccessClaim() {
             <Button
               onClick={handleClaim}
               disabled={claiming}
-              className="w-full py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(16,185,129,0.25)]"
+              className="w-full py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-accent-glow"
             >
               {claiming ? (
                 <>

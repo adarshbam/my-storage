@@ -203,42 +203,42 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
         className="fixed inset-0 bg-black/85 backdrop-blur-md"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-3xl bg-vault-surface border border-white/10 rounded-3xl p-6 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.9)] max-h-[88vh] overflow-y-auto custom-scrollbar">
+      <div className="relative z-10 w-full max-w-3xl bg-white dark:bg-vault-surface text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl max-h-[88vh] overflow-y-auto custom-scrollbar">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 text-white/40 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all"
+          className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl transition-all"
         >
           <X size={18} />
         </button>
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-2xl border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+          <div className="p-2.5 bg-accent-soft text-accent-primary rounded-2xl border border-accent-border shadow-accent-glow-sm">
             <Share2 size={24} />
           </div>
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-white uppercase">
+            <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">
               {selectedItems.length > 0 ? "Share Selected Items" : "Share Entire Vault"}
             </h2>
           </div>
         </div>
 
-        <p className="text-xs sm:text-sm text-white/50 mb-5">
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-white/50 mb-5">
           Generate an encrypted relay link with custom permissions, password protection, and expiration timers.
         </p>
 
         {/* Selected Items Chip Box */}
         {selectedItems.length > 0 ? (
-          <div className="mb-6 bg-black/40 border border-white/5 rounded-2xl p-3">
+          <div className="mb-6 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-2xl p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold tracking-wider uppercase text-white/40">
+              <span className="text-[10px] font-bold tracking-wider uppercase text-slate-500 dark:text-white/40">
                 Selected Items ({selectedItems.length}):
               </span>
               <button
                 onClick={() => setSelectedItems([])}
-                className="text-[10px] text-white/40 hover:text-danger-accent transition-colors"
+                className="text-[10px] text-slate-400 hover:text-danger-accent transition-colors"
               >
                 Clear (Share Whole Vault)
               </button>
@@ -247,17 +247,17 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
               {selectedItems.map((item) => (
                 <div
                   key={item._id || item.id}
-                  className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 border border-white/10 rounded-xl text-xs"
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-900 dark:text-white shadow-sm"
                 >
-                  <span className={item.type === "directory" ? "text-vault-emerald" : "text-white/70"}>
+                  <span className={item.type === "directory" ? "text-accent-primary" : "text-slate-600 dark:text-white/70"}>
                     {item.type === "directory" ? "📁" : "📄"}
                   </span>
-                  <span className="text-white truncate max-w-[140px]" title={item.name}>
+                  <span className="text-slate-900 dark:text-white truncate max-w-[140px]" title={item.name}>
                     {item.name}
                   </span>
                   <button
                     onClick={() => handleRemoveItem(item._id || item.id)}
-                    className="p-0.5 text-white/30 hover:text-danger-accent"
+                    className="p-0.5 text-slate-400 hover:text-danger-accent"
                   >
                     <X size={12} />
                   </button>
@@ -266,9 +266,9 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
             </div>
           </div>
         ) : (
-          <div className="mb-6 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-3 flex items-center gap-3">
-            <Layers size={18} className="text-vault-emerald shrink-0" />
-            <span className="text-xs text-white/70">
+          <div className="mb-6 bg-accent-soft/30 border border-accent-border/40 rounded-2xl p-3 flex items-center gap-3">
+            <Layers size={18} className="text-accent-primary shrink-0" />
+            <span className="text-xs text-slate-700 dark:text-white/70">
               <strong>Entire Vault Node:</strong> All root files and folders will be accessible under the specified clearance.
             </span>
           </div>
@@ -278,7 +278,7 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
           
           {/* Left Column: Configure & Generate */}
           <div className="space-y-4">
-            <h3 className="font-bold text-vault-emerald text-xs uppercase tracking-widest border-b border-vault-emerald/20 pb-2 flex items-center gap-2">
+            <h3 className="font-bold text-accent-primary text-xs uppercase tracking-widest border-b border-accent-border/30 pb-2 flex items-center gap-2">
               <Key size={14} />
               Configure Relay Node
             </h3>
@@ -308,13 +308,13 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Project Delivery Assets"
-                className="w-full px-3 py-2 bg-black/40 border border-white/10 text-white rounded-xl text-xs focus:border-vault-emerald outline-none transition-all"
+                className="w-full px-3.5 py-2 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl text-xs focus:border-accent-primary outline-none transition-all shadow-sm"
               />
             </div>
 
             {/* Security Clearance */}
             <div>
-              <label className="block text-[11px] font-bold tracking-wider uppercase text-white/40 mb-1">
+              <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-white/40 mb-1">
                 Security Clearance
               </label>
               <select
@@ -324,7 +324,7 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
                   setSelectedPermission(e.target.value);
                   setOwnerAgreed(false);
                 }}
-                className="w-full px-3 py-2 bg-black/40 border border-white/10 text-white rounded-xl text-xs focus:border-vault-emerald outline-none transition-all cursor-pointer [&>option]:bg-vault-black disabled:opacity-40"
+                className="w-full px-3.5 py-2 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl text-xs focus:border-accent-primary outline-none transition-all cursor-pointer [&>option]:bg-white dark:[&>option]:bg-vault-black disabled:opacity-40 shadow-sm"
               >
                 <option value="read">Read Only (Standard)</option>
                 <option value="write">Read & Write (Elevated)</option>
@@ -463,10 +463,10 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
                     key={preset.id}
                     type="button"
                     onClick={() => setExpiryPreset(preset.id)}
-                    className={`py-1 px-2 rounded-xl text-[11px] font-semibold border transition-all ${
+                    className={`py-1.5 px-2.5 rounded-xl text-[11px] font-semibold border transition-all ${
                       expiryPreset === preset.id
-                        ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                        : "bg-black/30 text-white/40 border-white/5 hover:border-white/10"
+                        ? "bg-accent-soft text-accent-primary border-accent-border font-bold shadow-sm"
+                        : "bg-slate-100 dark:bg-black/30 text-slate-600 dark:text-white/40 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
                     }`}
                   >
                     {preset.label}
@@ -476,13 +476,13 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
 
               {expiryPreset === "custom" && (
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-vault-emerald pointer-events-none" size={14} />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-accent-primary pointer-events-none" size={14} />
                   <input
                     type="date"
                     value={customExpiryDate}
                     onChange={(e) => setCustomExpiryDate(e.target.value)}
                     min={new Date().toLocaleDateString('en-CA')}
-                    className="w-full pl-9 pr-3 py-1.5 bg-black/40 border border-white/10 text-white rounded-xl text-xs focus:border-vault-emerald outline-none [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl text-xs focus:border-accent-primary outline-none cursor-pointer shadow-sm"
                   />
                 </div>
               )}
@@ -492,21 +492,21 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
             <Button
               onClick={handleCreateShareLink}
               disabled={generatingLink || (selectedPermission === "owner" && !ownerAgreed) || !hasFeature("share_links") || isNoPlan}
-              className="w-full py-2.5 text-xs font-bold shadow-[0_0_20px_rgba(16,185,129,0.25)]"
+              className="w-full py-2.5 text-xs font-bold shadow-accent-glow"
             >
               {generatingLink ? "Generating Secure Tokens..." : "Generate Relay Link"}
             </Button>
 
             {/* Generated Link Result State */}
             {generatedLink && (
-              <div className="mt-3 p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl space-y-2.5 animate-fade-in shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+              <div className="mt-3 p-3.5 bg-accent-soft/30 border border-accent-border/40 rounded-2xl space-y-2.5 animate-fade-in shadow-sm">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-bold tracking-widest uppercase text-vault-emerald">
+                  <p className="text-[11px] font-bold tracking-widest uppercase text-accent-primary">
                     Relay Link Ready
                   </p>
                   <button
                     onClick={() => setShowQRPreview(!showQRPreview)}
-                    className="text-[10px] text-white/50 hover:text-white flex items-center gap-1"
+                    className="text-[10px] text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white flex items-center gap-1"
                   >
                     <QrCode size={12} /> {showQRPreview ? "Hide QR" : "Show QR"}
                   </button>
@@ -517,14 +517,14 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
                     type="text"
                     readOnly
                     value={generatedLink}
-                    className="flex-1 bg-black/60 border border-vault-emerald/20 text-white font-mono text-xs rounded-xl px-3 py-2 focus:outline-none"
+                    className="flex-1 bg-white dark:bg-black/60 border border-slate-200 dark:border-accent-border/30 text-slate-900 dark:text-white font-mono text-xs rounded-xl px-3 py-2 focus:outline-none shadow-sm"
                   />
                   <button
                     onClick={() => copyToClipboard(generatedLink)}
                     className={`px-3.5 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all flex items-center gap-1 shrink-0 ${
                       copiedLink
-                        ? "bg-emerald-500 text-black"
-                        : "bg-vault-emerald hover:bg-vault-emerald/90 text-black"
+                        ? "bg-emerald-500 text-white"
+                        : "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-accent-glow-sm"
                     }`}
                   >
                     {copiedLink ? <Check size={12} /> : <Copy size={12} />}

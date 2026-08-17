@@ -62,9 +62,9 @@ function getItemVisual(item, items = []) {
   if (singleItem.type === "directory") {
     return {
       Icon: Folder,
-      bg: "bg-vault-emerald/10",
-      text: "text-vault-emerald",
-      border: "border-vault-emerald/25",
+      bg: "bg-accent-soft",
+      text: "text-accent-primary",
+      border: "border-accent-border",
       typeLabel: "Folder",
     };
   }
@@ -182,15 +182,15 @@ export default function SharedLinkCard({
   return (
     <div className={`relative group rounded-3xl p-5 transition-all duration-300 flex flex-col justify-between border ${
       isActive 
-        ? "bg-vault-surface/90 hover:bg-vault-surface border-white/5 hover:border-vault-emerald/30 shadow-[0_4px_24px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_rgba(0,212,165,0.08)]"
-        : "bg-vault-surface/40 border-white/5 opacity-70 hover:opacity-100"
-    }`}>
+        ? "bg-white dark:bg-vault-surface/90 hover:bg-slate-50 dark:hover:bg-vault-surface border-slate-200 dark:border-white/5 hover:border-accent-border shadow-sm hover:shadow-md"
+        : "bg-slate-50 dark:bg-vault-surface/40 border-slate-200 dark:border-white/5 opacity-70 hover:opacity-100"
+    } vault-card-interactive text-slate-900 dark:text-white`}>
       
       {/* Top Section: Icon, Name & Menu */}
       <div>
         <div className="flex items-start justify-between gap-3 mb-3.5">
           {/* File/Type Icon Badge */}
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${visual.bg} ${visual.text} ${visual.border} shadow-[0_0_15px_rgba(0,0,0,0.2)]`}>
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${visual.bg} ${visual.text} ${visual.border} shadow-sm`}>
             <VisualIcon size={22} />
           </div>
 
@@ -198,7 +198,7 @@ export default function SharedLinkCard({
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="p-1.5 text-white/40 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+              className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
               title="More options"
             >
               <MoreVertical size={16} />
@@ -210,15 +210,15 @@ export default function SharedLinkCard({
                   className="fixed inset-0 z-20"
                   onClick={() => setMenuOpen(false)}
                 />
-                <div className="absolute right-0 top-8 z-30 w-44 bg-vault-panel/95 backdrop-blur-xl border border-white/10 rounded-2xl p-1.5 shadow-2xl space-y-0.5 animate-fade-in">
+                <div className="absolute right-0 top-8 z-30 w-44 bg-white dark:bg-vault-panel/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-1.5 shadow-2xl space-y-0.5 animate-fade-in text-slate-900 dark:text-white">
                   <button
                     onClick={() => {
                       setMenuOpen(false);
                       onEdit(link);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors text-left"
                   >
-                    <Edit2 size={13} className="text-vault-emerald" />
+                    <Edit2 size={13} className="text-accent-primary" />
                     Edit Settings
                   </button>
                   <button
@@ -226,7 +226,7 @@ export default function SharedLinkCard({
                       setMenuOpen(false);
                       onShowQR(shareUrl, displayName);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors text-left"
                   >
                     <QrCode size={13} className="text-pulse-accent" />
                     Show QR Code
@@ -346,13 +346,13 @@ export default function SharedLinkCard({
             onClick={handleCopy}
             className={`flex-1 py-2 px-3.5 rounded-xl text-xs font-bold transition-all duration-300 flex items-center justify-center gap-2 border ${
               copied
-                ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
-                : "bg-vault-emerald/10 hover:bg-vault-emerald/20 text-vault-emerald border-vault-emerald/25 hover:border-vault-emerald/40"
+                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/40 shadow-sm"
+                : "bg-accent-soft hover:bg-accent-soft/80 text-accent-primary border-accent-border"
             }`}
           >
             {copied ? (
               <>
-                <Check size={14} className="text-emerald-300" />
+                <Check size={14} className="text-emerald-600 dark:text-emerald-300" />
                 <span>Copied</span>
               </>
             ) : (
@@ -368,15 +368,15 @@ export default function SharedLinkCard({
             onClick={() => onToggleActive(link._id)}
             className={`p-2 rounded-xl border transition-all duration-300 flex items-center justify-center ${
               link.isActive
-                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/20"
-                : "bg-white/5 text-white/30 border-white/10 hover:bg-white/10"
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/20"
+                : "bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-white/30 border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10"
             }`}
             title={link.isActive ? "Disable Link" : "Activate Link"}
           >
             <div className={`w-6 h-3.5 rounded-full p-0.5 transition-colors ${
-              link.isActive ? "bg-emerald-500" : "bg-white/20"
+              link.isActive ? "bg-emerald-500" : "bg-slate-300 dark:bg-white/20"
             }`}>
-              <div className={`w-2.5 h-2.5 rounded-full bg-black transition-transform ${
+              <div className={`w-2.5 h-2.5 rounded-full bg-white dark:bg-black transition-transform ${
                 link.isActive ? "translate-x-2.5" : "translate-x-0"
               }`} />
             </div>
@@ -385,7 +385,7 @@ export default function SharedLinkCard({
           {/* External Open / Preview Button */}
           <button
             onClick={handleOpenLink}
-            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white border border-white/10 transition-all flex items-center justify-center shrink-0"
+            className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 transition-all flex items-center justify-center shrink-0"
             title="Open in new tab"
           >
             <ExternalLink size={14} />

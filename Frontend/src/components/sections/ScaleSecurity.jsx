@@ -14,9 +14,9 @@ const FEATURES = [
     icon: ShieldCheck,
     title: "Military-Grade Encryption",
     desc: "AES-256 bit encryption for all your files at rest and in transit. Your keys, your rules. Zero-knowledge architecture means even we can't see your data.",
-    accentClass: "text-emerald-500",
-    bgClass: "bg-emerald-500/10",
-    borderClass: "border-emerald-500/30",
+    accentClass: "text-accent-primary",
+    bgClass: "bg-accent-soft",
+    borderClass: "border-accent-border",
   },
   {
     id: "search",

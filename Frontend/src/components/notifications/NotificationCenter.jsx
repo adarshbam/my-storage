@@ -72,21 +72,21 @@ export default function NotificationCenter({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.96 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed lg:absolute top-16 sm:top-20 right-2 sm:right-6 lg:right-0 z-[130] w-[calc(100vw-1rem)] sm:w-[460px] max-h-[85vh] flex flex-col rounded-3xl bg-[#091512]/95 dark:bg-[#030d0a]/95 border border-white/10 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden"
+            className="fixed lg:absolute top-16 sm:top-20 right-2 sm:right-6 lg:right-0 z-[130] w-[calc(100vw-1rem)] sm:w-[460px] max-h-[85vh] flex flex-col rounded-3xl bg-white/98 dark:bg-[#030d0a]/95 text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-2xl overflow-hidden"
           >
             {/* Header */}
-            <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between gap-2 bg-gradient-to-b from-white/[0.04] to-transparent">
+            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-white/10 flex items-center justify-between gap-2 bg-slate-50/60 dark:bg-white/[0.04]">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <div className="w-8 h-8 rounded-xl bg-accent-soft border border-accent-border flex items-center justify-center text-accent-primary">
                   <Bell size={16} />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-white tracking-tight">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
                       Notifications
                     </h3>
                     {unreadCount > 0 && (
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 animate-pulse">
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-accent-soft text-accent-primary border border-accent-border animate-pulse">
                         {unreadCount} new
                       </span>
                     )}
@@ -99,7 +99,7 @@ export default function NotificationCenter({
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllAsRead}
-                    className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-1 transition-all"
+                    className="p-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 text-xs font-semibold flex items-center gap-1 transition-all"
                     title="Mark all as read"
                   >
                     <CheckCheck size={14} />
@@ -110,7 +110,7 @@ export default function NotificationCenter({
                 {notifications.length > 0 && (
                   <button
                     onClick={dismissAll}
-                    className="p-1.5 rounded-xl bg-white/5 hover:bg-rose-500/15 hover:border-rose-500/30 text-white/50 hover:text-rose-400 border border-white/10 text-xs font-semibold flex items-center gap-1 transition-all"
+                    className="p-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-rose-500/15 hover:border-rose-500/30 text-slate-500 dark:text-white/50 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-white/10 text-xs font-semibold flex items-center gap-1 transition-all"
                     title="Clear all notifications"
                   >
                     <Trash2 size={14} />
@@ -119,7 +119,7 @@ export default function NotificationCenter({
 
                 <button
                   onClick={onClose}
-                  className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white border border-white/10 transition-all"
+                  className="p-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 dark:text-white/50 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 transition-all"
                   title="Close notifications"
                 >
                   <X size={16} />
@@ -128,7 +128,7 @@ export default function NotificationCenter({
             </div>
 
             {/* Filter Tabs Bar */}
-            <div className="px-3 sm:px-4 py-2.5 border-b border-white/5 flex items-center gap-1.5 overflow-x-auto custom-scrollbar no-scrollbar bg-black/20">
+            <div className="px-3 sm:px-4 py-2.5 border-b border-slate-100 dark:border-white/5 flex items-center gap-1.5 overflow-x-auto custom-scrollbar no-scrollbar bg-slate-50 dark:bg-black/20">
               {filterTabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = filter === tab.id;
@@ -138,14 +138,14 @@ export default function NotificationCenter({
                     onClick={() => setFilter(tab.id)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all ${
                       isActive
-                        ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.2)]"
-                        : "bg-transparent text-white/50 hover:text-white hover:bg-white/5 border border-transparent"
+                        ? "bg-accent-soft border border-accent-border text-accent-primary shadow-accent-glow-sm"
+                        : "bg-transparent text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent"
                     }`}
                   >
                     <Icon size={13} />
                     <span>{tab.label}</span>
                     {tab.count !== null && tab.count !== undefined && (
-                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/30 text-emerald-200">
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-accent-soft text-accent-primary">
                         {tab.count}
                       </span>
                     )}

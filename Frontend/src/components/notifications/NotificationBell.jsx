@@ -45,15 +45,15 @@ export default function NotificationBell({ className = "" }) {
       {/* Bell Trigger Button */}
       <button
         onClick={toggleOpen}
-        className={`relative p-2.5 rounded-2xl border transition-all duration-200 ${
+        className={`relative p-2 rounded-xl border transition-all duration-200 ${
           isOpen
-            ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.25)]"
-            : "bg-white/[0.03] hover:bg-white/[0.08] border-white/10 hover:border-white/20 text-white/70 hover:text-white"
+            ? "bg-accent-soft border-accent-border text-accent-primary shadow-accent-glow-sm"
+            : "bg-transparent hover:bg-slate-100 dark:hover:bg-white/[0.08] border-transparent hover:border-slate-200 dark:hover:border-white/10 text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white"
         }`}
         title="Notifications"
         aria-label="Open notifications"
       >
-        <Bell size={19} />
+        <Bell size={18} />
 
         {/* Live Unread Badge */}
         {unreadCount > 0 && (

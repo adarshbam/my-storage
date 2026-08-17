@@ -138,10 +138,10 @@ export default function CommandBar({
       label: "Share Vault",
       icon: Share2,
       onClick: () => guardAction(openShareModal, false),
-      color: "#00D4A5", // Emerald
-      hoverBg: "hover:bg-[rgba(0,212,165,0.1)]",
-      hoverText: "hover:text-vault-emerald",
-      glowHover: "hover:shadow-[0_0_15px_rgba(0,212,165,0.2)]",
+      color: "var(--accent-primary)",
+      hoverBg: "hover:bg-accent-soft",
+      hoverText: "hover:text-accent-primary",
+      glowHover: "hover:shadow-accent-glow-sm",
     },
     {
       label: "Upload Asset",
@@ -176,14 +176,14 @@ export default function CommandBar({
     <header className="h-[64px] shrink-0 bg-white/95 dark:bg-vault-surface/95 backdrop-blur-3xl border-b border-slate-200 dark:border-white/10 z-50 flex items-center justify-between px-3 sm:px-6 sticky top-0 shadow-sm">
       {/* Mobile Search Overlay */}
       {mobileSearchOpen && (
-        <div className="absolute top-0 left-0 right-0 bg-[#030706] z-[10000] border-b border-vault-emerald/20 sm:hidden transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+        <div className="absolute top-0 left-0 right-0 bg-white dark:bg-[#030706] z-[10000] border-b border-slate-200 dark:border-white/10 sm:hidden transition-all duration-300 shadow-xl">
           <div className="flex items-center px-4 h-[64px] gap-3">
             <button
               onClick={() => {
                 setMobileSearchOpen(false);
                 setShowFilters(false);
               }}
-              className="text-white/50 hover:text-white p-1 active:scale-95 transition-transform"
+              className="text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white p-1 active:scale-95 transition-transform"
             >
               <X size={24} />
             </button>
@@ -207,15 +207,15 @@ export default function CommandBar({
                     setShowFilters(false);
                   }
                 }}
-                className="w-full bg-transparent border-none outline-none text-white px-2 placeholder:text-white/30 text-lg font-medium"
+                className="w-full bg-transparent border-none outline-none text-slate-900 dark:text-white px-2 placeholder:text-slate-400 dark:placeholder:text-white/30 text-lg font-medium"
               />
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`p-2 rounded-xl transition-all active:scale-95 ${
                 showFilters
-                  ? "bg-vault-emerald/20 text-vault-emerald border border-vault-emerald/30 shadow-[0_0_15px_rgba(0,212,165,0.25)]"
-                  : "text-white/50 hover:text-white bg-white/5 border border-transparent"
+                  ? "bg-accent-soft text-accent-primary border border-accent-border shadow-accent-glow-sm"
+                  : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 border border-transparent"
               }`}
             >
               <svg
@@ -235,17 +235,17 @@ export default function CommandBar({
 
           {/* Mobile Filter Panel */}
           {showFilters && (
-            <div className="px-5 pb-6 pt-3 border-t border-white/[0.06] bg-[#030706]">
-              <h3 className="text-[10px] font-bold tracking-widest text-vault-emerald uppercase mb-4 pb-2 border-b border-vault-emerald/10 flex items-center justify-between">
+            <div className="px-5 pb-6 pt-3 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#030706]">
+              <h3 className="text-[10px] font-bold tracking-widest text-accent-primary uppercase mb-4 pb-2 border-b border-accent-border/30 flex items-center justify-between">
                 <span>Advanced Search Filters</span>
-                <span className="text-[9px] text-white/30 font-medium lowercase">
+                <span className="text-[9px] text-slate-500 dark:text-white/30 font-medium lowercase">
                   Active filters apply on enter
                 </span>
               </h3>
               <div className="space-y-4">
                 {/* Scope */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-white/40 uppercase tracking-widest">
                     Search Scope
                   </label>
                   <div className="flex gap-2">
@@ -254,8 +254,8 @@ export default function CommandBar({
                       onClick={() => setSearchScope("current")}
                       className={`flex-1 text-xs py-2.5 rounded-xl border font-bold transition-all duration-200 ${
                         searchScope === "current"
-                          ? "bg-vault-emerald/10 border-vault-emerald/50 text-vault-emerald shadow-[inset_0_0_12px_rgba(0,212,165,0.1)]"
-                          : "bg-black/35 border-white/5 text-white/40 hover:text-white"
+                          ? "bg-accent-soft border-accent-primary text-accent-primary shadow-sm"
+                          : "bg-white dark:bg-black/35 border-slate-200 dark:border-white/5 text-slate-600 dark:text-white/40 hover:text-slate-900 dark:hover:text-white"
                       }`}
                     >
                       Current Context
@@ -265,8 +265,8 @@ export default function CommandBar({
                       onClick={() => setSearchScope("global")}
                       className={`flex-1 text-xs py-2.5 rounded-xl border font-bold transition-all duration-200 ${
                         searchScope === "global"
-                          ? "bg-vault-emerald/10 border-vault-emerald/50 text-vault-emerald shadow-[inset_0_0_12px_rgba(0,212,165,0.1)]"
-                          : "bg-black/35 border-white/5 text-white/40 hover:text-white"
+                          ? "bg-accent-soft border-accent-primary text-accent-primary shadow-sm"
+                          : "bg-white dark:bg-black/35 border-slate-200 dark:border-white/5 text-slate-600 dark:text-white/40 hover:text-slate-900 dark:hover:text-white"
                       }`}
                     >
                       Global Vault
@@ -277,7 +277,7 @@ export default function CommandBar({
                 {/* File Type & Size Row */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-white/40 uppercase tracking-widest">
                       File Extension
                     </label>
                     <input
@@ -285,17 +285,17 @@ export default function CommandBar({
                       placeholder="e.g. pdf, txt, png"
                       value={searchExt}
                       onChange={(e) => setSearchExt(e.target.value)}
-                      className="w-full bg-black/35 border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-vault-emerald/30 focus:bg-black/60 transition-all placeholder:text-white/20 font-semibold"
+                      className="w-full bg-white dark:bg-black/35 border border-slate-200 dark:border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white outline-none focus:border-accent-primary transition-all placeholder:text-slate-400 dark:placeholder:text-white/20 font-semibold shadow-sm"
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-white/40 uppercase tracking-widest">
                       Maximum Size
                     </label>
                     <select
                       value={searchSize}
                       onChange={(e) => setSearchSize(e.target.value)}
-                      className="w-full bg-black/35 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-vault-emerald/30 focus:bg-black/60 transition-all font-semibold [&>option]:bg-[#020d0a] [&>option]:text-white"
+                      className="w-full bg-white dark:bg-black/35 border border-slate-200 dark:border-white/5 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white outline-none focus:border-accent-primary transition-all font-semibold [&>option]:bg-white dark:[&>option]:bg-[#020d0a] shadow-sm"
                     >
                       <option value="">Any Size</option>
                       <option value="1">Under 1 MB</option>
@@ -318,7 +318,7 @@ export default function CommandBar({
                     setMobileSearchOpen(false);
                     setShowFilters(false);
                   }}
-                  className="w-full mt-2 py-3 rounded-xl bg-vault-emerald text-black text-xs font-black tracking-widest uppercase active:scale-98 transition-transform shadow-[0_4px_20px_rgba(0,212,165,0.25)] hover:shadow-[0_4px_25px_rgba(0,212,165,0.4)]"
+                  className="w-full mt-2 py-3 rounded-xl bg-accent-primary text-accent-foreground text-xs font-black tracking-widest uppercase active:scale-98 transition-transform shadow-accent-glow hover:opacity-95"
                 >
                   Execute Search
                 </button>
@@ -399,30 +399,30 @@ export default function CommandBar({
 
           {/* Filter Dropdown */}
           {showFilters && (
-            <div className="absolute top-full sm:top-[calc(100%+8px)] left-0 mt-2 sm:mt-0 w-[100vw] sm:w-full -ml-4 sm:ml-0 bg-[#01140f]/95 backdrop-blur-xl border-y sm:border border-vault-emerald/30 sm:rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-50 p-4">
-              <h3 className="text-xs font-bold tracking-widest text-vault-emerald uppercase mb-4 border-b border-vault-emerald/20 pb-2">
+            <div className="absolute top-full sm:top-[calc(100%+8px)] left-0 mt-2 sm:mt-0 w-[100vw] sm:w-full -ml-4 sm:ml-0 bg-white/95 dark:bg-vault-surface/95 backdrop-blur-xl border-y sm:border border-slate-200 dark:border-white/10 sm:rounded-2xl shadow-2xl z-50 p-4 text-slate-900 dark:text-white">
+              <h3 className="text-xs font-bold tracking-widest text-accent-primary uppercase mb-4 border-b border-slate-200 dark:border-white/10 pb-2">
                 Advanced Search
               </h3>
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                  <label className="text-xs text-white/50 w-20">Scope</label>
+                  <label className="text-xs text-slate-500 dark:text-white/50 w-20">Scope</label>
                   <div className="flex gap-2 flex-1 w-full">
                     <button
                       onClick={() => setSearchScope("current")}
-                      className={`flex-1 text-xs py-1.5 rounded-md border transition-all ${searchScope === "current" ? "bg-vault-emerald/10 border-vault-emerald text-vault-emerald" : "bg-black/40 border-white/10 text-white/50 hover:text-white"}`}
+                      className={`flex-1 text-xs py-1.5 rounded-xl border transition-all ${searchScope === "current" ? "bg-accent-soft border-accent-primary text-accent-primary font-bold shadow-sm" : "bg-slate-100 dark:bg-black/40 border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
                     >
                       Current Context
                     </button>
                     <button
                       onClick={() => setSearchScope("global")}
-                      className={`flex-1 text-xs py-1.5 rounded-md border transition-all ${searchScope === "global" ? "bg-vault-emerald/10 border-vault-emerald text-vault-emerald" : "bg-black/40 border-white/10 text-white/50 hover:text-white"}`}
+                      className={`flex-1 text-xs py-1.5 rounded-xl border transition-all ${searchScope === "global" ? "bg-accent-soft border-accent-primary text-accent-primary font-bold shadow-sm" : "bg-slate-100 dark:bg-black/40 border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
                     >
                       Global Vault
                     </button>
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                  <label className="text-xs text-white/50 w-20">
+                  <label className="text-xs text-slate-500 dark:text-white/50 w-20">
                     Type (Ext)
                   </label>
                   <input
@@ -430,15 +430,15 @@ export default function CommandBar({
                     placeholder="e.g. pdf, txt"
                     value={searchExt}
                     onChange={(e) => setSearchExt(e.target.value)}
-                    className="w-full sm:flex-1 bg-black/40 border border-white/10 rounded-md px-3 py-1.5 text-xs text-white outline-none focus:border-vault-emerald/50"
+                    className="w-full sm:flex-1 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white outline-none focus:border-accent-primary"
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                  <label className="text-xs text-white/50 w-20">Max Size</label>
+                  <label className="text-xs text-slate-500 dark:text-white/50 w-20">Max Size</label>
                   <select
                     value={searchSize}
                     onChange={(e) => setSearchSize(e.target.value)}
-                    className="w-full sm:flex-1 bg-black/40 border border-white/10 rounded-md px-3 py-1.5 text-xs text-white outline-none focus:border-vault-emerald/50 [&>option]:bg-vault-black"
+                    className="w-full sm:flex-1 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white outline-none focus:border-accent-primary [&>option]:bg-white dark:[&>option]:bg-vault-black"
                   >
                     <option value="">Any Size</option>
                     <option value="1">Under 1 MB</option>

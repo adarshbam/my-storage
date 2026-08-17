@@ -18,7 +18,7 @@ export default function FileDetailsModal({ item, onClose }) {
 
   // Environment styling
   let envClass =
-    "text-vault-emerald bg-vault-emerald/10 border-vault-emerald/30";
+    "text-accent-primary bg-accent-soft border-accent-border";
   if (item.isTrash)
     envClass = "text-danger-accent bg-danger-accent/10 border-danger-accent/30";
   else if (provider === "google_drive" || provider === "shared_drive")
@@ -30,15 +30,15 @@ export default function FileDetailsModal({ item, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md bg-vault-surface/90 border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
+      <div className="w-full max-w-md bg-white dark:bg-vault-surface text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/5 bg-white/5">
-          <h2 className="text-sm font-bold tracking-widest text-white/70 uppercase">
+        <div className="flex items-center justify-between p-4 px-6 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5">
+          <h2 className="text-xs font-bold tracking-widest text-slate-700 dark:text-white/70 uppercase">
             Asset Details
           </h2>
           <button
             onClick={onClose}
-            className="p-1.5 text-white/40 hover:text-white bg-black/40 hover:bg-white/10 rounded-lg transition-all"
+            className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all"
           >
             <X size={16} />
           </button>
@@ -65,7 +65,7 @@ export default function FileDetailsModal({ item, onClose }) {
                   className="text-creative-accent drop-shadow-[0_0_15px_rgba(198,92,255,0.4)]"
                 />
               ) : (
-                <div className="text-vault-emerald drop-shadow-[0_0_15px_rgba(0,212,165,0.4)]">
+                <div className="text-accent-primary drop-shadow-[0_0_15px_var(--accent-glow)]">
                   <svg
                     width="40"
                     height="40"
@@ -243,25 +243,20 @@ export default function FileDetailsModal({ item, onClose }) {
             </div>
           )}
 
-          <div className="flex items-center gap-3 pt-2 mt-2 border-t border-white/5">
+          <div className="flex items-center gap-3 pt-2 mt-2 border-t border-slate-100 dark:border-white/5">
             <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center border ${item.isTrash ? "bg-danger-accent/10 border-danger-accent/20" : "bg-vault-emerald/10 border-vault-emerald/20"}`}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center border ${item.isTrash ? "bg-danger-accent/10 border-danger-accent/20" : "bg-accent-soft border-accent-border"}`}
             >
               <Shield
                 size={14}
                 className={
-                  item.isTrash ? "text-danger-accent" : "text-vault-emerald"
+                  item.isTrash ? "text-danger-accent" : "text-accent-primary"
                 }
               />
             </div>
             <div className="flex-1">
               <p
-                className="text-[10px] uppercase font-bold tracking-wider"
-                style={{
-                  color: item.isTrash
-                    ? "rgba(255, 90, 122, 0.5)"
-                    : "rgba(0, 212, 165, 0.5)",
-                }}
+                className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-white/40"
               >
                 {item.isTrash ? "Status" : "Security"}
               </p>
@@ -274,9 +269,9 @@ export default function FileDetailsModal({ item, onClose }) {
                   <>
                     <EncryptionBadgeIcon
                       size={12}
-                      className="text-vault-emerald"
+                      className="text-accent-primary"
                     />
-                    <span className="text-sm font-mono text-vault-emerald">
+                    <span className="text-sm font-mono text-accent-primary">
                       AES-256 Encrypted
                     </span>
                   </>

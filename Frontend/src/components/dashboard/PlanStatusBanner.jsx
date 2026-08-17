@@ -1,85 +1,69 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  Sparkles,
+  ArrowRight,
+  CheckCircle2,
+  AlertTriangle,
+  Zap,
+} from "lucide-react";
 import { usePlan } from "../../context/PlanContext";
-import { useAuth } from "../../context/AuthContext";
-import { Sparkles, AlertTriangle, ArrowRight, CheckCircle2, ShieldAlert } from "lucide-react";
-import PhoneVerificationModal from "../auth/PhoneVerificationModal";
-import { getUser } from "../../lib/utils";
+import { SERVER_URL } from "../../lib/api";
 
 export default function PlanStatusBanner() {
-  const { user, setUser } = useAuth();
-  const {
-    isNoSubscription,
-    isNoPlan,
-    canUseFreeTrial,
-    daysUntilPurge,
-    activateFreeTrial,
-  } = usePlan();
+  const { planData, isNoPlan, isTrialActive, trialDaysRemaining, refetchPlan } =
+    usePlan();
   const [activating, setActivating] = useState(false);
-  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
-  const [successMsg, setSuccessMsg] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
 
-  const noSub = isNoSubscription || isNoPlan;
-  if (!noSub) return null;
+  // If user has a valid paid active subscription or trial, don't show the intrusive full blocking banner
+  // but if trial is active, show a subtle reminder of days remaining.
+  if (!isNoPlan && !isTrialActive) return null;
+
+  // Determine if free trial has ever been used
+  const canUseFreeTrial = isNoPlan && planData?.trialUsed !== true;
 
   const handleActivateTrial = async () => {
-    if (!user?.phoneVerified) {
-      setPhoneModalOpen(true);
-      return;
-    }
-
     setActivating(true);
-    setErrorMsg("");
-    setSuccessMsg("");
-    const res = await activateFreeTrial();
-    if (res.success) {
-      setSuccessMsg(res.message || "30-Day Free Trial Activated!");
-      await getUser(setUser);
-    } else {
-      setErrorMsg(res.error || "Failed to activate Free Trial");
+    try {
+      const res = await fetch(`${SERVER_URL}/plans/activate-trial`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        await refetchPlan();
+      } else {
+        alert(data.error || "Failed to activate free trial");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error activating free trial");
+    } finally {
+      setActivating(false);
     }
-    setActivating(false);
-  };
-
-  const handlePhoneVerificationSuccess = async () => {
-    await getUser(setUser);
-    setPhoneModalOpen(false);
-    // Proceed to trial activation
-    setActivating(true);
-    setErrorMsg("");
-    setSuccessMsg("");
-    const res = await activateFreeTrial();
-    if (res.success) {
-      setSuccessMsg(res.message || "30-Day Free Trial Activated!");
-      await getUser(setUser);
-    } else {
-      setErrorMsg(res.error || "Failed to activate Free Trial");
-    }
-    setActivating(false);
   };
 
   return (
-    <div className="w-full mb-6 relative overflow-hidden rounded-2xl border border-white/10 backdrop-blur-xl transition-all duration-300 shadow-2xl">
+    <div className="w-full mb-6 relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-white/90 dark:bg-vault-surface/90 backdrop-blur-xl transition-all duration-300 shadow-md">
       {canUseFreeTrial ? (
         /* Free Trial Available Banner */
-        <div className="relative p-4 sm:p-5 bg-gradient-to-r from-vault-emerald/15 via-[#00d4a5]/10 to-transparent border-l-4 border-l-vault-emerald flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="relative p-4 sm:p-5 bg-gradient-to-r from-accent-soft via-accent-soft/30 to-transparent border-l-4 border-l-accent-primary flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-slate-900 dark:text-white">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-vault-emerald/20 border border-vault-emerald/40 flex items-center justify-center text-vault-emerald shrink-0 shadow-[0_0_15px_rgba(0,212,165,0.3)]">
+            <div className="w-10 h-10 rounded-xl bg-accent-soft border border-accent-border flex items-center justify-center text-accent-primary shrink-0 shadow-accent-glow-sm">
               <Sparkles size={20} className="animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-sm sm:text-base font-bold text-white tracking-wide">
+                <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-wide">
                   Storage Subscription Required (Read-Only Mode)
                 </h4>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-vault-emerald/20 text-vault-emerald border border-vault-emerald/30">
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-accent-soft text-accent-primary border border-accent-border">
                   Free Trial Available
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-white/60 mt-0.5">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-white/60 mt-0.5">
                 You currently have no active storage subscription. Start your{" "}
-                <span className="text-vault-emerald font-semibold">
+                <span className="text-accent-primary font-semibold">
                   30-Day Free Trial
                 </span>{" "}
                 with 5 GB vault storage, full uploads, and cloud sync.
@@ -91,10 +75,10 @@ export default function PlanStatusBanner() {
             <button
               onClick={handleActivateTrial}
               disabled={activating}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-vault-emerald to-[#00d4a5] hover:opacity-90 active:scale-95 text-vault-black font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(0,212,165,0.4)] transition-all disabled:opacity-50"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent-primary hover:opacity-90 active:scale-95 text-accent-foreground font-bold text-xs sm:text-sm shadow-accent-glow transition-all disabled:opacity-50"
             >
               {activating ? (
-                <div className="w-4 h-4 border-2 border-vault-black border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
                   <CheckCircle2 size={16} />
@@ -104,32 +88,31 @@ export default function PlanStatusBanner() {
             </button>
             <Link
               to="/dashboard/billing"
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 text-xs sm:text-sm font-medium transition-all"
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 text-xs sm:text-sm font-medium transition-all"
             >
               View Plans <ArrowRight size={14} />
             </Link>
           </div>
         </div>
-      ) : (
-        /* Free Trial Used -> Urgent Purge Warning Banner */
-        <div className="relative p-4 sm:p-5 bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-transparent border-l-4 border-l-amber-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      ) : isNoPlan ? (
+        /* No Plan & Trial Already Used Banner */
+        <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border-l-4 border-l-amber-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.3)]">
-              <ShieldAlert size={20} />
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-500 shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+              <AlertTriangle size={20} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-sm sm:text-base font-bold text-white tracking-wide">
-                  Account in Read-Only Mode (No Active Subscription)
+                <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-wide">
+                  Account in Read-Only Mode
                 </h4>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                  {daysUntilPurge} Days Until Storage Purge
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30">
+                  Trial Expired
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-white/60 mt-0.5">
-                New uploads and sharing are paused. Unsubscribed vaults are
-                permanently purged after 60 days. Choose a plan to restore full
-                access.
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-white/60 mt-0.5">
+                Your trial period has concluded. Uploads and modifying files are
+                temporarily paused until a plan is activated.
               </p>
             </div>
           </div>
@@ -137,36 +120,32 @@ export default function PlanStatusBanner() {
           <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
             <Link
               to="/dashboard/billing"
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:opacity-90 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all"
             >
-              Choose a Storage Plan <ArrowRight size={16} />
+              <Zap size={15} fill="currentColor" />
+              Choose a Storage Plan
             </Link>
           </div>
         </div>
-      )}
-
-      {errorMsg && (
-        <div className="px-4 py-2 bg-rose-500/20 border-t border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-          <AlertTriangle size={14} />
-          {errorMsg}
+      ) : isTrialActive ? (
+        /* Subtle Active Trial Pill Banner */
+        <div className="px-4 py-2 bg-accent-soft border-t border-accent-border text-accent-primary text-xs flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles size={14} className="animate-pulse" />
+            <span>
+              <strong>Free Trial Active:</strong> You have{" "}
+              {trialDaysRemaining} days remaining in your 30-day evaluation
+              period.
+            </span>
+          </div>
+          <Link
+            to="/dashboard/billing"
+            className="hover:underline font-bold text-accent-primary"
+          >
+            Upgrade Anytime →
+          </Link>
         </div>
-      )}
-      {successMsg && (
-        <div className="px-4 py-2 bg-emerald-500/20 border-t border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
-          <CheckCircle2 size={14} />
-          {successMsg}
-        </div>
-      )}
-
-      {/* Phone verification modal required for free trial */}
-      <PhoneVerificationModal
-        isOpen={phoneModalOpen}
-        onClose={() => setPhoneModalOpen(false)}
-        onSuccess={handlePhoneVerificationSuccess}
-        title="Verify Phone to Start Free Trial"
-        subtitle="To prevent free trial abuse and secure your vault, please verify your phone number via SMS."
-        purpose="trial"
-      />
+      ) : null}
     </div>
   );
 }

@@ -15,9 +15,10 @@ export default {
           panel: "rgb(var(--bg-panel-rgb) / <alpha-value>)",
           elevated: "rgb(var(--bg-elevated-rgb) / <alpha-value>)",
           subtle: "rgb(var(--bg-subtle-rgb) / <alpha-value>)",
-          emerald: "#10B981",
-          "emerald-soft": "#059669",
-          "emerald-dark": "#047857",
+          // Dynamic Emerald mapped directly to active accent tokens
+          emerald: "rgb(var(--accent-primary-rgb) / <alpha-value>)",
+          "emerald-soft": "var(--accent-soft)",
+          "emerald-dark": "var(--accent-active)",
         },
         accent: {
           primary: "rgb(var(--accent-primary-rgb) / <alpha-value>)",
@@ -28,7 +29,7 @@ export default {
           border: "var(--accent-border)",
           glow: "var(--accent-glow)",
         },
-        // Feature Module Identities
+        // Feature Module Identities (kept intentional and distinct)
         relay: { accent: "#8B5CF6", glow: "#7C3AED" },
         pulse: { accent: "#06B6D4", glow: "#0891B2" },
         beacon: { accent: "#F59E0B", glow: "#D97706" },

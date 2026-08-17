@@ -292,46 +292,44 @@ export default function BillingPlansPage() {
       )}
 
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-white/10 pb-6">
         <div>
-          <div className="flex items-center gap-2 text-emerald-400 text-xs uppercase font-bold tracking-widest mb-1">
+          <div className="flex items-center gap-2 text-accent-primary text-xs uppercase font-bold tracking-widest mb-1">
             <Zap size={14} fill="currentColor" /> Vault Account Dashboard
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
             Plans & Subscription
           </h1>
-          <p className="text-white/50 text-sm font-medium mt-1">
+          <p className="text-slate-500 dark:text-white/50 text-sm font-medium mt-1">
             Manage your storage plan, subscription status, and billing lifecycle.
           </p>
         </div>
 
-        <button
-          onClick={fetchInitialData}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-xs font-semibold transition-colors self-start md:self-auto"
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 text-xs font-bold transition-colors self-start md:self-auto"
         >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          <span>Refresh Details</span>
-        </button>
+          <ArrowLeft size={14} /> Back to Vault
+        </Link>
       </div>
 
-      {/* ── SECTION 1 & 2: CURRENT PLAN & SUBSCRIPTION STATUS ── */}
-      {loading ? (
-        <div className="p-8 rounded-3xl bg-vault-surface/60 border border-white/10 animate-pulse space-y-4">
-          <div className="h-6 bg-white/10 rounded w-1/4" />
-          <div className="h-10 bg-white/10 rounded w-1/2" />
-          <div className="h-4 bg-white/10 rounded w-3/4" />
+      {/* ── SECTION 1 & 2: CURRENT PLAN SUMMARY HERO ── */}
+      {loading && !subscription ? (
+        <div className="p-8 rounded-3xl bg-white dark:bg-vault-surface/60 border border-slate-200 dark:border-white/10 animate-pulse space-y-4 shadow-sm">
+          <div className="h-6 bg-slate-200 dark:bg-white/10 rounded w-1/4" />
+          <div className="h-10 bg-slate-200 dark:bg-white/10 rounded w-1/2" />
+          <div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-3/4" />
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Current Plan Hero Card */}
-          <div className="lg:col-span-2 rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-vault-surface via-slate-900 to-slate-950 border border-emerald-500/30 shadow-[0_0_40px_rgba(16,185,129,0.1)] relative overflow-hidden flex flex-col justify-between">
+          <div className="lg:col-span-2 rounded-3xl p-6 sm:p-8 bg-white dark:bg-gradient-to-br dark:from-vault-surface dark:via-slate-900 dark:to-slate-950 border border-slate-200 dark:border-accent-border/30 shadow-md relative overflow-hidden flex flex-col justify-between text-slate-900 dark:text-white">
             {/* Background Ambient Glow */}
-            <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute top-0 right-0 w-80 h-80 bg-accent-soft/20 rounded-full blur-3xl pointer-events-none" />
 
             <div>
               <div className="flex items-center justify-between gap-4 mb-6">
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">
+                <span className="text-xs font-bold uppercase tracking-widest text-accent-primary">
                   Current Subscription
                 </span>
                 <span
@@ -343,18 +341,18 @@ export default function BillingPlansPage() {
 
               <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                  <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
                     {subscription?.planName || "Novice Vault"}
                   </h2>
-                  <p className="text-white/50 text-xs font-medium mt-1">
+                  <p className="text-slate-500 dark:text-white/50 text-xs font-medium mt-1">
                     High-performance cloud vault storage
                   </p>
                 </div>
                 <div className="text-left sm:text-right">
-                  <span className="text-3xl font-black text-white">
+                  <span className="text-3xl font-black text-slate-900 dark:text-white">
                     ₹{subscription?.amount || 299}
                   </span>
-                  <span className="text-white/40 text-xs font-semibold">
+                  <span className="text-slate-500 dark:text-white/40 text-xs font-semibold">
                     /{subscription?.period?.toLowerCase() || "month"}
                   </span>
                 </div>
@@ -369,18 +367,18 @@ export default function BillingPlansPage() {
               </div>
 
               {/* Storage Usage Component */}
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-3 mb-6">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 space-y-3 mb-6">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-white flex items-center gap-1.5">
-                    <HardDrive size={14} className="text-emerald-400" /> Storage Used
+                  <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <HardDrive size={14} className="text-accent-primary" /> Storage Used
                   </span>
-                  <span className="font-semibold text-white/70">
+                  <span className="font-semibold text-slate-600 dark:text-white/70">
                     {formatSize(usedStorage)} / {formatSize(maxStorage)} ({usedPercent}%)
                   </span>
                 </div>
-                <div className="w-full h-2.5 rounded-full bg-white/10 overflow-hidden">
+                <div className="w-full h-2.5 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-teal-400 to-emerald-500 rounded-full transition-all duration-500"
+                    className="h-full bg-accent-primary rounded-full transition-all duration-500"
                     style={{ width: `${usedPercent}%` }}
                   />
                 </div>
@@ -388,11 +386,11 @@ export default function BillingPlansPage() {
             </div>
 
             {/* ── SECTION 3: SUBSCRIPTION ACTIONS ── */}
-            <div className="border-t border-white/10 pt-6 flex flex-wrap items-center justify-between gap-4">
-              <div className="text-xs text-white/50 flex items-center gap-1.5">
-                <Calendar size={14} className="text-emerald-400" />
+            <div className="border-t border-slate-200 dark:border-white/10 pt-6 flex flex-wrap items-center justify-between gap-4">
+              <div className="text-xs text-slate-500 dark:text-white/50 flex items-center gap-1.5">
+                <Calendar size={14} className="text-accent-primary" />
                 Next Billing Date:{" "}
-                <span className="font-bold text-white">
+                <span className="font-bold text-slate-900 dark:text-white">
                   {subscription?.nextBillingDate
                     ? new Date(subscription.nextBillingDate).toLocaleDateString("en-IN", {
                         day: "numeric",
@@ -496,22 +494,22 @@ export default function BillingPlansPage() {
       <div className="space-y-8 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-black text-white tracking-tight">
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
               Available Vault Storage Plans
             </h2>
-            <p className="text-white/50 text-xs font-medium mt-1">
+            <p className="text-slate-500 dark:text-white/50 text-xs font-medium mt-1">
               Select or change your plan tier. Pricing details are updated live from existing backend configs.
             </p>
           </div>
 
           {/* Billing Cycle Toggle */}
-          <div className="inline-flex items-center p-1 rounded-2xl bg-white/5 border border-white/10 self-start sm:self-auto">
+          <div className="inline-flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 self-start sm:self-auto shadow-sm">
             <button
               onClick={() => setIsYearly(false)}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 !isYearly
-                  ? "bg-emerald-500 text-black shadow-lg"
-                  : "text-white/60 hover:text-white"
+                  ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
+                  : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               Monthly Billing
@@ -520,8 +518,8 @@ export default function BillingPlansPage() {
               onClick={() => setIsYearly(true)}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 isYearly
-                  ? "bg-emerald-500 text-black shadow-lg"
-                  : "text-white/60 hover:text-white"
+                  ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
+                  : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               Yearly (Save ~17%)
@@ -535,7 +533,7 @@ export default function BillingPlansPage() {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-96 rounded-3xl bg-vault-surface/40 border border-white/10 animate-pulse"
+                className="h-96 rounded-3xl bg-white dark:bg-vault-surface/40 border border-slate-200 dark:border-white/10 animate-pulse shadow-sm"
               />
             ))}
           </div>
@@ -549,10 +547,11 @@ export default function BillingPlansPage() {
                   subscription?.razorpayPlanId === plan.razorpayPlanId ||
                   subscription?.planName?.toLowerCase() === (plan.type || plan.slug)?.toLowerCase()
                 }
+                isPopular={plan.isPopular || plan.popular || plan.type?.includes("Pro")}
+                loading={checkoutLoading}
+                onSelect={(p) => handleInitiatePlanCheckout(p, isYearly ? "yearly" : "monthly")}
+                isYearly={isYearly}
                 currentUsedStorage={usedStorage}
-                currentPlanAmount={subscription?.amount || 0}
-                onSelect={handleSelectPlan}
-                loading={actionLoading}
               />
             ))}
           </div>
@@ -562,41 +561,41 @@ export default function BillingPlansPage() {
       {/* ── SECTION 9: PLAN COMPARISON MATRIX ── */}
       <div className="space-y-6 pt-6">
         <div>
-          <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            <Sliders size={20} className="text-emerald-400" /> Compare Plans
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+            <Sliders size={20} className="text-accent-primary" /> Compare Plans
           </h2>
-          <p className="text-white/50 text-xs font-medium mt-1">
+          <p className="text-slate-500 dark:text-white/50 text-xs font-medium mt-1">
             Detailed side-by-side feature comparison across storage tiers.
           </p>
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-vault-surface/80 backdrop-blur-xl overflow-x-auto custom-scrollbar">
+        <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-vault-surface/80 backdrop-blur-xl overflow-x-auto custom-scrollbar shadow-sm">
           <table className="w-full text-left border-collapse min-w-[650px]">
             <thead>
-              <tr className="border-b border-white/10 bg-white/5">
-                <th className="p-4 sm:p-5 text-xs font-bold uppercase text-white/50">Feature</th>
+              <tr className="border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5">
+                <th className="p-4 sm:p-5 text-xs font-bold uppercase text-slate-500 dark:text-white/50">Feature</th>
                 {plans
                   .filter((p) => p.period?.toLowerCase() === (isYearly ? "yearly" : "monthly"))
                   .map((p) => (
-                    <th key={p._id || p.razorpayPlanId} className="p-4 sm:p-5 text-sm font-black text-white">
+                    <th key={p._id || p.razorpayPlanId} className="p-4 sm:p-5 text-sm font-black text-slate-900 dark:text-white">
                       {p.type || p.slug}
                     </th>
                   ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 text-xs text-white/80">
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs text-slate-800 dark:text-white/80">
               <tr>
-                <td className="p-4 sm:p-5 font-semibold text-white/60">Storage Quota</td>
+                <td className="p-4 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Storage Quota</td>
                 {plans
                   .filter((p) => p.period?.toLowerCase() === (isYearly ? "yearly" : "monthly"))
                   .map((p) => (
-                    <td key={p._id} className="p-4 sm:p-5 font-bold text-emerald-400">
+                    <td key={p._id} className="p-4 sm:p-5 font-bold text-accent-primary">
                       {formatSize(p.storage)}
                     </td>
                   ))}
               </tr>
               <tr>
-                <td className="p-4 sm:p-5 font-semibold text-white/60">Max Devices</td>
+                <td className="p-4 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Max Devices</td>
                 {plans
                   .filter((p) => p.period?.toLowerCase() === (isYearly ? "yearly" : "monthly"))
                   .map((p) => (
@@ -606,7 +605,7 @@ export default function BillingPlansPage() {
                   ))}
               </tr>
               <tr>
-                <td className="p-4 sm:p-5 font-semibold text-white/60">Upload Speed</td>
+                <td className="p-4 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Upload Speed</td>
                 {plans
                   .filter((p) => p.period?.toLowerCase() === (isYearly ? "yearly" : "monthly"))
                   .map((p) => (
@@ -616,7 +615,7 @@ export default function BillingPlansPage() {
                   ))}
               </tr>
               <tr>
-                <td className="p-4 sm:p-5 font-semibold text-white/60">Version History</td>
+                <td className="p-4 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Version History</td>
                 {plans
                   .filter((p) => p.period?.toLowerCase() === (isYearly ? "yearly" : "monthly"))
                   .map((p) => (
@@ -626,11 +625,11 @@ export default function BillingPlansPage() {
                   ))}
               </tr>
               <tr>
-                <td className="p-4 sm:p-5 font-semibold text-white/60">Price ({isYearly ? "Yearly" : "Monthly"})</td>
+                <td className="p-4 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Price ({isYearly ? "Yearly" : "Monthly"})</td>
                 {plans
                   .filter((p) => p.period?.toLowerCase() === (isYearly ? "yearly" : "monthly"))
                   .map((p) => (
-                    <td key={p._id} className="p-4 sm:p-5 font-bold text-white">
+                    <td key={p._id} className="p-4 sm:p-5 font-bold text-slate-900 dark:text-white">
                       ₹{p.amount || p.price}
                     </td>
                   ))}
@@ -643,22 +642,22 @@ export default function BillingPlansPage() {
       {/* ── SECTION 6: INVOICES / BILLING HISTORY ── */}
       <div className="space-y-6 pt-6">
         <div>
-          <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            <Download size={20} className="text-emerald-400" /> Billing History & Invoices
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+            <Download size={20} className="text-accent-primary" /> Billing History & Invoices
           </h2>
-          <p className="text-white/50 text-xs font-medium mt-1">
+          <p className="text-slate-500 dark:text-white/50 text-xs font-medium mt-1">
             Download past payment invoices and billing statements.
           </p>
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-vault-surface/80 backdrop-blur-xl overflow-hidden">
+        <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-vault-surface/80 backdrop-blur-xl overflow-hidden shadow-sm">
           {invoices.length === 0 ? (
             <div className="p-12 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-white/30">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center mx-auto text-slate-400 dark:text-white/30">
                 <CreditCard size={24} />
               </div>
-              <h4 className="text-base font-bold text-white">No Billing History Yet</h4>
-              <p className="text-xs text-white/40 max-w-sm mx-auto">
+              <h4 className="text-base font-bold text-slate-900 dark:text-white">No Billing History Yet</h4>
+              <p className="text-xs text-slate-500 dark:text-white/40 max-w-sm mx-auto">
                 Invoices will automatically appear here once payments are processed.
               </p>
             </div>
@@ -666,7 +665,7 @@ export default function BillingPlansPage() {
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
-                  <tr className="border-b border-white/10 bg-white/5 text-xs uppercase font-bold text-white/50">
+                  <tr className="border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-xs uppercase font-bold text-slate-500 dark:text-white/50">
                     <th className="p-4">Invoice ID</th>
                     <th className="p-4">Date</th>
                     <th className="p-4">Amount</th>
@@ -675,20 +674,20 @@ export default function BillingPlansPage() {
                     <th className="p-4 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5 text-xs text-white/80 font-medium">
+                <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs text-slate-800 dark:text-white/80 font-medium">
                   {invoices.map((inv) => (
                     <tr key={inv.id || inv._id}>
-                      <td className="p-4 font-mono text-emerald-400">{inv.id || "INV-1001"}</td>
+                      <td className="p-4 font-mono text-accent-primary">{inv.id || "INV-1001"}</td>
                       <td className="p-4">{inv.date || "Aug 1, 2026"}</td>
-                      <td className="p-4 font-bold text-white">₹{inv.amount || 299}</td>
+                      <td className="p-4 font-bold text-slate-900 dark:text-white">₹{inv.amount || 299}</td>
                       <td className="p-4">
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] uppercase font-bold">
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] uppercase font-bold">
                           {inv.status || "Paid"}
                         </span>
                       </td>
-                      <td className="p-4 text-white/60">{inv.period || "Aug 1 – Aug 31"}</td>
+                      <td className="p-4 text-slate-500 dark:text-white/60">{inv.period || "Aug 1 – Aug 31"}</td>
                       <td className="p-4 text-right">
-                        <button className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white font-semibold text-xs transition-colors inline-flex items-center gap-1.5">
+                        <button className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-white font-semibold text-xs transition-colors inline-flex items-center gap-1.5 border border-slate-200 dark:border-white/10">
                           <Download size={12} /> Download
                         </button>
                       </td>

@@ -515,7 +515,7 @@ export default function AssetCard({
                 e.stopPropagation();
                 onRestore(item);
               }}
-              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-vault-emerald/70 backdrop-blur-sm border border-vault-emerald text-white text-[10px] font-semibold transition-all hover:scale-[1.03] hover:bg-vault-emerald/90"
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-accent-primary text-accent-foreground backdrop-blur-sm border border-accent-border text-[10px] font-semibold transition-all hover:scale-[1.03] hover:opacity-90"
               title="Restore"
             >
               <RotateCcw size={12} className="shrink-0" />
@@ -525,14 +525,14 @@ export default function AssetCard({
             <span className="flex-1" />
           )}
 
-          {/* Download — right (solid green) */}
+          {/* Download — right */}
           {!isTrash && onDownload ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onDownload(item);
               }}
-              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-vault-emerald/70 backdrop-blur-sm border border-vault-emerald text-white text-[10px] font-semibold transition-all hover:scale-[1.03] hover:bg-vault-emerald/90"
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-accent-primary text-accent-foreground backdrop-blur-sm border border-accent-border text-[10px] font-semibold transition-all hover:scale-[1.03] hover:opacity-90"
               title="Download"
             >
               <Download size={12} className="shrink-0" />
@@ -665,7 +665,7 @@ export default function AssetCard({
                   closeMenu();
                   onCut(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-white/80 hover:text-white hover:bg-white/[0.07] transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-slate-900 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/[0.07] transition-colors"
               >
                 <Scissors size={14} className="shrink-0" />
                 Cut
@@ -677,7 +677,7 @@ export default function AssetCard({
                   closeMenu();
                   onDownload(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-vault-emerald hover:bg-vault-emerald/10 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-accent-primary hover:bg-accent-soft transition-colors"
               >
                 <Download size={14} className="shrink-0" />
                 Download
@@ -689,7 +689,7 @@ export default function AssetCard({
                   closeMenu();
                   onRestore(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-vault-emerald hover:bg-vault-emerald/10 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-accent-primary hover:bg-accent-soft transition-colors"
               >
                 <RotateCcw size={14} className="shrink-0" />
                 Restore
@@ -698,7 +698,7 @@ export default function AssetCard({
             {/* Separator */}
             {((!isTrash && !effectiveReadOnly && onDelete) ||
               (isTrash && onDeleteForever)) && (
-              <div className="my-1 mx-3 border-t border-white/[0.08]" />
+              <div className="my-1 mx-3 border-t border-slate-200 dark:border-white/[0.08]" />
             )}
             {!isTrash && !effectiveReadOnly && onDelete && (
               <button
@@ -706,7 +706,7 @@ export default function AssetCard({
                   closeMenu();
                   onDelete(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-danger-accent hover:bg-danger-accent/10 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-rose-500 hover:bg-rose-500/10 transition-colors"
               >
                 <Trash2 size={14} className="shrink-0" />
                 Delete
@@ -718,7 +718,7 @@ export default function AssetCard({
                   closeMenu();
                   onDeleteForever(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-danger-accent hover:bg-danger-accent/10 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-rose-500 hover:bg-rose-500/10 transition-colors"
               >
                 <Trash2 size={14} className="shrink-0" />
                 Delete Forever
@@ -753,24 +753,24 @@ export default function AssetCard({
         <div className="flex items-center gap-2.5 mt-1 flex-wrap">
           <div className="flex items-center gap-1">
             <div className="status-dot status-dot-emerald" />
-            <span className="text-[10px] text-white/50">Encrypted</span>
+            <span className="text-[10px] text-slate-500 dark:text-white/50">Encrypted</span>
           </div>
           {(item.isShared || provider !== "local") && (
             <div className="flex items-center gap-1">
               <div className="status-dot status-dot-purple" />
-              <span className="text-[10px] text-white/50">Shared</span>
+              <span className="text-[10px] text-slate-500 dark:text-white/50">Shared</span>
             </div>
           )}
           {(item.isStarred || item.starred) && (
             <div className="flex items-center gap-1">
               <div className="status-dot status-dot-orange" />
-              <span className="text-[10px] text-white/50">Starred</span>
+              <span className="text-[10px] text-slate-500 dark:text-white/50">Starred</span>
             </div>
           )}
           {isTrash && (
             <div className="flex items-center gap-1">
               <div className="status-dot status-dot-crimson" />
-              <span className="text-[10px] text-white/50">Expired</span>
+              <span className="text-[10px] text-slate-500 dark:text-white/50">Expired</span>
             </div>
           )}
         </div>
@@ -779,14 +779,14 @@ export default function AssetCard({
       {/* ── Selected checkmark ── */}
       {selected && (
         <div
-          className={`absolute -top-2 -right-2 w-6 h-6 rounded-full text-vault-black flex items-center justify-center border-2 border-vault-surface z-10 ${
+          className={`absolute -top-2 -right-2 w-6 h-6 rounded-full text-accent-foreground flex items-center justify-center border-2 border-vault-surface z-10 ${
             isTrash
               ? "bg-danger-accent shadow-[0_0_15px_rgba(255,90,122,0.6)]"
               : provider === "github"
                 ? "bg-creative-accent shadow-[0_0_15px_rgba(198,92,255,0.6)]"
                 : provider === "google_drive" || provider === "shared_drive"
                   ? "shadow-[0_0_15px_rgba(0,207,255,0.6)]"
-                  : "bg-vault-emerald shadow-[0_0_15px_rgba(0,212,165,0.6)]"
+                  : "bg-accent-primary shadow-accent-glow-sm"
           }`}
           style={
             (provider === "google_drive" || provider === "shared_drive") &&

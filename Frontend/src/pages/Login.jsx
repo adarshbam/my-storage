@@ -273,8 +273,8 @@ export default function Login() {
             className="space-y-6"
           >
             <div className="flex flex-col items-center text-center">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-                <ShieldCheck className="text-emerald-400" size={28} />
+              <div className="w-14 h-14 rounded-2xl bg-accent-soft border border-accent-border flex items-center justify-center mb-4 shadow-accent-glow-sm">
+                <ShieldCheck className="text-accent-primary" size={28} />
               </div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
                 Two-Factor Authentication
@@ -311,7 +311,7 @@ export default function Login() {
                           handleTwoFactorCodeChange(idx, e.target.value.replace(/\D/, ""))
                         }
                         onKeyDown={(e) => handleTwoFactorKeyDown(idx, e)}
-                        className="w-11 h-12 text-center text-lg font-black rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all caret-emerald-500"
+                        className="w-11 h-12 text-center text-lg font-black rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all caret-accent-primary"
                       />
                     ))}
                   </div>
@@ -327,7 +327,7 @@ export default function Login() {
                     value={recoveryCodeInput}
                     onChange={(e) => setRecoveryCodeInput(e.target.value.toUpperCase())}
                     placeholder="XXXX-XXXX-XXXX"
-                    className="w-full px-4 py-3.5 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono text-center text-base tracking-widest uppercase focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                    className="w-full px-4 py-3.5 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono text-center text-base tracking-widest uppercase focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all"
                   />
                 </div>
               )}
@@ -339,7 +339,7 @@ export default function Login() {
                     setUseRecoveryCode(!useRecoveryCode);
                     setError("");
                   }}
-                  className="text-emerald-500 hover:text-emerald-400 font-bold transition-colors inline-flex items-center gap-1.5"
+                  className="text-accent-primary hover:opacity-80 font-bold transition-colors inline-flex items-center gap-1.5"
                 >
                   <Key size={13} />
                   {useRecoveryCode
@@ -356,7 +356,7 @@ export default function Login() {
                     (!useRecoveryCode && twoFactorCode.join("").length !== 6) ||
                     (useRecoveryCode && !recoveryCodeInput.trim())
                   }
-                  className="w-full bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-teal-500/25 transition-all"
+                  className="w-full bg-accent-primary text-accent-foreground font-bold py-3.5 rounded-xl shadow-md shadow-accent-glow/20 transition-all"
                 >
                   {verifying2FA ? (
                     <span className="flex items-center justify-center gap-2">
