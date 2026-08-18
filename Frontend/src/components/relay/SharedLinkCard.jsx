@@ -260,14 +260,14 @@ export default function SharedLinkCard({
 
         {/* Title */}
         <h3
-          className="font-bold text-white text-base truncate mb-1"
+          className="font-bold text-slate-900 dark:text-white text-base truncate mb-1"
           title={displayName}
         >
           {displayName}
         </h3>
 
         {/* Metadata Line (Size • Date) */}
-        <div className="flex items-center gap-2 text-xs text-white/40 mb-3 font-medium">
+        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-white/40 mb-3 font-medium">
           <span>{formattedSize}</span>
           <span>•</span>
           <span>{formattedDate}</span>
@@ -277,33 +277,33 @@ export default function SharedLinkCard({
         <div className="flex items-center gap-1.5 flex-wrap mb-4">
           {/* Active / Disabled / Expired Pill */}
           {isExpired ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
               <Clock size={11} /> Expired
             </span>
           ) : link.isActive ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <Globe size={11} /> Active
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/5 text-white/40 border border-white/10">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/40 border border-slate-200 dark:border-white/10">
               <Ban size={11} /> Disabled
             </span>
           )}
 
           {/* Access / Clearance Pill */}
           {link.accessType === "public" ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 border border-cyan-500/20">
               <Globe size={11} /> Public
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-500/10 text-purple-300 border border-purple-500/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20">
               <Shield size={11} /> Restricted
             </span>
           )}
 
           {/* Password Pill */}
           {link.hasPassword && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-500/20">
               <Lock size={11} /> Password
             </span>
           )}
@@ -328,13 +328,13 @@ export default function SharedLinkCard({
       {/* Bottom Section: Analytics & Action Buttons */}
       <div>
         {/* Analytics Counter Row */}
-        <div className="flex items-center justify-between text-xs text-white/40 mb-3.5 pt-2.5 border-t border-white/5 font-mono">
+        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-white/40 mb-3.5 pt-2.5 border-t border-slate-100 dark:border-white/5 font-mono">
           <div className="flex items-center gap-1.5">
-            <Eye size={13} className="text-white/30" />
+            <Eye size={13} className="text-slate-400 dark:text-white/30" />
             <span>{link.views || 0} views</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Download size={13} className="text-white/30" />
+            <Download size={13} className="text-slate-400 dark:text-white/30" />
             <span>{link.downloads || 0}</span>
           </div>
         </div>

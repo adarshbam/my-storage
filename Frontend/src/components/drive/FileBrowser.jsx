@@ -1182,6 +1182,9 @@ export default function FileBrowser({ specialView }) {
     }
   };
 
+  const [activeDraggedIds, setActiveDraggedIds] = useState([]);
+  const [dragOverTargetId, setDragOverTargetId] = useState(null);
+
   const handleDragStart = (e, item) => {
     let itemsToDrag = [item];
     if (selectedItems.some((i) => i._id === item._id)) {
@@ -1194,25 +1197,40 @@ export default function FileBrowser({ specialView }) {
       type: i.type || (i.extension ? "file" : "directory"),
     }));
 
+    setActiveDraggedIds(preparedItems.map((i) => i._id));
     e.dataTransfer.setData("draggedItems", JSON.stringify(preparedItems));
     e.dataTransfer.setData("draggedItem", JSON.stringify(preparedItems[0]));
+    e.dataTransfer.effectAllowed = "move";
   };
 
-  const [dragOverTargetId, setDragOverTargetId] = useState(null);
+  const handleDragEnd = () => {
+    setActiveDraggedIds([]);
+    setDragOverTargetId(null);
+  };
 
   const handleDragOver = (e, targetItem) => {
     e.preventDefault();
-    if (targetItem && targetItem.type === "directory") {
-      setDragOverTargetId(targetItem._id);
-    } else {
-      setDragOverTargetId(null);
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "move";
+    if (
+      targetItem &&
+      (targetItem.type === "directory" ||
+        targetItem.provider === "shared_drive" ||
+        targetItem.provider === "google_drive" ||
+        targetItem.provider === "github") &&
+      !activeDraggedIds.includes(targetItem._id)
+    ) {
+      if (dragOverTargetId !== targetItem._id) {
+        setDragOverTargetId(targetItem._id);
+      }
     }
   };
 
   const handleDragLeave = (e, targetItem) => {
-    // Only clear if we're leaving the actual card (not entering a child)
     if (targetItem && !e.currentTarget.contains(e.relatedTarget)) {
-      setDragOverTargetId(null);
+      if (dragOverTargetId === targetItem._id) {
+        setDragOverTargetId(null);
+      }
     }
   };
 
@@ -1222,6 +1240,7 @@ export default function FileBrowser({ specialView }) {
     e.preventDefault();
     e.stopPropagation();
     setDragOverTargetId(null);
+    setActiveDraggedIds([]);
     if (isReadOnly) return;
 
     // Handle internal DnD FIRST
@@ -1640,7 +1659,7 @@ export default function FileBrowser({ specialView }) {
                 e.preventDefault();
                 e.stopPropagation();
               }}
-              className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-xl transition-all border border-transparent hover:border-white/20 mr-2"
+              className="p-2 text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all border border-slate-200 dark:border-white/10 mr-2 shadow-sm"
               title="Go Back"
             >
               <svg
@@ -1658,24 +1677,24 @@ export default function FileBrowser({ specialView }) {
               </svg>
             </button>
           )}
-          <div className="flex items-center flex-wrap gap-1 text-xl md:text-2xl font-bold text-white drop-shadow-md tracking-wide">
+          <div className="flex items-center flex-wrap gap-1 text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             {breadcrumbs.map((crumb, idx) => {
               const isLast = idx === breadcrumbs.length - 1;
               return (
                 <div key={idx} className="flex items-center gap-1">
                   {idx > 0 && (
-                    <span className="text-white/20 select-none font-light mx-0.5">
+                    <span className="text-slate-300 dark:text-white/20 select-none font-light mx-0.5">
                       /
                     </span>
                   )}
                   {isLast ? (
-                    <span className="text-white font-extrabold capitalize truncate max-w-[240px] select-none">
+                    <span className="text-slate-900 dark:text-white font-black capitalize truncate max-w-[280px] select-none">
                       {crumb.label}
                     </span>
                   ) : (
                     <button
                       onClick={() => navigate(crumb.path)}
-                      className="text-white/40 hover:text-white capitalize transition-all duration-200 select-none hover:translate-y-[-0.5px]"
+                      className="text-slate-500 dark:text-white/40 hover:text-slate-900 dark:hover:text-white capitalize transition-all duration-200 select-none hover:underline underline-offset-4"
                     >
                       {crumb.label}
                     </button>
@@ -1694,7 +1713,7 @@ export default function FileBrowser({ specialView }) {
                   setModalInput(dirName);
                   setModalType("rename");
                 }}
-                className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-md transition-all ml-1 shrink-0"
+                className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-md transition-all ml-1 shrink-0"
                 title="Rename Folder"
               >
                 <Edit2 size={16} />
@@ -1828,6 +1847,7 @@ export default function FileBrowser({ specialView }) {
               onPreview={handlePreview}
               onDetails={(item) => setDetailsItem(item)}
               onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
               onDragOver={(e) => handleDragOver(e, dir)}
               onDragLeave={(e) => handleDragLeave(e, dir)}
               onDrop={handleDrop}
@@ -1840,6 +1860,7 @@ export default function FileBrowser({ specialView }) {
                 clipboard.action === "cut" &&
                 clipboard.items.some((i) => i._id === dir._id)
               }
+              isBeingDragged={activeDraggedIds.includes(dir._id)}
               isDragOver={dragOverTargetId === dir._id}
               isIntegrationRoot={
                 (!specialView &&
@@ -1869,7 +1890,9 @@ export default function FileBrowser({ specialView }) {
                 fetch(`${SERVER_URL}/file/${item._id}`, { credentials: "include" }).catch(() => {});
               }}
               onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
               onDragOver={(e) => handleDragOver(e, file)}
+              onDragLeave={(e) => handleDragLeave(e, file)}
               onDrop={handleDrop}
               viewMode={viewMode}
               readOnly={isReadOnly}
@@ -1880,6 +1903,8 @@ export default function FileBrowser({ specialView }) {
                 clipboard.action === "cut" &&
                 clipboard.items.some((i) => i._id === file._id)
               }
+              isBeingDragged={activeDraggedIds.includes(file._id)}
+              isDragOver={dragOverTargetId === file._id}
               onShare={openShareModal}
             />
           ))}
@@ -2022,346 +2047,28 @@ export default function FileBrowser({ specialView }) {
         </div>
       )}
 
-      <Modal
-        isOpen={!!modalType}
-        onClose={() => {
-          if (document.fullscreenElement) document.exitFullscreen();
-          setModalType(null);
-          setModalInput("");
-          setNewFileContent("");
-        }}
-        className={cn(
-          modalType === "create-file" ? "max-w-4xl" : "max-w-md",
-          isCreateFullscreen &&
-            "max-w-none w-full h-full rounded-none border-none",
-        )}
-        headerActions={
-          modalType === "create-file" && (
-            <button
-              onClick={toggleCreateFullscreen}
-              className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
-              title={isCreateFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-            >
-              {isCreateFullscreen ? (
-                <Minimize size={20} />
-              ) : (
-                <Maximize size={20} />
-              )}
-            </button>
-          )
-        }
-        title={
-          modalType === "create"
-            ? "Create New Folder"
-            : modalType === "create-file"
-              ? "Create New File"
-              : modalType === "create-repo"
-                ? "Create New GitHub Repository"
-                : modalType === "rename"
-                  ? "Rename Item"
-                  : modalType === "delete"
-                    ? "Confirm Deletion"
-                    : "Danger: Permanent Deletion"
-        }
-      >
-        <div
-          ref={createModalRef}
-          className={cn(
-            "bg-white dark:bg-slate-900",
-            isCreateFullscreen && "h-full flex flex-col p-4",
-          )}
-        >
-          {modalType === "delete" ? (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/50">
-                <div>
-                  <div className="font-medium text-slate-700 dark:text-slate-300">
-                    Permanent Delete
-                  </div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                    {isPermanentDelete
-                      ? "Item will be permanently erased"
-                      : "Item will be moved to trash"}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={isPermanentDelete}
-                  onClick={() => setIsPermanentDelete(!isPermanentDelete)}
-                  className={cn(
-                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
-                    isPermanentDelete
-                      ? "bg-red-500"
-                      : "bg-slate-300 dark:bg-slate-600",
-                  )}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                      isPermanentDelete ? "translate-x-5" : "translate-x-0",
-                    )}
-                  />
-                </button>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setModalType(null);
-                    setModalItem(null);
-                    setIsPermanentDelete(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="danger"
-                  className={cn(
-                    "flex-1 text-white",
-                    isPermanentDelete
-                      ? "bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
-                      : "bg-orange-500 hover:bg-orange-600 dark:bg-orange-500 dark:hover:bg-orange-600",
-                  )}
-                  onClick={handleDeleteConfirm}
-                >
-                  {isPermanentDelete ? "Delete Permanently" : "Move to Trash"}
-                </Button>
-              </div>
-            </div>
-          ) : modalType === "delete-github" ? (
-            <div className="space-y-6">
-              <div className="flex items-center gap-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/30">
-                <div className="p-3 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-full shrink-0">
-                  <AlertTriangle size={24} />
-                </div>
-                <div>
-                  <h3 className="text-red-800 dark:text-red-200 font-semibold text-lg leading-tight">
-                    Wait! This is permanent.
-                  </h3>
-                  <p className="text-red-600 dark:text-red-400 text-sm mt-1">
-                    You are about to delete{" "}
-                    <strong className="text-red-700 dark:text-red-100">
-                      {modalItem?.name}
-                    </strong>{" "}
-                    from GitHub. This action will create a direct commit and
-                    cannot be undone.
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 dark:bg-white/[0.02] p-4 rounded-xl border border-slate-200 dark:border-white/10 space-y-3">
-                <div className="flex justify-between items-center text-[13px]">
-                  <span className="text-slate-500">Repository</span>
-                  <span className="font-mono text-slate-700 dark:text-slate-300">
-                    {modalItem?.githubPath?.split("/").slice(0, 2).join("/")}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-[13px]">
-                  <span className="text-slate-500">Action Type</span>
-                  <span className="text-red-500 font-semibold">
-                    COMMIT_DELETE
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setModalType(null)}
-                  className="hover:bg-slate-100 dark:hover:bg-slate-800 px-6"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={confirmDeleteGithub}
-                  className="bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20 px-6 border-none"
-                >
-                  Confirm Delete
-                </Button>
-              </div>
-            </div>
-          ) : modalType === "create-file" ? (
-            <form
-              onSubmit={handleModalSubmit}
-              className={cn(
-                "space-y-4",
-                isCreateFullscreen && "flex-1 flex flex-col",
-              )}
-            >
-              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                <div className="flex-1">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                    Filename
-                  </label>
-                  <input
-                    type="text"
-                    value={modalInput}
-                    onChange={(e) => setModalInput(e.target.value)}
-                    className="w-full bg-transparent text-slate-900 dark:text-white font-medium focus:outline-none text-lg"
-                    placeholder="untitled"
-                    autoFocus
-                  />
-                </div>
-                <div className="w-px h-10 bg-slate-200 dark:bg-slate-800 mx-2"></div>
-                <div className="w-32">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                    Extension
-                  </label>
-                  <select
-                    value={selectedExt}
-                    onChange={(e) => setSelectedExt(e.target.value)}
-                    className="w-full bg-transparent text-[#14b8a6] font-bold focus:outline-none appearance-none cursor-pointer text-lg"
-                  >
-                    {supportedExtensions.map((ext) => (
-                      <option
-                        key={ext}
-                        value={ext}
-                        className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                      >
-                        {ext}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div
-                className={cn(
-                  "relative group bg-[#1e1e1e] rounded-xl border border-black/10 dark:border-white/5 overflow-hidden flex flex-col",
-                  isCreateFullscreen ? "flex-1" : "h-64",
-                )}
-              >
-                <div className="flex-1 overflow-auto custom-scrollbar">
-                  <Editor
-                    value={newFileContent}
-                    onValueChange={(code) => setNewFileContent(code)}
-                    highlight={(code) => {
-                      const lang = getLanguage(selectedExt);
-                      try {
-                        const grammar =
-                          Prism.languages[lang] ||
-                          Prism.languages.javascript ||
-                          Prism.languages.clike;
-                        return Prism.highlight(code, grammar, lang);
-                      } catch (e) {
-                        return code;
-                      }
-                    }}
-                    padding={16}
-                    style={{
-                      fontFamily: '"Cascadia Code", "Fira Code", monospace',
-                      fontSize: 13,
-                      minHeight: "100%",
-                      color: "#d4d4d4",
-                    }}
-                    className="w-full focus:outline-none"
-                  />
-                </div>
-                <div className="px-3 py-1 bg-[#007acc] flex justify-between items-center text-[10px] text-white font-medium uppercase tracking-wider">
-                  <span>{getLanguage(selectedExt)} Mode</span>
-                  <span>Ready to Create</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-500 italic">
-                  Final:{" "}
-                  <span className="text-slate-700 dark:text-slate-300 font-mono font-medium">
-                    {modalInput || "untitled"}
-                    {selectedExt}
-                  </span>
-                </p>
-                <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      if (document.fullscreenElement) document.exitFullscreen();
-                      setModalType(null);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white border-none shadow-lg shadow-[#14b8a6]/20 px-8"
-                  >
-                    Create & Save
-                  </Button>
-                </div>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleModalSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  value={modalInput}
-                  onChange={(e) => setModalInput(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  placeholder={
-                    modalType === "create-repo"
-                      ? "Enter repository name..."
-                      : "Enter name..."
-                  }
-                  autoFocus
-                />
-              </div>
-
-              {modalType === "create-repo" && (
-                <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/[0.03] rounded-xl border border-slate-200 dark:border-white/10">
-                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
-                    {isPrivate ? <Lock size={16} /> : <Globe size={16} />}
-                    <span>
-                      {isPrivate ? "Private Repository" : "Public Repository"}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsPrivate(!isPrivate)}
-                    className={cn(
-                      "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#14b8a6] focus:ring-offset-2",
-                      isPrivate
-                        ? "bg-[#14b8a6]"
-                        : "bg-slate-200 dark:bg-slate-700",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                        isPrivate ? "translate-x-5" : "translate-x-0",
-                      )}
-                    />
-                  </button>
-                </div>
-              )}
-              <div className="flex justify-end gap-3">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setModalType(null)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  {modalType === "create"
-                    ? "Create Folder"
-                    : modalType === "create-repo"
-                      ? "Create Repository"
-                      : "Rename"}
-                </Button>
-              </div>
-            </form>
-          )}
-        </div>
-      </Modal>
+      <FileOperationModals
+        modalType={modalType}
+        setModalType={setModalType}
+        modalItem={modalItem}
+        setModalItem={setModalItem}
+        modalInput={modalInput}
+        setModalInput={setModalInput}
+        selectedExt={selectedExt}
+        setSelectedExt={setSelectedExt}
+        newFileContent={newFileContent}
+        setNewFileContent={setNewFileContent}
+        isPermanentDelete={isPermanentDelete}
+        setIsPermanentDelete={setIsPermanentDelete}
+        isCreateFullscreen={isCreateFullscreen}
+        createModalRef={createModalRef}
+        toggleCreateFullscreen={toggleCreateFullscreen}
+        handleModalSubmit={handleModalSubmit}
+        handleDeleteConfirm={handleDeleteConfirm}
+        confirmDeleteGithub={confirmDeleteGithub}
+        isPrivate={isPrivate}
+        setIsPrivate={setIsPrivate}
+      />
 
       {/* New Vault OS Details Modal */}
       {detailsItem && (

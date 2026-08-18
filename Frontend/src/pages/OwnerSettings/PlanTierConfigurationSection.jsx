@@ -138,7 +138,7 @@ export default function PlanTierConfigurationSection({
   };
 
   return (
-    <section className="bg-slate-900/60 dark:bg-[#071310]/80 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-emerald-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-emerald-500/30">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/5">
@@ -200,7 +200,7 @@ export default function PlanTierConfigurationSection({
 
       {/* TAB 1: FEATURES MATRIX */}
       {activeTab === "features" && (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200/60 dark:border-white/10 bg-slate-800/20 dark:bg-black/20 animate-fade-in">
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 animate-fade-in">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="border-b border-slate-200/60 dark:border-white/10 bg-slate-100/50 dark:bg-white/[0.03]">
@@ -278,7 +278,7 @@ export default function PlanTierConfigurationSection({
 
       {/* TAB 2: RULES MATRIX */}
       {activeTab === "rules" && (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200/60 dark:border-white/10 bg-slate-800/20 dark:bg-black/20 animate-fade-in">
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 animate-fade-in">
           <table className="w-full text-left border-collapse min-w-[750px]">
             <thead>
               <tr className="border-b border-slate-200/60 dark:border-white/10 bg-slate-100/50 dark:bg-white/[0.03]">

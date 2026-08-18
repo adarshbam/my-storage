@@ -16,7 +16,7 @@ export default function GlobalSystemLimitsSection({
   };
 
   return (
-    <section className="bg-slate-900/60 dark:bg-[#071310]/80 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden transition-all duration-300 hover:border-purple-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden transition-all duration-300 hover:border-purple-500/30">
       <div className="absolute top-0 right-0 w-72 h-72 bg-purple-500/5 blur-[90px] rounded-full pointer-events-none" />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
@@ -48,7 +48,7 @@ export default function GlobalSystemLimitsSection({
       >
         {/* Max Connected Devices */}
         <div className="space-y-2">
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white/70">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white/70 font-mono">
             Max Devices / Session
           </label>
           <div className="relative">
@@ -60,7 +60,7 @@ export default function GlobalSystemLimitsSection({
               onChange={(e) =>
                 onChange("maxDevicesLimit", Number(e.target.value))
               }
-              className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-300 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-sm"
+              className="w-full bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-sm shadow-sm"
             />
           </div>
           <p className="text-[11px] text-slate-500 dark:text-white/40">
@@ -70,7 +70,7 @@ export default function GlobalSystemLimitsSection({
 
         {/* Max Upload File Size */}
         <div className="space-y-2">
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white/70">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white/70 font-mono">
             Max Upload File Size
           </label>
           <div className="flex gap-2 min-w-0">
@@ -81,12 +81,12 @@ export default function GlobalSystemLimitsSection({
               onChange={(e) =>
                 onChange("maxFileSizeValue", Number(e.target.value))
               }
-              className="w-2/5 min-w-0 bg-slate-100 dark:bg-white/[0.04] border border-slate-300 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-sm"
+              className="w-2/5 min-w-0 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-sm shadow-sm"
             />
             <select
               value={limits.maxFileSizeUnit ?? "MB"}
               onChange={(e) => onChange("maxFileSizeUnit", e.target.value)}
-              className="w-3/5 min-w-0 truncate bg-slate-100 dark:bg-[#0c1613] border border-slate-300 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-xs"
+              className="w-3/5 min-w-0 truncate bg-slate-50 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-xs shadow-sm"
             >
               <option value="B">Bytes (B)</option>
               <option value="KB">KB (Kilobytes)</option>
@@ -102,7 +102,7 @@ export default function GlobalSystemLimitsSection({
 
         {/* Session Timeout */}
         <div className="space-y-2">
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white/70">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white/70 font-mono">
             Session Idle Timeout
           </label>
           <div className="flex gap-2 min-w-0">
@@ -113,12 +113,12 @@ export default function GlobalSystemLimitsSection({
               onChange={(e) =>
                 onChange("sessionTimeoutValue", Number(e.target.value))
               }
-              className="w-2/5 min-w-0 bg-slate-100 dark:bg-white/[0.04] border border-slate-300 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-sm"
+              className="w-2/5 min-w-0 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-sm shadow-sm"
             />
             <select
               value={limits.sessionTimeoutUnit ?? "Hours"}
               onChange={(e) => onChange("sessionTimeoutUnit", e.target.value)}
-              className="w-3/5 min-w-0 truncate bg-slate-100 dark:bg-[#0c1613] border border-slate-300 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-xs"
+              className="w-3/5 min-w-0 truncate bg-slate-50 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-xs shadow-sm"
             >
               <option value="Mins">Minutes</option>
               <option value="Hours">Hours</option>
@@ -132,13 +132,13 @@ export default function GlobalSystemLimitsSection({
 
         {/* Default Storage Display Unit */}
         <div className="space-y-2">
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white/70">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white/70 font-mono">
             Default Storage Unit
           </label>
           <select
             value={limits.defaultStorageUnit ?? "GB"}
             onChange={(e) => onChange("defaultStorageUnit", e.target.value)}
-            className="w-full min-w-0 bg-slate-100 dark:bg-[#0c1613] border border-slate-300 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500/50 transition-colors text-xs"
+            className="w-full min-w-0 bg-slate-50 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-xs shadow-sm"
           >
             <option value="MB">MB (Megabytes)</option>
             <option value="GB">GB (Gigabytes)</option>

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Check, Sparkles, Eye, Shield, Zap, HardDrive } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Check, Sparkles, Eye, Shield, Zap, HardDrive, ChevronDown } from "lucide-react";
 import { currencySymbols } from "../../lib/currency";
 
 const accentThemes = {
@@ -104,6 +104,7 @@ export default function PricingLivePreviewSection({
   features,
 }) {
   const [isYearly, setIsYearly] = useState(false);
+  const [expandedTiers, setExpandedTiers] = useState({});
 
   // Filter features enabled for a given tier
   const getFeaturesForTier = (tierSlug) => {
@@ -131,7 +132,7 @@ export default function PricingLivePreviewSection({
   };
 
   return (
-    <section className="bg-slate-900/60 dark:bg-[#071310]/80 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-sky-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-sky-500/30">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center shadow-lg shadow-sky-500/5">
@@ -338,7 +339,7 @@ export default function PricingLivePreviewSection({
 
                         {/* Feature Checklist */}
                         <div className="space-y-2.5 mb-6 flex-grow">
-                          {tierFeatures.slice(0, 6).map((feat) => (
+                          {tierFeatures.slice(0, 5).map((feat) => (
                             <div
                               key={feat._id}
                               className="flex items-center gap-2 text-xs font-medium text-white/80"
@@ -347,10 +348,52 @@ export default function PricingLivePreviewSection({
                               <span className="truncate">{feat.title}</span>
                             </div>
                           ))}
-                          {tierFeatures.length > 6 && (
-                            <p className="text-[10px] font-bold text-white/40 pt-1">
-                              + {tierFeatures.length - 6} additional features
-                            </p>
+
+                          <AnimatePresence initial={false}>
+                            {expandedTiers[tier.slug] && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="space-y-2.5 overflow-hidden"
+                              >
+                                {tierFeatures.slice(5).map((feat) => (
+                                  <div
+                                    key={feat._id}
+                                    className="flex items-center gap-2 text-xs font-medium text-white/80"
+                                  >
+                                    <Check size={14} className={`${theme.check} shrink-0`} />
+                                    <span className="truncate">{feat.title}</span>
+                                  </div>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+
+                          {tierFeatures.length > 5 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedTiers((prev) => ({
+                                  ...prev,
+                                  [tier.slug]: !prev[tier.slug],
+                                }))
+                              }
+                              className="text-[11px] font-bold text-white/60 hover:text-white pt-1 flex items-center gap-1 cursor-pointer transition-colors"
+                            >
+                              <span>
+                                {expandedTiers[tier.slug]
+                                  ? "Show fewer features"
+                                  : `+ ${tierFeatures.length - 5} more features`}
+                              </span>
+                              <ChevronDown
+                                size={12}
+                                className={`transition-transform duration-200 ${
+                                  expandedTiers[tier.slug] ? "rotate-180" : ""
+                                }`}
+                              />
+                            </button>
                           )}
                         </div>
                       </div>

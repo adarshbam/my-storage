@@ -166,7 +166,7 @@ export default function EditLinkModal({ isOpen, onClose, link, onUpdated }) {
 
           {/* Access Mode */}
           <div>
-            <label className="block text-[11px] font-bold tracking-wider uppercase text-white/40 mb-1.5">
+            <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-white/40 mb-1.5 font-mono">
               Access Restriction
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -175,8 +175,8 @@ export default function EditLinkModal({ isOpen, onClose, link, onUpdated }) {
                 onClick={() => setAccessType("restricted")}
                 className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
                   accessType === "restricted"
-                    ? "bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.15)]"
-                    : "bg-black/40 text-white/40 border-white/5 hover:border-white/10"
+                    ? "bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.15)]"
+                    : "bg-slate-100 dark:bg-black/40 text-slate-600 dark:text-white/40 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
                 }`}
               >
                 Restricted (Auth Required)
@@ -186,8 +186,8 @@ export default function EditLinkModal({ isOpen, onClose, link, onUpdated }) {
                 onClick={() => setAccessType("public")}
                 className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
                   accessType === "public"
-                    ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.15)]"
-                    : "bg-black/40 text-white/40 border-white/5 hover:border-white/10"
+                    ? "bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.15)]"
+                    : "bg-slate-100 dark:bg-black/40 text-slate-600 dark:text-white/40 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
                 }`}
               >
                 Public (Direct Link)
@@ -196,17 +196,17 @@ export default function EditLinkModal({ isOpen, onClose, link, onUpdated }) {
           </div>
 
           {/* Password Protection */}
-          <div className="p-3.5 bg-black/30 border border-white/5 rounded-2xl space-y-3">
+          <div className="p-3.5 bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/5 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
-                <Lock size={14} className={hasPassword ? "text-amber-400" : "text-white/40"} />
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-white/80 cursor-pointer">
+                <Lock size={14} className={hasPassword ? "text-amber-500" : "text-slate-400 dark:text-white/40"} />
                 Require Password
               </label>
               <input
                 type="checkbox"
                 checked={hasPassword}
                 onChange={(e) => setHasPassword(e.target.checked)}
-                className="w-4 h-4 rounded border-white/20 bg-black/50 text-amber-500 focus:ring-0"
+                className="w-4 h-4 rounded border-slate-300 dark:border-white/20 bg-white dark:bg-black/50 text-amber-500 focus:ring-0"
               />
             </div>
 
@@ -217,7 +217,7 @@ export default function EditLinkModal({ isOpen, onClose, link, onUpdated }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={link.hasPassword ? "Enter new password to change (leave blank to keep current)" : "Set security password"}
-                  className="w-full px-3 py-1.5 bg-black/60 border border-white/10 text-white rounded-xl text-xs focus:border-amber-400 outline-none"
+                  className="w-full px-3 py-2 bg-white dark:bg-black/60 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl text-xs focus:border-amber-400 outline-none shadow-sm"
                 />
               </div>
             )}

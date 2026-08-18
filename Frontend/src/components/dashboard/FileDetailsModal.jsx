@@ -45,13 +45,13 @@ export default function FileDetailsModal({ item, onClose }) {
         </div>
 
         {/* Hero Section */}
-        <div className="p-8 flex flex-col items-center border-b border-white/5 relative overflow-hidden">
+        <div className="p-8 flex flex-col items-center border-b border-slate-100 dark:border-white/5 relative overflow-hidden">
           <div
-            className={`absolute inset-0 opacity-10 bg-gradient-radial to-transparent from-white`}
+            className={`absolute inset-0 opacity-10 bg-gradient-radial to-transparent from-slate-400 dark:from-white`}
           />
 
           <div
-            className={`rounded-lg ${item.type === "file" && item.hasThumbnail ? "bg-vault-black border-4 border-white shadow-xl" : ""} flex overflow-hidden items-center justify-center shrink-0 mb-4 relative z-10`}
+            className={`rounded-lg ${item.type === "file" && item.hasThumbnail ? "bg-slate-100 dark:bg-vault-black border-4 border-slate-200 dark:border-white shadow-xl" : ""} flex overflow-hidden items-center justify-center shrink-0 mb-4 relative z-10`}
           >
             {isDirectory ? (
               provider === "google_drive" ? (
@@ -92,7 +92,7 @@ export default function FileDetailsModal({ item, onClose }) {
             )}
           </div>
 
-          <h3 className="text-xl font-semibold text-white text-center break-all z-10">
+          <h3 className="text-xl font-semibold text-slate-900 dark:text-white text-center break-all z-10">
             {item.name}
           </h3>
         </div>
@@ -100,14 +100,14 @@ export default function FileDetailsModal({ item, onClose }) {
         {/* Metadata List */}
         <div className="p-6 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center border border-white/5">
-              <FileType size={14} className="text-white/50" />
+            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-black/40 flex items-center justify-center border border-slate-200 dark:border-white/5">
+              <FileType size={14} className="text-slate-500 dark:text-white/50" />
             </div>
             <div className="flex-1">
-              <p className="text-[10px] uppercase font-bold text-white/30 tracking-wider">
+              <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/30 tracking-wider">
                 Type
               </p>
-              <p className="text-sm text-white/80">
+              <p className="text-sm text-slate-700 dark:text-white/80 font-medium">
                 {isDirectory
                   ? "Directory (Chamber)"
                   : `File (${ext.toUpperCase() || "Unknown"})`}
@@ -116,30 +116,30 @@ export default function FileDetailsModal({ item, onClose }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center border border-white/5">
-              <HardDrive size={14} className="text-white/50" />
+            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-black/40 flex items-center justify-center border border-slate-200 dark:border-white/5">
+              <HardDrive size={14} className="text-slate-500 dark:text-white/50" />
             </div>
             <div className="flex-1">
-              <p className="text-[10px] uppercase font-bold text-white/30 tracking-wider">
+              <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/30 tracking-wider">
                 Size
               </p>
-              <p className="text-sm text-white/80">
+              <p className="text-sm text-slate-700 dark:text-white/80 font-medium">
                 {formatSize(item.size) || 0}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center border border-white/5">
-              <HardDrive size={14} className="text-white/50" />
+            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-black/40 flex items-center justify-center border border-slate-200 dark:border-white/5">
+              <HardDrive size={14} className="text-slate-500 dark:text-white/50" />
             </div>
             <div className="flex-1">
-              <p className="text-[10px] uppercase font-bold text-white/30 tracking-wider">
+              <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/30 tracking-wider">
                 Path
               </p>
-              <div className="text-sm text-white/80 flex flex-wrap items-center gap-1 font-medium mt-0.5">
+              <div className="text-sm text-slate-700 dark:text-white/80 flex flex-wrap items-center gap-1 font-medium mt-0.5">
                 {/* Root Segment */}
-                <span className="text-white/40 font-normal">
+                <span className="text-slate-500 dark:text-white/40 font-normal">
                   {provider === "google_drive"
                     ? "Google Drive"
                     : provider === "github"
@@ -150,7 +150,7 @@ export default function FileDetailsModal({ item, onClose }) {
                 </span>
 
                 {/* Separator if path or item name exists */}
-                <span className="text-white/20 select-none">/</span>
+                <span className="text-slate-300 dark:text-white/20 select-none">/</span>
 
                 {/* Path Segments */}
                 {Array.isArray(item.path) && item.path.length > 0 ? (
@@ -161,34 +161,34 @@ export default function FileDetailsModal({ item, onClose }) {
                         <span
                           className={
                             isLast
-                              ? "text-white font-semibold"
-                              : "text-white/50 font-normal"
+                              ? "text-slate-900 dark:text-white font-semibold"
+                              : "text-slate-600 dark:text-white/50 font-normal"
                           }
                         >
                           {name}
                         </span>
                         {!isLast && (
-                          <span className="text-white/20 select-none">/</span>
+                          <span className="text-slate-300 dark:text-white/20 select-none">/</span>
                         )}
                       </span>
                     );
                   })
                 ) : (
-                  <span className="text-white font-semibold">{item.name}</span>
+                  <span className="text-slate-900 dark:text-white font-semibold">{item.name}</span>
                 )}
               </div>
             </div>
           </div>
           {isDirectory ? (
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center border border-white/5">
-                <HardDrive size={14} className="text-white/50" />
+              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-black/40 flex items-center justify-center border border-slate-200 dark:border-white/5">
+                <HardDrive size={14} className="text-slate-500 dark:text-white/50" />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] uppercase font-bold text-white/30 tracking-wider">
+                <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/30 tracking-wider">
                   Contents
                 </p>
-                <p className="text-sm text-white/80">
+                <p className="text-sm text-slate-700 dark:text-white/80 font-medium">
                   {`${item?.filesCount || 0} files   ${item?.directoriesCount || 0} directories`}
                 </p>
               </div>
@@ -199,14 +199,14 @@ export default function FileDetailsModal({ item, onClose }) {
 
           {item.createdAt && (
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center border border-white/5">
-                <Calendar size={14} className="text-white/50" />
+              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-black/40 flex items-center justify-center border border-slate-200 dark:border-white/5">
+                <Calendar size={14} className="text-slate-500 dark:text-white/50" />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] uppercase font-bold text-white/30 tracking-wider">
+                <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/30 tracking-wider">
                   Date Created
                 </p>
-                <p className="text-sm text-white/80">
+                <p className="text-sm text-slate-700 dark:text-white/80 font-medium">
                   {formatDate(item.createdAt)}
                 </p>
               </div>
@@ -215,14 +215,14 @@ export default function FileDetailsModal({ item, onClose }) {
 
           {item.updatedAt && (
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center border border-white/5">
-                <Calendar size={14} className="text-white/50" />
+              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-black/40 flex items-center justify-center border border-slate-200 dark:border-white/5">
+                <Calendar size={14} className="text-slate-500 dark:text-white/50" />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] uppercase font-bold text-white/30 tracking-wider">
+                <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/30 tracking-wider">
                   Date Modified
                 </p>
-                <p className="text-sm text-white/80">
+                <p className="text-sm text-slate-700 dark:text-white/80 font-medium">
                   {formatDate(item.updatedAt)}
                 </p>
               </div>
@@ -231,14 +231,14 @@ export default function FileDetailsModal({ item, onClose }) {
 
           {item.ownerEmail && (
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center border border-white/5">
-                <User size={14} className="text-white/50" />
+              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-black/40 flex items-center justify-center border border-slate-200 dark:border-white/5">
+                <User size={14} className="text-slate-500 dark:text-white/50" />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] uppercase font-bold text-white/30 tracking-wider">
+                <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/30 tracking-wider">
                   Owner
                 </p>
-                <p className="text-sm text-white/80">{item.ownerEmail}</p>
+                <p className="text-sm text-slate-700 dark:text-white/80 font-medium">{item.ownerEmail}</p>
               </div>
             </div>
           )}
@@ -256,7 +256,7 @@ export default function FileDetailsModal({ item, onClose }) {
             </div>
             <div className="flex-1">
               <p
-                className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-white/40"
+                className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-white/40"
               >
                 {item.isTrash ? "Status" : "Security"}
               </p>

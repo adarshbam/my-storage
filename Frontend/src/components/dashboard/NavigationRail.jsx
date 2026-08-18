@@ -225,11 +225,17 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
 
                 {/* Label */}
                 <span
-                  className={`whitespace-nowrap font-semibold text-sm tracking-wide transition-all duration-300 ${
+                  className={`whitespace-nowrap font-bold text-sm tracking-wide transition-all duration-300 ${
                     isMobileOpen
                       ? "opacity-100"
                       : "opacity-0 md:group-hover:opacity-100"
-                  } ${lit ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-white/40 group-hover:text-slate-800 dark:group-hover:text-white/80"}`}
+                  } ${
+                    active
+                      ? `${item.accentClass}`
+                      : lit
+                        ? "text-slate-900 dark:text-white"
+                        : "text-slate-500 dark:text-white/40 group-hover:text-slate-800 dark:group-hover:text-white/80"
+                  }`}
                 >
                   {item.name}
                 </span>

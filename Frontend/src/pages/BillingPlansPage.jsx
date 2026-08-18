@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Zap,
@@ -16,6 +17,7 @@ import {
   Sliders,
   Calendar,
   Sparkles,
+  ArrowLeft,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { SERVER_URL } from "../lib/api";
@@ -445,32 +447,32 @@ export default function BillingPlansPage() {
           </div>
 
           {/* ── SECTION 5 & 8: BILLING SUMMARY & QUICK STORAGE CARD ── */}
-          <div className="rounded-3xl p-6 sm:p-8 bg-vault-surface/80 border border-white/10 backdrop-blur-xl flex flex-col justify-between space-y-6">
+          <div className="rounded-3xl p-6 sm:p-8 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 backdrop-blur-xl flex flex-col justify-between space-y-6 shadow-sm">
             <div>
-              <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <CreditCard size={18} className="text-emerald-400" /> Billing Summary
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <CreditCard size={18} className="text-emerald-500" /> Billing Summary
               </h3>
 
-              <div className="space-y-4 text-xs">
-                <div className="flex justify-between py-2 border-b border-white/5">
-                  <span className="text-white/50">Plan Tier</span>
-                  <span className="font-bold text-white">
+              <div className="space-y-4 text-xs font-mono">
+                <div className="flex justify-between py-2 border-b border-slate-100 dark:border-white/5">
+                  <span className="text-slate-500 dark:text-white/50">Plan Tier</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
                     {subscription?.planName || "Novice Vault"}
                   </span>
                 </div>
-                <div className="flex justify-between py-2 border-b border-white/5">
-                  <span className="text-white/50">Price</span>
-                  <span className="font-bold text-white">
+                <div className="flex justify-between py-2 border-b border-slate-100 dark:border-white/5">
+                  <span className="text-slate-500 dark:text-white/50">Price</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
                     ₹{subscription?.amount || 299} / {subscription?.period || "Month"}
                   </span>
                 </div>
-                <div className="flex justify-between py-2 border-b border-white/5">
-                  <span className="text-white/50">Status</span>
-                  <span className="font-bold text-emerald-400">{status}</span>
+                <div className="flex justify-between py-2 border-b border-slate-100 dark:border-white/5">
+                  <span className="text-slate-500 dark:text-white/50">Status</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{status}</span>
                 </div>
-                <div className="flex justify-between py-2 border-b border-white/5">
-                  <span className="text-white/50">Payment Gateways</span>
-                  <span className="font-bold text-white">Razorpay Secure</span>
+                <div className="flex justify-between py-2 border-b border-slate-100 dark:border-white/5">
+                  <span className="text-slate-500 dark:text-white/50">Payment Gateways</span>
+                  <span className="font-bold text-slate-900 dark:text-white">Razorpay Secure</span>
                 </div>
               </div>
             </div>
@@ -547,10 +549,9 @@ export default function BillingPlansPage() {
                   subscription?.razorpayPlanId === plan.razorpayPlanId ||
                   subscription?.planName?.toLowerCase() === (plan.type || plan.slug)?.toLowerCase()
                 }
-                isPopular={plan.isPopular || plan.popular || plan.type?.includes("Pro")}
-                loading={checkoutLoading}
-                onSelect={(p) => handleInitiatePlanCheckout(p, isYearly ? "yearly" : "monthly")}
-                isYearly={isYearly}
+                currentPlanAmount={subscription?.amount || 0}
+                loading={actionLoading}
+                onSelect={(p) => handleSelectPlan(p)}
                 currentUsedStorage={usedStorage}
               />
             ))}

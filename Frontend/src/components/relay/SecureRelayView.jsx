@@ -26,6 +26,7 @@ import {
   Trash2,
   Copy,
   Check,
+  RefreshCw,
 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
 import SharedLinkCard from "./SharedLinkCard";
@@ -164,6 +165,14 @@ export default function SecureRelayView({ openShareModal }) {
       console.error("Failed to fetch shared drives:", err);
     } finally {
       setLoadingIncoming(false);
+    }
+  };
+
+  const refreshCurrentTab = () => {
+    if (activeTab === "outgoing") {
+      fetchOutgoingLinks();
+    } else {
+      fetchIncomingDrives();
     }
   };
 
@@ -452,11 +461,11 @@ export default function SecureRelayView({ openShareModal }) {
             {/* Quick Refresh Button */}
             <button
               onClick={refreshCurrentTab}
-              disabled={loading}
+              disabled={loadingLinks || loadingIncoming}
               className="p-2.5 rounded-2xl bg-slate-100 dark:bg-vault-surface border border-slate-200 dark:border-white/10 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/5 transition-all shadow-sm active:scale-95 disabled:opacity-40"
               title="Refresh Data"
             >
-              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+              <RefreshCw size={16} className={(loadingLinks || loadingIncoming) ? "animate-spin" : ""} />
             </button>
 
             {/* Create Link CTA */}
@@ -652,7 +661,7 @@ export default function SecureRelayView({ openShareModal }) {
                 }`}
                 title="Grid view"
               >
-                <Grid size={15} />
+                <LayoutGrid size={15} />
               </button>
             </div>
           </div>

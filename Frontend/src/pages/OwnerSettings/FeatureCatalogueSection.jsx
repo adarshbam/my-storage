@@ -43,7 +43,7 @@ export default function FeatureCatalogueSection({
       : features.filter((f) => f.category === selectedCategoryFilter);
 
   return (
-    <section className="bg-slate-900/60 dark:bg-[#071310]/80 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-blue-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-blue-500/30">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center shadow-lg shadow-blue-500/5">
@@ -103,8 +103,8 @@ export default function FeatureCatalogueSection({
               key={feature._id || feature.key || feature.id}
               className={`rounded-2xl p-5 border transition-all duration-300 flex flex-col justify-between ${
                 feature.enabled
-                  ? "bg-slate-800/40 dark:bg-white/[0.02] border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 shadow-lg"
-                  : "bg-slate-800/20 dark:bg-white/[0.01] border-slate-300/40 dark:border-white/5 opacity-50 hover:opacity-90"
+                  ? "bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 hover:border-blue-500/40 shadow-sm"
+                  : "bg-slate-100/50 dark:bg-white/[0.01] border-slate-200 dark:border-white/5 opacity-60 hover:opacity-90"
               }`}
             >
               <div>

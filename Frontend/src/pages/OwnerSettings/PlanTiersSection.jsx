@@ -59,7 +59,7 @@ export default function PlanTiersSection({
   };
 
   return (
-    <section className="bg-slate-900/60 dark:bg-[#071310]/80 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-rose-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-rose-500/30">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center shadow-lg shadow-rose-500/5">
@@ -108,16 +108,16 @@ export default function PlanTiersSection({
       {showAddForm && (
         <form
           onSubmit={handleCreateSubmit}
-          className="mb-8 p-6 rounded-2xl bg-slate-800/60 dark:bg-white/[0.03] border border-rose-500/30 space-y-4 animate-fade-in"
+          className="mb-8 p-6 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-rose-500/30 space-y-4 animate-fade-in shadow-sm"
         >
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200/50 dark:border-white/10">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/10">
             <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <Plus size={16} className="text-rose-400" /> Create New Plan Tier
+              <Plus size={16} className="text-rose-500" /> Create New Plan Tier
             </h3>
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="text-slate-400 hover:text-white"
+              className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
             >
               <X size={16} />
             </button>
@@ -125,7 +125,7 @@ export default function PlanTiersSection({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+              <label className="block text-[10px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1 font-mono">
                 Tier Type / Identifier
               </label>
               <input
@@ -134,74 +134,41 @@ export default function PlanTiersSection({
                 placeholder="e.g. Free Trial, Enterprise"
                 value={newTierData.type}
                 onChange={(e) =>
-                  setNewTierData({
-                    ...newTierData,
-                    type: e.target.value,
-                    slug: e.target.value.toLowerCase().replace(/\s+/g, "-"),
-                  })
+                  setNewTierData({ ...newTierData, type: e.target.value })
                 }
-                className="w-full bg-slate-100 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none"
+                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                Slug
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. free-trial"
-                value={newTierData.slug}
-                onChange={(e) =>
-                  setNewTierData({ ...newTierData, slug: e.target.value })
-                }
-                className="w-full bg-slate-100 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+              <label className="block text-[10px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1 font-mono">
                 Display Title
               </label>
               <input
                 type="text"
                 required
-                placeholder="e.g. Free Trial Vault"
+                placeholder="e.g. Enterprise Shield"
                 value={newTierData.title}
                 onChange={(e) =>
                   setNewTierData({ ...newTierData, title: e.target.value })
                 }
-                className="w-full bg-slate-100 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                Badge Label
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. 30 Days Free"
-                value={newTierData.badge}
-                onChange={(e) =>
-                  setNewTierData({ ...newTierData, badge: e.target.value })
-                }
-                className="w-full bg-slate-100 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none"
+                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+              <label className="block text-[10px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1 font-mono">
                 Highlight Accent Color
               </label>
               <select
                 value={newTierData.accentColor}
                 onChange={(e) =>
-                  setNewTierData({ ...newTierData, accentColor: e.target.value })
+                  setNewTierData({
+                    ...newTierData,
+                    accentColor: e.target.value,
+                  })
                 }
-                className="w-full bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none"
+                className="w-full bg-white dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
               >
                 {accentOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -212,34 +179,54 @@ export default function PlanTiersSection({
             </div>
           </div>
 
-          <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-              Description
-            </label>
-            <textarea
-              rows="2"
-              placeholder="e.g. Designed for creators and power users."
-              value={newTierData.description}
-              onChange={(e) =>
-                setNewTierData({ ...newTierData, description: e.target.value })
-              }
-              className="w-full bg-slate-100 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-xs text-white resize-none focus:outline-none"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1 font-mono">
+                Marketing Badge (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Popular, Recommended"
+                value={newTierData.badge}
+                onChange={(e) =>
+                  setNewTierData({ ...newTierData, badge: e.target.value })
+                }
+                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1 font-mono">
+                Card Description
+              </label>
+              <input
+                type="text"
+                placeholder="Short tagline for this plan tier"
+                value={newTierData.description}
+                onChange={(e) =>
+                  setNewTierData({
+                    ...newTierData,
+                    description: e.target.value,
+                  })
+                }
+                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-medium text-xs focus:outline-none focus:border-rose-500 shadow-sm"
+              />
+            </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="px-4 py-2 rounded-xl bg-slate-700 text-white font-bold text-xs"
+              className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-white/5 text-slate-700 dark:text-white/70 hover:bg-slate-300 dark:hover:bg-white/10 font-bold text-xs transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-500/20"
+              className="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs shadow-md shadow-rose-500/20 transition-all"
             >
-              Save Tier
+              Create Tier
             </button>
           </div>
         </form>
@@ -250,20 +237,20 @@ export default function PlanTiersSection({
         {planTiers.map((tier) => (
           <div
             key={tier.slug}
-            className={`rounded-2xl p-5 border transition-all duration-300 space-y-4 shadow-lg ${
+            className={`rounded-2xl p-5 border transition-all duration-300 space-y-4 shadow-sm ${
               tier.active !== false
-                ? "border-slate-200/80 dark:border-white/10 bg-slate-800/40 dark:bg-white/[0.02] hover:border-rose-500/40"
-                : "border-slate-300/40 dark:border-white/5 bg-slate-800/20 dark:bg-white/[0.01] opacity-60"
+                ? "border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02] hover:border-rose-500/40"
+                : "border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-white/[0.01] opacity-60"
             }`}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200/50 dark:border-white/5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/5">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span
                   className={`w-3 h-3 rounded-full shrink-0 ${
-                    tier.active !== false ? "bg-rose-500" : "bg-slate-500"
+                    tier.active !== false ? "bg-rose-500" : "bg-slate-400"
                   }`}
                 />
-                <h3 className="text-base font-black text-slate-900 dark:text-white truncate" title={tier.slug}>
+                <h3 className="text-base font-black text-slate-900 dark:text-white truncate font-mono" title={tier.slug}>
                   {tier.slug}
                 </h3>
               </div>
@@ -275,7 +262,7 @@ export default function PlanTiersSection({
                   onUpdateTierDetail(tier.slug, "active", !(tier.active !== false))
                 }
                 className={`w-11 h-6 shrink-0 rounded-full p-1 transition-colors duration-200 flex items-center ${
-                  tier.active !== false ? "bg-rose-500" : "bg-slate-700"
+                  tier.active !== false ? "bg-rose-500" : "bg-slate-300 dark:bg-slate-700"
                 }`}
                 title={tier.active !== false ? "Disable Tier" : "Enable Tier"}
               >
@@ -289,7 +276,7 @@ export default function PlanTiersSection({
 
             {/* Slug */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50 mb-1 font-mono">
                 Slug
               </label>
               <input
@@ -298,13 +285,13 @@ export default function PlanTiersSection({
                 onChange={(e) =>
                   onUpdateTierDetail(tier.slug, "slug", e.target.value)
                 }
-                className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-rose-500/50"
+                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-rose-500 shadow-sm"
               />
             </div>
 
             {/* Title */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50 mb-1 font-mono">
                 Display Title
               </label>
               <input
@@ -313,13 +300,13 @@ export default function PlanTiersSection({
                 onChange={(e) =>
                   onUpdateTierDetail(tier.slug, "title", e.target.value)
                 }
-                className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500/50 text-xs"
+                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
               />
             </div>
 
             {/* Marketing Badge */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50 mb-1 font-mono">
                 Marketing Badge Label
               </label>
               <input
@@ -328,14 +315,14 @@ export default function PlanTiersSection({
                 onChange={(e) =>
                   onUpdateTierDetail(tier.slug, "badge", e.target.value)
                 }
-                className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500/50 text-xs"
+                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
                 placeholder="e.g. Most Popular"
               />
             </div>
 
             {/* Highlight Accent Color */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50 mb-1 font-mono">
                 Highlight Accent Color
               </label>
               <select
@@ -343,7 +330,7 @@ export default function PlanTiersSection({
                 onChange={(e) =>
                   onUpdateTierDetail(tier.slug, "accentColor", e.target.value)
                 }
-                className="w-full bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500/50 text-xs"
+                className="w-full bg-white dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
               >
                 {accentOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -355,7 +342,7 @@ export default function PlanTiersSection({
 
             {/* Description */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50 mb-1 font-mono">
                 Public Card Description
               </label>
               <textarea
@@ -364,7 +351,7 @@ export default function PlanTiersSection({
                 onChange={(e) =>
                   onUpdateTierDetail(tier.slug, "description", e.target.value)
                 }
-                className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-900 dark:text-white font-medium text-xs resize-none focus:outline-none focus:border-rose-500/50"
+                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-900 dark:text-white font-medium text-xs resize-none focus:outline-none focus:border-rose-500 shadow-sm"
               />
             </div>
           </div>

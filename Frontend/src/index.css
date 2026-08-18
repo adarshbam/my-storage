@@ -404,6 +404,29 @@
     border-color: var(--border-default);
   }
 
+  /* High Intensity Theme-Aware Glows & Glassmorphism */
+  .hover-glow-accent {
+    transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+  }
+  .hover-glow-accent:hover {
+    box-shadow: 0 12px 35px -5px var(--accent-glow), 0 0 25px var(--accent-glow);
+    border-color: var(--accent-border);
+    transform: translateY(-2px);
+  }
+
+  .glass-card-pro {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(248, 250, 252, 0.82) 100%);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(203, 213, 225, 0.8);
+    box-shadow: 0 12px 36px -4px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(0, 0, 0, 0.03);
+  }
+  .dark .glass-card-pro {
+    background: linear-gradient(135deg, rgba(22, 22, 26, 0.88) 0%, rgba(14, 14, 16, 0.75) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 45px -5px rgba(0, 0, 0, 0.75);
+  }
+
   /* Interactive Cards with rich elevation and glow response */
   .vault-card-interactive {
     background-color: var(--card-bg);
@@ -412,9 +435,9 @@
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
   }
   .vault-card-interactive:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--card-shadow-hover);
-    border-color: var(--border-hover);
+    transform: translateY(-2.5px);
+    box-shadow: var(--card-shadow-hover), 0 0 20px -2px var(--accent-glow);
+    border-color: var(--accent-border);
   }
 
   /* Custom Clean Scrollbar */

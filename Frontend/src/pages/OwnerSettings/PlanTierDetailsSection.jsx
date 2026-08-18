@@ -12,7 +12,7 @@ export default function PlanTierDetailsSection({
   onUpdateTierDetail,
 }) {
   return (
-    <section className="bg-slate-900/60 dark:bg-[#071310]/80 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-rose-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-rose-500/30">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center shadow-lg shadow-rose-500/5">
@@ -38,9 +38,9 @@ export default function PlanTierDetailsSection({
         {planTiers.map((tier) => (
           <div
             key={tier.type}
-            className="rounded-2xl p-5 border border-slate-200/80 dark:border-white/10 bg-slate-800/40 dark:bg-white/[0.02] hover:border-rose-500/40 transition-all duration-300 space-y-4 shadow-lg"
+            className="rounded-2xl p-5 border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02] hover:border-rose-500/40 transition-all duration-300 space-y-4 shadow-sm"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200/50 dark:border-white/5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/5">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-rose-500" />
                 <h3 className="text-base font-black text-slate-900 dark:text-white">
@@ -54,7 +54,7 @@ export default function PlanTierDetailsSection({
 
             {/* Title */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50 mb-1 font-mono">
                 Display Title
               </label>
               <input
@@ -63,13 +63,13 @@ export default function PlanTierDetailsSection({
                 onChange={(e) =>
                   onUpdateTierDetail(tier.type, "title", e.target.value)
                 }
-                className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500/50 text-xs"
+                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
               />
             </div>
 
             {/* Marketing Badge */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50 mb-1 font-mono">
                 Marketing Badge Label
               </label>
               <input
@@ -78,14 +78,14 @@ export default function PlanTierDetailsSection({
                 onChange={(e) =>
                   onUpdateTierDetail(tier.type, "badge", e.target.value)
                 }
-                className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500/50 text-xs"
+                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
                 placeholder="e.g. Most Popular"
               />
             </div>
 
             {/* Highlight Accent Color */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50 mb-1 font-mono">
                 Highlight Accent Color
               </label>
               <select
@@ -93,7 +93,7 @@ export default function PlanTierDetailsSection({
                 onChange={(e) =>
                   onUpdateTierDetail(tier.type, "accentColor", e.target.value)
                 }
-                className="w-full bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500/50 text-xs"
+                className="w-full bg-white dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
               >
                 {accentOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -105,7 +105,7 @@ export default function PlanTierDetailsSection({
 
             {/* Description */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50 mb-1">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50 mb-1 font-mono">
                 Public Card Subtitle
               </label>
               <textarea
@@ -114,7 +114,7 @@ export default function PlanTierDetailsSection({
                 onChange={(e) =>
                   onUpdateTierDetail(tier.type, "description", e.target.value)
                 }
-                className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-900 dark:text-white font-medium text-xs resize-none focus:outline-none focus:border-rose-500/50"
+                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-900 dark:text-white font-medium text-xs resize-none focus:outline-none focus:border-rose-500 shadow-sm"
               />
             </div>
           </div>

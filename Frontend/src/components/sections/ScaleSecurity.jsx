@@ -273,50 +273,50 @@ const ScaleSecurity = () => {
         </div>
 
         {/* Feature Grid with Interactive Showcase */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center rounded-3xl p-4 sm:p-8 bg-slate-50/70 dark:bg-vault-surface/40 border border-slate-200/70 dark:border-white/5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center rounded-3xl p-5 sm:p-8 bg-white/60 dark:bg-vault-surface/40 border border-slate-200/80 dark:border-white/10 backdrop-blur-xl shadow-lg">
           {/* Left Feature Selector Tabs */}
-          <div className="lg:col-span-6 flex flex-col gap-2.5">
+          <div className="lg:col-span-6 flex flex-col gap-3">
             {FEATURES.map((feat, idx) => {
               const isActive = idx === activeIndex;
               const Icon = feat.icon;
               return (
-                <div
+                <button
                   key={feat.id}
                   onClick={() => setActiveIndex(idx)}
-                  className={`cursor-pointer p-4.5 rounded-2xl transition-all duration-200 border ${
+                  className={`w-full text-left p-4 sm:p-4.5 rounded-2xl transition-all duration-300 border ${
                     isActive
-                      ? "bg-white dark:bg-vault-surface border-accent-border shadow-md"
-                      : "bg-transparent border-transparent hover:bg-white/60 dark:hover:bg-white/[0.04]"
+                      ? "bg-white dark:bg-vault-surface/90 border-accent-border shadow-md shadow-accent-glow/10 scale-[1.01]"
+                      : "bg-slate-50/60 dark:bg-white/[0.02] border-slate-200/60 dark:border-white/5 hover:bg-white dark:hover:bg-white/[0.05] hover:border-slate-300 dark:hover:border-white/15"
                   }`}
                 >
                   <div className="flex items-start gap-4">
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 ${
                         isActive
-                          ? "bg-accent-primary text-accent-foreground"
+                          ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm scale-105"
                           : "bg-slate-200/70 dark:bg-white/5 text-slate-600 dark:text-white/50"
                       }`}
                     >
-                      <Icon size={18} />
+                      <Icon size={19} />
                     </div>
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1 tracking-tight">
                         {feat.title}
                       </h3>
                       {isActive && (
-                        <p className="text-xs text-slate-600 dark:text-white/60 leading-relaxed max-w-md">
+                        <p className="text-xs text-slate-600 dark:text-white/60 leading-relaxed animate-fade-in mt-1">
                           {feat.desc}
                         </p>
                       )}
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
 
           {/* Right Monolith Visualizer */}
-          <div className="lg:col-span-6 w-full aspect-[4/3] rounded-3xl overflow-hidden bg-slate-100 dark:bg-[#020806] border border-slate-200 dark:border-white/10 relative shadow-inner flex items-center justify-center">
+          <div className="lg:col-span-6 w-full aspect-[4/3] rounded-3xl overflow-hidden bg-slate-50 dark:bg-[#020806] border border-slate-200 dark:border-white/10 relative shadow-inner flex items-center justify-center">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeIndex}

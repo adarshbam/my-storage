@@ -97,9 +97,9 @@ function CodeViewer({ code, language, wrapText = false }) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#1e1e1e] rounded-xl border border-white/10 shadow-2xl overflow-hidden relative group">
+    <div className="h-full flex flex-col bg-[#141416] rounded-2xl border border-slate-300 dark:border-white/10 shadow-2xl overflow-hidden relative group">
       {/* Code Header Bar */}
-      <div className="px-4 py-2 bg-[#252526] border-b border-white/5 flex justify-between items-center shrink-0">
+      <div className="px-4 py-2.5 bg-[#1c1c1f] border-b border-white/5 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
@@ -109,24 +109,24 @@ function CodeViewer({ code, language, wrapText = false }) {
           <span className="text-xs text-slate-400 font-mono">
             {lines.length} {lines.length === 1 ? "line" : "lines"}
           </span>
-          <span className="text-[10px] px-2 py-0.5 rounded bg-white/10 text-slate-300 uppercase font-mono tracking-wider">
+          <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/10 text-slate-300 uppercase font-mono tracking-wider font-bold">
             {language}
           </span>
         </div>
 
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-medium transition-all"
+          className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all shadow-sm"
           title="Copy code"
         >
           {copied ? (
             <>
-              <CheckCheck size={13} className="text-vault-emerald" />
-              <span className="text-vault-emerald">Copied</span>
+              <CheckCheck size={14} className="text-accent-primary" />
+              <span className="text-accent-primary">Copied</span>
             </>
           ) : (
             <>
-              <Copy size={13} />
+              <Copy size={14} />
               <span>Copy</span>
             </>
           )}
@@ -134,9 +134,9 @@ function CodeViewer({ code, language, wrapText = false }) {
       </div>
 
       {/* Code Viewport with Gutter Line Numbers */}
-      <div className="flex-1 overflow-auto custom-scrollbar flex bg-[#1e1e1e] text-sm font-mono leading-relaxed">
+      <div className="flex-1 overflow-auto custom-scrollbar flex bg-[#141416] text-sm font-mono leading-relaxed">
         {/* Line Numbers Gutter */}
-        <div className="py-4 pl-3 pr-4 select-none text-right text-slate-600 text-xs font-mono border-r border-white/5 bg-[#1a1a1a] shrink-0 min-w-[3.5rem]">
+        <div className="py-4 pl-3 pr-4 select-none text-right text-slate-600 text-xs font-mono border-r border-white/5 bg-[#101012] shrink-0 min-w-[3.5rem]">
           {(isVeryLarge ? lines.slice(0, MAX_HIGHLIGHT_LINES + 2) : lines).map(
             (_, idx) => (
               <div key={idx} className="h-6 leading-6">
@@ -151,7 +151,7 @@ function CodeViewer({ code, language, wrapText = false }) {
           className={`flex-1 py-4 px-4 m-0 overflow-x-auto text-slate-200 ${
             wrapText ? "whitespace-pre-wrap break-words" : "whitespace-pre"
           }`}
-          style={{ fontFamily: '"Cascadia Code", "Fira Code", monospace' }}
+          style={{ fontFamily: '"JetBrains Mono", "Cascadia Code", "Fira Code", monospace' }}
         >
           <code
             className={`language-${language} text-[13px] leading-6 inline-block w-full`}
@@ -161,14 +161,14 @@ function CodeViewer({ code, language, wrapText = false }) {
       </div>
 
       {/* Footer Bar */}
-      <div className="px-4 py-1.5 bg-[#007acc] flex justify-between items-center text-[11px] text-white font-medium shrink-0">
+      <div className="px-4 py-2 bg-[#0e0e10] border-t border-white/5 flex justify-between items-center text-[11px] text-slate-400 font-mono shrink-0">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
-            <Check size={11} /> UTF-8
+          <span className="flex items-center gap-1.5 text-accent-primary font-bold">
+            <Check size={12} /> UTF-8
           </span>
           <span className="opacity-80">Spaces: 2</span>
         </div>
-        <span className="bg-white/15 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-mono">
+        <span className="bg-white/10 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-mono text-slate-300 font-bold">
           READ ONLY
         </span>
       </div>
@@ -590,15 +590,15 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
             </div>
 
             {/* Editor Footer/Status Bar */}
-            <div className="px-4 py-1.5 bg-[#007acc] flex justify-between items-center text-[11px] text-white font-medium">
+            <div className="px-4 py-2 bg-[#121214] border-t border-white/5 flex justify-between items-center text-[11px] text-slate-400 font-mono">
               <div className="flex items-center gap-4">
-                <span className="flex items-center gap-1">
-                  <Check size={10} /> UTF-8
+                <span className="flex items-center gap-1 text-accent-primary font-bold">
+                  <Check size={12} /> UTF-8
                 </span>
                 <span className="opacity-80">Spaces: 2</span>
               </div>
               <div className="flex items-center gap-4">
-                <span className="bg-white/10 px-2 py-0.5 rounded uppercase tracking-wider font-mono">
+                <span className="bg-white/10 px-2 py-0.5 rounded uppercase tracking-wider font-mono text-slate-300 font-bold">
                   {getLanguage(ext)}
                 </span>
               </div>
@@ -619,14 +619,14 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
 
     return (
       <div className="flex flex-col items-center justify-center h-full text-slate-400">
-        <div className="bg-slate-200 dark:bg-white/[0.04] p-5 rounded-full mb-4 border border-white/5">
+        <div className="bg-slate-200 dark:bg-white/[0.04] p-5 rounded-full mb-4 border border-slate-300 dark:border-white/5">
           {ext === ".zip" ? <AlertCircle size={32} /> : <FileText size={32} />}
         </div>
-        <p className="text-lg font-semibold text-white mb-1">Preview not available</p>
-        <p className="text-xs text-white/40 mb-5">
+        <p className="text-lg font-bold text-slate-900 dark:text-white mb-1">Preview not available</p>
+        <p className="text-xs text-slate-500 dark:text-white/40 mb-5">
           Binary format ({ext?.toUpperCase() || "File"}) can be downloaded to view.
         </p>
-        <Button onClick={handleDownload} className="flex items-center gap-2">
+        <Button onClick={handleDownload} className="flex items-center gap-2 shadow-accent-glow">
           <Download size={16} /> Download File
         </Button>
       </div>
@@ -635,23 +635,23 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200 ${
-        isFullscreen ? "p-0" : "p-4"
+      className={`fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-200 ${
+        isFullscreen ? "p-0" : "p-3 sm:p-6"
       }`}
     >
       {!isFullscreen && <div className="absolute inset-0" onClick={onClose} />}
       <div
         ref={modalRef}
-        className={`relative bg-white/90 dark:bg-vault-surface/90 backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_0_rgba(0,212,165,0.2),0_12px_40px_rgba(0,0,0,0.7),0_0_20px_rgba(0,212,165,0.05)] flex flex-col border border-black/10 dark:border-vault-emerald/20 animate-in zoom-in-95 duration-150 transition-all ${
+        className={`relative bg-white/95 dark:bg-[#0c0c0e]/95 backdrop-blur-2xl shadow-[0_25px_80px_rgba(0,0,0,0.35)] dark:shadow-[0_30px_90px_rgba(0,0,0,0.9),0_0_35px_var(--accent-glow)] flex flex-col border border-slate-200/90 dark:border-white/10 overflow-hidden animate-in zoom-in-95 duration-150 transition-all ${
           isFullscreen
             ? "w-full h-full rounded-none"
-            : "w-full max-w-5xl h-[70vh] rounded-3xl"
+            : "w-full max-w-6xl h-[82vh] rounded-3xl"
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02]">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="p-2.5 bg-accent-soft border border-accent-border rounded-xl text-accent-primary shrink-0 shadow-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.03]">
+          <div className="flex items-center gap-3.5 overflow-hidden">
+            <div className="p-2.5 bg-accent-soft border border-accent-border rounded-2xl text-accent-primary shrink-0 shadow-sm shadow-accent-glow/10">
               {isTextOrCode(file.extension) ? (
                 <FileCode size={20} />
               ) : isAudio(file.extension) ? (
@@ -679,11 +679,11 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                     }
                   }}
                   autoFocus
-                  className="bg-white/10 dark:bg-black/20 border border-accent-primary rounded-xl px-2.5 py-1 text-sm font-semibold text-slate-900 dark:text-white outline-none w-full max-w-[200px]"
+                  className="bg-white dark:bg-black/40 border border-accent-primary rounded-xl px-2.5 py-1 text-sm font-bold text-slate-900 dark:text-white outline-none w-full max-w-[240px] shadow-sm"
                 />
               ) : (
                 <h3
-                  className={`text-base font-bold text-slate-900 dark:text-white truncate ${
+                  className={`text-base font-black text-slate-900 dark:text-white tracking-tight truncate ${
                     allowEdit
                       ? "cursor-pointer hover:text-accent-primary"
                       : "cursor-default"
@@ -737,7 +737,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                     size="sm"
                     onClick={() => setWrapText(!wrapText)}
                     title={wrapText ? "Disable Word Wrap" : "Enable Word Wrap"}
-                    className={wrapText ? "text-accent-primary" : "text-slate-400"}
+                    className={wrapText ? "text-accent-primary bg-accent-soft" : "text-slate-500 dark:text-white/60"}
                   >
                     <WrapText size={16} />
                   </Button>
@@ -759,7 +759,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                       size="sm"
                       onClick={handleSave}
                       disabled={saving || !allowEdit}
-                      className="flex items-center gap-2 bg-accent-primary text-accent-foreground"
+                      className="flex items-center gap-2 bg-accent-primary text-accent-foreground shadow-accent-glow"
                     >
                       <Save size={16} />
                       {saving ? "Saving..." : "Save"}
@@ -770,15 +770,15 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsEditing(true)}
-                    className={`flex items-center gap-2 ${
-                      saveSuccess ? "text-accent-primary" : "text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
+                    className={`flex items-center gap-2 font-bold ${
+                      saveSuccess ? "text-accent-primary bg-accent-soft" : "text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     {saveSuccess ? <Check size={16} /> : <Edit size={16} />}
                     {saveSuccess ? "Saved!" : "Edit"}
                   </Button>
                 ) : null}
-                <div className="w-px h-6 bg-slate-200 dark:border-white/10 mx-1" />
+                <div className="w-px h-6 bg-slate-200 dark:bg-white/10 mx-1" />
               </>
             )}
             <Button
@@ -786,6 +786,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
               size="sm"
               onClick={toggleFullscreen}
               title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+              className="text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white"
             >
               {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
             </Button>
@@ -794,6 +795,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
               size="sm"
               onClick={handleDownload}
               title="Download"
+              className="text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white"
             >
               <Download size={18} />
             </Button>
@@ -808,7 +810,7 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
 
         {/* Content */}
         <div
-          className={`flex-1 overflow-auto bg-slate-100/50 dark:bg-black/30 ${
+          className={`flex-1 overflow-auto bg-slate-100/70 dark:bg-black/40 ${
             isPdf(file.extension) ? "p-0 overflow-hidden" : "p-4 md:p-6"
           }`}
         >

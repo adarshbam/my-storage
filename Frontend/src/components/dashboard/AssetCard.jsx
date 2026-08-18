@@ -12,6 +12,7 @@ import {
   Scissors,
   Share2,
   Star,
+  FolderPlus,
 } from "lucide-react";
 import getFileImage, { renderFileIcon } from "../../lib/FileImages";
 import { formatSize } from "../../lib/utils";
@@ -154,6 +155,8 @@ export default function AssetCard({
   onDragLeave = null,
   onDrop = null,
   isDragOver = false,
+  isBeingDragged = false,
+  onDragEnd = null,
   onShare = null,
   specialView = null,
 }) {
@@ -228,16 +231,31 @@ export default function AssetCard({
         onMouseLeave={() => setIsHovered(false)}
         draggable={!readOnly && !isTrash}
         onDragStart={(e) => onDragStart && onDragStart(e, item)}
+        onDragEnd={(e) => onDragEnd && onDragEnd(e, item)}
         onDragOver={(e) => onDragOver && onDragOver(e)}
         onDragLeave={(e) => onDragLeave && onDragLeave(e)}
         onDrop={(e) => onDrop && onDrop(e, item)}
         className={`
-          vault-card-interactive group relative flex items-center p-3 rounded-2xl border transition-all duration-200 bg-white dark:bg-vault-surface/80 border-slate-200/90 dark:border-white/10 shadow-sm hover:shadow-md
-          ${isDragOver ? "border-orange-400 bg-orange-500/10 shadow-[0_0_20px_rgba(249,115,22,0.25)]" : ""}
+          vault-card-interactive group relative flex items-center p-3 rounded-2xl border transition-all duration-150 select-none
+          ${
+            isDragOver
+              ? "bg-accent-primary/20 dark:bg-emerald-950/70 border-2 border-accent-primary dark:border-emerald-400 ring-4 ring-accent-primary/60 shadow-[0_0_40px_rgba(16,185,129,0.85),0_0_80px_rgba(16,185,129,0.45),inset_0_0_20px_rgba(16,185,129,0.3)] scale-[1.03] z-30"
+              : "bg-white dark:bg-vault-surface/80 border-slate-200/90 dark:border-white/10 shadow-sm hover:shadow-md"
+          }
           ${selected && !isDragOver ? "ring-2 ring-accent-primary bg-accent-soft/30 dark:bg-accent-soft/20 border-accent-border shadow-md" : !isDragOver ? "hover:bg-slate-50/90 dark:hover:bg-vault-surface hover:border-slate-300 dark:hover:border-white/20" : ""}
           ${isCut ? "opacity-35" : ""}
+          ${isBeingDragged ? "opacity-40 scale-95 border-dashed border-accent-primary/60" : ""}
         `}
       >
+        {/* Exaggerated Glow / Drop Target Overlay for List */}
+        {isDragOver && (
+          <div className="absolute inset-0 rounded-2xl pointer-events-none border-2 border-dashed border-accent-primary z-40 flex items-center justify-end pr-4 bg-accent-primary/10 backdrop-blur-[1px] animate-pulse">
+            <div className="px-3 py-1 rounded-full bg-black/90 border border-accent-primary text-accent-primary text-xs font-mono font-bold tracking-wider shadow-[0_0_20px_var(--accent-glow)] flex items-center gap-1.5 animate-bounce">
+              <FolderPlus size={14} />
+              <span>DROP HERE</span>
+            </div>
+          </div>
+        )}
         <div
           className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-2xl transition-all duration-300 ${
             selected || isHovered
@@ -314,7 +332,7 @@ export default function AssetCard({
                 e.stopPropagation();
                 onPreview(item);
               }}
-              className="p-1.5 text-white/40 hover:text-white bg-black/40 hover:bg-white/10 rounded-lg transition-all"
+              className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-black/40 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg transition-all"
               title="Preview"
             >
               <ExternalLink size={16} />
@@ -326,7 +344,7 @@ export default function AssetCard({
                 e.stopPropagation();
                 onDetails(item);
               }}
-              className="p-1.5 text-white/40 hover:text-white bg-black/40 hover:bg-white/10 rounded-lg transition-all"
+              className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-black/40 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg transition-all"
               title="Details"
             >
               <Info size={16} />
@@ -338,7 +356,7 @@ export default function AssetCard({
                 e.stopPropagation();
                 onRename(item);
               }}
-              className="p-1.5 text-white/40 hover:text-white bg-black/40 hover:bg-white/10 rounded-lg transition-all"
+              className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-black/40 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg transition-all"
             >
               <Edit2 size={16} />
             </button>
@@ -349,7 +367,7 @@ export default function AssetCard({
                 e.stopPropagation();
                 onDownload(item);
               }}
-              className="p-1.5 text-white/40 hover:text-vault-emerald bg-black/40 hover:bg-vault-emerald/20 rounded-lg transition-all"
+              className="p-1.5 text-slate-400 hover:text-accent-primary bg-slate-100 dark:bg-black/40 hover:bg-accent-soft rounded-lg transition-all"
             >
               <Download size={16} />
             </button>
@@ -360,7 +378,7 @@ export default function AssetCard({
                 e.stopPropagation();
                 onDelete(item);
               }}
-              className="p-1.5 text-white/40 hover:text-danger-accent bg-black/40 hover:bg-danger-accent/20 rounded-lg transition-all"
+              className="p-1.5 text-slate-400 hover:text-rose-500 bg-slate-100 dark:bg-black/40 hover:bg-rose-500/10 rounded-lg transition-all"
             >
               <Trash2 size={16} />
             </button>
@@ -371,7 +389,7 @@ export default function AssetCard({
                 e.stopPropagation();
                 onRestore(item);
               }}
-              className="px-3 py-1.5 text-xs font-bold text-vault-emerald bg-vault-emerald/10 hover:bg-vault-emerald/20 rounded-lg transition-all uppercase tracking-wider"
+              className="px-3 py-1.5 text-xs font-bold text-accent-primary bg-accent-soft hover:bg-accent-soft/80 rounded-lg transition-all uppercase tracking-wider"
             >
               Restore
             </button>
@@ -395,17 +413,33 @@ export default function AssetCard({
       onMouseLeave={() => setIsHovered(false)}
       draggable={!effectiveReadOnly && !isTrash}
       onDragStart={(e) => onDragStart && onDragStart(e, item)}
+      onDragEnd={(e) => onDragEnd && onDragEnd(e, item)}
       onDragOver={(e) => onDragOver && onDragOver(e)}
       onDragLeave={(e) => onDragLeave && onDragLeave(e)}
       onDrop={(e) => onDrop && onDrop(e, item)}
       className={`
-        vault-card-interactive group relative flex flex-col rounded-2xl transition-all duration-200 select-none bg-white dark:bg-vault-surface/80 border border-slate-200/90 dark:border-white/10 shadow-sm hover:shadow-xl dark:hover:shadow-black/60
-        ${isDragOver ? "bg-orange-500/10 border-2 border-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.3)] scale-[1.02]" : ""}
+        vault-card-interactive group relative flex flex-col rounded-2xl transition-all duration-150 select-none
+        ${
+          isDragOver
+            ? "bg-accent-primary/20 dark:bg-emerald-950/80 border-2 border-accent-primary dark:border-emerald-400 ring-4 ring-accent-primary/60 shadow-[0_0_50px_rgba(16,185,129,0.9),0_0_100px_rgba(16,185,129,0.5),inset_0_0_30px_rgba(16,185,129,0.35)] scale-[1.06] -translate-y-2 z-30"
+            : "bg-white dark:bg-vault-surface/80 border border-slate-200/90 dark:border-white/10 shadow-sm hover:shadow-xl dark:hover:shadow-black/60"
+        }
         ${selected && !isDragOver ? `ring-2 ring-accent-primary bg-accent-soft/30 dark:bg-accent-soft/20 border-accent-border shadow-md` : !isDragOver ? "" : ""}
         ${isHovered && !selected && !isDragOver ? `border-slate-300 dark:border-white/25 ${envClass}` : ""}
         ${isCut ? "opacity-35" : ""}
+        ${isBeingDragged ? "opacity-40 scale-95 border-dashed border-accent-primary/60" : ""}
       `}
     >
+      {/* Exaggerated Glow / Drop Target Overlay for Grid */}
+      {isDragOver && (
+        <div className="absolute inset-0 rounded-2xl pointer-events-none border-2 border-dashed border-accent-primary z-40 flex flex-col items-center justify-center bg-accent-primary/15 dark:bg-emerald-950/50 backdrop-blur-[2px] animate-pulse">
+          <div className="px-4 py-2 rounded-full bg-black/90 border-2 border-accent-primary text-accent-primary text-xs font-mono font-black tracking-widest shadow-[0_0_30px_var(--accent-glow)] flex items-center gap-2 animate-bounce">
+            <FolderPlus size={16} />
+            <span>DROP TO MOVE</span>
+          </div>
+        </div>
+      )}
+
       {/* ── Thumbnail ── (overflow-hidden stays, but menu is outside this div) */}
       <div className="relative aspect-[4/3] w-full bg-slate-50 dark:bg-black/40 rounded-t-2xl overflow-hidden border-b border-slate-200/70 dark:border-white/5">
         {/* Ambient glow */}
@@ -579,7 +613,7 @@ export default function AssetCard({
 
         {/* Dropdown — unrestricted, renders from card root level */}
         {showMenu && (
-          <div className="absolute right-0 top-full mt-1.5 w-48 bg-white dark:bg-[#111113] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl dark:shadow-[0_12px_40px_rgba(0,0,0,0.8)] z-50 py-1.5 overflow-hidden">
+          <div className="absolute right-0 top-full mt-1.5 w-48 bg-white dark:bg-[#111113] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1.5 overflow-hidden text-slate-900 dark:text-white backdrop-blur-xl animate-fade-in">
             {/* Open / Preview */}
             {!isTrash && (
               <button
@@ -587,9 +621,9 @@ export default function AssetCard({
                   closeMenu();
                   isDirectory ? onNavigate?.(item) : onPreview?.(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-white/80 hover:text-white hover:bg-white/[0.07] transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors rounded-xl"
               >
-                <ExternalLink size={14} className="shrink-0" />
+                <ExternalLink size={14} className="shrink-0 text-slate-500 dark:text-white/60" />
                 {isDirectory ? "Open folder" : "Preview"}
               </button>
             )}
@@ -599,9 +633,9 @@ export default function AssetCard({
                   closeMenu();
                   onDetails(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-white/80 hover:text-white hover:bg-white/[0.07] transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors rounded-xl"
               >
-                <Info size={14} className="shrink-0" />
+                <Info size={14} className="shrink-0 text-slate-500 dark:text-white/60" />
                 Details
               </button>
             )}
@@ -612,12 +646,12 @@ export default function AssetCard({
                   e.stopPropagation();
                   onStarred(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-white/80 hover:text-white hover:bg-white/[0.07] transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors rounded-xl"
               >
                 <Star
-                  size={16}
+                  size={15}
                   fill={(item.isStarred || item.starred) ? "#FF7A3D" : "none"}
-                  className={(item.isStarred || item.starred) ? "text-[#FF7A3D] drop-shadow-[0_0_8px_rgba(255,122,61,0.85)]" : "text-white/60"}
+                  className={(item.isStarred || item.starred) ? "text-[#FF7A3D] drop-shadow-[0_0_8px_rgba(255,122,61,0.85)]" : "text-slate-400 dark:text-white/60"}
                 />
                 Priority
               </button>
@@ -629,9 +663,9 @@ export default function AssetCard({
                   closeMenu();
                   onRename(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-white/80 hover:text-white hover:bg-white/[0.07] transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors rounded-xl"
               >
-                <Edit2 size={14} className="shrink-0" />
+                <Edit2 size={14} className="shrink-0 text-slate-500 dark:text-white/60" />
                 Rename
               </button>
             )}
@@ -641,9 +675,9 @@ export default function AssetCard({
                   closeMenu();
                   onShare(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-white/80 hover:text-white hover:bg-white/[0.07] transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors rounded-xl"
               >
-                <Share2 size={14} className="shrink-0 text-purple-400" />
+                <Share2 size={14} className="shrink-0 text-purple-600 dark:text-purple-400" />
                 Share
               </button>
             )}
@@ -653,9 +687,9 @@ export default function AssetCard({
                   closeMenu();
                   onCopy(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-white/80 hover:text-white hover:bg-white/[0.07] transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors rounded-xl"
               >
-                <Copy size={14} className="shrink-0" />
+                <Copy size={14} className="shrink-0 text-slate-500 dark:text-white/60" />
                 Copy
               </button>
             )}
@@ -665,9 +699,9 @@ export default function AssetCard({
                   closeMenu();
                   onCut(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-slate-900 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/[0.07] transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors rounded-xl"
               >
-                <Scissors size={14} className="shrink-0" />
+                <Scissors size={14} className="shrink-0 text-slate-500 dark:text-white/60" />
                 Cut
               </button>
             )}
@@ -677,9 +711,9 @@ export default function AssetCard({
                   closeMenu();
                   onDownload(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-accent-primary hover:bg-accent-soft transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-accent-primary hover:bg-accent-soft transition-colors rounded-xl"
               >
-                <Download size={14} className="shrink-0" />
+                <Download size={14} className="shrink-0 text-accent-primary" />
                 Download
               </button>
             )}
@@ -689,16 +723,16 @@ export default function AssetCard({
                   closeMenu();
                   onRestore(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-accent-primary hover:bg-accent-soft transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-accent-primary hover:bg-accent-soft transition-colors rounded-xl"
               >
-                <RotateCcw size={14} className="shrink-0" />
+                <RotateCcw size={14} className="shrink-0 text-accent-primary" />
                 Restore
               </button>
             )}
             {/* Separator */}
             {((!isTrash && !effectiveReadOnly && onDelete) ||
               (isTrash && onDeleteForever)) && (
-              <div className="my-1 mx-3 border-t border-slate-200 dark:border-white/[0.08]" />
+              <div className="my-1 mx-2 border-t border-slate-100 dark:border-white/[0.08]" />
             )}
             {!isTrash && !effectiveReadOnly && onDelete && (
               <button
@@ -706,7 +740,7 @@ export default function AssetCard({
                   closeMenu();
                   onDelete(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-rose-500 hover:bg-rose-500/10 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors rounded-xl"
               >
                 <Trash2 size={14} className="shrink-0" />
                 Delete
@@ -718,7 +752,7 @@ export default function AssetCard({
                   closeMenu();
                   onDeleteForever(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-rose-500 hover:bg-rose-500/10 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors rounded-xl"
               >
                 <Trash2 size={14} className="shrink-0" />
                 Delete Forever

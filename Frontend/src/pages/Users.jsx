@@ -14,12 +14,21 @@ import {
   CheckCircle2,
   ArrowLeft,
   UserCheck,
+  Search,
+  Activity,
+  HardDrive,
+  Monitor,
+  UserPlus,
+  Radio,
+  SlidersHorizontal,
+  Lock,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Skeleton from "../components/ui/Skeleton";
+import { formatSize } from "../lib/utils";
 
-const Users = () => {
+export default function Users() {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +36,11 @@ const Users = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const [editRoleModalOpen, setEditRoleModalOpen] = useState(false);
   const [userToEditRole, setUserToEditRole] = useState(null);
+
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   const { user: currentUser, loading: authLoading } = useAuth();
   const profilePicUrl = currentUser?.profilepic
@@ -69,7 +83,6 @@ const Users = () => {
         credentials: "include",
       });
       if (res.ok) {
-        console.log(`Force logged out user ${id}`);
         setUsers(
           users.map((u) => (u._id === id ? { ...u, isLoggedIn: false } : u))
         );
@@ -112,7 +125,6 @@ const Users = () => {
         },
       );
       if (res.ok) {
-        console.log(`User ${userToEditRole._id} role updated to: ${newRole}`);
         setUsers(
           users.map((u) =>
             u._id === userToEditRole._id ? { ...u, role: newRole } : u,
@@ -136,7 +148,6 @@ const Users = () => {
         body: JSON.stringify({ deleteType: type }),
       });
       if (res.ok) {
-        console.log(`User ${userToDelete._id} deleted with type: ${type}`);
         if (type === "soft") {
           setUsers(
             users.map((u) =>
@@ -161,7 +172,6 @@ const Users = () => {
         credentials: "include",
       });
       if (res.ok) {
-        console.log(`User ${id} reactivated`);
         setUsers(
           users.map((u) => (u._id === id ? { ...u, status: "OFFLINE" } : u)),
         );
@@ -174,24 +184,15 @@ const Users = () => {
   const getRoleBadgeStyle = (role) => {
     switch (role?.toUpperCase()) {
       case "OWNER":
-        return "bg-purple-500/10 text-purple-300 border-purple-500/30";
+        return "bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.15)]";
       case "ADMIN":
-        return "bg-rose-500/10 text-rose-300 border-rose-500/30";
+        return "bg-rose-500/10 text-rose-600 dark:text-rose-300 border-rose-500/30 shadow-[0_0_12px_rgba(244,63,94,0.15)]";
       case "MANAGER":
-        return "bg-amber-500/10 text-amber-300 border-amber-500/30";
+        return "bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.15)]";
       case "USER":
-        return "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
       default:
-        return "bg-white/5 text-white/50 border-white/10";
+        return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]";
     }
-  };
-
-  const getStatusBadgeStyle = (status) => {
-    if (status === "ONLINE")
-      return "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
-    if (status === "TERMINATED" || status === "Deleted")
-      return "bg-rose-500/10 text-rose-400 border-rose-500/30";
-    return "bg-white/5 text-white/50 border-white/10";
   };
 
   const getDisplayStatus = (u) => {
@@ -200,109 +201,262 @@ const Users = () => {
     return u.isLoggedIn ? "ONLINE" : "OFFLINE";
   };
 
+  // Metrics computation
+  const totalUsers = users.length;
+  const onlineCount = users.filter((u) => u.isLoggedIn).length;
+  const privilegedCount = users.filter((u) => ["OWNER", "ADMIN"].includes(u.role?.toUpperCase())).length;
+  const totalAllocated = users.reduce((acc, u) => acc + (u.maxStorage || 524288000), 0);
+
+  // Filtered list
+  const filteredUsers = users.filter((u) => {
+    const matchesSearch =
+      u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole =
+      roleFilter === "ALL" || u.role?.toUpperCase() === roleFilter;
+    const status = getDisplayStatus(u);
+    const matchesStatus =
+      statusFilter === "ALL" || status === statusFilter;
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
   return (
-    <div className="min-h-screen bg-vault-bg text-slate-900 dark:text-white p-6 sm:p-8 relative overflow-hidden font-sans pt-20 pb-24">
+    <div className="min-h-screen bg-vault-bg text-slate-900 dark:text-white p-4 sm:p-6 lg:p-8 relative overflow-hidden font-sans transition-colors duration-300">
       {/* Subtle Atmospheric Gradient Orbs */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-accent-primary/10 via-accent-soft/5 to-transparent blur-[140px] rounded-full" />
-        <div className="absolute top-1/3 -left-48 w-96 h-96 bg-blue-500/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-10 -right-48 w-96 h-96 bg-purple-500/5 blur-[120px] rounded-full" />
+        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-accent-primary/15 via-accent-soft/10 to-transparent blur-[140px] rounded-full" />
+        <div className="absolute top-1/3 -left-48 w-96 h-96 bg-blue-500/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-10 -right-48 w-96 h-96 bg-purple-500/10 blur-[120px] rounded-full" />
       </div>
 
-      <div className="max-w-7xl mx-auto relative z-10 space-y-10">
-        {/* Navigation Top Header */}
+      <div className="max-w-7xl mx-auto relative z-10 space-y-8">
+        
+        {/* ── TOP HEADER ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-white/10 pb-6">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate("/dashboard")}
-              className="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white transition-colors shadow-sm"
-              title="Return to Dashboard"
+              className="p-3 rounded-2xl bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all shadow-sm hover:scale-105 active:scale-95"
+              title="Back to Dashboard"
             >
               <ArrowLeft size={18} />
             </button>
 
             <div>
-              <div className="flex items-center gap-2 text-accent-primary text-xs font-bold uppercase tracking-widest mb-1">
+              <div className="flex items-center gap-2 text-accent-primary text-xs font-mono font-bold uppercase tracking-widest mb-1">
                 <UsersIcon size={14} /> Vault System Administration
               </div>
-              <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                System Users
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                System Users Directory
               </h1>
-              <p className="text-slate-500 dark:text-white/50 text-sm font-medium mt-1">
-                Manage user access, role permissions, and active session controls.
+              <p className="text-slate-500 dark:text-white/50 text-xs sm:text-sm font-medium mt-0.5">
+                Audit system access clearances, force terminate rogue sessions, and manage hierarchy permissions.
               </p>
             </div>
           </div>
 
-          <button
-            onClick={fetchUsers}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white text-xs font-bold transition-colors self-start sm:self-auto"
-          >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            <span>Refresh List</span>
-          </button>
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            {currentUser?.role?.toUpperCase() === "OWNER" && (
+              <Link
+                to="/owner/settings"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-600 dark:text-purple-300 text-xs font-mono font-bold tracking-wider transition-all shadow-sm"
+              >
+                <ShieldAlert size={14} />
+                <span>Owner Settings</span>
+              </Link>
+            )}
+
+            <button
+              onClick={fetchUsers}
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white dark:bg-vault-surface hover:bg-slate-100 dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white text-xs font-mono font-bold transition-all shadow-sm"
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin text-accent-primary" : ""} />
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
 
-        {/* ── CURRENT USER / OWNER HIGHLIGHT CARD ── */}
+        {/* ── METRIC STAT CARDS ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="rounded-3xl p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
+              <span>Total Accounts</span>
+              <UsersIcon size={16} className="text-accent-primary" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              {totalUsers}
+            </div>
+            <div className="text-[11px] text-slate-400 dark:text-white/40 font-mono">
+              Registered Identities
+            </div>
+          </div>
+
+          <div className="rounded-3xl p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
+              <span>Active Sessions</span>
+              <Radio size={16} className="text-emerald-500 animate-pulse" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight flex items-center gap-2">
+              <span>{onlineCount}</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
+            </div>
+            <div className="text-[11px] text-slate-400 dark:text-white/40 font-mono">
+              Live Encrypted Connections
+            </div>
+          </div>
+
+          <div className="rounded-3xl p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
+              <span>Admin Nodes</span>
+              <Shield size={16} className="text-purple-500" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-300 tracking-tight">
+              {privilegedCount}
+            </div>
+            <div className="text-[11px] text-slate-400 dark:text-white/40 font-mono">
+              Elevated Security Clearances
+            </div>
+          </div>
+
+          <div className="rounded-3xl p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
+              <span>System Quota</span>
+              <HardDrive size={16} className="text-cyan-500" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-cyan-600 dark:text-cyan-400 tracking-tight">
+              {formatSize(totalAllocated)}
+            </div>
+            <div className="text-[11px] text-slate-400 dark:text-white/40 font-mono">
+              Cumulative Storage Provisioned
+            </div>
+          </div>
+        </div>
+
+        {/* ── CURRENT USER HERO HIGHLIGHT ── */}
         {currentUser && (
-          <div className="rounded-3xl p-6 sm:p-8 bg-white dark:bg-gradient-to-br dark:from-vault-surface dark:via-slate-900 dark:to-slate-950 border border-slate-200 dark:border-accent-border/30 shadow-md relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-6 text-slate-900 dark:text-white">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-accent-soft/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="rounded-3xl p-6 sm:p-7 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-accent-border/40 shadow-lg relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 backdrop-blur-2xl">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-accent-soft/25 rounded-full blur-3xl pointer-events-none" />
 
             <div className="flex items-center gap-5 relative z-10 w-full sm:w-auto">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0 bg-accent-soft border-2 border-accent-border flex items-center justify-center shadow-accent-glow-sm">
-                {profilePicUrl ? (
-                  <img
-                    src={profilePicUrl}
-                    alt={currentUser.name || "Profile"}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <span className="text-xl sm:text-2xl font-black text-accent-primary select-none">
-                    {currentUser?.name?.[0]?.toUpperCase() ||
-                      currentUser?.email?.[0]?.toUpperCase() ||
-                      "U"}
-                  </span>
-                )}
+              <div className="relative">
+                <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl overflow-hidden shrink-0 bg-accent-soft border-2 border-accent-border flex items-center justify-center shadow-accent-glow">
+                  {profilePicUrl ? (
+                    <img
+                      src={profilePicUrl}
+                      alt={currentUser.name || "Profile"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <span className="text-xl sm:text-2xl font-black text-accent-primary select-none">
+                      {currentUser?.name?.[0]?.toUpperCase() ||
+                        currentUser?.email?.[0]?.toUpperCase() ||
+                        "U"}
+                    </span>
+                  )}
+                </div>
+                <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-vault-black shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
               </div>
 
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
                     {currentUser.name}
                   </h2>
                   <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getRoleBadgeStyle(
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border uppercase tracking-wider ${getRoleBadgeStyle(
                       currentUser.role
                     )}`}
                   >
+                    <Shield size={11} className="mr-1" />
                     {currentUser.role?.toUpperCase()}
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-white/50 font-medium">
+                <p className="text-xs sm:text-sm font-mono text-slate-500 dark:text-white/50 truncate">
                   {currentUser.email}
                 </p>
               </div>
             </div>
 
-            <div className="relative z-10 flex items-center gap-3 w-full sm:w-auto justify-end border-t sm:border-t-0 border-slate-200 dark:border-white/10 pt-4 sm:pt-0">
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-soft border border-accent-border text-accent-primary text-xs font-bold uppercase tracking-wider">
+            <div className="relative z-10 flex items-center gap-3 w-full sm:w-auto justify-end border-t sm:border-t-0 border-slate-100 dark:border-white/10 pt-4 sm:pt-0">
+              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent-soft border border-accent-border text-accent-primary text-xs font-mono font-bold uppercase tracking-wider shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />
-                Current User
+                Active Administrator Session
               </span>
             </div>
           </div>
         )}
 
+        {/* ── SEARCH & FILTER CONTROLS ── */}
+        <div className="rounded-3xl p-4 sm:p-5 bg-white dark:bg-vault-surface/70 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-4">
+          
+          {/* Search Input */}
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40" size={15} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name or email..."
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-2xl text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary transition-all font-medium"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-black/30 p-1 rounded-2xl border border-slate-200 dark:border-white/10">
+              {["ALL", "OWNER", "ADMIN", "MANAGER", "USER"].map((role) => (
+                <button
+                  key={role}
+                  onClick={() => setRoleFilter(role)}
+                  className={`px-3 py-1 rounded-xl text-[11px] font-mono font-bold uppercase tracking-wider transition-all ${
+                    roleFilter === role
+                      ? "bg-accent-primary text-accent-foreground shadow-sm"
+                      : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-black/30 p-1 rounded-2xl border border-slate-200 dark:border-white/10">
+              {["ALL", "ONLINE", "OFFLINE"].map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setStatusFilter(st)}
+                  className={`px-3 py-1 rounded-xl text-[11px] font-mono font-bold uppercase tracking-wider transition-all ${
+                    statusFilter === st
+                      ? "bg-accent-soft text-accent-primary border border-accent-border shadow-sm"
+                      : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
         {/* ── USERS GRID ── */}
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-white/40">
-              Registered Accounts ({users.length})
+            <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-white/40 flex items-center gap-2">
+              <Activity size={14} className="text-accent-primary" />
+              <span>Registered Accounts Directory ({filteredUsers.length} of {totalUsers})</span>
             </h3>
           </div>
 
@@ -311,7 +465,7 @@ const Users = () => {
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div
                   key={i}
-                  className="rounded-3xl p-6 bg-vault-surface/60 border border-white/10 space-y-4"
+                  className="rounded-3xl p-6 bg-white dark:bg-vault-surface/60 border border-slate-200 dark:border-white/10 space-y-4"
                 >
                   <div className="flex items-center gap-4">
                     <Skeleton variant="circular" className="w-14 h-14 shrink-0" />
@@ -320,7 +474,7 @@ const Users = () => {
                       <Skeleton className="h-3 w-1/2 rounded opacity-60" />
                     </div>
                   </div>
-                  <div className="flex gap-2 pt-2 border-t border-white/5">
+                  <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
                     <Skeleton className="h-6 w-20 rounded-full" />
                     <Skeleton className="h-6 w-16 rounded-full" />
                   </div>
@@ -328,16 +482,29 @@ const Users = () => {
                 </div>
               ))}
             </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="rounded-3xl p-12 bg-white dark:bg-vault-surface/60 border border-slate-200 dark:border-white/10 text-center space-y-3">
+              <UsersIcon size={36} className="mx-auto text-slate-400 dark:text-white/30" />
+              <h4 className="text-base font-bold text-slate-900 dark:text-white">No Users Found</h4>
+              <p className="text-xs text-slate-500 dark:text-white/40">
+                No registered accounts match your active search and role criteria.
+              </p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <AnimatePresence>
-                {users.map((user) => {
+                {filteredUsers.map((user) => {
                   const displayStatus = getDisplayStatus(user);
                   const isTerminated =
                     user.status === "TERMINATED" || user.status === "Deleted";
                   const userAvatarUrl = user.profilepic
                     ? `${SERVER_URL}/user/profilepic?id=${user.profilepic}`
                     : null;
+                  const isSelf = currentUser?._id === user._id;
+                  const canEditRole =
+                    !isSelf &&
+                    user.yourAuthority &&
+                    user.yourAuthority.length > 0;
 
                   return (
                     <motion.div
@@ -345,122 +512,184 @@ const Users = () => {
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="rounded-3xl p-6 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 backdrop-blur-xl hover:border-accent-border shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-6 relative overflow-hidden group text-slate-900 dark:text-white"
+                      className={`rounded-3xl p-6 bg-white dark:bg-vault-surface/85 border transition-all duration-200 flex flex-col justify-between space-y-5 relative overflow-hidden group shadow-sm hover:shadow-xl ${
+                        isTerminated
+                          ? "border-rose-500/30 opacity-70 bg-rose-500/[0.02]"
+                          : "border-slate-200 dark:border-white/10 hover:border-accent-border"
+                      }`}
                     >
-                      {/* Top Row: User Avatar & Basic Info */}
-                      <div>
-                        <div className="flex items-start gap-4 mb-4">
-                          <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center group-hover:border-accent-border transition-colors">
-                            {userAvatarUrl ? (
-                              <img
-                                src={userAvatarUrl}
-                                alt={user.name || "User Avatar"}
-                                referrerPolicy="no-referrer"
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.target.onerror = null;
-                                  e.target.style.display = "none";
-                                }}
-                              />
-                            ) : (
-                              <span className="text-lg font-bold text-slate-800 dark:text-white/80 select-none">
-                                {user?.name?.[0]?.toUpperCase() ||
-                                  user?.email?.[0]?.toUpperCase() ||
-                                  "U"}
-                              </span>
-                            )}
-                          </div>
+                      {/* Top Section: Avatar, Name, Email, Badges */}
+                      <div className="space-y-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <div className="relative shrink-0">
+                              <div className="w-13 h-13 rounded-2xl overflow-hidden bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-sm">
+                                {userAvatarUrl ? (
+                                  <img
+                                    src={userAvatarUrl}
+                                    alt={user.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.style.display = "none";
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-base font-black text-slate-700 dark:text-white/80 select-none">
+                                    {user.name?.[0]?.toUpperCase() ||
+                                      user.email?.[0]?.toUpperCase() ||
+                                      "U"}
+                                  </span>
+                                )}
+                              </div>
 
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-lg font-bold text-slate-900 dark:text-white truncate tracking-tight">
-                              {user.name}
-                            </h4>
-                            <p className="text-xs text-slate-500 dark:text-white/40 truncate font-medium mt-0.5">
-                              {user.email}
-                            </p>
+                              {/* Online Status Pill Indicator */}
+                              <span
+                                className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-vault-black ${
+                                  displayStatus === "ONLINE"
+                                    ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
+                                    : displayStatus === "TERMINATED"
+                                    ? "bg-rose-500"
+                                    : "bg-slate-400 dark:bg-white/20"
+                                }`}
+                              />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-base font-black text-slate-900 dark:text-white tracking-tight truncate">
+                                {user.name || "Operative"}
+                              </h4>
+                              <p className="text-xs font-mono text-slate-500 dark:text-white/40 truncate">
+                                {user.email}
+                              </p>
+                            </div>
                           </div>
                         </div>
 
-                        {/* Badges Row */}
-                        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-white/5">
-                          <button
-                            onClick={() => !isTerminated && openEditRoleModal(user)}
-                            disabled={isTerminated}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider transition-all ${getRoleBadgeStyle(
-                              user.role
-                            )} ${
-                              isTerminated
-                                ? "opacity-50 cursor-not-allowed"
-                                : "hover:brightness-125"
-                            }`}
-                            title={
-                              isTerminated
-                                ? "Cannot change role of terminated user"
-                                : "Click to edit role permission"
-                            }
-                          >
-                            <span>{user.role}</span>
-                            {!isTerminated && <Edit2 size={10} />}
-                          </button>
+                        {/* Status Badges Row */}
+                        <div className="flex items-center gap-2 flex-wrap pt-1">
+                          {/* Role Badge */}
+                          <div className="flex items-center gap-1">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-mono font-bold border uppercase tracking-wider ${getRoleBadgeStyle(
+                                user.role
+                              )}`}
+                            >
+                              <Shield size={10} className="mr-1" />
+                              {user.role || "USER"}
+                            </span>
 
+                            {canEditRole && (
+                              <button
+                                onClick={() => openEditRoleModal(user)}
+                                className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 transition-colors"
+                                title="Change Role"
+                              >
+                                <Edit2 size={11} />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Status Badge */}
                           <span
-                            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getStatusBadgeStyle(
-                              displayStatus
-                            )}`}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold border uppercase tracking-wider ${
+                              displayStatus === "ONLINE"
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30"
+                                : displayStatus === "TERMINATED"
+                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-300 border-rose-500/30"
+                                : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/40 border-slate-200 dark:border-white/10"
+                            }`}
                           >
                             <span
                               className={`w-1.5 h-1.5 rounded-full ${
                                 displayStatus === "ONLINE"
-                                  ? "bg-emerald-400 animate-pulse"
+                                  ? "bg-emerald-500 animate-pulse"
                                   : displayStatus === "TERMINATED"
                                   ? "bg-rose-500"
-                                  : "bg-white/30"
+                                  : "bg-slate-400 dark:bg-white/30"
                               }`}
                             />
                             {displayStatus}
                           </span>
+
+                          {/* 2FA Indicator */}
+                          {user.twoFactorEnabled && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-teal-500/10 text-teal-600 dark:text-teal-300 border border-teal-500/30">
+                              <Lock size={9} /> 2FA
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Quota & Device metrics */}
+                        <div className="pt-2 border-t border-slate-100 dark:border-white/5 space-y-1.5 text-xs font-mono text-slate-500 dark:text-white/40">
+                          <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <HardDrive size={12} className="text-accent-primary" /> Max Quota:
+                            </span>
+                            <span className="font-bold text-slate-700 dark:text-white/70">
+                              {formatSize(user.maxStorage || 524288000)}
+                            </span>
+                          </div>
+                          {user.devicesCount !== undefined && (
+                            <div className="flex items-center justify-between">
+                              <span className="flex items-center gap-1.5">
+                                <Monitor size={12} className="text-cyan-500" /> Active Devices:
+                              </span>
+                              <span className="font-bold text-slate-700 dark:text-white/70">
+                                {user.devicesCount}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      {/* Action Controls Row */}
-                      <div className="pt-4 border-t border-white/10">
-                        {isTerminated ? (
-                          currentUser?.role?.toUpperCase() === "OWNER" ? (
+                      {/* Bottom Section: Actions */}
+                      <div className="pt-3 border-t border-slate-100 dark:border-white/5">
+                        {isSelf ? (
+                          <div className="w-full py-2.5 rounded-2xl text-center text-xs font-mono font-bold text-accent-primary bg-accent-soft border border-accent-border">
+                            Current Operator Profile
+                          </div>
+                        ) : isTerminated ? (
+                          <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleReactivate(user._id)}
-                              className="w-full py-2.5 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 transition-colors"
+                              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 transition-colors flex items-center justify-center gap-1.5"
                             >
-                              Reactivate Account
+                              <UserCheck size={14} /> Reactivate
                             </button>
-                          ) : (
-                            <div className="text-center text-xs text-white/30 font-semibold py-2">
-                              Account Terminated
-                            </div>
-                          )
+                            <button
+                              onClick={() => openDeleteModal(user)}
+                              className="p-2.5 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-500 transition-colors"
+                              title="Permanently Purge"
+                            >
+                              <AlertTriangle size={14} />
+                            </button>
+                          </div>
                         ) : (
                           <div className="flex items-center gap-2">
                             {(currentUser?.role?.toUpperCase() === "OWNER" ||
-                              currentUser?.role?.toUpperCase() === "ADMIN") && (
-                              <button
-                                onClick={() =>
-                                  navigate(
-                                    `/dashboard/${currentUser?.role?.toLowerCase()}/folder/${user.rootDirId}`
-                                  )
-                                }
-                                className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white transition-colors"
-                                title={`View ${user.name}'s Drive`}
-                              >
-                                <Eye size={16} />
-                              </button>
-                            )}
+                              currentUser?.role?.toUpperCase() === "ADMIN") &&
+                              user.rootDirId && (
+                                <button
+                                  onClick={() =>
+                                    navigate(
+                                      `/dashboard/${currentUser?.role?.toLowerCase()}/folder/${user.rootDirId}`
+                                    )
+                                  }
+                                  className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                  title={`Inspect ${user.name}'s Vault Root`}
+                                >
+                                  <Eye size={15} />
+                                </button>
+                              )}
 
                             <button
                               onClick={() => handleForceLogout(user._id)}
                               disabled={!user.isLoggedIn}
                               className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-colors ${
                                 user.isLoggedIn
-                                  ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-300"
-                                  : "bg-white/5 border-white/5 text-white/30 cursor-not-allowed opacity-50"
+                                  ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-600 dark:text-amber-300 shadow-sm"
+                                  : "bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-400 dark:text-white/20 cursor-not-allowed opacity-50"
                               }`}
                             >
                               Force Logout
@@ -468,7 +697,7 @@ const Users = () => {
 
                             <button
                               onClick={() => openDeleteModal(user)}
-                              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors"
+                              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 transition-colors shadow-sm"
                             >
                               Terminate
                             </button>
@@ -482,6 +711,7 @@ const Users = () => {
             </div>
           )}
         </div>
+
       </div>
 
       {/* ── TERMINATE / DELETE USER MODAL ── */}
@@ -500,30 +730,30 @@ const Users = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-vault-surface border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 overflow-hidden"
+              className="relative w-full max-w-md bg-white dark:bg-vault-surface text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 overflow-hidden"
             >
               <button
                 onClick={closeDeleteModal}
-                className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors"
+                className="absolute top-5 right-5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
               >
                 <X size={20} />
               </button>
 
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shrink-0">
-                  <ShieldAlert className="text-rose-400" size={24} />
+                  <ShieldAlert className="text-rose-500" size={24} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">Terminate User</h3>
-                  <p className="text-xs text-white/40 uppercase tracking-wider font-semibold">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Terminate User</h3>
+                  <p className="text-xs text-slate-500 dark:text-white/40 uppercase tracking-wider font-semibold font-mono">
                     System Permission Action
                   </p>
                 </div>
               </div>
 
-              <p className="text-sm text-white/80 mb-6 leading-relaxed">
+              <p className="text-sm text-slate-600 dark:text-white/80 mb-6 leading-relaxed">
                 You are about to terminate account access for{" "}
-                <span className="text-white font-bold">{userToDelete?.name}</span>. Select how to apply this deletion.
+                <strong className="text-slate-900 dark:text-white font-bold">{userToDelete?.name}</strong>. Select how to apply this deletion.
               </p>
 
               <div className="space-y-3 mb-8">
@@ -531,10 +761,10 @@ const Users = () => {
                   onClick={() => handleDelete("soft")}
                   className="w-full text-left p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 transition-all group"
                 >
-                  <div className="text-amber-300 text-sm font-bold mb-1">
+                  <div className="text-amber-600 dark:text-amber-300 text-sm font-bold mb-1">
                     Soft Delete (Deactivate)
                   </div>
-                  <div className="text-xs text-amber-300/70">
+                  <div className="text-xs text-slate-600 dark:text-amber-300/70">
                     Disables login access while maintaining files and data history.
                   </div>
                 </button>
@@ -543,10 +773,10 @@ const Users = () => {
                   onClick={() => handleDelete("hard")}
                   className="w-full text-left p-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 transition-all group"
                 >
-                  <div className="text-rose-400 text-sm font-bold flex items-center gap-2 mb-1">
+                  <div className="text-rose-600 dark:text-rose-400 text-sm font-bold flex items-center gap-2 mb-1">
                     <AlertTriangle size={14} /> Hard Delete (Purge)
                   </div>
-                  <div className="text-xs text-rose-400/70">
+                  <div className="text-xs text-slate-600 dark:text-rose-400/70">
                     Permanently deletes user account, permissions, and all associated vault data.
                   </div>
                 </button>
@@ -555,7 +785,7 @@ const Users = () => {
               <div className="flex justify-end">
                 <button
                   onClick={closeDeleteModal}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 transition-colors"
                 >
                   Cancel
                 </button>
@@ -581,30 +811,30 @@ const Users = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-vault-surface border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 overflow-hidden"
+              className="relative w-full max-w-md bg-white dark:bg-vault-surface text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 overflow-hidden"
             >
               <button
                 onClick={closeEditRoleModal}
-                className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors"
+                className="absolute top-5 right-5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
               >
                 <X size={20} />
               </button>
 
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center shrink-0">
-                  <Shield className="text-purple-300" size={24} />
+                  <Shield className="text-purple-500 dark:text-purple-300" size={24} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">Change Role</h3>
-                  <p className="text-xs text-white/40 uppercase tracking-wider font-semibold">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Change Role</h3>
+                  <p className="text-xs text-slate-500 dark:text-white/40 uppercase tracking-wider font-semibold font-mono">
                     Permission Hierarchy
                   </p>
                 </div>
               </div>
 
-              <p className="text-sm text-white/80 mb-6 leading-relaxed">
+              <p className="text-sm text-slate-600 dark:text-white/80 mb-6 leading-relaxed">
                 Select a new system permission tier for{" "}
-                <span className="text-white font-bold">{userToEditRole?.name}</span>.
+                <strong className="text-slate-900 dark:text-white font-bold">{userToEditRole?.name}</strong>.
               </p>
 
               <div className="space-y-3 mb-8">
@@ -654,7 +884,4 @@ const Users = () => {
       </AnimatePresence>
     </div>
   );
-};
-
-export default Users;
-
+}
