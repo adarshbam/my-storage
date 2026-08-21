@@ -373,11 +373,18 @@ export default function FileBrowser({ specialView }) {
       setModalType("create-file");
       setSelectedExt(".txt");
     };
+    const onRepoTrigger = () => {
+      setModalInput("");
+      setIsPrivate(false);
+      setModalType("create-repo");
+    };
     document.addEventListener("createFolderTrigger", onFolderTrigger);
     document.addEventListener("createFileTrigger", onFileTrigger);
+    document.addEventListener("createRepoTrigger", onRepoTrigger);
     return () => {
       document.removeEventListener("createFolderTrigger", onFolderTrigger);
       document.removeEventListener("createFileTrigger", onFileTrigger);
+      document.removeEventListener("createRepoTrigger", onRepoTrigger);
     };
   }, []);
 
@@ -1858,6 +1865,21 @@ export default function FileBrowser({ specialView }) {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          {specialView === "github" && (
+            <button
+              onClick={() => {
+                setModalInput("");
+                setIsPrivate(false);
+                setModalType("create-repo");
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-primary text-accent-foreground font-bold shadow-accent-glow hover:opacity-90 text-xs active:scale-95 transition-all cursor-pointer"
+              title="Create New GitHub Repository"
+            >
+              <Plus size={15} />
+              <span>New Repository</span>
+            </button>
+          )}
+
           <div className="flex items-center bg-black/40 backdrop-blur-sm rounded-xl p-1 border border-white/5">
             <button
               onClick={() => setViewMode("grid")}

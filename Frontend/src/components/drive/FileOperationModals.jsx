@@ -366,16 +366,12 @@ export default function FileOperationModals({
             )}
 
             {modalType === "rename" && modalItem && (
-              <div className="flex items-center gap-3.5 p-3.5 bg-slate-50 dark:bg-vault-panel/60 rounded-2xl border border-slate-200 dark:border-white/10">
-                <div className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shrink-0 shadow-sm">
-                  {modalItem.type === "directory" ? (
-                    <FolderPlus size={18} className="text-accent-primary" />
-                  ) : (
-                    renderFileIcon(modalItem.extension || modalItem.name.split(".").pop(), { size: 18 })
-                  )}
+              <div className="p-3 bg-slate-50 dark:bg-vault-panel/60 rounded-2xl border border-slate-200 dark:border-white/10 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-accent-soft border border-accent-border flex items-center justify-center text-accent-primary shrink-0">
+                  <Edit2 size={15} />
                 </div>
-                <div className="overflow-hidden">
-                  <div className="text-[10px] font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-white/40">
                     Current Name
                   </div>
                   <div className="text-xs font-bold text-slate-900 dark:text-white truncate mt-0.5">
@@ -385,45 +381,81 @@ export default function FileOperationModals({
               </div>
             )}
 
-            <div>
-              <label className="block text-xs font-black text-slate-700 dark:text-white/70 uppercase tracking-wider mb-2">
-                {modalType === "create" ? "Folder Name" : "New Name"}
-              </label>
-              <input
-                type="text"
-                value={modalInput}
-                onChange={(e) => setModalInput(e.target.value)}
-                placeholder={modalType === "create" ? "e.g. Financial Reports 2026" : "Enter new filename"}
-                className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-vault-panel/60 text-slate-900 dark:text-white focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 outline-none transition-all text-sm font-bold placeholder:text-slate-400 dark:placeholder:text-white/30 shadow-sm"
-                autoFocus
-              />
-            </div>
-
-            {modalType === "create-repo" && (
-              <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-vault-panel/60 rounded-2xl border border-slate-200 dark:border-white/10">
-                <div className="flex items-center gap-2.5 text-xs font-bold text-slate-800 dark:text-white">
-                  {isPrivate ? (
-                    <Lock size={15} className="text-accent-primary" />
-                  ) : (
-                    <Globe size={15} className="text-blue-500" />
-                  )}
-                  <span>{isPrivate ? "Private Repository" : "Public Repository"}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsPrivate(!isPrivate)}
-                  className={cn(
-                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                    isPrivate ? "bg-accent-primary" : "bg-slate-300 dark:bg-white/20",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                      isPrivate ? "translate-x-5" : "translate-x-0",
-                    )}
+            {modalType === "create-repo" ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black text-slate-700 dark:text-white/70 uppercase tracking-wider mb-2">
+                    Repository Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={modalInput}
+                    onChange={(e) => setModalInput(e.target.value)}
+                    placeholder="e.g. cloud-storage-backend"
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-vault-panel/60 text-slate-900 dark:text-white focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 outline-none transition-all text-sm font-bold placeholder:text-slate-400 dark:placeholder:text-white/30 shadow-sm"
+                    autoFocus
                   />
-                </button>
+                  <p className="text-[11px] text-slate-400 dark:text-white/40 mt-1.5">
+                    Repository names should be alphanumeric and can contain hyphens or underscores.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-slate-700 dark:text-white/70 uppercase tracking-wider mb-2">
+                    Visibility
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div
+                      onClick={() => setIsPrivate(false)}
+                      className={cn(
+                        "p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 flex flex-col gap-1.5 select-none",
+                        !isPrivate
+                          ? "bg-blue-500/10 border-blue-500/40 shadow-sm ring-1 ring-blue-500/30"
+                          : "bg-slate-50 dark:bg-vault-panel/40 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10",
+                      )}
+                    >
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
+                        <Globe size={16} className={!isPrivate ? "text-blue-400" : "text-slate-400"} />
+                        <span>Public</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-white/50 leading-relaxed">
+                        Anyone on the internet can see this repository.
+                      </p>
+                    </div>
+
+                    <div
+                      onClick={() => setIsPrivate(true)}
+                      className={cn(
+                        "p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 flex flex-col gap-1.5 select-none",
+                        isPrivate
+                          ? "bg-accent-soft border-accent-border shadow-sm ring-1 ring-accent-primary/30"
+                          : "bg-slate-50 dark:bg-vault-panel/40 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10",
+                      )}
+                    >
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
+                        <Lock size={16} className={isPrivate ? "text-accent-primary" : "text-slate-400"} />
+                        <span>Private</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-white/50 leading-relaxed">
+                        You choose who can see and commit.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-black text-slate-700 dark:text-white/70 uppercase tracking-wider mb-2">
+                  {modalType === "create" ? "Folder Name" : "New Name"}
+                </label>
+                <input
+                  type="text"
+                  value={modalInput}
+                  onChange={(e) => setModalInput(e.target.value)}
+                  placeholder={modalType === "create" ? "e.g. Financial Reports 2026" : "Enter new filename"}
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-vault-panel/60 text-slate-900 dark:text-white focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 outline-none transition-all text-sm font-bold placeholder:text-slate-400 dark:placeholder:text-white/30 shadow-sm"
+                  autoFocus
+                />
               </div>
             )}
 
@@ -432,7 +464,11 @@ export default function FileOperationModals({
                 Cancel
               </Button>
               <Button type="submit" variant="primary" disabled={!modalInput.trim()} className="shadow-accent-glow">
-                {modalType === "create" ? "Create Folder" : "Save Changes"}
+                {modalType === "create-repo"
+                  ? "Create Repository"
+                  : modalType === "create"
+                    ? "Create Folder"
+                    : "Save Changes"}
               </Button>
             </div>
           </form>

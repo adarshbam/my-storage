@@ -20,6 +20,7 @@ import {
   Upload,
   FolderPlus,
   FilePlus,
+  Plus,
   Menu,
   PanelLeft,
   MoreVertical,
@@ -455,20 +456,31 @@ export default function CommandBar({
 
       {/* RIGHT: Quick Actions & Status */}
       <div className="flex items-center gap-3 shrink-0">
-        {/* Quick Create Actions — Color-Coded */}
+        {/* Quick Create Actions — Color-Coded (Contextual for GitHub) */}
         <div className="hidden lg:flex items-center gap-1 border-r border-slate-200 dark:border-white/10 pr-3 mr-1">
-          {quickActions.map((action) => (
+          {location.pathname === "/dashboard/github" ? (
             <button
-              key={action.label}
-              onClick={() => {
-                action.onClick();
-              }}
-              className={`p-2 text-slate-500 dark:text-white/50 ${action.hoverText} ${action.hoverBg} ${action.glowHover} rounded-xl transition-all duration-200`}
-              title={action.label}
+              onClick={() => document.dispatchEvent(new CustomEvent("createRepoTrigger"))}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-soft text-accent-primary border border-accent-border hover:bg-accent-primary hover:text-accent-foreground text-xs font-bold transition-all shadow-sm active:scale-95"
+              title="Create New GitHub Repository"
             >
-              <action.icon size={18} />
+              <Plus size={14} />
+              <span>New Repository</span>
             </button>
-          ))}
+          ) : (
+            quickActions.map((action) => (
+              <button
+                key={action.label}
+                onClick={() => {
+                  action.onClick();
+                }}
+                className={`p-2 text-slate-500 dark:text-white/50 ${action.hoverText} ${action.hoverBg} ${action.glowHover} rounded-xl transition-all duration-200`}
+                title={action.label}
+              >
+                <action.icon size={18} />
+              </button>
+            ))
+          )}
         </div>
 
         {/* Mobile Control Center Toggle */}
@@ -551,54 +563,69 @@ export default function CommandBar({
                 </span>
               </button>
 
-              {/* Action Grid — 2x2 Color-Coded Tiles */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                {quickActions.map((action, idx) => (
+              {/* Action Grid — Contextual for GitHub */}
+              {location.pathname === "/dashboard/github" ? (
+                <div className="mb-4">
                   <button
-                    key={action.label}
                     onClick={() => {
                       setShowMobileMenu(false);
-                      action.onClick();
+                      document.dispatchEvent(new CustomEvent("createRepoTrigger"));
                     }}
-                    className="control-center-tile relative flex flex-col items-center justify-center gap-2 p-4 sm:p-5 rounded-2xl border border-white/10 backdrop-blur-md bg-vault-surface/80 active:scale-95 transition-transform duration-150"
-                    style={{
-                      animationDelay: `${idx * 50}ms`,
-                    }}
+                    className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl bg-accent-primary text-accent-foreground font-bold text-sm shadow-accent-glow active:scale-95 transition-transform"
                   >
-                    {/* Colored glow behind icon */}
-                    <div
-                      className="absolute inset-0 rounded-2xl opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                      style={{ boxShadow: `inset 0 0 30px ${action.color}15` }}
-                    />
-
-                    {/* Icon with color */}
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center border border-white/10 relative"
+                    <Plus size={18} />
+                    <span>Create New Repository</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {quickActions.map((action, idx) => (
+                    <button
+                      key={action.label}
+                      onClick={() => {
+                        setShowMobileMenu(false);
+                        action.onClick();
+                      }}
+                      className="control-center-tile relative flex flex-col items-center justify-center gap-2 p-4 sm:p-5 rounded-2xl border border-white/10 backdrop-blur-md bg-vault-surface/80 active:scale-95 transition-transform duration-150"
                       style={{
-                        backgroundColor: `${action.color}15`,
-                        boxShadow: `0 0 20px ${action.color}10`,
+                        animationDelay: `${idx * 50}ms`,
                       }}
                     >
-                      <action.icon
-                        size={22}
-                        style={{ color: action.color }}
-                        className="relative z-10"
+                      {/* Colored glow behind icon */}
+                      <div
+                        className="absolute inset-0 rounded-2xl opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                        style={{ boxShadow: `inset 0 0 30px ${action.color}15` }}
                       />
-                    </div>
 
-                    {/* Label */}
-                    <span className="text-[11px] sm:text-xs font-semibold text-white/70 tracking-wide text-center leading-tight">
-                      {action.label}
-                    </span>
+                      {/* Icon with color */}
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center border border-white/10 relative"
+                        style={{
+                          backgroundColor: `${action.color}15`,
+                          boxShadow: `0 0 20px ${action.color}10`,
+                        }}
+                      >
+                        <action.icon
+                          size={22}
+                          style={{ color: action.color }}
+                          className="relative z-10"
+                        />
+                      </div>
 
-                    {/* Colored bottom accent line */}
-                    <div
-                      className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full opacity-40"
-                      style={{ backgroundColor: action.color }}
-                    />
-                  </button>
-                ))}
-              </div>
+                      {/* Label */}
+                      <span className="text-[11px] sm:text-xs font-semibold text-white/70 tracking-wide text-center leading-tight">
+                        {action.label}
+                      </span>
+
+                      {/* Colored bottom accent line */}
+                      <div
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full opacity-40"
+                        style={{ backgroundColor: action.color }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Cancel */}
               <button
