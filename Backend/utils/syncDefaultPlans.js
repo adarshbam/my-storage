@@ -3,13 +3,14 @@ import Feature from "../models/featureModel.js";
 import PlanTierConfiguration from "../models/planTierConfigurationModel.js";
 import PlanTier from "../models/planTierModel.js";
 import SystemConfig from "../models/systemConfigModel.js";
+import { rzInstance } from "../integrations/razorpay/razorpay.client.js";
 
 export const initialPlanTiers = [
   {
     slug: "free-trial",
     type: "Free Trial",
     title: "Free Trial",
-    description: "Try everything free for 30 days with essential features.",
+    description: "Try 100% of Ultimate features free for 30 days with a 5 GB quota.",
     badge: "30 Days Free",
     accentColor: "emerald",
     active: true,
@@ -18,7 +19,7 @@ export const initialPlanTiers = [
     slug: "novice",
     type: "Novice",
     title: "Novice Vault",
-    description: "1 TB secure storage for personal files and photos.",
+    description: "1 TB secure storage for personal files, photos, and documents.",
     badge: "Personal",
     accentColor: "purple",
     active: true,
@@ -28,7 +29,7 @@ export const initialPlanTiers = [
     type: "Professional",
     title: "Professional",
     description:
-      "Designed for creators and power users with priority speed and AI search.",
+      "Designed for power users with priority speed, cloud linkage, and AI search.",
     badge: "Most Popular",
     accentColor: "rose",
     active: true,
@@ -38,7 +39,7 @@ export const initialPlanTiers = [
     type: "Ultimate",
     title: "Ultimate Enterprise",
     description:
-      "Everything included with 15 TB storage for teams and total backup.",
+      "Full capability suite with 15 TB storage for power teams and total backup.",
     badge: "Best Value",
     accentColor: "sky",
     active: true,
@@ -50,23 +51,21 @@ export const initialBillingPlans = [
     period: "Monthly",
     slug: "free-trial",
     amount: 0,
-    currency: "USD",
+    currency: "INR",
     storage: 5368709120, // 5 GB
-    razorpayPlanId: "plan_free_0000",
     active: true,
     version: 1,
-    description: "30-day free trial tier with 5 GB storage.",
+    description: "30-day free trial tier with 5 GB storage and full Ultimate features.",
   },
   {
     period: "Yearly",
     slug: "free-trial",
     amount: 0,
-    currency: "USD",
+    currency: "INR",
     storage: 5368709120, // 5 GB
-    razorpayPlanId: "plan_free_0000_yr",
     active: true,
     version: 1,
-    description: "Annual free trial tier with 5 GB storage.",
+    description: "Annual free trial tier with 5 GB storage and full Ultimate features.",
   },
   {
     period: "Monthly",
@@ -74,7 +73,6 @@ export const initialBillingPlans = [
     amount: 199,
     currency: "INR",
     storage: 1099511627776, // 1 TB
-    razorpayPlanId: "plan_TLhlNqWa9N7Eds",
     active: true,
     version: 1,
     description: "1 TB secure storage for personal files and photos.",
@@ -85,7 +83,6 @@ export const initialBillingPlans = [
     amount: 1999,
     currency: "INR",
     storage: 1099511627776, // 1 TB
-    razorpayPlanId: "plan_TLhpKywIQbITby",
     active: true,
     version: 1,
     description: "1 TB secure storage billed annually (2 months free).",
@@ -96,7 +93,6 @@ export const initialBillingPlans = [
     amount: 499,
     currency: "INR",
     storage: 5497558138880, // 5 TB
-    razorpayPlanId: "plan_TLhqYa2YW08mV0",
     active: true,
     version: 1,
     description:
@@ -108,7 +104,6 @@ export const initialBillingPlans = [
     amount: 4999,
     currency: "INR",
     storage: 5497558138880, // 5 TB
-    razorpayPlanId: "plan_TLhsDtgn6S2jzn",
     active: true,
     version: 1,
     description:
@@ -120,7 +115,6 @@ export const initialBillingPlans = [
     amount: 1199,
     currency: "INR",
     storage: 16492674416640, // 15 TB
-    razorpayPlanId: "plan_TLhu6W2TP8aXLF",
     active: true,
     version: 1,
     description:
@@ -132,7 +126,6 @@ export const initialBillingPlans = [
     amount: 11999,
     currency: "INR",
     storage: 16492674416640, // 15 TB
-    razorpayPlanId: "plan_TLhvIDwdeWiEmn",
     active: true,
     version: 1,
     description: "15 TB annual power tier for teams and total backup.",
@@ -227,8 +220,22 @@ export const initialFeatures = [
   },
 ];
 
+// Free Trial gets 100% of the Ultimate features (Sandbox of Ultimate)
 export const initialPlanTierFeatureConfigs = {
-  "free-trial": ["secure_storage", "share_links"],
+  "free-trial": [
+    "secure_storage",
+    "folder_upload",
+    "share_links",
+    "password_links",
+    "expiring_links",
+    "gdrive_sync",
+    "dropbox_sync",
+    "github_backup",
+    "ai_search",
+    "priority_speed",
+    "version_history",
+    "priority_support",
+  ],
   novice: [
     "secure_storage",
     "folder_upload",
@@ -269,16 +276,20 @@ export const initialPlanTierRuleConfigs = {
       allowUpload: true,
       allowDownload: true,
       allowSharing: true,
+      allowEdit: true,
+      allowMove: true,
+      allowCopy: true,
+      allowDelete: true,
     },
     limits: {
       storageLimit: 5368709120, // 5 GB
-      maxConnectedDevices: 3,
+      maxConnectedDevices: 5,
       maxUploadFileSize: 2147483648, // 2 GB
     },
     settings: {
-      uploadSpeedMultiplier: 1,
+      uploadSpeedMultiplier: 10,
       versionHistoryDays: 30,
-      deleteFilesAfterExpiryDays: 60,
+      deleteFilesAfterExpiryDays: 30, // 30 days read-only rescue window after lapse
     },
   },
   novice: {
@@ -286,6 +297,10 @@ export const initialPlanTierRuleConfigs = {
       allowUpload: true,
       allowDownload: true,
       allowSharing: true,
+      allowEdit: true,
+      allowMove: true,
+      allowCopy: true,
+      allowDelete: true,
     },
     limits: {
       storageLimit: 1099511627776, // 1 TB
@@ -295,7 +310,7 @@ export const initialPlanTierRuleConfigs = {
     settings: {
       uploadSpeedMultiplier: 5,
       versionHistoryDays: 90,
-      deleteFilesAfterExpiryDays: 0, // Never
+      deleteFilesAfterExpiryDays: 0, // Never while active
     },
   },
   professional: {
@@ -303,6 +318,10 @@ export const initialPlanTierRuleConfigs = {
       allowUpload: true,
       allowDownload: true,
       allowSharing: true,
+      allowEdit: true,
+      allowMove: true,
+      allowCopy: true,
+      allowDelete: true,
     },
     limits: {
       storageLimit: 5497558138880, // 5 TB
@@ -312,7 +331,7 @@ export const initialPlanTierRuleConfigs = {
     settings: {
       uploadSpeedMultiplier: 10,
       versionHistoryDays: 365,
-      deleteFilesAfterExpiryDays: 0, // Never
+      deleteFilesAfterExpiryDays: 0, // Never while active
     },
   },
   ultimate: {
@@ -320,6 +339,10 @@ export const initialPlanTierRuleConfigs = {
       allowUpload: true,
       allowDownload: true,
       allowSharing: true,
+      allowEdit: true,
+      allowMove: true,
+      allowCopy: true,
+      allowDelete: true,
     },
     limits: {
       storageLimit: 16492674416640, // 15 TB
@@ -329,7 +352,7 @@ export const initialPlanTierRuleConfigs = {
     settings: {
       uploadSpeedMultiplier: 20,
       versionHistoryDays: 0, // Unlimited
-      deleteFilesAfterExpiryDays: 0, // Never
+      deleteFilesAfterExpiryDays: 0, // Never while active
     },
   },
 };
@@ -343,113 +366,161 @@ export const initialSystemConfig = {
   defaultStorageUnit: "GB",
 };
 
-const resetToDefaultSettings = async (req, res, next) => {
-  // Global System Config reset or initial set
-  const {
-    maxDevicesLimit,
-    maxFileSizeValue,
-    maxFileSizeUnit,
-    sessionTimeoutValue,
-    sessionTimeoutUnit,
-    defaultStorageUnit,
-  } = initialSystemConfig;
-
-  const globalSystemConfig = await SystemConfig.findOneAndUpdate(
-    { key: "global" },
-    {
-      maxDevicesLimit,
-      maxFileSizeValue,
-      maxFileSizeUnit,
-      sessionTimeoutValue,
-      sessionTimeoutUnit,
-      defaultStorageUnit,
-    },
-    { upsert: true, returnDocument: "after" },
-  );
-
-  console.log(globalSystemConfig);
-
-  // Initial Features reset or initial Set
-  for (const initialFeature of initialFeatures) {
-    console.log(initialFeature);
-    const { title, key, category, description, enabled } = initialFeature;
-
-    console.log(initialFeature);
-    let currentFeature = await Feature.findOneAndUpdate(
-      { key },
-      { title, key, category, description, enabled },
-      { upsert: true, returnDocument: "after" },
-    );
-    console.log(currentFeature);
+/**
+ * Dynamically generate a Razorpay Plan or return existing/fallback
+ */
+async function resolveRazorpayPlanId(billingPlan) {
+  if (!billingPlan.amount || billingPlan.amount === 0) {
+    return null;
   }
 
-  // Plan Tier reset or initial Set
-  for (const planTier of initialPlanTiers) {
-    console.log(planTier);
-    const { slug, type, title, description, accentColor, active } = planTier;
-    const currentPlanTier = await PlanTier.findOneAndUpdate(
-      { slug },
-      { slug, title, description, accentColor, active },
-      { upsert: true, returnDocument: "after" },
-    );
-    console.log(currentPlanTier);
+  const planCurrency = (billingPlan.currency || "INR").toUpperCase();
+  const rzAmount = Math.round(billingPlan.amount * 100);
 
-    const currentPlanFeatures = await Feature.find({
-      key: { $in: initialPlanTierFeatureConfigs[slug] },
-    }).select("_id");
-
-    console.log(currentPlanFeatures);
-    const tierRules = initialPlanTierRuleConfigs[slug] || {};
-
-    const currentPlanTierConfiguration =
-      await PlanTierConfiguration.findOneAndUpdate(
-        { tier: currentPlanTier._id, slug },
-        {
-          tier: currentPlanTier._id,
-          slug,
-          features: currentPlanFeatures,
-          rules: tierRules,
-        },
-        { upsert: true, returnDocument: "after" },
-      );
-    console.log(currentPlanTierConfiguration);
-  }
-
-  // Billing Plans reset or inital Set
-  for (const billingPlan of initialBillingPlans) {
-    console.log(billingPlan);
-    const {
-      slug,
-      amount,
-      period,
-      description,
-      version,
-      storage,
-      active,
-      currency,
-      razorpayPlanId,
-    } = billingPlan;
-
-    const currentPlanTier = await PlanTier.findOne({ slug });
-    console.log(currentPlanTier);
-    let currentBillingPlan = await BillingPlan.findOneAndUpdate(
-      { slug, period, amount },
-      {
-        tier: currentPlanTier?._id,
-        slug,
-        amount,
-        period,
-        description,
-        version,
-        storage,
-        active,
-        currency,
-        razorpayPlanId,
+  try {
+    const newRzPlan = await rzInstance.plans.create({
+      period: billingPlan.period.toLowerCase(),
+      interval: 1,
+      item: {
+        name: `${billingPlan.slug} - ${billingPlan.period}`,
+        amount: rzAmount,
+        currency: planCurrency,
+        description: billingPlan.description || `${billingPlan.slug} ${billingPlan.period} subscription`,
       },
+    });
+
+    console.log(
+      `[syncDefaultPlans] Created dynamic Razorpay Plan for ${billingPlan.slug} (${billingPlan.period}):`,
+      newRzPlan.id,
+    );
+    return newRzPlan.id;
+  } catch (rzErr) {
+    const existing = await BillingPlan.findOne({
+      slug: billingPlan.slug,
+      period: billingPlan.period,
+      amount: billingPlan.amount,
+      razorpayPlanId: { $exists: true, $ne: "" },
+    });
+
+    if (existing?.razorpayPlanId) {
+      return existing.razorpayPlanId;
+    }
+
+    console.warn(
+      `[syncDefaultPlans] Razorpay API unavailable, using deterministic fallback for ${billingPlan.slug}:`,
+      rzErr?.error?.description || rzErr.message,
+    );
+    return `plan_${billingPlan.slug}_${billingPlan.period.toLowerCase()}_dynamic`;
+  }
+}
+
+const resetToDefaultSettings = async (req, res, next) => {
+  try {
+    // 1. Global System Config reset or initial set
+    const globalSystemConfig = await SystemConfig.findOneAndUpdate(
+      { key: "global" },
+      { $set: initialSystemConfig },
       { upsert: true, returnDocument: "after" },
     );
-    console.log(currentBillingPlan);
+
+    // 2. Initial Features reset or initial Set in parallel
+    await Promise.all(
+      initialFeatures.map((f) =>
+        Feature.findOneAndUpdate(
+          { key: f.key },
+          {
+            $set: {
+              title: f.title,
+              key: f.key,
+              category: f.category,
+              description: f.description,
+              enabled: f.enabled,
+            },
+          },
+          { upsert: true, returnDocument: "after" },
+        ),
+      ),
+    );
+
+    // 3. Plan Tiers & Tier Configurations reset or initial Set
+    await Promise.all(
+      initialPlanTiers.map(async (planTier) => {
+        const { slug, title, description, accentColor, active } = planTier;
+        const currentPlanTier = await PlanTier.findOneAndUpdate(
+          { slug },
+          { $set: { slug, title, description, accentColor, active } },
+          { upsert: true, returnDocument: "after" },
+        );
+
+        const currentPlanFeatures = await Feature.find({
+          key: { $in: initialPlanTierFeatureConfigs[slug] || [] },
+        }).select("_id");
+
+        const tierRules = initialPlanTierRuleConfigs[slug] || {};
+
+        await PlanTierConfiguration.findOneAndUpdate(
+          { tier: currentPlanTier._id, slug },
+          {
+            $set: {
+              tier: currentPlanTier._id,
+              slug,
+              features: currentPlanFeatures.map((f) => f._id),
+              rules: tierRules,
+            },
+          },
+          { upsert: true, returnDocument: "after" },
+        );
+      }),
+    );
+
+    // 4. Billing Plans reset with dynamic Razorpay Plan generation
+    await Promise.all(
+      initialBillingPlans.map(async (billingPlan) => {
+        const { slug, amount, period, description, version, storage, active, currency } = billingPlan;
+        const currentPlanTier = await PlanTier.findOne({ slug });
+        const dynamicRazorpayId = await resolveRazorpayPlanId(billingPlan);
+
+        await BillingPlan.findOneAndUpdate(
+          { slug, period },
+          {
+            $set: {
+              tier: currentPlanTier?._id || null,
+              slug,
+              amount,
+              period,
+              description,
+              version,
+              storage,
+              active,
+              currency,
+              ...(dynamicRazorpayId ? { razorpayPlanId: dynamicRazorpayId } : {}),
+            },
+          },
+          { upsert: true, returnDocument: "after" },
+        );
+      }),
+    );
+
+    console.log("[syncDefaultPlans] Successfully reset all settings to defaults.");
+
+    if (res && typeof res.status === "function") {
+      return res.status(200).json({
+        success: true,
+        message: "Default system limits, plan tiers, dynamic Razorpay billing plans, and feature catalogue synchronized successfully.",
+        globalSystemConfig,
+      });
+    }
+  } catch (err) {
+    console.error("[syncDefaultPlans] Error during reset:", err);
+    if (res && typeof res.status === "function") {
+      return res.status(500).json({
+        success: false,
+        error: "Failed to reset settings to default: " + err.message,
+      });
+    }
+    throw err;
   }
 };
 
 export default resetToDefaultSettings;
+

@@ -41,7 +41,10 @@ export async function createNotificationLogic({
 
   const cleanAction =
     action && action.label && action.route
-      ? { label: String(action.label).trim(), route: String(action.route).trim() }
+      ? {
+          label: String(action.label).trim(),
+          route: String(action.route).trim(),
+        }
       : null;
 
   // 1. If eventKey is specified, check for existing active notification
@@ -82,7 +85,10 @@ export async function createNotificationLogic({
         return existing;
       }
     }
-    console.error("[NotificationService] Error creating notification:", err.message);
+    console.error(
+      "[NotificationService] Error creating notification:",
+      err.message,
+    );
     throw err;
   }
 }
@@ -458,6 +464,23 @@ export async function subscriptionCancelled({
   subscriptionId,
   retentionDays = 60,
 }) {
+  await resolveByEventKeyLogic({
+    userId,
+    eventKey: NOTIFICATION_EVENT_KEYS.SUBSCRIPTION_PAUSED(subscriptionId),
+  });
+  await resolveByEventKeyLogic({
+    userId,
+    eventKey: NOTIFICATION_EVENT_KEYS.SUBSCRIPTION_RESUMED(subscriptionId),
+  });
+  await resolveByEventKeyLogic({
+    userId,
+    eventKey: NOTIFICATION_EVENT_KEYS.SUBSCRIPTION_ACTIVATED(subscriptionId),
+  });
+  await resolveByEventKeyLogic({
+    userId,
+    eventKey: NOTIFICATION_EVENT_KEYS.SUBSCRIPTION_CANCELLED(subscriptionId),
+  });
+
   return createNotificationLogic({
     userId,
     type: NOTIFICATION_TYPES.SUBSCRIPTION,
@@ -482,6 +505,8 @@ export async function subscriptionActivated({
   await resolveByEventKeyPrefixLogic({ userId, prefix: "sub-cancelled" });
   await resolveByEventKeyPrefixLogic({ userId, prefix: "sub-expired" });
   await resolveByEventKeyPrefixLogic({ userId, prefix: "sub-paused" });
+  await resolveByEventKeyPrefixLogic({ userId, prefix: "sub-resumed" });
+  await resolveByEventKeyPrefixLogic({ userId, prefix: "sub-activated" });
   await resolveByEventKeyPrefixLogic({
     userId,
     prefix: "file-deletion-scheduled",
@@ -494,7 +519,7 @@ export async function subscriptionActivated({
     title: "Subscription Activated",
     message: `Your ${planName} is now active with full upload, download, and vault storage features.`,
     action: {
-      label: "View Plan",
+      label: "View Invoices",
       route: "/dashboard/billing",
     },
     eventKey: NOTIFICATION_EVENT_KEYS.SUBSCRIPTION_ACTIVATED(subscriptionId),
@@ -503,6 +528,15 @@ export async function subscriptionActivated({
 }
 
 export async function subscriptionPaused({ userId, subscriptionId }) {
+  await resolveByEventKeyLogic({
+    userId,
+    eventKey: NOTIFICATION_EVENT_KEYS.SUBSCRIPTION_RESUMED(subscriptionId),
+  });
+  await resolveByEventKeyLogic({
+    userId,
+    eventKey: NOTIFICATION_EVENT_KEYS.SUBSCRIPTION_PAUSED(subscriptionId),
+  });
+
   return createNotificationLogic({
     userId,
     type: NOTIFICATION_TYPES.SUBSCRIPTION,
@@ -523,6 +557,10 @@ export async function subscriptionResumed({ userId, subscriptionId }) {
   await resolveByEventKeyLogic({
     userId,
     eventKey: NOTIFICATION_EVENT_KEYS.SUBSCRIPTION_PAUSED(subscriptionId),
+  });
+  await resolveByEventKeyLogic({
+    userId,
+    eventKey: NOTIFICATION_EVENT_KEYS.SUBSCRIPTION_RESUMED(subscriptionId),
   });
 
   return createNotificationLogic({

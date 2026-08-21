@@ -8,7 +8,7 @@ import {
 } from "react-router-dom";
 import { SERVER_URL } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
-import { joinUrl, cn, formatSize, getUser } from "../../lib/utils";
+import { joinUrl, cn, formatSize, getUser, isSpecialFolder } from "../../lib/utils";
 import getFileImage from "../../lib/FileImages";
 import Button from "../ui/Button";
 import Editor from "react-simple-code-editor";
@@ -30,6 +30,8 @@ import FileDetailsModal from "../dashboard/FileDetailsModal";
 import PlanStatusBanner from "../dashboard/PlanStatusBanner";
 import SecureRelayView from "../relay/SecureRelayView";
 import { usePlan } from "../../context/PlanContext";
+import { useGoogleLogin } from "@react-oauth/google";
+import { VaultDriveIcon } from "../ui/VaultIcons";
 import FileBrowserSkeleton from "./FileBrowserSkeleton";
 import {
   Upload,
@@ -152,6 +154,43 @@ export default function FileBrowser({ specialView }) {
     driveFolderId,
     githubPath,
     user,
+  });
+
+  const [reconnectingDrive, setReconnectingDrive] = useState(false);
+
+  const reconnectGoogleDrive = useGoogleLogin({
+    flow: "auth-code",
+    prompt: "consent",
+    access_type: "offline",
+    scope: "https://www.googleapis.com/auth/drive",
+    onSuccess: async (codeResponse) => {
+      try {
+        setReconnectingDrive(true);
+        setError(null);
+        const res = await fetch(`${SERVER_URL}/drive/connect`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: codeResponse.code }),
+          credentials: "include",
+        });
+        if (res.ok) {
+          await getUser(setUser);
+          await fetchFiles(true);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          setError(errData.error || "Failed to reconnect Google Drive");
+        }
+      } catch (err) {
+        console.error("Drive reconnect error:", err);
+        setError("Failed to reconnect Google Drive");
+      } finally {
+        setReconnectingDrive(false);
+      }
+    },
+    onError: (err) => {
+      console.error("Google Drive connection error:", err);
+      setReconnectingDrive(false);
+    },
   });
 
   // --- DRAG SELECTION STATE ---
@@ -543,32 +582,53 @@ export default function FileBrowser({ specialView }) {
     }
   };
 
-  const fetchBranches = async () => {
+  const fetchBranches = async (overrideRepoPath) => {
     if (specialView !== "github-repo") return;
     try {
-      const parts = githubPath.split("/");
+      const parts = (overrideRepoPath || githubPath || "").split("/");
+      if (parts.length < 2) return;
       const repoPath = `${parts[0]}/${parts[1]}`;
       const ownerParam = ownerId ? `?ownerId=${ownerId}` : "";
 
-      const repoRes = await fetch(
-        `${SERVER_URL}/github/repositories/${repoPath}${ownerParam}`,
-        { credentials: "include" },
-      );
+      const [repoRes, branchRes] = await Promise.all([
+        fetch(
+          `${SERVER_URL}/github/repositories/${repoPath}${ownerParam}`,
+          { credentials: "include" },
+        ),
+        fetch(
+          `${SERVER_URL}/github/repositories/${repoPath}/branches${ownerParam}`,
+          { credentials: "include" },
+        ),
+      ]);
+
+      let defaultBranchName = "";
       if (repoRes.ok) {
         const repoData = await repoRes.json();
-        const defaultBranchName = repoData.default_branch || "main";
-        if (!selectedBranch) {
-          setSelectedBranch(defaultBranchName);
-        }
+        defaultBranchName =
+          repoData.details?.default_branch ||
+          repoData.default_branch ||
+          "";
       }
 
-      const response = await fetch(
-        `${SERVER_URL}/github/repositories/${repoPath}/branches${ownerParam}`,
-        { credentials: "include" },
-      );
-      if (response.ok) {
-        const branchList = await response.json();
+      if (branchRes.ok) {
+        const branchData = await branchRes.json();
+        const branchList = Array.isArray(branchData)
+          ? branchData
+          : branchData.branches || [];
         setBranches(branchList);
+
+        const targetBranch =
+          defaultBranchName || (branchList.length > 0 ? branchList[0] : "");
+        if (targetBranch) {
+          // Pre-populate folderCache for the resolved default branch using the root fetch cache if available
+          const emptyBranchKey = `${specialView || "drive"}:${folderId || "root"}:${isSearch ? searchQuery || "" : ""}:${""}:${driveFolderId || ""}:${githubPath || ""}:${ownerId || ""}`;
+          const cached = folderCache.current?.get(emptyBranchKey);
+          if (cached) {
+            const defaultBranchKey = `${specialView || "drive"}:${folderId || "root"}:${isSearch ? searchQuery || "" : ""}:${targetBranch}:${driveFolderId || ""}:${githubPath || ""}:${ownerId || ""}`;
+            folderCache.current?.set(defaultBranchKey, cached);
+          }
+          setSelectedBranch((prev) => prev || targetBranch);
+        }
       }
     } catch (error) {
       console.error("Error fetching branches:", error);
@@ -584,10 +644,11 @@ export default function FileBrowser({ specialView }) {
         const currentRepo = `${parts[0]}/${parts[1]}`;
         if (currentRepo !== lastRepoRef.current) {
           setSelectedBranch("");
+          setBranches([]);
           lastRepoRef.current = currentRepo;
+          fetchBranches(currentRepo);
         }
       }
-      fetchBranches();
     } else {
       setSelectedBranch("");
       setBranches([]);
@@ -858,26 +919,29 @@ export default function FileBrowser({ specialView }) {
           const owner = p[0];
           const repo = p[1];
           const path = p.slice(2).join("/");
-          url = `${SERVER_URL}/github/file/${owner}/${repo}/${path}`;
+          url = `${SERVER_URL}/github/file/${owner}/${repo}/${path}${selectedBranch ? `?ref=${selectedBranch}` : ""}`;
           body = JSON.stringify({
             content: btoa(".gitkeep"), // Base64 for empty or small text
             message: `Create folder ${modalInput}`,
+            ...(selectedBranch && { branch: selectedBranch }),
           });
         } else {
           url = `${SERVER_URL}/directory/${folderId || ""}`;
           body = JSON.stringify({ foldername: modalInput });
         }
       } else if (modalType === "create-file") {
-        const fullName = modalInput.trim() + selectedExt;
+        const rawInput = modalInput.trim();
+        const fullName = rawInput.endsWith(selectedExt) ? rawInput : rawInput + selectedExt;
         if (specialView === "github-repo") {
           const p = (githubPath + "/" + fullName).split("/");
           const owner = p[0];
           const repo = p[1];
           const path = p.slice(2).join("/");
-          url = `${SERVER_URL}/github/file/${owner}/${repo}/${path}`;
+          url = `${SERVER_URL}/github/file/${owner}/${repo}/${path}${selectedBranch ? `?ref=${selectedBranch}` : ""}`;
           body = JSON.stringify({
             content: btoa(unescape(encodeURIComponent(newFileContent))),
             message: `Create ${fullName}`,
+            ...(selectedBranch && { branch: selectedBranch }),
           });
         } else if (
           specialView === "google-drive" ||
@@ -1151,7 +1215,7 @@ export default function FileBrowser({ specialView }) {
       const isDirectory = modalItem.type === "directory";
       let url = isDirectory
         ? `${SERVER_URL}/github/repositories/${modalItem.githubPath}${selectedBranch ? `?ref=${selectedBranch}` : ""}`
-        : `${SERVER_URL}/github/file/${modalItem.githubPath}`;
+        : `${SERVER_URL}/github/file/${modalItem.githubPath}${selectedBranch ? `?ref=${selectedBranch}` : ""}`;
 
       if (ownerId) {
         const separator = url.includes("?") ? "&" : "?";
@@ -1160,7 +1224,7 @@ export default function FileBrowser({ specialView }) {
 
       const body = isDirectory
         ? undefined
-        : JSON.stringify({ sha: modalItem.sha });
+        : JSON.stringify({ sha: modalItem.sha, ...(selectedBranch && { branch: selectedBranch }) });
 
       const res = await fetch(url, {
         method: "DELETE",
@@ -1186,9 +1250,17 @@ export default function FileBrowser({ specialView }) {
   const [dragOverTargetId, setDragOverTargetId] = useState(null);
 
   const handleDragStart = (e, item) => {
+    if (isSpecialFolder(item)) {
+      e.preventDefault();
+      return;
+    }
     let itemsToDrag = [item];
     if (selectedItems.some((i) => i._id === item._id)) {
-      itemsToDrag = selectedItems;
+      itemsToDrag = selectedItems.filter((i) => !isSpecialFolder(i));
+    }
+    if (itemsToDrag.length === 0) {
+      e.preventDefault();
+      return;
     }
 
     // Ensure type is present for all
@@ -1253,6 +1325,9 @@ export default function FileBrowser({ specialView }) {
     } else if (singleDraggedItemStr) {
       itemsToMove = [JSON.parse(singleDraggedItemStr)];
     }
+
+    // Filter out special folders - they are permanently fixed and not movable
+    itemsToMove = itemsToMove.filter((i) => !isSpecialFolder(i));
 
     if (itemsToMove.length > 0) {
       // Normalize targetItem: if it's a file, treat it as dropped into its parent directory
@@ -1775,25 +1850,70 @@ export default function FileBrowser({ specialView }) {
       </div>
 
       {error ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mb-4">
-            <AlertTriangle size={32} />
-          </div>
-          <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
-            Connection Error
-          </h3>
-          <p className="text-slate-500 dark:text-slate-400 max-w-md mb-6">
-            {error}
-          </p>
-          <Button
-            onClick={fetchFiles}
-            className="bg-[#14b8a6] hover:bg-[#14b8a6]/90 text-white px-8"
-          >
-            Retry Connection
-          </Button>
-          <p className="mt-4 text-xs text-slate-400">
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 max-w-lg mx-auto">
+          {specialView === "google-drive" ||
+          specialView === "google-drive-folder" ||
+          (typeof error === "string" &&
+            (error.toLowerCase().includes("invalid_grant") ||
+              error.toLowerCase().includes("drive") ||
+              error.toLowerCase().includes("token") ||
+              error.toLowerCase().includes("expired") ||
+              error.toLowerCase().includes("not connected"))) ? (
+            <>
+              <div className="w-20 h-20 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-3xl flex items-center justify-center mb-5 shadow-[0_0_30px_rgba(245,158,11,0.15)]">
+                <VaultDriveIcon size={38} />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+                Google Drive Authorization Expired
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
+                {error?.includes("invalid_grant") || error?.includes("expired")
+                  ? "Your Google Drive session has expired or the token was revoked (Google OAuth refresh tokens expire after 7 days in testing mode). Reconnect your Google account to restore instant access."
+                  : error}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Button
+                  onClick={() => reconnectGoogleDrive()}
+                  disabled={reconnectingDrive}
+                  className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 flex items-center gap-2 font-medium shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+                >
+                  {reconnectingDrive ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <VaultDriveIcon size={18} />
+                  )}
+                  {reconnectingDrive ? "Connecting..." : "Reconnect Google Drive"}
+                </Button>
+                <Button
+                  onClick={() => fetchFiles(true)}
+                  className="bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/15 text-slate-700 dark:text-white px-5 py-2.5"
+                >
+                  Retry Connection
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mb-4">
+                <AlertTriangle size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
+                Connection Error
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400 mb-6">
+                {error}
+              </p>
+              <Button
+                onClick={() => fetchFiles(true)}
+                className="bg-[#14b8a6] hover:bg-[#14b8a6]/90 text-white px-8"
+              >
+                Retry Connection
+              </Button>
+            </>
+          )}
+          <p className="mt-6 text-xs text-slate-400">
             Current Server:{" "}
-            <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">
+            <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[11px]">
               {SERVER_URL}
             </code>
           </p>
@@ -2004,21 +2124,26 @@ export default function FileBrowser({ specialView }) {
           <span className="font-medium text-sm">
             {selectedItems.length} selected
           </span>
+          {selectedItems.some((i) => !isSpecialFolder(i)) && (
+            <>
+              <div className="h-4 w-px bg-slate-700"></div>
+              <button
+                onClick={handleCopySelected}
+                className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm"
+                title="Bulk Copy"
+              >
+                <Copy size={16} /> Copy
+              </button>
+              <button
+                onClick={handleCutSelected}
+                className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm"
+                title="Bulk Move"
+              >
+                <Scissors size={16} /> Move
+              </button>
+            </>
+          )}
           <div className="h-4 w-px bg-slate-700"></div>
-          <button
-            onClick={handleCopySelected}
-            className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm"
-            title="Bulk Copy"
-          >
-            <Copy size={16} /> Copy
-          </button>
-          <button
-            onClick={handleCutSelected}
-            className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm"
-            title="Bulk Move"
-          >
-            <Scissors size={16} /> Move
-          </button>
           <button
             onClick={() => {
               openShareModal(selectedItems);
@@ -2029,21 +2154,26 @@ export default function FileBrowser({ specialView }) {
           >
             <Share2 size={16} className="text-purple-400" /> Share
           </button>
-          <div className="h-4 w-px bg-slate-700"></div>
-          <button
-            onClick={() => {
-              if (selectedItems.length === 1) {
-                handleDelete(selectedItems[0]);
-              } else {
-                setModalItem(null);
-                setIsPermanentDelete(false);
-                setModalType("delete");
-              }
-            }}
-            className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors font-medium text-sm"
-          >
-            <Trash2 size={16} /> Delete
-          </button>
+          {selectedItems.some((i) => !isSpecialFolder(i)) && (
+            <>
+              <div className="h-4 w-px bg-slate-700"></div>
+              <button
+                onClick={() => {
+                  const deletable = selectedItems.filter((i) => !isSpecialFolder(i));
+                  if (deletable.length === 1) {
+                    handleDelete(deletable[0]);
+                  } else if (deletable.length > 1) {
+                    setModalItem(null);
+                    setIsPermanentDelete(false);
+                    setModalType("delete");
+                  }
+                }}
+                className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors font-medium text-sm"
+              >
+                <Trash2 size={16} /> Delete
+              </button>
+            </>
+          )}
         </div>
       )}
 

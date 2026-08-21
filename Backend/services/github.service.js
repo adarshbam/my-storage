@@ -312,6 +312,7 @@ export const getFilesLogic = async ({ owner, repo, path, ref, action, req, res }
 
 export const updateFilesLogic = async ({ owner, repo, path, data, req }) => {
   const { content, sha } = data;
+  const branch = req.query.ref || data.branch;
   const auth = await getAuthenticatedAccessToken(req, true);
   const { githubAccessToken } = auth;
 
@@ -327,6 +328,7 @@ export const updateFilesLogic = async ({ owner, repo, path, data, req }) => {
         message: "update file",
         content,
         sha,
+        ...(branch && { branch }),
       }),
     },
   );
@@ -356,6 +358,7 @@ export const deleteFileLogic = async ({ owner, repo, path, sha, branch, req }) =
       body: JSON.stringify({
         message: `Delete ${path}`,
         sha,
+        ...(branch && { branch }),
       }),
     },
   );
@@ -376,6 +379,7 @@ export const createFileLogic = async ({ owner, repo, path, req }) => {
 
   const githubPath = `${owner}/${repo}${path ? `/${path}` : ""}`;
   const fileName = req.headers.filename ? sanitize(req.headers.filename) : null;
+  const branch = req.query.ref || req.body?.branch;
 
   // Helper to handle the actual GitHub API call
   const pushToGithub = async (content, finalPath, msg) => {
@@ -386,7 +390,7 @@ export const createFileLogic = async ({ owner, repo, path, req }) => {
     let sha;
     try {
       const getRes = await fetch(
-        `https://api.github.com/repos/${pushOwner}/${pushRepo}/contents/${pushPath}`,
+        `https://api.github.com/repos/${pushOwner}/${pushRepo}/contents/${pushPath}${branch ? `?ref=${branch}` : ""}`,
         {
           headers: {
             Authorization: `Bearer ${githubAccessToken}`,
@@ -414,6 +418,7 @@ export const createFileLogic = async ({ owner, repo, path, req }) => {
           message: msg,
           content,
           ...(sha && { sha }),
+          ...(branch && { branch }),
         }),
       },
     );
@@ -754,7 +759,7 @@ export const getRepositoryDetailsLogic = async ({ owner, repo, req }) => {
     throw err;
   }
 
-  return { details: data };
+  return { details: data, default_branch: data.default_branch };
 };
 
 export const moveGithubItemsLogic = async ({ items, req }) => {

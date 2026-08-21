@@ -75,3 +75,20 @@ export const formatDate = (dateString) => {
     minute: "2-digit"
   });
 };
+
+export const isSpecialFolder = (item) => {
+  if (!item) return false;
+  const provider = item.provider || "local";
+  const name = (item.name || "").trim().toLowerCase();
+
+  return (
+    provider === "google_drive" ||
+    provider === "github" ||
+    provider === "dropbox" ||
+    provider === "shared_drive" ||
+    name === "github" ||
+    name === "google drive" ||
+    name === "dropbox"
+  );
+};
+

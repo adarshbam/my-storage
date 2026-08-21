@@ -3,12 +3,66 @@ import { rzInstance } from "../integrations/razorpay/razorpay.client.js";
 import Subscription from "../models/subscriptionModel.js";
 import BillingPlan from "../models/billingPlanModel.js";
 import User from "../models/userModel.js";
+import Directory from "../models/directoryModel.js";
 import {
   subscriptionActivated,
   subscriptionCancelled,
   subscriptionPaused,
   subscriptionResumed,
 } from "./notification.service.js";
+import { invalidatePlanContextCache } from "../middlewares/loadPlanContext.js";
+
+const findUserSubscription = async (subscriptionId, userId) => {
+  let sub = null;
+  if (subscriptionId && mongoose.Types.ObjectId.isValid(subscriptionId)) {
+    sub = await Subscription.findOne({ _id: subscriptionId, userId });
+  }
+  if (!sub && subscriptionId && subscriptionId !== "sub_current") {
+    sub = await Subscription.findOne({
+      razorpaySubscriptionId: subscriptionId,
+      userId,
+    });
+  }
+  if (!sub) {
+    // 1. Search for an active or paused subscription
+    sub = await Subscription.findOne({
+      userId,
+      status: { $in: ["active", "paused", "authenticated"] },
+    }).sort({ updatedAt: -1, createdAt: -1 });
+  }
+  if (!sub) {
+    // 2. Search for a cancelled subscription with a valid remaining cycle
+    const candidate = await Subscription.findOne({
+      userId,
+      status: "cancelled",
+    }).sort({ createdAt: -1 });
+
+    if (candidate) {
+      const isCycleValid = Boolean(
+        candidate.cancelAtCycleEnd &&
+          ((candidate.currentEnd &&
+            new Date(candidate.currentEnd).getTime() > Date.now()) ||
+            (!candidate.currentEnd &&
+              new Date(candidate.createdAt).getTime() +
+                30 * 24 * 60 * 60 * 1000 >
+                Date.now())),
+      );
+      if (isCycleValid) {
+        sub = candidate;
+      }
+    }
+  }
+  if (!sub) {
+    const user = await User.findById(userId);
+    if (user?.subscription) {
+      sub = await Subscription.findOne({ _id: user.subscription, userId });
+    }
+  }
+  if (!sub) {
+    sub = await Subscription.findOne({ userId }).sort({ createdAt: -1 });
+  }
+  return sub;
+};
 
 export const createSubscriptionLogic = async ({ planId, userId }) => {
   const billingPlan =
@@ -35,36 +89,124 @@ export const createSubscriptionLogic = async ({ planId, userId }) => {
     userId: userId,
     billingPlan: billingPlan._id,
     amount: billingPlan.amount || 0,
+    currency: billingPlan.currency || "INR",
     status: "created",
-  });
-
-  // Link Subscription to User and update user limits
-  await User.findByIdAndUpdate(userId, {
-    $set: {
-      subscription: subscription._id,
-      noSubscriptionSince: null,
-      noPlanSince: null,
-      ...(billingPlan.storage ? { maxStorage: billingPlan.storage } : {}),
-    },
+    totalCount: newSubscription.total_count || 120,
   });
 
   console.log(
-    "[Subscription] Created and linked to user:",
+    "[Subscription] Created checkout session for user:",
     subscription.razorpaySubscriptionId,
   );
-
-  // Trigger subscription activated notification and resolve past warnings
-  await subscriptionActivated({
-    userId,
-    subscriptionId: subscription._id,
-    planName: billingPlan.slug ? billingPlan.slug.toUpperCase() : "Storage Plan",
-  }).catch((nErr) => {
-    console.warn("[Subscription] Notification trigger error:", nErr.message);
-  });
 
   return {
     subscriptionId: newSubscription.id,
     razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+  };
+};
+
+export const confirmSubscriptionPaymentLogic = async ({
+  razorpaySubscriptionId,
+  razorpayPaymentId,
+  userId,
+}) => {
+  if (!razorpaySubscriptionId) {
+    throw Object.assign(new Error("Missing subscription ID"), { status: 400 });
+  }
+
+  const subscription = await Subscription.findOne({
+    razorpaySubscriptionId,
+    userId,
+  }).populate("billingPlan");
+
+  if (!subscription) {
+    throw Object.assign(new Error("Subscription not found"), { status: 404 });
+  }
+
+  // Fetch live state from Razorpay
+  let rzSub = null;
+  try {
+    rzSub = await rzInstance.subscriptions.fetch(razorpaySubscriptionId);
+  } catch (err) {
+    console.warn("[confirmSubscriptionPaymentLogic] Razorpay fetch note:", err.message);
+  }
+
+  const now = new Date();
+  subscription.status = "active";
+  subscription.activatedAt = now;
+  subscription.purchasedAt = subscription.purchasedAt || now;
+  subscription.paidCount = rzSub?.paid_count || 1;
+  subscription.remainingCount = rzSub?.remaining_count;
+  subscription.totalCount = rzSub?.total_count || subscription.totalCount;
+
+  if (rzSub?.current_start) {
+    subscription.currentStart = new Date(rzSub.current_start * 1000);
+  } else {
+    subscription.currentStart = now;
+  }
+
+  if (rzSub?.current_end) {
+    subscription.currentEnd = new Date(rzSub.current_end * 1000);
+  } else {
+    subscription.currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  }
+
+  if (rzSub?.charge_at) {
+    subscription.chargeAt = new Date(rzSub.charge_at * 1000);
+  }
+
+  await subscription.save();
+
+  // Cancel prior active subscriptions for this user to avoid duplicate recurring debits
+  const previousActiveSubscriptions = await Subscription.find({
+    userId,
+    status: { $in: ["active", "paused"] },
+    _id: { $ne: subscription._id },
+  });
+
+  for (const prevSub of previousActiveSubscriptions) {
+    try {
+      await rzInstance.subscriptions.cancel(prevSub.razorpaySubscriptionId, false);
+    } catch (cancelErr) {
+      console.warn(
+        `[confirmPayment] Could not cancel prior sub ${prevSub.razorpaySubscriptionId}:`,
+        cancelErr.message,
+      );
+    }
+    prevSub.status = "cancelled";
+    prevSub.cancellationReason = "system";
+    await prevSub.save();
+  }
+
+  // Update user storage limits and clear grace markers
+  const updateUserData = {
+    subscription: subscription._id,
+    billingPlan: subscription.billingPlan?._id,
+    noSubscriptionSince: null,
+    noPlanSince: null,
+  };
+  if (subscription.billingPlan?.storage) {
+    updateUserData.maxStorage = subscription.billingPlan.storage;
+  }
+
+  await User.findByIdAndUpdate(userId, { $set: updateUserData });
+  await invalidatePlanContextCache(userId);
+
+  // Trigger activation notification
+  await subscriptionActivated({
+    userId,
+    subscriptionId: subscription._id,
+    planName: subscription.billingPlan?.slug
+      ? subscription.billingPlan.slug.toUpperCase()
+      : "Vault Storage Plan",
+  }).catch((nErr) => {
+    console.warn("[confirmPayment] Notification trigger error:", nErr.message);
+  });
+
+  return {
+    success: true,
+    status: "ACTIVE",
+    subscription,
   };
 };
 
@@ -76,7 +218,49 @@ export const getCurrentSubscriptionLogic = async ({
   const user = await User.findById(userId).lean();
   let subscription = null;
 
-  if (user?.subscription) {
+  // 1. Search for active or paused subscription first
+  subscription = await Subscription.findOne({
+    userId,
+    status: { $in: ["active", "paused", "authenticated"] },
+  })
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .populate({
+      path: "billingPlan",
+      populate: { path: "tier" },
+    })
+    .lean();
+
+  // 2. Check for cycle-valid cancelled subscription
+  if (!subscription) {
+    const candidate = await Subscription.findOne({
+      userId,
+      status: "cancelled",
+    })
+      .sort({ createdAt: -1 })
+      .populate({
+        path: "billingPlan",
+        populate: { path: "tier" },
+      })
+      .lean();
+
+    if (candidate) {
+      const isCycleValid = Boolean(
+        candidate.cancelAtCycleEnd &&
+          ((candidate.currentEnd &&
+            new Date(candidate.currentEnd).getTime() > Date.now()) ||
+            (!candidate.currentEnd &&
+              new Date(candidate.createdAt).getTime() +
+                30 * 24 * 60 * 60 * 1000 >
+                Date.now())),
+      );
+      if (isCycleValid) {
+        subscription = candidate;
+      }
+    }
+  }
+
+  // 3. Fallback to linked user.subscription or most recent
+  if (!subscription && user?.subscription) {
     subscription = await Subscription.findById(user.subscription)
       .populate({
         path: "billingPlan",
@@ -95,8 +279,18 @@ export const getCurrentSubscriptionLogic = async ({
       .lean();
   }
 
+  let usedStorage = userUsedStorage;
+  if (usedStorage === undefined && user?.rootDirId) {
+    const rootDir = await Directory.findOne({ _id: user.rootDirId })
+      .select("size")
+      .lean();
+    if (rootDir?.size) {
+      usedStorage = rootDir.size;
+    }
+  }
+
   const userStorage = {
-    usedStorage: userUsedStorage || 0,
+    usedStorage: usedStorage || 0,
     maxStorage:
       subscription?.billingPlan?.storage || userMaxStorage || 5368709120,
   };
@@ -123,11 +317,37 @@ export const getCurrentSubscriptionLogic = async ({
         subscription.billingPlan.slug.slice(1)
       : "Novice Vault");
 
+  const isCycleStillValid = Boolean(
+    subscription.status?.toLowerCase() === "cancelled" &&
+      subscription.cancelAtCycleEnd &&
+      ((subscription.currentEnd &&
+        new Date(subscription.currentEnd).getTime() > Date.now()) ||
+        (!subscription.currentEnd &&
+          new Date(subscription.createdAt).getTime() +
+            30 * 24 * 60 * 60 * 1000 >
+            Date.now())),
+  );
+
+  const isActuallyActive = Boolean(
+    ["active", "authenticated"].includes(subscription.status?.toLowerCase()) ||
+      isCycleStillValid,
+  );
+
+  let nextBillingDate = null;
+  if (isActuallyActive) {
+    if (subscription.currentEnd) {
+      nextBillingDate = new Date(subscription.currentEnd).toISOString();
+    } else if (subscription.createdAt) {
+      nextBillingDate = new Date(
+        new Date(subscription.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+    }
+  }
+
   return {
     ...subscription,
-    isNoSubscription: ["cancelled", "expired", "halted"].includes(
-      subscription.status?.toLowerCase(),
-    ),
+    isNoSubscription: !isActuallyActive,
+    isCycleValid: isCycleStillValid,
     planName,
     amount: subscription.billingPlan?.amount ?? subscription.amount ?? 0,
     currency: subscription.billingPlan?.currency || "INR",
@@ -135,86 +355,95 @@ export const getCurrentSubscriptionLogic = async ({
     status: (subscription.status || "active").toUpperCase(),
     usedStorage: userStorage.usedStorage,
     maxStorage: subscription.billingPlan?.storage || userStorage.maxStorage,
-    nextBillingDate: new Date(
-      Date.now() + 30 * 24 * 60 * 60 * 1000,
-    ).toISOString(),
+    nextBillingDate,
   };
 };
 
 export const pauseSubscriptionLogic = async ({ subscriptionId, userId }) => {
-  console.log(
-    `[Subscription] Received request to pause subscription: ${subscriptionId}`,
-  );
+  const sub = await findUserSubscription(subscriptionId, userId);
+  if (!sub)
+    throw Object.assign(new Error("Subscription not found"), {
+      status: 404,
+    });
 
-  await subscriptionPaused({ userId, subscriptionId }).catch((nErr) => {
-    console.warn("[Subscription] Pause notification error:", nErr.message);
+  // 1. Tell Razorpay to pause
+  await rzInstance.subscriptions.pause(sub.razorpaySubscriptionId, {
+    pause_at: "now",
   });
 
-  return {
-    success: true,
-    message: "Subscription pause action received.",
-    status: "PAUSED",
-    id: subscriptionId,
-  };
+  sub.status = "paused";
+  sub.pausedAt = new Date();
+  await sub.save();
+
+  await invalidatePlanContextCache(userId);
+
+  return { success: true, status: "PAUSED", subscriptionId: sub._id };
 };
 
 export const resumeSubscriptionLogic = async ({ subscriptionId, userId }) => {
-  console.log(
-    `[Subscription] Received request to resume subscription: ${subscriptionId}`,
-  );
+  const sub = await findUserSubscription(subscriptionId, userId);
+  if (!sub)
+    throw Object.assign(new Error("Subscription not found"), {
+      status: 404,
+    });
 
-  await subscriptionResumed({ userId, subscriptionId }).catch((nErr) => {
-    console.warn("[Subscription] Resume notification error:", nErr.message);
+  // 1. Tell Razorpay to resume
+  await rzInstance.subscriptions.resume(sub.razorpaySubscriptionId, {
+    resume_at: "now",
   });
 
-  return {
-    success: true,
-    message: "Subscription resume action received.",
-    status: "ACTIVE",
-    id: subscriptionId,
-  };
+  sub.status = "active";
+  sub.resumedAt = new Date();
+  sub.pausedAt = null;
+  await sub.save();
+
+  await invalidatePlanContextCache(userId);
+
+  return { success: true, status: "RESUMED", subscriptionId: sub._id };
 };
 
 export const cancelSubscriptionLogic = async ({
   subscriptionId,
   userId,
-  cancelAtCycleEnd,
+  cancelAtCycleEnd = true,
 }) => {
-  console.log(
-    `[Subscription] Received request to cancel subscription: ${subscriptionId}, cancelAtCycleEnd: ${cancelAtCycleEnd}`,
+  const sub = await findUserSubscription(subscriptionId, userId);
+  if (!sub)
+    throw Object.assign(new Error("Subscription not found"), { status: 404 });
+
+  // 1. Cancel on Razorpay (default to cancel_at_cycle_end: 1)
+  const cancelAtEndNum = cancelAtCycleEnd ? 1 : 0;
+  await rzInstance.subscriptions.cancel(
+    sub.razorpaySubscriptionId,
+    cancelAtEndNum,
   );
 
-  await subscriptionCancelled({
-    userId,
-    subscriptionId,
-    retentionDays: 60,
-  }).catch((nErr) => {
-    console.warn("[Subscription] Cancel notification error:", nErr.message);
-  });
+  // 2. Record lifecycle metadata
+  const now = new Date();
+  sub.status = "cancelled";
+  sub.cancelledAt = now;
+  sub.cancelledBy = "user";
+  sub.cancellationReason = "user_requested";
+  sub.cancelAtCycleEnd = Boolean(cancelAtCycleEnd);
+
+  if (!sub.currentEnd) {
+    sub.currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  }
+
+  // If immediate cancellation (not cycle end), mark grace period start now
+  if (!cancelAtCycleEnd) {
+    await User.findByIdAndUpdate(userId, {
+      $set: { noSubscriptionSince: now, noPlanSince: now },
+    });
+  }
+
+  await sub.save();
+  await invalidatePlanContextCache(userId);
 
   return {
     success: true,
-    message: "Subscription cancellation action received.",
     status: "CANCELLED",
-    id: subscriptionId,
-  };
-};
-
-export const changePlanLogic = async ({ targetPlanId, userId }) => {
-  console.log(
-    `[Subscription] Received request to change plan to: ${targetPlanId}`,
-  );
-
-  // =========================================================================
-  // TODO: Implement Upgrade / Downgrade logic here.
-  // TODO: Verify storage quota on backend (prevent downgrade if usage > quota)
-  // TODO: Update subscription with Razorpay or create new subscription
-  // TODO: Update user maxStorage according to target plan
-  // =========================================================================
-
-  return {
-    success: true,
-    message: "Plan change request received.",
-    targetPlanId,
+    cancelAtCycleEnd: sub.cancelAtCycleEnd,
+    currentEnd: sub.currentEnd,
   };
 };

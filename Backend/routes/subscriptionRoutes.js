@@ -5,7 +5,7 @@ import {
   pauseSubscription,
   resumeSubscription,
   cancelSubscription,
-  changePlan,
+  confirmSubscriptionPayment,
 } from "../controllers/subscriptionController.js";
 import checkAuth from "../middlewares/authMiddleware.js";
 import { validate } from "../middlewares/validationMiddleware.js";
@@ -44,6 +44,22 @@ router.post(
   createSubscription,
 );
 
+// Confirm subscription payment (authenticated client-side callback)
+router.post(
+  "/confirm-payment",
+  checkAuth,
+  subscriptionLimiter,
+  throttle(1000, 3, "sub-confirm"),
+  confirmSubscriptionPayment,
+);
+router.post(
+  "/verify",
+  checkAuth,
+  subscriptionLimiter,
+  throttle(1000, 3, "sub-confirm"),
+  confirmSubscriptionPayment,
+);
+
 // Subscription Action Endpoints
 router.post(
   "/:id/pause",
@@ -65,13 +81,6 @@ router.post(
   subscriptionLimiter,
   throttle(1000, 3, "sub-cancel"),
   cancelSubscription,
-);
-router.post(
-  "/change-plan",
-  checkAuth,
-  subscriptionLimiter,
-  throttle(1000, 3, "sub-change"),
-  changePlan,
 );
 
 export default router;

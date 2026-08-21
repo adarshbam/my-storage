@@ -1,5 +1,6 @@
 import Subscription from "../../../models/subscriptionModel.js";
 import { subscriptionPaused } from "../../../services/notification.service.js";
+import { invalidatePlanContextCache } from "../../../middlewares/loadPlanContext.js";
 
 export async function handleSubscriptionPaused(payload) {
   const entity =
@@ -8,9 +9,7 @@ export async function handleSubscriptionPaused(payload) {
     payload.entity;
 
   if (!entity || !entity.id) {
-    console.warn(
-      "[Webhook] subscription.paused: missing subscription entity",
-    );
+    console.warn("[Webhook] subscription.paused: missing subscription entity");
     return;
   }
 
@@ -18,11 +17,17 @@ export async function handleSubscriptionPaused(payload) {
 
   const subscription = await Subscription.findOneAndUpdate(
     { razorpaySubscriptionId: entity.id },
-    { $set: { status: "paused" } },
-    { new: true },
+    { $set: { status: "paused", pausedAt: new Date() } },
+    { returnDocument: "after" },
   );
 
+  if (!subscription)
+    console.warn(
+      "[Webhook] subscription.paused: missing subscription in the database",
+    );
+
   if (subscription) {
+    await invalidatePlanContextCache(subscription.userId);
     await subscriptionPaused({
       userId: subscription.userId,
       subscriptionId: subscription._id,

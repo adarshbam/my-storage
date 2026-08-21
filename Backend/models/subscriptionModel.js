@@ -21,6 +21,13 @@ const subscriptionSchema = new mongoose.Schema(
       unique: true,
     },
 
+    category: {
+      type: String,
+      enum: ["ai", "storage"],
+      default: "storage",
+      required: true,
+    },
+
     status: {
       type: String,
       enum: [
@@ -28,6 +35,7 @@ const subscriptionSchema = new mongoose.Schema(
         "authenticated",
         "active",
         "pending",
+        "paused",
         "halted",
         "cancelled",
         "completed",
@@ -40,9 +48,93 @@ const subscriptionSchema = new mongoose.Schema(
       type: Number,
     },
 
+    currency: {
+      type: String,
+      default: "INR",
+    },
+
     isFreeTrial: {
       type: Boolean,
       default: false,
+    },
+
+    // ── Lifecycle Dates ──
+    purchasedAt: {
+      type: Date,
+      default: null,
+    },
+    activatedAt: {
+      type: Date,
+      default: null,
+    },
+    pausedAt: {
+      type: Date,
+      default: null,
+    },
+    resumedAt: {
+      type: Date,
+      default: null,
+    },
+    haltedAt: {
+      type: Date,
+      default: null,
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+    expiredAt: {
+      type: Date,
+      default: null,
+    },
+
+    // ── Billing Cycle Period Fields ──
+    currentStart: {
+      type: Date,
+      default: null,
+    },
+    currentEnd: {
+      type: Date,
+      default: null,
+    },
+    chargeAt: {
+      type: Date,
+      default: null,
+    },
+    totalCount: {
+      type: Number,
+      default: null,
+    },
+    paidCount: {
+      type: Number,
+      default: 0,
+    },
+    remainingCount: {
+      type: Number,
+      default: null,
+    },
+
+    // ── Cancellation Metadata ──
+    cancelledBy: {
+      type: String,
+      enum: ["user", "admin", "system", "payment_failure", null],
+      default: null,
+    },
+    cancelAtCycleEnd: {
+      type: Boolean,
+      default: true,
+    },
+    cancellationReason: {
+      type: String,
+      enum: [
+        "user_requested",
+        "plan_change",
+        "admin_action",
+        "payment_failure",
+        "system",
+        null,
+      ],
+      default: null,
     },
   },
   {

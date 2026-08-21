@@ -13,6 +13,18 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
     loadUser();
+
+    // Listen for real-time subscription & profile updates
+    const handleRefresh = () => {
+      getUser(setUser);
+    };
+    window.addEventListener("subscription:updated", handleRefresh);
+    window.addEventListener("auth:refresh", handleRefresh);
+
+    return () => {
+      window.removeEventListener("subscription:updated", handleRefresh);
+      window.removeEventListener("auth:refresh", handleRefresh);
+    };
   }, []);
 
   console.log(user?.role);

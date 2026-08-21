@@ -18,6 +18,7 @@ import {
   Calendar,
   Sparkles,
   ArrowLeft,
+  Lock,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { SERVER_URL } from "../lib/api";
@@ -37,12 +38,44 @@ export default function BillingPlansPage() {
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState("CANCEL"); // PAUSE, RESUME, CANCEL, UPGRADE, DOWNGRADE
+  const [modalType, setModalType] = useState("CANCEL"); // PAUSE, RESUME, CANCEL
   const [targetPlan, setTargetPlan] = useState(null);
 
   useEffect(() => {
-    fetchInitialData();
+    fetchInitialData(false);
     loadRazorpayScript();
+
+    // 1. Live Sync listener for subscription & notification updates
+    const handleSync = () => {
+      fetchInitialData(true);
+    };
+    window.addEventListener("subscription:updated", handleSync);
+    window.addEventListener("notifications:updated", handleSync);
+
+    // 2. Real-time refresh when switching back to tab/window
+    const handleFocus = () => {
+      fetchInitialData(true);
+    };
+    window.addEventListener("focus", handleFocus);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchInitialData(true);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    // 3. Background live-sync interval (every 5 seconds while viewing billing)
+    const syncInterval = setInterval(() => {
+      fetchInitialData(true);
+    }, 5000);
+
+    return () => {
+      window.removeEventListener("subscription:updated", handleSync);
+      window.removeEventListener("notifications:updated", handleSync);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      clearInterval(syncInterval);
+    };
   }, []);
 
   const loadRazorpayScript = () => {
@@ -53,8 +86,8 @@ export default function BillingPlansPage() {
     document.body.appendChild(script);
   };
 
-  const fetchInitialData = async () => {
-    setLoading(true);
+  const fetchInitialData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       // 1. Fetch Current Subscription
       const subRes = await fetch(`${SERVER_URL}/subscriptions/current`, {
@@ -86,15 +119,27 @@ export default function BillingPlansPage() {
       }
     } catch (err) {
       console.error("Failed to load billing details:", err);
-      showToast("Error loading billing details", "error");
+      if (!silent) showToast("Error loading billing details", "error");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   const showToast = (text, type = "info") => {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  // Handle Invoice Download
+  const handleDownloadInvoice = (inv) => {
+    if (inv?.downloadUrl) {
+      window.open(inv.downloadUrl, "_blank", "noopener,noreferrer");
+    } else {
+      showToast(
+        `Invoice ${inv.invoiceNumber || inv.id || ""} is linked to your billing receipt.`,
+        "info",
+      );
+    }
   };
 
   // Open Razorpay Popup
@@ -110,8 +155,29 @@ export default function BillingPlansPage() {
       description: "Cloud Storage Subscription",
       handler: async function (response) {
         console.log("Razorpay Checkout Response:", response);
-        showToast("Payment response received! Refreshing subscription status...", "success");
-        fetchInitialData();
+        setActionLoading(true);
+        try {
+          const confirmRes = await fetch(`${SERVER_URL}/subscriptions/confirm-payment`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySubscriptionId: response.razorpay_subscription_id,
+              razorpaySignature: response.razorpay_signature,
+            }),
+          });
+          if (confirmRes.ok) {
+            showToast("Subscription activated successfully!", "success");
+          }
+        } catch (e) {
+          console.warn("Direct confirmation error, relying on webhook:", e);
+        } finally {
+          setActionLoading(false);
+          await fetchInitialData(false);
+          window.dispatchEvent(new CustomEvent("subscription:updated"));
+          window.dispatchEvent(new CustomEvent("notifications:refresh"));
+        }
       },
       prefill: {
         name: user?.name || "",
@@ -124,29 +190,20 @@ export default function BillingPlansPage() {
     rzp.open();
   };
 
-  // Purchase/Plan Select Handler
+  // Purchase/Plan Select Handler (Direct Checkout Strategy B)
   const handleSelectPlan = async (plan) => {
-    const isCurrentPlan =
+    const isPlanMatch =
       subscription?.razorpayPlanId === plan.razorpayPlanId ||
-      subscription?.planName?.toLowerCase() === (plan.type || plan.slug)?.toLowerCase();
+      subscription?.billingPlan?._id === plan._id ||
+      subscription?.billingPlan === plan._id ||
+      subscription?.planName?.toLowerCase() ===
+        (plan.type || plan.slug || plan.name)?.toLowerCase();
 
-    if (isCurrentPlan) return;
+    const isCurrentActivePlan = isActive && isPlanMatch;
 
-    const currentAmount = subscription?.amount || 0;
-    const selectedAmount = plan.amount || plan.price || 0;
+    if (isCurrentActivePlan) return;
 
-    if (currentAmount > 0) {
-      setTargetPlan(plan);
-      if (selectedAmount > currentAmount) {
-        setModalType("UPGRADE");
-      } else {
-        setModalType("DOWNGRADE");
-      }
-      setModalOpen(true);
-      return;
-    }
-
-    // Direct Purchase via Razorpay
+    // Direct Purchase / Upgrade / Downgrade via Razorpay Checkout
     try {
       setActionLoading(true);
       const res = await fetch(`${SERVER_URL}/subscriptions/create-subscription`, {
@@ -170,62 +227,106 @@ export default function BillingPlansPage() {
     }
   };
 
-  // Execute Subscription Action from Confirmation Modal
+  // Execute Subscription Action from Confirmation Modal (Pause / Resume / Cancel)
   const handleConfirmModalAction = async () => {
     setActionLoading(true);
     const subId = subscription?.razorpaySubscriptionId || subscription?._id || "sub_current";
     try {
-      let endpoint = "";
-      let method = "POST";
-      let body = null;
-
       if (modalType === "PAUSE") {
-        endpoint = `${SERVER_URL}/subscriptions/${subId}/pause`;
+        const res = await fetch(`${SERVER_URL}/subscriptions/${subId}/pause`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to pause subscription");
+        showToast("Subscription paused successfully", "info");
       } else if (modalType === "RESUME") {
-        endpoint = `${SERVER_URL}/subscriptions/${subId}/resume`;
+        const res = await fetch(`${SERVER_URL}/subscriptions/${subId}/resume`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to resume subscription");
+        showToast("Subscription resumed successfully", "success");
       } else if (modalType === "CANCEL") {
-        endpoint = `${SERVER_URL}/subscriptions/${subId}/cancel`;
-        body = JSON.stringify({ cancelAtCycleEnd: true });
-      } else if (modalType === "UPGRADE" || modalType === "DOWNGRADE") {
-        endpoint = `${SERVER_URL}/subscriptions/change-plan`;
-        body = JSON.stringify({ targetPlanId: targetPlan?.razorpayPlanId || targetPlan?._id });
+        const res = await fetch(`${SERVER_URL}/subscriptions/${subId}/cancel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ cancelAtCycleEnd: true }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to cancel subscription");
+        showToast("Subscription cancellation scheduled at end of billing period", "info");
       }
 
-      const res = await fetch(endpoint, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body,
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || `Failed to execute ${modalType}`);
-
-      showToast(data.message || `${modalType} request submitted successfully!`, "success");
-      setModalOpen(false);
-      fetchInitialData();
+      await fetchInitialData(false);
+      window.dispatchEvent(new CustomEvent("subscription:updated"));
+      window.dispatchEvent(new CustomEvent("notifications:refresh"));
     } catch (err) {
-      console.error(`Action error [${modalType}]:`, err);
+      console.error("Action error:", err);
       showToast(err.message, "error");
     } finally {
+      setModalOpen(false);
       setActionLoading(false);
     }
   };
 
   // Computed Values
-  const status = (subscription?.status || "ACTIVE").toUpperCase();
-  const usedStorage = user?.usedStorage ?? subscription?.usedStorage ?? 0;
-  const maxStorage = user?.maxStorage ?? subscription?.maxStorage ?? 10737418240;
+  const rawStatus = (subscription?.status || "NO_SUBSCRIPTION").toUpperCase();
+  const isCycleValid = Boolean(subscription?.isCycleValid);
+  const isCancelled = rawStatus === "CANCELLED";
+  const isPaused = rawStatus === "PAUSED";
+  const isActive = rawStatus === "ACTIVE" || (isCancelled && isCycleValid);
+  const isNoSubscription = Boolean(subscription?.isNoSubscription);
+
+  let status = "NO_SUBSCRIPTION";
+  if (isActive && !isCancelled) {
+    status = "ACTIVE";
+  } else if (isCancelled && isCycleValid) {
+    status = "CANCEL_SCHEDULED";
+  } else if (isPaused) {
+    status = "PAUSED";
+  } else if (rawStatus === "CANCELLED") {
+    status = "CANCELLED";
+  } else if (rawStatus === "PENDING") {
+    status = "PENDING";
+  } else if (rawStatus === "HALTED") {
+    status = "HALTED";
+  } else if (rawStatus === "EXPIRED") {
+    status = "EXPIRED";
+  }
+
+  const usedStorage = subscription?.usedStorage ?? user?.usedStorage ?? 0;
+  const maxStorage = subscription?.maxStorage ?? user?.maxStorage ?? 5368709120;
   const usedPercent = Math.min(100, Math.max(0, ((usedStorage / maxStorage) * 100).toFixed(1)));
 
   // Status Styling Config
   const statusConfigs = {
+    NO_SUBSCRIPTION: {
+      label: "No Active Subscription",
+      badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+      icon: Lock,
+      bannerClass: "bg-amber-500/10 border-amber-500/20 text-amber-300",
+      message:
+        "Your vault is currently in Read-Only Mode (30-day data rescue window). You can search, preview, and download your files. Select a plan below to unlock uploads and editing.",
+    },
     ACTIVE: {
       label: "Active Subscription",
       badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
       icon: CheckCircle2,
       bannerClass: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300",
       message: "Your subscription is active and all vault storage features are fully enabled.",
+    },
+    CANCEL_SCHEDULED: {
+      label: "Cancellation Scheduled",
+      badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+      icon: AlertTriangle,
+      bannerClass: "bg-amber-500/10 border-amber-500/20 text-amber-300",
+      message:
+        "Your subscription has been cancelled and will end at the conclusion of your billing cycle. You retain full access to all features until then.",
     },
     PAUSED: {
       label: "Subscription Paused",
@@ -253,7 +354,7 @@ export default function BillingPlansPage() {
       badgeClass: "bg-rose-500/10 text-rose-400 border-rose-500/30",
       icon: XCircle,
       bannerClass: "bg-rose-500/10 border-rose-500/20 text-rose-300",
-      message: "Your subscription has been cancelled and will end at the current billing cycle finish.",
+      message: "Your subscription has ended. Your vault is in a 30-day read-only data rescue window.",
     },
     EXPIRED: {
       label: "Subscription Expired",
@@ -264,8 +365,25 @@ export default function BillingPlansPage() {
     },
   };
 
-  const statusConfig = statusConfigs[status] || statusConfigs.ACTIVE;
+  const statusConfig = statusConfigs[status] || statusConfigs.NO_SUBSCRIPTION;
   const StatusIcon = statusConfig.icon;
+
+  const displayPrice = isNoSubscription
+    ? "₹0"
+    : `₹${subscription?.amount ?? 0}`;
+
+  const displayPeriod = isNoSubscription
+    ? "/no cost"
+    : `/${subscription?.period?.toLowerCase() || "month"}`;
+
+  const nextBillingDisplay =
+    !isNoSubscription && subscription?.nextBillingDate
+      ? new Date(subscription.nextBillingDate).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : "— (No active renewal)";
 
   // Filter plans by billing period toggle
   const filteredPlans = plans.filter(
@@ -344,18 +462,18 @@ export default function BillingPlansPage() {
               <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                    {subscription?.planName || "Novice Vault"}
+                    {isNoSubscription ? "No Active Subscription" : subscription?.planName || "Novice Vault"}
                   </h2>
                   <p className="text-slate-500 dark:text-white/50 text-xs font-medium mt-1">
-                    High-performance cloud vault storage
+                    {isNoSubscription ? "Read-Only data rescue vault access" : "High-performance cloud vault storage"}
                   </p>
                 </div>
                 <div className="text-left sm:text-right">
                   <span className="text-3xl font-black text-slate-900 dark:text-white">
-                    ₹{subscription?.amount || 299}
+                    {displayPrice}
                   </span>
                   <span className="text-slate-500 dark:text-white/40 text-xs font-semibold">
-                    /{subscription?.period?.toLowerCase() || "month"}
+                    {displayPeriod}
                   </span>
                 </div>
               </div>
@@ -393,54 +511,64 @@ export default function BillingPlansPage() {
                 <Calendar size={14} className="text-accent-primary" />
                 Next Billing Date:{" "}
                 <span className="font-bold text-slate-900 dark:text-white">
-                  {subscription?.nextBillingDate
-                    ? new Date(subscription.nextBillingDate).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })
-                    : "25 Aug 2026"}
+                  {nextBillingDisplay}
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
-                {status === "ACTIVE" && (
+                {isNoSubscription ? (
                   <button
                     onClick={() => {
-                      setModalType("PAUSE");
-                      setModalOpen(true);
+                      document
+                        .getElementById("available-vault-plans")
+                        ?.scrollIntoView({ behavior: "smooth" });
                     }}
-                    disabled={actionLoading}
-                    className="px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition-colors"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-black shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-1.5"
                   >
-                    Pause Subscription
+                    <Zap size={14} className="fill-current" />
+                    Get a Subscription
                   </button>
-                )}
+                ) : (
+                  <>
+                    {status === "ACTIVE" && (
+                      <button
+                        onClick={() => {
+                          setModalType("PAUSE");
+                          setModalOpen(true);
+                        }}
+                        disabled={actionLoading}
+                        className="px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition-colors"
+                      >
+                        Pause Subscription
+                      </button>
+                    )}
 
-                {status === "PAUSED" && (
-                  <button
-                    onClick={() => {
-                      setModalType("RESUME");
-                      setModalOpen(true);
-                    }}
-                    disabled={actionLoading}
-                    className="px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition-colors"
-                  >
-                    Resume Subscription
-                  </button>
-                )}
+                    {status === "PAUSED" && (
+                      <button
+                        onClick={() => {
+                          setModalType("RESUME");
+                          setModalOpen(true);
+                        }}
+                        disabled={actionLoading}
+                        className="px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition-colors"
+                      >
+                        Resume Subscription
+                      </button>
+                    )}
 
-                {status !== "CANCELLED" && (
-                  <button
-                    onClick={() => {
-                      setModalType("CANCEL");
-                      setModalOpen(true);
-                    }}
-                    disabled={actionLoading}
-                    className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-bold transition-colors"
-                  >
-                    Cancel Subscription
-                  </button>
+                    {(status === "ACTIVE" || status === "PAUSED") && (
+                      <button
+                        onClick={() => {
+                          setModalType("CANCEL");
+                          setModalOpen(true);
+                        }}
+                        disabled={actionLoading}
+                        className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        Cancel Subscription
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -457,18 +585,22 @@ export default function BillingPlansPage() {
                 <div className="flex justify-between py-2 border-b border-slate-100 dark:border-white/5">
                   <span className="text-slate-500 dark:text-white/50">Plan Tier</span>
                   <span className="font-bold text-slate-900 dark:text-white">
-                    {subscription?.planName || "Novice Vault"}
+                    {isNoSubscription ? "No Active Subscription" : subscription?.planName || "Novice Vault"}
                   </span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-slate-100 dark:border-white/5">
                   <span className="text-slate-500 dark:text-white/50">Price</span>
                   <span className="font-bold text-slate-900 dark:text-white">
-                    ₹{subscription?.amount || 299} / {subscription?.period || "Month"}
+                    {isNoSubscription
+                      ? "₹0 / Free"
+                      : `₹${subscription?.amount ?? 0} / ${subscription?.period || "Month"}`}
                   </span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-slate-100 dark:border-white/5">
                   <span className="text-slate-500 dark:text-white/50">Status</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{status}</span>
+                  <span className={`font-bold ${isNoSubscription ? "text-amber-500 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                    {status}
+                  </span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-slate-100 dark:border-white/5">
                   <span className="text-slate-500 dark:text-white/50">Payment Gateways</span>
@@ -493,7 +625,7 @@ export default function BillingPlansPage() {
       )}
 
       {/* ── SECTION 4: AVAILABLE PLANS GRID ── */}
-      <div className="space-y-8 pt-6">
+      <div id="available-vault-plans" className="space-y-8 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -541,20 +673,31 @@ export default function BillingPlansPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {filteredPlans.map((plan) => (
-              <PlanCard
-                key={plan._id || plan.razorpayPlanId}
-                plan={plan}
-                isCurrent={
-                  subscription?.razorpayPlanId === plan.razorpayPlanId ||
-                  subscription?.planName?.toLowerCase() === (plan.type || plan.slug)?.toLowerCase()
-                }
-                currentPlanAmount={subscription?.amount || 0}
-                loading={actionLoading}
-                onSelect={(p) => handleSelectPlan(p)}
-                currentUsedStorage={usedStorage}
-              />
-            ))}
+            {filteredPlans.map((plan) => {
+              const isPlanMatch =
+                subscription?.razorpayPlanId === plan.razorpayPlanId ||
+                subscription?.billingPlan?._id === plan._id ||
+                subscription?.billingPlan === plan._id ||
+                subscription?.planName?.toLowerCase() ===
+                  (plan.type || plan.slug || plan.name)?.toLowerCase();
+
+              const isCurrent = isActive && isPlanMatch;
+              const isPrevious =
+                (isCancelled || isNoSubscription) && isPlanMatch && !isActive;
+
+              return (
+                <PlanCard
+                  key={plan._id || plan.razorpayPlanId}
+                  plan={plan}
+                  isCurrent={isCurrent}
+                  isPrevious={isPrevious}
+                  currentPlanAmount={isActive ? subscription?.amount || 0 : 0}
+                  loading={actionLoading}
+                  onSelect={(p) => handleSelectPlan(p)}
+                  currentUsedStorage={usedStorage}
+                />
+              );
+            })}
           </div>
         )}
       </div>
@@ -676,24 +819,41 @@ export default function BillingPlansPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs text-slate-800 dark:text-white/80 font-medium">
-                  {invoices.map((inv) => (
-                    <tr key={inv.id || inv._id}>
-                      <td className="p-4 font-mono text-accent-primary">{inv.id || "INV-1001"}</td>
-                      <td className="p-4">{inv.date || "Aug 1, 2026"}</td>
-                      <td className="p-4 font-bold text-slate-900 dark:text-white">₹{inv.amount || 299}</td>
-                      <td className="p-4">
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] uppercase font-bold">
-                          {inv.status || "Paid"}
-                        </span>
-                      </td>
-                      <td className="p-4 text-slate-500 dark:text-white/60">{inv.period || "Aug 1 – Aug 31"}</td>
-                      <td className="p-4 text-right">
-                        <button className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-white font-semibold text-xs transition-colors inline-flex items-center gap-1.5 border border-slate-200 dark:border-white/10">
-                          <Download size={12} /> Download
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {invoices.map((inv) => {
+                    const statusStr = (inv.status || "paid").toLowerCase();
+                    const isPaid = statusStr === "paid";
+                    const isFailed = ["failed", "expired", "halted"].includes(statusStr);
+
+                    return (
+                      <tr key={inv.id || inv._id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors">
+                        <td className="p-4 font-mono text-accent-primary font-bold">{inv.invoiceNumber || inv.id || "INV-1001"}</td>
+                        <td className="p-4">{inv.date || "Aug 1, 2026"}</td>
+                        <td className="p-4 font-bold text-slate-900 dark:text-white">₹{inv.amount || 299}</td>
+                        <td className="p-4">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold border ${
+                              isPaid
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                : isFailed
+                                  ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                            }`}
+                          >
+                            {inv.status || "Paid"}
+                          </span>
+                        </td>
+                        <td className="p-4 text-slate-500 dark:text-white/60">{inv.period || "Monthly Cycle"}</td>
+                        <td className="p-4 text-right">
+                          <button
+                            onClick={() => handleDownloadInvoice(inv)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-white font-semibold text-xs transition-colors inline-flex items-center gap-1.5 border border-slate-200 dark:border-white/10 cursor-pointer active:scale-95"
+                          >
+                            <Download size={12} /> Download
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

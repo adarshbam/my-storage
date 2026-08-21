@@ -3,7 +3,7 @@ import User from "../models/userModel.js";
 import { cacheGet, cacheSet, cacheSadd } from "../databases/redis.js";
 
 async function checkAuth(req, res, next) {
-  const { sessionId } = req.signedCookies;
+  const { sessionId } = req.signedCookies || {};
 
   if (sessionId === false) {
     return res.status(401).json({ message: "Invalid cookie signature" });
@@ -45,7 +45,9 @@ async function checkAuth(req, res, next) {
 
       return res.status(404).json({ message: "Sesssion not Found" });
     }
-    const user = await User.findOne({ _id: session.userId });
+    const user = await User.findOne({ _id: session.userId }).populate(
+      "subscription",
+    );
 
     if (!user) {
       return res.status(401).json({ message: "User not found" });
@@ -71,6 +73,11 @@ async function checkAuth(req, res, next) {
       twoFactorEnabled: !!user.twoFactorEnabled,
       maxStorage: user.maxStorage,
       billingPlan: user.billingPlan ? user.billingPlan.toString() : null,
+      subscription: user.subscription
+        ? (user.subscription._id
+            ? user.subscription._id.toString()
+            : user.subscription.toString())
+        : null,
 
       role: user.role,
       rootDirId: user.rootDirId ? user.rootDirId.toString() : "",

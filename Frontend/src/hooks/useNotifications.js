@@ -177,18 +177,38 @@ export function useNotifications() {
     [fetchNotifications],
   );
 
-  // Initial load & periodic unread count poll
+  // Initial load & periodic live sync poll
   useEffect(() => {
-    if (user) {
+    if (!user) return;
+
+    fetchUnreadCount();
+    fetchNotifications(1, "all", false);
+
+    // Live Sync Polling interval (8 seconds)
+    const interval = setInterval(() => {
       fetchUnreadCount();
-      fetchNotifications(1, "all", false);
+      fetchNotifications(1, filterRef.current, false);
+    }, 8000);
 
-      const interval = setInterval(() => {
-        fetchUnreadCount();
-      }, 60000); // 1 minute poll
+    // Window focus refresh (e.g. returning from Razorpay or external tabs)
+    const handleFocus = () => {
+      fetchUnreadCount();
+      fetchNotifications(1, filterRef.current, false);
+    };
+    window.addEventListener("focus", handleFocus);
 
-      return () => clearInterval(interval);
-    }
+    // Custom event listener to immediately refresh notifications on any action
+    const handleRefresh = () => {
+      fetchUnreadCount();
+      fetchNotifications(1, filterRef.current, false);
+    };
+    window.addEventListener("notifications:refresh", handleRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("notifications:refresh", handleRefresh);
+    };
   }, [user, fetchUnreadCount, fetchNotifications]);
 
   return {

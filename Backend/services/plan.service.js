@@ -17,7 +17,9 @@ export const createPlanLogic = async ({ planData, userId, userRole }) => {
   console.log(planData);
 
   if (userRole != "Owner") {
-    throw Object.assign(new Error("You are forbidden to perform this action"), { status: 403 });
+    throw Object.assign(new Error("You are forbidden to perform this action"), {
+      status: 403,
+    });
   }
 
   const planCurrency = (currency || "INR").toUpperCase();
@@ -83,13 +85,19 @@ export const createPlanLogic = async ({ planData, userId, userRole }) => {
   };
 };
 
-export const planTierManagementLogic = async ({ planData, userId, userRole }) => {
+export const planTierManagementLogic = async ({
+  planData,
+  userId,
+  userRole,
+}) => {
   const { type, amount, storage, period, currency } = planData;
 
   console.log(planData);
 
   if (userRole != "Owner") {
-    throw Object.assign(new Error("You are forbidden to perform this action"), { status: 403 });
+    throw Object.assign(new Error("You are forbidden to perform this action"), {
+      status: 403,
+    });
   }
 
   const planCurrency = (currency || "INR").toUpperCase();
@@ -167,7 +175,10 @@ export const getAllActivePlansLogic = async () => {
 
 export const getOwnerSettingsLogic = async ({ userRole }) => {
   if (userRole !== "Owner") {
-    throw Object.assign(new Error("Access denied. Only Owners can view settings."), { status: 403 });
+    throw Object.assign(
+      new Error("Access denied. Only Owners can view settings."),
+      { status: 403 },
+    );
   }
 
   // TODO: fetch and return all owner settings
@@ -206,7 +217,10 @@ export const getOwnerSettingsLogic = async ({ userRole }) => {
 
 export const updateGlobalLimitsLogic = async ({ limits, userRole }) => {
   if (userRole !== "Owner") {
-    throw Object.assign(new Error("Access denied. Only Owners can update settings."), { status: 403 });
+    throw Object.assign(
+      new Error("Access denied. Only Owners can update settings."),
+      { status: 403 },
+    );
   }
 
   // TODO: Update global system config in DB using req.body
@@ -252,7 +266,10 @@ export const updateGlobalLimitsLogic = async ({ limits, userRole }) => {
 
 export const updatePlansLogic = async ({ plans, userRole }) => {
   if (userRole !== "Owner") {
-    throw Object.assign(new Error("Access denied. Only Owners can update billing plans."), { status: 403 });
+    throw Object.assign(
+      new Error("Access denied. Only Owners can update billing plans."),
+      { status: 403 },
+    );
   }
 
   if (!Array.isArray(plans) || plans.length === 0) {
@@ -363,7 +380,10 @@ export const updatePlansLogic = async ({ plans, userRole }) => {
 
 export const updatePlanTiersLogic = async ({ tiers, userRole }) => {
   if (userRole !== "Owner") {
-    throw Object.assign(new Error("Access denied. Only Owners can update plan tiers."), { status: 403 });
+    throw Object.assign(
+      new Error("Access denied. Only Owners can update plan tiers."),
+      { status: 403 },
+    );
   }
 
   const bulkOps = tiers.map((p) => ({
@@ -388,9 +408,18 @@ export const updatePlanTiersLogic = async ({ tiers, userRole }) => {
   return tiers;
 };
 
-export const updatePlanTierActiveLogic = async ({ tierId, slug, bodyId, active, userRole }) => {
+export const updatePlanTierActiveLogic = async ({
+  tierId,
+  slug,
+  bodyId,
+  active,
+  userRole,
+}) => {
   if (userRole !== "Owner") {
-    throw Object.assign(new Error("Access denied. Only Owners can update plan tiers."), { status: 403 });
+    throw Object.assign(
+      new Error("Access denied. Only Owners can update plan tiers."),
+      { status: 403 },
+    );
   }
 
   const filter = tierId
@@ -402,7 +431,9 @@ export const updatePlanTierActiveLogic = async ({ tierId, slug, bodyId, active, 
         : null;
 
   if (!filter) {
-    throw Object.assign(new Error("tierId, _id, or slug is required"), { status: 400 });
+    throw Object.assign(new Error("tierId, _id, or slug is required"), {
+      status: 400,
+    });
   }
 
   const updatedTier = await PlanTier.findOneAndUpdate(
@@ -433,7 +464,10 @@ export const updatePlanTierActiveLogic = async ({ tierId, slug, bodyId, active, 
 
 export const updateFeaturesLogic = async ({ features, userRole }) => {
   if (userRole !== "Owner") {
-    throw Object.assign(new Error("Access denied. Only Owners can update feature catalogue."), { status: 403 });
+    throw Object.assign(
+      new Error("Access denied. Only Owners can update feature catalogue."),
+      { status: 403 },
+    );
   }
 
   const bulkOps = features.map((f) => ({
@@ -460,7 +494,10 @@ export const updateFeaturesLogic = async ({ features, userRole }) => {
 
 export const updateTierConfigurationsLogic = async ({ configs, userRole }) => {
   if (userRole !== "Owner") {
-    throw Object.assign(new Error("Access denied. Only Owners can update tier configurations."), { status: 403 });
+    throw Object.assign(
+      new Error("Access denied. Only Owners can update tier configurations."),
+      { status: 403 },
+    );
   }
 
   const { tierFeatureConfigs = {}, tierRuleConfigs = {} } = configs;
@@ -543,12 +580,13 @@ export const updateTierConfigurationsLogic = async ({ configs, userRole }) => {
 
 export const createPlanTierLogic = async ({ tierData, userRole }) => {
   if (userRole !== "Owner") {
-    throw Object.assign(new Error("Access denied. Only Owners can create plan tiers."), { status: 403 });
+    throw Object.assign(
+      new Error("Access denied. Only Owners can create plan tiers."),
+      { status: 403 },
+    );
   }
 
   const { slug, title, description, badge, accentColor } = tierData;
-  console.log(tierData);
-
   const newTier = await PlanTier.create({
     slug,
     title,
@@ -559,38 +597,96 @@ export const createPlanTierLogic = async ({ tierData, userRole }) => {
 
   await BillingPlan.updateMany({ slug }, { active: false });
 
-  const plans = ["Monthly", "Yearly"].map((period) => ({
-    name: `${slug} - ${period}`,
-    period,
-    currency: "INR",
-    amount: 0,
-    storage: 5 * 1024 ** 3,
-  }));
+  const defaultStorage = Number(tierData.storage) || 5 * 1024 ** 3;
+  const defaultAmount = Number(tierData.amount) || 0;
 
-  const razorpayPlans = await Promise.all(
-    plans.map((plan) =>
-      rzInstance.plans.create({
-        period: plan.period.toLowerCase(),
-        interval: 1,
-        item: {
-          name: plan.name,
-          amount: plan.amount,
-          currency: plan.currency,
-        },
-      }),
-    ),
+  const plans = [
+    {
+      period: "Monthly",
+      amount: defaultAmount,
+      currency: "INR",
+      storage: defaultStorage,
+    },
+    {
+      period: "Yearly",
+      amount: defaultAmount > 0 ? Math.round(defaultAmount * 10) : 0,
+      currency: "INR",
+      storage: defaultStorage,
+    },
+  ];
+
+  const createdBillingPlans = await Promise.all(
+    plans.map(async (plan) => {
+      let rzPlanId = null;
+      if (plan.amount > 0) {
+        try {
+          const newRzPlan = await rzInstance.plans.create({
+            period: plan.period.toLowerCase(),
+            interval: 1,
+            item: {
+              name: `${title || slug} - ${plan.period}`,
+              amount: Math.round(plan.amount * 100),
+              currency: plan.currency,
+            },
+          });
+          rzPlanId = newRzPlan.id;
+        } catch (rzErr) {
+          console.warn(
+            `[createPlanTier] Razorpay fallback used for ${slug}:`,
+            rzErr.message,
+          );
+          rzPlanId = `plan_${slug}_${plan.period.toLowerCase()}_auto`;
+        }
+      } else {
+        rzPlanId = `plan_${slug}_${plan.period.toLowerCase()}_free`;
+      }
+
+      return await BillingPlan.create({
+        tier: newTier._id,
+        slug,
+        amount: plan.amount,
+        currency: plan.currency,
+        period: plan.period,
+        storage: plan.storage,
+        razorpayPlanId: rzPlanId,
+        active: true,
+      });
+    }),
   );
 
-  const createdBillingPlans = await BillingPlan.create(
-    plans.map((plan, i) => ({
-      razorpayPlanId: razorpayPlans[i].id,
-      slug,
-      amount: plan.amount,
-      currency: plan.currency,
-      period: plan.period,
-      storage: plan.storage,
-      active: true,
-    })),
+  // Auto-seed default PlanTierConfiguration
+  const allFeatures = await Feature.find().select("_id");
+  await PlanTierConfiguration.findOneAndUpdate(
+    { tier: newTier._id, slug },
+    {
+      $set: {
+        tier: newTier._id,
+        slug,
+        features: allFeatures.map((f) => f._id),
+        rules: {
+          permissions: {
+            allowUpload: true,
+            allowDownload: true,
+            allowSharing: true,
+            allowEdit: true,
+            allowMove: true,
+            allowCopy: true,
+            allowDelete: true,
+          },
+          limits: {
+            storageLimit: defaultStorage,
+            maxConnectedDevices: 5,
+            maxUploadFileSize: 5 * 1024 * 1024 * 1024,
+          },
+          settings: {
+            uploadSpeedMultiplier: 5,
+            versionHistoryDays: 30,
+            deleteFilesAfterExpiryDays: 0,
+          },
+        },
+      },
+    },
+    { upsert: true, returnDocument: "after" },
   );
 
   return {
@@ -607,7 +703,9 @@ export const activateFreeTrialLogic = async ({ userId, req }) => {
 
   // 1. Mandatory phone verification
   if (!user.phone || !user.phoneVerified) {
-    const err = new Error("Phone number verification is required to claim the 30-day Free Trial.");
+    const err = new Error(
+      "Phone number verification is required to claim the 30-day Free Trial.",
+    );
     err.status = 403;
     err.code = "PHONE_VERIFICATION_REQUIRED";
     throw err;
@@ -667,8 +765,8 @@ export const activateFreeTrialLogic = async ({ userId, req }) => {
     userId: user._id,
     billingPlan: freeTrialPlan._id,
     razorpaySubscriptionId: `trial_${user._id}_${Date.now()}`,
-    status: "active",
     amount: 0,
+    status: "created",
     isFreeTrial: true,
   });
 
@@ -698,4 +796,3 @@ export const activateFreeTrialLogic = async ({ userId, req }) => {
     billingPlan: freeTrialPlan,
   };
 };
-

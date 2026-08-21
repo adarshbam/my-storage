@@ -1,5 +1,5 @@
 import { X, Calendar, HardDrive, Shield, FileType, User } from "lucide-react";
-import { formatSize, formatDate } from "../../lib/utils";
+import { formatSize, formatDate, isSpecialFolder } from "../../lib/utils";
 import {
   VaultDriveIcon,
   VaultGitIcon,
@@ -15,18 +15,19 @@ export default function FileDetailsModal({ item, onClose }) {
     item.type === "directory" || item.provider === "shared_drive";
   const provider = item.provider || "local";
   const ext = item.name.split(".").pop()?.toLowerCase() || "";
+  const isSpecial = isSpecialFolder(item);
 
   // Environment styling
   let envClass =
     "text-accent-primary bg-accent-soft border-accent-border";
   if (item.isTrash)
     envClass = "text-danger-accent bg-danger-accent/10 border-danger-accent/30";
-  else if (provider === "google_drive" || provider === "shared_drive")
+  else if (provider === "google_drive" || provider === "shared_drive" || item.name?.toLowerCase() === "google drive")
     envClass =
-      "text-document-accent bg-document-accent/10 border-document-accent/30";
-  else if (provider === "github")
+      "text-pulse-accent bg-pulse-accent/10 border-pulse-accent/30";
+  else if (provider === "github" || item.name?.toLowerCase() === "github")
     envClass =
-      "text-creative-accent bg-creative-accent/10 border-creative-accent/30";
+      "text-linkgit-accent bg-linkgit-accent/10 border-linkgit-accent/30";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -54,15 +55,15 @@ export default function FileDetailsModal({ item, onClose }) {
             className={`rounded-lg ${item.type === "file" && item.hasThumbnail ? "bg-slate-100 dark:bg-vault-black border-4 border-slate-200 dark:border-white shadow-xl" : ""} flex overflow-hidden items-center justify-center shrink-0 mb-4 relative z-10`}
           >
             {isDirectory ? (
-              provider === "google_drive" ? (
+              provider === "google_drive" || item.name?.toLowerCase() === "google drive" ? (
                 <VaultDriveIcon
                   size={40}
-                  className="text-document-accent drop-shadow-[0_0_15px_rgba(77,166,255,0.4)]"
+                  className="drop-shadow-[0_0_15px_rgba(77,166,255,0.4)]"
                 />
-              ) : provider === "github" ? (
+              ) : provider === "github" || item.name?.toLowerCase() === "github" ? (
                 <VaultGitIcon
                   size={40}
-                  className="text-creative-accent drop-shadow-[0_0_15px_rgba(198,92,255,0.4)]"
+                  className="text-white drop-shadow-[0_0_15px_rgba(198,92,255,0.4)]"
                 />
               ) : (
                 <div className="text-accent-primary drop-shadow-[0_0_15px_var(--accent-glow)]">
@@ -108,26 +109,30 @@ export default function FileDetailsModal({ item, onClose }) {
                 Type
               </p>
               <p className="text-sm text-slate-700 dark:text-white/80 font-medium">
-                {isDirectory
-                  ? "Directory (Chamber)"
-                  : `File (${ext.toUpperCase() || "Unknown"})`}
+                {isSpecial
+                  ? "Special Chamber"
+                  : isDirectory
+                    ? "Directory (Chamber)"
+                    : `File (${ext.toUpperCase() || "Unknown"})`}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-black/40 flex items-center justify-center border border-slate-200 dark:border-white/5">
-              <HardDrive size={14} className="text-slate-500 dark:text-white/50" />
+          {!isSpecial && (
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-black/40 flex items-center justify-center border border-slate-200 dark:border-white/5">
+                <HardDrive size={14} className="text-slate-500 dark:text-white/50" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/30 tracking-wider">
+                  Size
+                </p>
+                <p className="text-sm text-slate-700 dark:text-white/80 font-medium">
+                  {formatSize(item.size) || 0}
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-white/30 tracking-wider">
-                Size
-              </p>
-              <p className="text-sm text-slate-700 dark:text-white/80 font-medium">
-                {formatSize(item.size) || 0}
-              </p>
-            </div>
-          </div>
+          )}
 
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-black/40 flex items-center justify-center border border-slate-200 dark:border-white/5">
@@ -140,9 +145,9 @@ export default function FileDetailsModal({ item, onClose }) {
               <div className="text-sm text-slate-700 dark:text-white/80 flex flex-wrap items-center gap-1 font-medium mt-0.5">
                 {/* Root Segment */}
                 <span className="text-slate-500 dark:text-white/40 font-normal">
-                  {provider === "google_drive"
+                  {provider === "google_drive" || item.name?.toLowerCase() === "google drive"
                     ? "Google Drive"
-                    : provider === "github"
+                    : provider === "github" || item.name?.toLowerCase() === "github"
                       ? "GitHub"
                       : provider === "shared_drive"
                         ? "Secure Relay"
@@ -179,7 +184,8 @@ export default function FileDetailsModal({ item, onClose }) {
               </div>
             </div>
           </div>
-          {isDirectory ? (
+
+          {isDirectory && !isSpecial ? (
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-black/40 flex items-center justify-center border border-slate-200 dark:border-white/5">
                 <HardDrive size={14} className="text-slate-500 dark:text-white/50" />

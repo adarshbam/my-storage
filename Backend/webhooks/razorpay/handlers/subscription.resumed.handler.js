@@ -1,5 +1,6 @@
 import Subscription from "../../../models/subscriptionModel.js";
 import { subscriptionResumed } from "../../../services/notification.service.js";
+import { invalidatePlanContextCache } from "../../../middlewares/loadPlanContext.js";
 
 export async function handleSubscriptionResumed(payload) {
   const entity =
@@ -8,9 +9,7 @@ export async function handleSubscriptionResumed(payload) {
     payload.entity;
 
   if (!entity || !entity.id) {
-    console.warn(
-      "[Webhook] subscription.resumed: missing subscription entity",
-    );
+    console.warn("[Webhook] subscription.resumed: missing subscription entity");
     return;
   }
 
@@ -18,11 +17,12 @@ export async function handleSubscriptionResumed(payload) {
 
   const subscription = await Subscription.findOneAndUpdate(
     { razorpaySubscriptionId: entity.id },
-    { $set: { status: "active" } },
-    { new: true },
+    { $set: { status: "active", resumedAt: new Date(), pausedAt: null } },
+    { returnDocument: "after" },
   );
 
   if (subscription) {
+    await invalidatePlanContextCache(subscription.userId);
     await subscriptionResumed({
       userId: subscription.userId,
       subscriptionId: subscription._id,

@@ -126,14 +126,26 @@ export const connectGoogleDriveLogic = async ({ code, userId, rootDirId, req, re
 
   const { tokens } = await oauth2Client.getToken(code);
 
+  const existingUser = await User.findById(userId).select("integrations").lean();
+  const existingRefreshToken = existingUser?.integrations?.googleDrive?.refreshToken;
+  const refreshToken = tokens.refresh_token || existingRefreshToken;
+
+  if (!refreshToken) {
+    const err = new Error(
+      "Google did not provide a refresh token. Please ensure consent is granted during login.",
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
   await User.updateOne(
     { _id: userId },
     {
       $set: {
         "integrations.googleDrive": {
           connected: true,
-          refreshToken: tokens.refresh_token,
-          scope: tokens.scope,
+          refreshToken: refreshToken,
+          scope: tokens.scope || "https://www.googleapis.com/auth/drive",
           connectedAt: new Date(),
         },
       },

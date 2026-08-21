@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { copyItems, moveItems, batchDelete } from '../api/files.api';
 import { SERVER_URL } from '../lib/api';
+import { isSpecialFolder } from '../lib/utils';
 
 export function useClipboard({
   folderId,
@@ -32,7 +33,7 @@ export function useClipboard({
   };
 
   const handleCopyItem = (item) => {
-    if (isReadOnly) return;
+    if (isReadOnly || isSpecialFolder(item)) return;
     const prepared = {
       action: "copy",
       items: [
@@ -52,7 +53,7 @@ export function useClipboard({
   };
 
   const handleCutItem = (item) => {
-    if (isReadOnly) return;
+    if (isReadOnly || isSpecialFolder(item)) return;
     const prepared = {
       action: "cut",
       items: [
@@ -73,9 +74,12 @@ export function useClipboard({
 
   const handleCopySelected = () => {
     if (isReadOnly || selectedItems.length === 0) return;
+    const eligibleItems = selectedItems.filter((i) => !isSpecialFolder(i));
+    if (eligibleItems.length === 0) return;
+
     const prepared = {
       action: "copy",
-      items: selectedItems.map((item) => ({
+      items: eligibleItems.map((item) => ({
         _id: item._id || item.id,
         name: item.name,
         type: item.type || (item.extension ? "file" : "directory"),
@@ -92,9 +96,12 @@ export function useClipboard({
 
   const handleCutSelected = () => {
     if (isReadOnly || selectedItems.length === 0) return;
+    const eligibleItems = selectedItems.filter((i) => !isSpecialFolder(i));
+    if (eligibleItems.length === 0) return;
+
     const prepared = {
       action: "cut",
-      items: selectedItems.map((item) => ({
+      items: eligibleItems.map((item) => ({
         _id: item._id || item.id,
         name: item.name,
         type: item.type || (item.extension ? "file" : "directory"),

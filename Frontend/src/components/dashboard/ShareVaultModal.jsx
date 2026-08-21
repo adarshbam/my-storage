@@ -400,21 +400,27 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
             </div>
 
             {/* Password Protection */}
-            <div className="p-3 bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/5 rounded-2xl space-y-2.5">
+            <div className={`p-3 bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/5 rounded-2xl space-y-2.5 ${!hasFeature("password_links") ? "opacity-60" : ""}`}>
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-white/80 cursor-pointer">
                   <Lock size={13} className={hasPassword ? "text-amber-500" : "text-slate-400 dark:text-white/40"} />
                   Password Protection
+                  {!hasFeature("password_links") && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase font-mono">
+                      Upgrade Required
+                    </span>
+                  )}
                 </label>
                 <input
                   type="checkbox"
-                  checked={hasPassword}
+                  disabled={!hasFeature("password_links")}
+                  checked={hasPassword && hasFeature("password_links")}
                   onChange={(e) => setHasPassword(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 dark:border-white/20 bg-white dark:bg-black/50 text-amber-500"
+                  className="w-4 h-4 rounded border-slate-300 dark:border-white/20 bg-white dark:bg-black/50 text-amber-500 disabled:opacity-40"
                 />
               </div>
 
-              {hasPassword && (
+              {hasPassword && hasFeature("password_links") && (
                 <div className="space-y-2 pt-1">
                   <div className="relative">
                     <input
@@ -448,33 +454,46 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
 
             {/* Expiration Preset Selection */}
             <div>
-              <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-white/40 mb-1 font-mono">
-                Link Expiration
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-white/40 font-mono">
+                  Link Expiration
+                </label>
+                {!hasFeature("expiring_links") && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase font-mono">
+                    Upgrade Required
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-3 gap-1.5 mb-2">
                 {[
-                  { id: "never", label: "Never" },
-                  { id: "24h", label: "24 Hours" },
-                  { id: "7d", label: "7 Days" },
-                  { id: "30d", label: "30 Days" },
-                  { id: "custom", label: "Custom Date" },
-                ].map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => setExpiryPreset(preset.id)}
-                    className={`py-1.5 px-2.5 rounded-xl text-[11px] font-semibold border transition-all ${
-                      expiryPreset === preset.id
-                        ? "bg-accent-soft text-accent-primary border-accent-border font-bold shadow-sm"
-                        : "bg-slate-100 dark:bg-black/30 text-slate-600 dark:text-white/40 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+                  { id: "never", label: "Never", requiresFeature: false },
+                  { id: "24h", label: "24 Hours", requiresFeature: true },
+                  { id: "7d", label: "7 Days", requiresFeature: true },
+                  { id: "30d", label: "30 Days", requiresFeature: true },
+                  { id: "custom", label: "Custom Date", requiresFeature: true },
+                ].map((preset) => {
+                  const isDisabled = preset.requiresFeature && !hasFeature("expiring_links");
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      disabled={isDisabled}
+                      onClick={() => !isDisabled && setExpiryPreset(preset.id)}
+                      className={`py-1.5 px-2.5 rounded-xl text-[11px] font-semibold border transition-all ${
+                        isDisabled
+                          ? "opacity-40 cursor-not-allowed bg-slate-100 dark:bg-black/20 text-slate-400 dark:text-white/20 border-transparent"
+                          : expiryPreset === preset.id
+                          ? "bg-accent-soft text-accent-primary border-accent-border font-bold shadow-sm"
+                          : "bg-slate-100 dark:bg-black/30 text-slate-600 dark:text-white/40 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
               </div>
 
-              {expiryPreset === "custom" && (
+              {expiryPreset === "custom" && hasFeature("expiring_links") && (
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-accent-primary pointer-events-none" size={14} />
                   <input

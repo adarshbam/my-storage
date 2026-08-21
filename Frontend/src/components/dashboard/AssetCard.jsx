@@ -15,7 +15,7 @@ import {
   FolderPlus,
 } from "lucide-react";
 import getFileImage, { renderFileIcon } from "../../lib/FileImages";
-import { formatSize } from "../../lib/utils";
+import { formatSize, isSpecialFolder } from "../../lib/utils";
 import {
   EncryptionBadgeIcon,
   VaultDriveIcon,
@@ -171,6 +171,7 @@ export default function AssetCard({
 
   const provider = item.provider || "local";
   const isDirectory = item.type === "directory" || provider === "shared_drive";
+  const isSpecial = isSpecialFolder(item);
   const typeInfo = getItemTypeInfo(item, isDirectory, provider, specialView);
 
   // Close dropdown when clicking outside
@@ -229,7 +230,7 @@ export default function AssetCard({
           if (!isDirectory && item) prefetchFileContent(item);
         }}
         onMouseLeave={() => setIsHovered(false)}
-        draggable={!readOnly && !isTrash}
+        draggable={!readOnly && !isTrash && !isSpecial}
         onDragStart={(e) => onDragStart && onDragStart(e, item)}
         onDragEnd={(e) => onDragEnd && onDragEnd(e, item)}
         onDragOver={(e) => onDragOver && onDragOver(e)}
@@ -269,7 +270,7 @@ export default function AssetCard({
             provider === "google_drive" ? (
               <VaultDriveIcon size={20} className="text-document-accent" />
             ) : provider === "github" ? (
-              <VaultGitIcon size={20} className="text-creative-accent" />
+              <VaultGitIcon size={20} className="text-slate-800 dark:text-white" />
             ) : (
               <Folder size={20} className="text-vault-emerald" />
             )
@@ -350,7 +351,7 @@ export default function AssetCard({
               <Info size={16} />
             </button>
           )}
-          {!isTrash && !effectiveReadOnly && onRename && (
+          {!isTrash && !effectiveReadOnly && !isSpecial && onRename && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -372,7 +373,7 @@ export default function AssetCard({
               <Download size={16} />
             </button>
           )}
-          {!isTrash && !effectiveReadOnly && onDelete && (
+          {!isTrash && !effectiveReadOnly && !isSpecial && onDelete && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -411,7 +412,7 @@ export default function AssetCard({
         if (!isDirectory && item) prefetchFileContent(item);
       }}
       onMouseLeave={() => setIsHovered(false)}
-      draggable={!effectiveReadOnly && !isTrash}
+      draggable={!effectiveReadOnly && !isTrash && !isSpecial}
       onDragStart={(e) => onDragStart && onDragStart(e, item)}
       onDragEnd={(e) => onDragEnd && onDragEnd(e, item)}
       onDragOver={(e) => onDragOver && onDragOver(e)}
@@ -465,7 +466,7 @@ export default function AssetCard({
             ) : provider === "github" ? (
               <VaultGitIcon
                 size={48}
-                className="text-creative-accent drop-shadow-[0_0_15px_rgba(198,92,255,0.4)]"
+                className="text-slate-800 dark:text-white drop-shadow-[0_0_15px_rgba(198,92,255,0.4)]"
               />
             ) : (
               <Folder
@@ -657,7 +658,7 @@ export default function AssetCard({
               </button>
             )}
 
-            {!isTrash && !effectiveReadOnly && onRename && (
+            {!isTrash && !effectiveReadOnly && !isSpecial && onRename && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -681,7 +682,7 @@ export default function AssetCard({
                 Share
               </button>
             )}
-            {!isTrash && !effectiveReadOnly && onCopy && (
+            {!isTrash && !effectiveReadOnly && !isSpecial && onCopy && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -693,7 +694,7 @@ export default function AssetCard({
                 Copy
               </button>
             )}
-            {!isTrash && !effectiveReadOnly && onCut && (
+            {!isTrash && !effectiveReadOnly && !isSpecial && onCut && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -730,11 +731,11 @@ export default function AssetCard({
               </button>
             )}
             {/* Separator */}
-            {((!isTrash && !effectiveReadOnly && onDelete) ||
+            {((!isTrash && !effectiveReadOnly && !isSpecial && onDelete) ||
               (isTrash && onDeleteForever)) && (
               <div className="my-1 mx-2 border-t border-slate-100 dark:border-white/[0.08]" />
             )}
-            {!isTrash && !effectiveReadOnly && onDelete && (
+            {!isTrash && !effectiveReadOnly && !isSpecial && onDelete && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -813,21 +814,15 @@ export default function AssetCard({
       {/* ── Selected checkmark ── */}
       {selected && (
         <div
-          className={`absolute -top-2 -right-2 w-6 h-6 rounded-full text-accent-foreground flex items-center justify-center border-2 border-vault-surface z-10 ${
+          className={`absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center border-2 border-white/20 dark:border-vault-surface z-10 shadow-lg ${
             isTrash
-              ? "bg-danger-accent shadow-[0_0_15px_rgba(255,90,122,0.6)]"
-              : provider === "github"
-                ? "bg-creative-accent shadow-[0_0_15px_rgba(198,92,255,0.6)]"
-                : provider === "google_drive" || provider === "shared_drive"
-                  ? "shadow-[0_0_15px_rgba(0,207,255,0.6)]"
-                  : "bg-accent-primary shadow-accent-glow-sm"
+              ? "bg-danger-accent shadow-[0_0_15px_rgba(255,90,122,0.6)] text-white"
+              : provider === "github" || item.name?.toLowerCase() === "github"
+                ? "bg-linkgit-accent shadow-[0_0_15px_rgba(198,92,255,0.6)] text-white"
+                : provider === "google_drive" || provider === "shared_drive" || item.name?.toLowerCase() === "google drive"
+                  ? "bg-[#00CFFF] shadow-[0_0_15px_rgba(0,207,255,0.6)] text-slate-950"
+                  : "bg-accent-primary shadow-accent-glow-sm text-accent-foreground"
           }`}
-          style={
-            (provider === "google_drive" || provider === "shared_drive") &&
-            !isTrash
-              ? { backgroundColor: "#00CFFF" }
-              : undefined
-          }
         >
           <svg
             width="12"
@@ -835,7 +830,7 @@ export default function AssetCard({
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="4"
+            strokeWidth="3.5"
             strokeLinecap="round"
             strokeLinejoin="round"
           >

@@ -136,7 +136,13 @@ app.use(
 );
 app.use(compression());
 app.use(cookieParser(SESSION_SECRET));
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+);
 
 app.use("/directory", checkAuth, directoryRouter);
 app.use("/file", checkAuth, fileRouter);

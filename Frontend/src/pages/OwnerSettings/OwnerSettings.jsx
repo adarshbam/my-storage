@@ -384,15 +384,68 @@ export default function OwnerSettings() {
   };
 
   const handleResetDefaults = async () => {
-    const res = await fetch(`${SERVER_URL}/owner-settings/reset`, {
-      method: "PATCH",
-      credentials: "include",
-    });
-    if (res.ok) {
+    try {
+      showToast("Resetting configurations to defaults...");
+      const res = await fetch(`${SERVER_URL}/owner-settings/reset`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        await getOwnerSettings();
+        showToast(data.message || "Reset all configurations to defaults successfully!");
+      } else {
+        showToast(data.error || "Failed to reset configurations.");
+      }
+    } catch (err) {
+      console.error("[handleResetDefaults] Error:", err);
+      showToast("Error resetting configurations.");
+    }
+  };
+
+  const handleSaveAll = async () => {
+    try {
+      showToast("Saving all configurations to database...");
+      await Promise.all([
+        fetch(`${SERVER_URL}/owner-settings/global`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(limits),
+        }),
+        fetch(`${SERVER_URL}/plans/update-plans`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(billingPlans),
+        }),
+        fetch(`${SERVER_URL}/owner-settings/tiers`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(planTiers),
+        }),
+        fetch(`${SERVER_URL}/owner-settings/features`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(features),
+        }),
+        fetch(`${SERVER_URL}/owner-settings/configurations`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tierFeatureConfigs,
+            tierRuleConfigs,
+          }),
+        }),
+      ]);
       await getOwnerSettings();
-      showToast("Reset all configurations to defaults.");
-    } else {
-      showToast("Failed to reset configurations.");
+      showToast("All owner configurations saved and applied successfully!");
+    } catch (err) {
+      console.error("[handleSaveAll] Error:", err);
+      showToast("Error saving configurations.");
     }
   };
 
@@ -442,7 +495,7 @@ export default function OwnerSettings() {
             </button>
 
             <button
-              onClick={() => showToast("Frontend state saved successfully!")}
+              onClick={handleSaveAll}
               className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-xs font-black shadow-lg shadow-teal-500/20 hover:opacity-95 transition-opacity"
             >
               <Check size={14} strokeWidth={3} /> Save Configurations

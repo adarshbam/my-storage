@@ -21,7 +21,30 @@ export const generateShareLinkLogic = async ({
   accessType,
   title,
   maxDownloads,
+  planContext,
 }) => {
+  const activeFeatures = planContext?.features || [];
+  const checkFeature = (key) =>
+    activeFeatures.some(
+      (f) => (f.key === key || f.slug === key || f.name === key) && f.enabled !== false,
+    );
+
+  const isProtected = Boolean(hasPassword && password && password.trim().length > 0);
+  if (isProtected && planContext && !checkFeature("password_links")) {
+    const err = new Error("Password-protected links are not available on your current plan.");
+    err.statusCode = 403;
+    err.code = "FEATURE_NOT_PERMITTED";
+    throw err;
+  }
+
+  const parsedExpiresAt = expiresAt ? new Date(expiresAt) : null;
+  if (parsedExpiresAt && planContext && !checkFeature("expiring_links")) {
+    const err = new Error("Expiring access links are not available on your current plan.");
+    err.statusCode = 403;
+    err.code = "FEATURE_NOT_PERMITTED";
+    throw err;
+  }
+
   // Ensure permission is valid, default to ["read"]
   let cleanPermission = ["read"];
   if (Array.isArray(permissions)) {
@@ -70,12 +93,9 @@ export const generateShareLinkLogic = async ({
     .digest("hex");
 
   let hashedPassword = null;
-  const isProtected = Boolean(hasPassword && password && password.trim().length > 0);
   if (isProtected) {
     hashedPassword = await argon2.hash(password.trim());
   }
-
-  const parsedExpiresAt = expiresAt ? new Date(expiresAt) : null;
 
   const shareLink = await ShareLink.create({
     userId,

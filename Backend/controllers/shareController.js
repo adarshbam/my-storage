@@ -12,6 +12,7 @@ export const generateShareLink = async (req, res, next) => {
       accessType: req.body.accessType,
       title: req.body.title,
       maxDownloads: req.body.maxDownloads,
+      planContext: req.planContext,
     });
     return res.status(201).json(result);
   } catch (error) {

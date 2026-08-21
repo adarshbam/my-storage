@@ -57,8 +57,11 @@ export const createFileSchema = {
   }),
   body: z.object({
     content: z.string().optional(),
+    message: z.string().optional(),
+    branch: z.string().optional(),
   }).optional(),
   query: z.object({
+    ref: z.string().optional(),
     ownerId: z.string().optional(),
   }).optional(),
 };
@@ -73,8 +76,11 @@ export const updateFilesSchema = {
   body: z.object({
     content: z.string(),
     sha: z.string().min(1),
+    message: z.string().optional(),
+    branch: z.string().optional(),
   }),
   query: z.object({
+    ref: z.string().optional(),
     ownerId: z.string().optional(),
   }).optional(),
 };

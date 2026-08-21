@@ -26,9 +26,15 @@ export async function handlePaymentFailed(payload) {
     await paymentFailed({
       userId: user._id,
       paymentId: entity.id,
-      reason: entity.error_description || entity.error_reason || "Transaction declined",
+      reason:
+        entity.error_description ||
+        entity.error_reason ||
+        "Transaction declined",
     }).catch((nErr) => {
-      console.warn("[Webhook] Payment failure notification error:", nErr.message);
+      console.warn(
+        "[Webhook] Payment failure notification error:",
+        nErr.message,
+      );
     });
   }
 }

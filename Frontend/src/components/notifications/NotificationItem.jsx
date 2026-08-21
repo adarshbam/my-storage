@@ -143,8 +143,8 @@ export default function NotificationItem({
     if (isUnread && onMarkAsRead) {
       onMarkAsRead(notification._id);
     }
+    if (onCloseCenter) onCloseCenter();
     if (notification.action?.route) {
-      if (onCloseCenter) onCloseCenter();
       navigate(notification.action.route);
     }
   };
@@ -222,8 +222,8 @@ export default function NotificationItem({
             {notification.message}
           </p>
 
-          {/* Optional Action CTA Button */}
-          {notification.action?.label && notification.action?.route && (
+          {/* Optional Action CTA Button (Only show if NOT resolved) */}
+          {notification.action?.label && notification.action?.route && !isResolved && (
             <div className="mt-3 flex items-center gap-2">
               <button
                 onClick={handleActionClick}

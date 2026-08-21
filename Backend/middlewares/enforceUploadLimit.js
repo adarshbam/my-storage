@@ -12,6 +12,30 @@ import Directory from "../models/directoryModel.js";
  */
 export const enforceUploadLimit = async (req, res, next) => {
   try {
+    // Inside upload authorization middleware:
+    const subscription = req.user.subscription;
+    console.log(subscription);
+
+    const isPaused = subscription?.status === "paused";
+    const isHaltedOrExpired = ["halted", "expired", "cancelled"].includes(
+      subscription?.status,
+    );
+
+    if (isPaused) {
+      return res.status(403).json({
+        error:
+          "Subscription is paused. Resuming your plan is required to upload new files.",
+        code: "SUBSCRIPTION_PAUSED",
+      });
+    }
+
+    if (isHaltedOrExpired && user.usedStorage > FREE_TIER_QUOTA) {
+      return res.status(403).json({
+        error: "Payment required. Storage quota exceeded for unpaid account.",
+        code: "PAYMENT_REQUIRED",
+      });
+    }
+
     const systemConfig = await getSystemConfigHelper();
     const maxFileSize = systemConfig?.maxFileSizeLimit || 500 * 1024 * 1024;
     const planLimit = req.planContext?.rules?.limits?.maxUploadFileSize;

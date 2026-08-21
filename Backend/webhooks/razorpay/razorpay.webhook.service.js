@@ -1,11 +1,13 @@
 import { handlePaymentCaptured } from "./handlers/payment.captured.handler.js";
 import { handlePaymentFailed } from "./handlers/payment.failed.handler.js";
 import { handleSubscriptionActivated } from "./handlers/subscription.activated.handler.js";
+import { handleSubscriptionCharged } from "./handlers/subscription.charged.handler.js";
 import { handleSubscriptionPending } from "./handlers/subscription.pending.handler.js";
 import { handleSubscriptionHalted } from "./handlers/subscription.halted.handler.js";
 import { handleSubscriptionCancelled } from "./handlers/subscription.cancelled.handler.js";
 import { handleSubscriptionPaused } from "./handlers/subscription.paused.handler.js";
 import { handleSubscriptionResumed } from "./handlers/subscription.resumed.handler.js";
+import { handleInvoicePaid } from "./handlers/invoice.paid.handler.js";
 
 export const dispatchRazorpayEvent = async (eventType, payload) => {
   switch (eventType) {
@@ -17,7 +19,11 @@ export const dispatchRazorpayEvent = async (eventType, payload) => {
       await handlePaymentFailed(payload);
       break;
     case "subscription.activated":
+    case "subscription.authenticated":
       await handleSubscriptionActivated(payload);
+      break;
+    case "subscription.charged":
+      await handleSubscriptionCharged(payload);
       break;
     case "subscription.pending":
       await handleSubscriptionPending(payload);
@@ -33,6 +39,9 @@ export const dispatchRazorpayEvent = async (eventType, payload) => {
       break;
     case "subscription.resumed":
       await handleSubscriptionResumed(payload);
+      break;
+    case "invoice.paid":
+      await handleInvoicePaid(payload);
       break;
     default:
       console.log(`[Webhook] Unhandled Razorpay event type: ${eventType}`);
