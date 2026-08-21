@@ -13,6 +13,7 @@ import {
   Share2,
   Star,
   FolderPlus,
+  History,
 } from "lucide-react";
 import getFileImage, { renderFileIcon } from "../../lib/FileImages";
 import { formatSize, isSpecialFolder } from "../../lib/utils";
@@ -158,6 +159,7 @@ export default function AssetCard({
   isBeingDragged = false,
   onDragEnd = null,
   onShare = null,
+  onViewHistory = null,
   specialView = null,
 }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -638,6 +640,19 @@ export default function AssetCard({
               >
                 <Info size={14} className="shrink-0 text-slate-500 dark:text-white/60" />
                 Details
+              </button>
+            )}
+
+            {provider === "github" && !isDirectory && onViewHistory && (
+              <button
+                onClick={() => {
+                  closeMenu();
+                  onViewHistory(item);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors rounded-xl"
+              >
+                <History size={14} className="shrink-0 text-accent-primary" />
+                Commit History
               </button>
             )}
 

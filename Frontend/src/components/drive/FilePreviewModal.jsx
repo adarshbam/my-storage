@@ -16,6 +16,7 @@ import {
   CheckCheck,
   WrapText,
   FileVideo,
+  History,
 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
 import Button from "../ui/Button";
@@ -176,7 +177,14 @@ function CodeViewer({ code, language, wrapText = false }) {
   );
 }
 
-export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
+export default function FilePreviewModal({
+  file,
+  isOpen,
+  onClose,
+  ownerId,
+  selectedBranch,
+  onViewHistory,
+}) {
   const { isNoPlan, rules } = usePlan();
   const allowEdit = !isNoPlan && (rules?.permissions?.allowUpload ?? true);
 
@@ -300,7 +308,9 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
         try {
           let url =
             file.provider === "github"
-              ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}`
+              ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}${
+                  selectedBranch ? `?ref=${encodeURIComponent(selectedBranch)}` : ""
+                }`
               : file.provider === "google_drive"
                 ? `${SERVER_URL}/drive/file/${file._id}`
                 : `${SERVER_URL}/file/${file._id}`;
@@ -343,13 +353,15 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
       abortController.abort();
       document.body.style.overflow = "unset";
     };
-  }, [file, isOpen, ownerId]);
+  }, [file, isOpen, ownerId, selectedBranch]);
 
   if (!isOpen || !file) return null;
 
   let fileUrl =
     file.provider === "github"
-      ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}`
+      ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}${
+          selectedBranch ? `?ref=${encodeURIComponent(selectedBranch)}` : ""
+        }`
       : file.provider === "google_drive"
         ? `${SERVER_URL}/drive/file/${file._id}`
         : `${SERVER_URL}/file/${file._id}`;
@@ -363,11 +375,13 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
     try {
       const isGithub = file.provider === "github";
       let url = isGithub
-        ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}`
+        ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}${
+            selectedBranch ? `?ref=${encodeURIComponent(selectedBranch)}` : ""
+          }`
         : `${SERVER_URL}/file/${file._id}/save`;
 
       if (ownerId) {
-        url += `?ownerId=${ownerId}`;
+        url += (url.includes("?") ? "&" : "?") + `ownerId=${ownerId}`;
       }
 
       const body = isGithub
@@ -780,6 +794,18 @@ export default function FilePreviewModal({ file, isOpen, onClose, ownerId }) {
                 ) : null}
                 <div className="w-px h-6 bg-slate-200 dark:bg-white/10 mx-1" />
               </>
+            )}
+            {file.provider === "github" && onViewHistory && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onViewHistory(file)}
+                title="View Commit History"
+                className="text-slate-600 dark:text-white/70 hover:text-accent-primary flex items-center gap-1.5 font-bold"
+              >
+                <History size={16} />
+                <span className="hidden sm:inline text-xs">History</span>
+              </Button>
             )}
             <Button
               variant="ghost"

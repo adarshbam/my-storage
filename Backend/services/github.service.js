@@ -7,7 +7,6 @@ import path from "path";
 import SharedAccess from "../models/sharedAccessModel.js";
 import { invalidateUserSessions } from "../databases/redis.js";
 import { getObjectFromB2 } from "../integrations/storage/s3.client.js";
-
 import { resolveIntegrationOwnerId } from "../utils/integrationHelper.js";
 
 async function getAuthenticatedAccessToken(req, requireWrite = false) {
@@ -118,12 +117,34 @@ export const createRepositoryLogic = async ({ name: rawName, description: rawDes
   };
 };
 
+export const deleteRepositoryLogic = async ({ owner, repo, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${githubAccessToken}`,
+      Accept: "application/vnd.github+json",
+    },
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    const err = new Error(data.message || "Failed to delete repository");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return { success: true, message: `Repository ${owner}/${repo} deleted successfully` };
+};
+
 export const listRepositoriesLogic = async ({ req }) => {
   const auth = await getAuthenticatedAccessToken(req, false);
   const { githubAccessToken } = auth;
 
   const response = await fetch(
-    "https://api.github.com/user/repos?per_page=100",
+    "https://api.github.com/user/repos?per_page=100&sort=updated",
     {
       headers: {
         Authorization: `Bearer ${githubAccessToken}`,
@@ -147,6 +168,13 @@ export const listRepositoriesLogic = async ({ req }) => {
     provider: "github",
     githubPath: repo.full_name,
     updatedAt: repo.updated_at,
+    private: repo.private,
+    default_branch: repo.default_branch,
+    description: repo.description,
+    stargazers_count: repo.stargazers_count,
+    forks_count: repo.forks_count,
+    open_issues_count: repo.open_issues_count,
+    html_url: repo.html_url,
   }));
 
   return {
@@ -156,13 +184,13 @@ export const listRepositoriesLogic = async ({ req }) => {
   };
 };
 
-export const getRepositoryContentsLogic = async ({ owner, repo, path, ref, req }) => {
+export const getRepositoryContentsLogic = async ({ owner, repo, path: reqPath, ref, req }) => {
   const auth = await getAuthenticatedAccessToken(req, false);
   const { githubAccessToken } = auth;
 
   const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${path || ""}${
-      ref ? `?ref=${ref}` : ""
+    `https://api.github.com/repos/${owner}/${repo}/contents/${reqPath || ""}${
+      ref ? `?ref=${encodeURIComponent(ref)}` : ""
     }`,
     {
       headers: {
@@ -175,6 +203,11 @@ export const getRepositoryContentsLogic = async ({ owner, repo, path, ref, req }
   const data = await response.json();
 
   if (!Array.isArray(data)) {
+    if (data && data.message && !response.ok) {
+      const err = new Error(data.message || "Failed to fetch repository contents");
+      err.statusCode = response.status;
+      throw err;
+    }
     return { directories: [], files: [], name: repo };
   }
 
@@ -188,10 +221,11 @@ export const getRepositoryContentsLogic = async ({ owner, repo, path, ref, req }
       provider: "github",
       githubPath: `${owner}/${repo}/${dir.path}`,
       size: 0,
+      sha: dir.sha,
     }));
 
   const files = data
-    .filter((cnt) => cnt.type === "file")
+    .filter((cnt) => cnt.type === "file" || cnt.type === "symlink")
     .map((file) => ({
       _id: file.sha,
       id: file.sha,
@@ -213,13 +247,12 @@ export const getRepositoryContentsLogic = async ({ owner, repo, path, ref, req }
   };
 };
 
-export const getFilesLogic = async ({ owner, repo, path, ref, action, req, res }) => {
+export const getFilesLogic = async ({ owner, repo, path: reqPath, ref, action, req, res }) => {
   const auth = await getAuthenticatedAccessToken(req, false);
   const { githubAccessToken } = auth;
 
-  // 1. Get file metadata first (to get size and verify it's a file)
   const metaResponse = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${path}${ref ? `?ref=${ref}` : ""}`,
+    `https://api.github.com/repos/${owner}/${repo}/contents/${reqPath}${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`,
     {
       headers: {
         Authorization: `Bearer ${githubAccessToken}`,
@@ -245,23 +278,35 @@ export const getFilesLogic = async ({ owner, repo, path, ref, action, req, res }
   const fileSize = fileMeta.size;
   const range = req.headers.range;
 
-  // 2. Prepare headers for the final response
   const ext = fileMeta.name.split(".").pop().toLowerCase();
   const mimeTypes = {
     png: "image/png",
     jpg: "image/jpeg",
     jpeg: "image/jpeg",
     gif: "image/gif",
+    webp: "image/webp",
     svg: "image/svg+xml",
     pdf: "application/pdf",
     mp4: "video/mp4",
+    webm: "video/webm",
+    mp3: "audio/mpeg",
     zip: "application/zip",
+    json: "application/json",
+    js: "application/javascript",
+    ts: "text/typescript",
+    txt: "text/plain",
+    md: "text/markdown",
+    html: "text/html",
+    css: "text/css",
   };
   const contentType = mimeTypes[ext] || "text/plain";
 
   res.setHeader("Content-Type", contentType);
   res.setHeader("Accept-Ranges", "bytes");
   res.setHeader("X-Total-Size", fileSize);
+  if (fileMeta.sha) {
+    res.setHeader("X-File-Sha", fileMeta.sha);
+  }
 
   if (action === "download") {
     res.setHeader(
@@ -270,7 +315,6 @@ export const getFilesLogic = async ({ owner, repo, path, ref, action, req, res }
     );
   }
 
-  // 3. Fetch the raw content (streaming)
   const fetchOptions = {
     headers: {
       Authorization: `Bearer ${githubAccessToken}`,
@@ -289,7 +333,7 @@ export const getFilesLogic = async ({ owner, repo, path, ref, action, req, res }
   }
 
   const rawResponse = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${path}${ref ? `?ref=${ref}` : ""}`,
+    `https://api.github.com/repos/${owner}/${repo}/contents/${reqPath}${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`,
     fetchOptions,
   );
 
@@ -299,7 +343,6 @@ export const getFilesLogic = async ({ owner, repo, path, ref, action, req, res }
     throw err;
   }
 
-  // 4. Pipe the stream directly to the response
   if (rawResponse.body) {
     const { Readable } = await import("stream");
     Readable.fromWeb(rawResponse.body).pipe(res);
@@ -310,22 +353,23 @@ export const getFilesLogic = async ({ owner, repo, path, ref, action, req, res }
   }
 };
 
-export const updateFilesLogic = async ({ owner, repo, path, data, req }) => {
-  const { content, sha } = data;
+export const updateFilesLogic = async ({ owner, repo, path: reqPath, data, req }) => {
+  const { content, sha, message } = data;
   const branch = req.query.ref || data.branch;
   const auth = await getAuthenticatedAccessToken(req, true);
   const { githubAccessToken } = auth;
 
   const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+    `https://api.github.com/repos/${owner}/${repo}/contents/${reqPath}`,
     {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${githubAccessToken}`,
         Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message: "update file",
+        message: message || `Update ${reqPath}`,
         content,
         sha,
         ...(branch && { branch }),
@@ -340,23 +384,24 @@ export const updateFilesLogic = async ({ owner, repo, path, data, req }) => {
     throw err;
   }
 
-  return { msg: "Edited!", content: responseData.content };
+  return { msg: "File updated successfully", content: responseData.content, commit: responseData.commit };
 };
 
-export const deleteFileLogic = async ({ owner, repo, path, sha, branch, req }) => {
+export const deleteFileLogic = async ({ owner, repo, path: reqPath, sha, branch, req }) => {
   const auth = await getAuthenticatedAccessToken(req, true);
   const { githubAccessToken } = auth;
 
   const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+    `https://api.github.com/repos/${owner}/${repo}/contents/${reqPath}`,
     {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${githubAccessToken}`,
         Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message: `Delete ${path}`,
+        message: `Delete ${reqPath}`,
         sha,
         ...(branch && { branch }),
       }),
@@ -373,24 +418,22 @@ export const deleteFileLogic = async ({ owner, repo, path, sha, branch, req }) =
   return { msg: "Deleted!" };
 };
 
-export const createFileLogic = async ({ owner, repo, path, req }) => {
+export const createFileLogic = async ({ owner, repo, path: reqPath, req }) => {
   const auth = await getAuthenticatedAccessToken(req, true);
   const { githubAccessToken } = auth;
 
-  const githubPath = `${owner}/${repo}${path ? `/${path}` : ""}`;
+  const githubPath = `${owner}/${repo}${reqPath ? `/${reqPath}` : ""}`;
   const fileName = req.headers.filename ? sanitize(req.headers.filename) : null;
   const branch = req.query.ref || req.body?.branch;
 
-  // Helper to handle the actual GitHub API call
   const pushToGithub = async (content, finalPath, msg) => {
     const [pushOwner, pushRepo, ...pathParts] = finalPath.split("/");
     const pushPath = pathParts.join("/");
 
-    // Check if the file already exists to get its sha
     let sha;
     try {
       const getRes = await fetch(
-        `https://api.github.com/repos/${pushOwner}/${pushRepo}/contents/${pushPath}${branch ? `?ref=${branch}` : ""}`,
+        `https://api.github.com/repos/${pushOwner}/${pushRepo}/contents/${pushPath}${branch ? `?ref=${encodeURIComponent(branch)}` : ""}`,
         {
           headers: {
             Authorization: `Bearer ${githubAccessToken}`,
@@ -413,6 +456,7 @@ export const createFileLogic = async ({ owner, repo, path, req }) => {
         headers: {
           Authorization: `Bearer ${githubAccessToken}`,
           Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           message: msg,
@@ -426,7 +470,6 @@ export const createFileLogic = async ({ owner, repo, path, req }) => {
   };
 
   if (fileName) {
-    // CASE 1: Binary upload from TransferManager
     return new Promise((resolve, reject) => {
       const chunks = [];
       req.on("data", (chunk) => chunks.push(chunk));
@@ -448,19 +491,18 @@ export const createFileLogic = async ({ owner, repo, path, req }) => {
             err.statusCode = response.status;
             throw err;
           }
-          resolve({ msg: "Uploaded!", content: data.content });
+          resolve({ msg: "Uploaded!", content: data.content, commit: data.commit });
         } catch (err) {
           reject(err);
         }
       });
     });
   } else {
-    // CASE 2: JSON request from "New File" button
-    const { content } = req.body;
+    const { content, message } = req.body || {};
     const response = await pushToGithub(
       content || "",
       githubPath,
-      `Create ${githubPath}`,
+      message || `Create ${githubPath}`,
     );
     const data = await response.json();
 
@@ -469,12 +511,12 @@ export const createFileLogic = async ({ owner, repo, path, req }) => {
       err.statusCode = response.status;
       throw err;
     }
-    return { msg: "Created!", content: data.content };
+    return { msg: "Created!", content: data.content, commit: data.commit };
   }
 };
 
-export const deleteFolderLogic = async ({ owner, repo, path, branch, req }) => {
-  const pathPrefix = path || "";
+export const deleteFolderLogic = async ({ owner, repo, path: reqPath, branch, req }) => {
+  const pathPrefix = reqPath || "";
 
   const auth = await getAuthenticatedAccessToken(req, true);
   const { githubAccessToken } = auth;
@@ -495,9 +537,8 @@ export const deleteFolderLogic = async ({ owner, repo, path, branch, req }) => {
     }
   }
 
-  // 1. Get all files in the repo recursively
   const treeResponse = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/git/trees/${targetBranch}?recursive=1`,
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(targetBranch)}?recursive=1`,
     {
       headers: { Authorization: `Bearer ${githubAccessToken}` },
     },
@@ -510,12 +551,10 @@ export const deleteFolderLogic = async ({ owner, repo, path, branch, req }) => {
   }
   const treeData = await treeResponse.json();
 
-  // 2. Filter for files that are inside the target folder
-  const filesToDelete = treeData.tree.filter(
+  const filesToDelete = (treeData.tree || []).filter(
     (item) => item.type === "blob" && item.path.startsWith(pathPrefix + "/"),
   );
 
-  // 3. Delete each file
   for (const file of filesToDelete) {
     await fetch(
       `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}`,
@@ -524,10 +563,12 @@ export const deleteFolderLogic = async ({ owner, repo, path, branch, req }) => {
         headers: {
           Authorization: `Bearer ${githubAccessToken}`,
           Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           message: `Delete ${file.path} (Recursive Folder Delete)`,
           sha: file.sha,
+          branch: targetBranch,
         }),
       },
     );
@@ -540,7 +581,7 @@ export const downloadRepositoryLogic = async ({ owner, repo, branch, req, res })
   const auth = await getAuthenticatedAccessToken(req, false);
   const { githubAccessToken } = auth;
   const ref = branch;
-  const zipballUrl = `https://api.github.com/repos/${owner}/${repo}/zipball${ref ? `/${ref}` : ""}`;
+  const zipballUrl = `https://api.github.com/repos/${owner}/${repo}/zipball${ref ? `/${encodeURIComponent(ref)}` : ""}`;
 
   const response = await fetch(zipballUrl, {
     headers: {
@@ -566,8 +607,8 @@ export const downloadRepositoryLogic = async ({ owner, repo, branch, req, res })
   }
 };
 
-export const downloadFolderLogic = async ({ owner, repo, path, branch, req, res }) => {
-  const pathPrefix = path || "";
+export const downloadFolderLogic = async ({ owner, repo, path: reqPath, branch, req, res }) => {
+  const pathPrefix = reqPath || "";
   const queryRef = branch;
 
   const auth = await getAuthenticatedAccessToken(req, false);
@@ -575,11 +616,7 @@ export const downloadFolderLogic = async ({ owner, repo, path, branch, req, res 
 
   let targetRef = queryRef;
 
-  // 1. If no ref provided, get repo info to find default branch
   if (!targetRef) {
-    console.log(
-      `No ref provided for ${owner}/${repo}, fetching default branch`,
-    );
     const repoInfoRes = await fetch(
       `https://api.github.com/repos/${owner}/${repo}`,
       {
@@ -592,10 +629,8 @@ export const downloadFolderLogic = async ({ owner, repo, path, branch, req, res 
     targetRef = repoInfo.default_branch || "main";
   }
 
-  // 2. Get repo tree recursively
-  console.log(`Fetching recursive tree for ${owner}/${repo} at ${targetRef}`);
   const treeResponse = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/git/trees/${targetRef}?recursive=1`,
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(targetRef)}?recursive=1`,
     { headers: { Authorization: `Bearer ${githubAccessToken}` } },
   );
 
@@ -611,15 +646,11 @@ export const downloadFolderLogic = async ({ owner, repo, path, branch, req, res 
     throw new Error("Invalid tree data received from GitHub");
   }
 
-  // 3. Filter for files in target path
-  // We check if item.path is exactly pathPrefix or starts with pathPrefix/
   const files = treeData.tree.filter(
     (item) =>
       item.type === "blob" &&
       (item.path === pathPrefix || item.path.startsWith(pathPrefix + "/")),
   );
-
-  console.log(`Found ${files.length} files in ${pathPrefix}`);
 
   if (files.length === 0) {
     const err = new Error("No files found in this folder");
@@ -629,10 +660,6 @@ export const downloadFolderLogic = async ({ owner, repo, path, branch, req, res 
 
   const archive = archiver("zip", { zlib: { level: 5 } });
 
-  archive.on("error", (err) => {
-    console.error("Archiver error:", err);
-  });
-
   res.setHeader(
     "Content-Disposition",
     `attachment; filename="${pathPrefix.split("/").pop() || repo}.zip"`,
@@ -640,7 +667,6 @@ export const downloadFolderLogic = async ({ owner, repo, path, branch, req, res 
   res.setHeader("Content-Type", "application/zip");
   archive.pipe(res);
 
-  // 4. Append files to archive in parallel (up to 10 at a time to be safe with rate limits)
   const CHUNK_SIZE = 10;
   for (let i = 0; i < files.length; i += CHUNK_SIZE) {
     const chunk = files.slice(i, i + CHUNK_SIZE);
@@ -648,14 +674,13 @@ export const downloadFolderLogic = async ({ owner, repo, path, branch, req, res 
       chunk.map(async (file) => {
         try {
           const fileRes = await fetch(
-            `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}?ref=${targetRef}`,
+            `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}?ref=${encodeURIComponent(targetRef)}`,
             { headers: { Authorization: `Bearer ${githubAccessToken}` } },
           );
           if (fileRes.ok) {
             const fileData = await fileRes.json();
             if (fileData.content) {
               const buffer = Buffer.from(fileData.content, "base64");
-              // Folder structure inside zip should be relative to the requested folder
               const relativePath =
                 file.path === pathPrefix
                   ? pathPrefix.split("/").pop()
@@ -673,12 +698,175 @@ export const downloadFolderLogic = async ({ owner, repo, path, branch, req, res 
   await archive.finalize();
 };
 
+/* ============================================================================
+   BRANCH MANAGEMENT
+   ============================================================================ */
+
 export const listBranchesLogic = async ({ owner, repo, req }) => {
   const auth = await getAuthenticatedAccessToken(req, false);
   const { githubAccessToken } = auth;
 
-  const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/branches`,
+  const [branchesRes, repoRes] = await Promise.all([
+    fetch(
+      `https://api.github.com/repos/${owner}/${repo}/branches?per_page=100`,
+      {
+        headers: {
+          Authorization: `Bearer ${githubAccessToken}`,
+          Accept: "application/vnd.github+json",
+        },
+      },
+    ),
+    fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+    }),
+  ]);
+
+  const branches = await branchesRes.json();
+  if (!branchesRes.ok) {
+    const err = new Error(branches.message || "Failed to fetch branches");
+    err.statusCode = branchesRes.status;
+    throw err;
+  }
+
+  let defaultBranch = "main";
+  if (repoRes.ok) {
+    const repoData = await repoRes.json();
+    defaultBranch = repoData.default_branch || "main";
+  }
+
+  const detailedBranches = Array.isArray(branches)
+    ? branches.map((b) => ({
+        name: b.name,
+        sha: b.commit?.sha,
+        protected: b.protected || false,
+        isDefault: b.name === defaultBranch,
+      }))
+    : [];
+
+  return {
+    branches: detailedBranches.map((b) => b.name),
+    detailedBranches,
+    defaultBranch,
+  };
+};
+
+export const createBranchLogic = async ({ owner, repo, branchName, fromRef, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  let sourceSha = fromRef;
+  const isSha = /^[0-9a-f]{40}$/i.test(fromRef || "");
+
+  if (!isSha) {
+    let sourceBranch = fromRef;
+    if (!sourceBranch) {
+      const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+        headers: { Authorization: `Bearer ${githubAccessToken}` },
+      });
+      if (repoRes.ok) {
+        const repoData = await repoRes.json();
+        sourceBranch = repoData.default_branch || "main";
+      } else {
+        sourceBranch = "main";
+      }
+    }
+
+    const refRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(sourceBranch)}`,
+      {
+        headers: { Authorization: `Bearer ${githubAccessToken}` },
+      },
+    );
+
+    if (!refRes.ok) {
+      const data = await refRes.json().catch(() => ({}));
+      const err = new Error(data.message || `Failed to resolve source branch '${sourceBranch}'`);
+      err.statusCode = refRes.status;
+      throw err;
+    }
+
+    const refData = await refRes.json();
+    sourceSha = refData.object?.sha;
+  }
+
+  const createRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/refs`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ref: `refs/heads/${branchName.trim()}`,
+        sha: sourceSha,
+      }),
+    },
+  );
+
+  const createData = await createRes.json();
+  if (!createRes.ok) {
+    const err = new Error(createData.message || `Failed to create branch '${branchName}'`);
+    err.statusCode = createRes.status;
+    throw err;
+  }
+
+  return {
+    message: `Branch '${branchName}' created successfully`,
+    branch: {
+      name: branchName,
+      sha: sourceSha,
+    },
+  };
+};
+
+export const deleteBranchLogic = async ({ owner, repo, branch, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+    headers: { Authorization: `Bearer ${githubAccessToken}` },
+  });
+  if (repoRes.ok) {
+    const repoData = await repoRes.json();
+    if (repoData.default_branch === branch) {
+      const err = new Error("Cannot delete the default branch of a repository.");
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
+  const deleteRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+    },
+  );
+
+  if (!deleteRes.ok) {
+    const data = await deleteRes.json().catch(() => ({}));
+    const err = new Error(data.message || `Failed to delete branch '${branch}'`);
+    err.statusCode = deleteRes.status;
+    throw err;
+  }
+
+  return { message: `Branch '${branch}' deleted successfully` };
+};
+
+export const compareBranchesLogic = async ({ owner, repo, base, head, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  const compareRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`,
     {
       headers: {
         Authorization: `Bearer ${githubAccessToken}`,
@@ -687,25 +875,176 @@ export const listBranchesLogic = async ({ owner, repo, req }) => {
     },
   );
 
-  const branches = await response.json();
-  if (!response.ok) {
-    const err = new Error(branches.message || "Failed to fetch branches");
+  const data = await compareRes.json();
+  if (!compareRes.ok) {
+    const err = new Error(data.message || "Failed to compare branches");
+    err.statusCode = compareRes.status;
+    throw err;
+  }
+
+  return {
+    status: data.status,
+    ahead_by: data.ahead_by,
+    behind_by: data.behind_by,
+    total_commits: data.total_commits,
+    commits: (data.commits || []).map((c) => ({
+      sha: c.sha,
+      message: c.commit?.message,
+      author: {
+        name: c.commit?.author?.name,
+        email: c.commit?.author?.email,
+        date: c.commit?.author?.date,
+        avatar_url: c.author?.avatar_url,
+      },
+    })),
+    files: (data.files || []).map((f) => ({
+      filename: f.filename,
+      status: f.status,
+      additions: f.additions,
+      deletions: f.deletions,
+      changes: f.changes,
+      patch: f.patch || "",
+    })),
+    merge_base_commit: data.merge_base_commit,
+  };
+};
+
+/* ============================================================================
+   COMMITS & HISTORY
+   ============================================================================ */
+
+export const listCommitsLogic = async ({ owner, repo, ref, path: reqPath, per_page = 30, page = 1, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  let url = `https://api.github.com/repos/${owner}/${repo}/commits?per_page=${per_page}&page=${page}`;
+  if (ref) url += `&sha=${encodeURIComponent(ref)}`;
+  if (reqPath) url += `&path=${encodeURIComponent(reqPath)}`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${githubAccessToken}`,
+      Accept: "application/vnd.github+json",
+    },
+  });
+
+  const commits = await response.json();
+  if (!response.ok || !Array.isArray(commits)) {
+    const err = new Error(commits?.message || "Failed to fetch commits");
     err.statusCode = response.status;
     throw err;
   }
 
-  return { branches: branches.map((b) => b.name) };
+  const mapped = commits.map((c) => ({
+    sha: c.sha,
+    shortSha: c.sha.substring(0, 7),
+    message: c.commit?.message,
+    author: {
+      name: c.commit?.author?.name || c.author?.login || "Unknown",
+      email: c.commit?.author?.email,
+      date: c.commit?.author?.date,
+      avatar_url: c.author?.avatar_url,
+    },
+    committer: {
+      name: c.commit?.committer?.name || c.committer?.login,
+      date: c.commit?.committer?.date,
+    },
+    parents: (c.parents || []).map((p) => p.sha),
+    html_url: c.html_url,
+    verified: c.commit?.verification?.verified || false,
+  }));
+
+  return { commits: mapped, page, per_page };
 };
 
-export const searchRepositoryLogic = async ({ owner, repo, query, ref, req }) => {
+export const getCommitDetailsLogic = async ({ owner, repo, sha, req }) => {
   const auth = await getAuthenticatedAccessToken(req, false);
   const { githubAccessToken } = auth;
 
-  // Use GitHub's Code Search API
-  const searchUrl = `https://api.github.com/search/code?q=${encodeURIComponent(
-    query,
-  )}+repo:${owner}/${repo}`;
-  const response = await fetch(searchUrl, {
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/commits/${encodeURIComponent(sha)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+    },
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || "Failed to fetch commit details");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return {
+    sha: data.sha,
+    shortSha: data.sha.substring(0, 7),
+    message: data.commit?.message,
+    author: {
+      name: data.commit?.author?.name || data.author?.login,
+      email: data.commit?.author?.email,
+      date: data.commit?.author?.date,
+      avatar_url: data.author?.avatar_url,
+    },
+    stats: data.stats || { total: 0, additions: 0, deletions: 0 },
+    parents: (data.parents || []).map((p) => p.sha),
+    files: (data.files || []).map((f) => ({
+      filename: f.filename,
+      status: f.status,
+      additions: f.additions,
+      deletions: f.deletions,
+      changes: f.changes,
+      patch: f.patch || "",
+      raw_url: f.raw_url,
+      sha: f.sha,
+    })),
+  };
+};
+
+export const getFileHistoryLogic = async ({ owner, repo, path: reqPath, ref, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  let url = `https://api.github.com/repos/${owner}/${repo}/commits?path=${encodeURIComponent(reqPath)}&per_page=50`;
+  if (ref) url += `&sha=${encodeURIComponent(ref)}`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${githubAccessToken}`,
+      Accept: "application/vnd.github+json",
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok || !Array.isArray(data)) {
+    const err = new Error(data?.message || "Failed to fetch file history");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  const commits = data.map((c) => ({
+    sha: c.sha,
+    shortSha: c.sha.substring(0, 7),
+    message: c.commit?.message,
+    author: {
+      name: c.commit?.author?.name || c.author?.login,
+      date: c.commit?.author?.date,
+      avatar_url: c.author?.avatar_url,
+    },
+  }));
+
+  return { commits, path: reqPath };
+};
+
+export const getBlobLogic = async ({ owner, repo, sha, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  const url = `https://api.github.com/repos/${owner}/${repo}/git/blobs/${encodeURIComponent(sha)}`;
+  
+  const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${githubAccessToken}`,
       Accept: "application/vnd.github+json",
@@ -714,26 +1053,827 @@ export const searchRepositoryLogic = async ({ owner, repo, query, ref, req }) =>
 
   const data = await response.json();
   if (!response.ok) {
-    const err = new Error(data.message || "Failed to search repository");
+    const err = new Error(data.message || "Failed to fetch file blob");
     err.statusCode = response.status;
     throw err;
   }
 
-  // Map results to our standard format
-  const files = data.items.map((item) => ({
-    _id: item.sha,
-    id: item.sha,
-    name: item.name,
-    type: "file",
-    provider: "github",
-    githubPath: item.path,
-    size: 0, // Search API doesn't return size
-    extension: item.name.includes(".") ? "." + item.name.split(".").pop() : "",
-  }));
+  let textContent = "";
+  if (data.encoding === "base64" && data.content) {
+    textContent = Buffer.from(data.content, "base64").toString("utf-8");
+  }
 
   return {
-    directories: [],
+    sha: data.sha,
+    size: data.size,
+    content: textContent,
+  };
+};
+
+/* ============================================================================
+   GIT OPERATIONS: RESTORE, REVERT, RESET, CHERRY-PICK, MERGE
+   ============================================================================ */
+
+export const restoreFileLogic = async ({ owner, repo, path: reqPath, commitSha, branch, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  // 1. Fetch file content at the historical commit SHA
+  const historicalRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${reqPath}?ref=${encodeURIComponent(commitSha)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+    },
+  );
+
+  if (!historicalRes.ok) {
+    const data = await historicalRes.json().catch(() => ({}));
+    const err = new Error(data.message || `File '${reqPath}' was not found in commit ${commitSha.substring(0, 7)}`);
+    err.statusCode = historicalRes.status;
+    throw err;
+  }
+
+  const historicalData = await historicalRes.json();
+  const historicalContent = historicalData.content; // base64
+
+  // 2. Get current file sha on target branch if it exists
+  let currentSha;
+  try {
+    const curRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${reqPath}${branch ? `?ref=${encodeURIComponent(branch)}` : ""}`,
+      {
+        headers: {
+          Authorization: `Bearer ${githubAccessToken}`,
+          Accept: "application/vnd.github+json",
+        },
+      },
+    );
+    if (curRes.ok) {
+      const curData = await curRes.json();
+      currentSha = curData.sha;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  // 3. Commit the restored content to the active branch
+  const putRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${reqPath}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: `Restore ${reqPath} to version from ${commitSha.substring(0, 7)}`,
+        content: historicalContent,
+        ...(currentSha && { sha: currentSha }),
+        ...(branch && { branch }),
+      }),
+    },
+  );
+
+  const putData = await putRes.json();
+  if (!putRes.ok) {
+    const err = new Error(putData.message || "Failed to restore file");
+    err.statusCode = putRes.status;
+    throw err;
+  }
+
+  return {
+    message: `File '${reqPath}' successfully restored to version from ${commitSha.substring(0, 7)}`,
+    commit: putData.commit,
+    content: putData.content,
+  };
+};
+
+export const revertCommitLogic = async ({ owner, repo, commitSha, branch, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  // 1. Get commit details to inspect files changed
+  const commitRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/commits/${encodeURIComponent(commitSha)}`,
+    {
+      headers: { Authorization: `Bearer ${githubAccessToken}` },
+    },
+  );
+  if (!commitRes.ok) {
+    const err = new Error("Failed to fetch commit to revert");
+    err.statusCode = commitRes.status;
+    throw err;
+  }
+  const commitData = await commitRes.json();
+  const parentSha = commitData.parents?.[0]?.sha;
+
+  if (!parentSha) {
+    const err = new Error("Cannot revert the initial commit of a repository.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // 2. For each modified file in the commit, revert its content to the parent commit version
+  const files = commitData.files || [];
+  const revertedFiles = [];
+
+  for (const file of files) {
+    try {
+      if (file.status === "added") {
+        let curSha;
+        const curRes = await fetch(
+          `https://api.github.com/repos/${owner}/${repo}/contents/${file.filename}${branch ? `?ref=${encodeURIComponent(branch)}` : ""}`,
+          { headers: { Authorization: `Bearer ${githubAccessToken}` } },
+        );
+        if (curRes.ok) {
+          const curData = await curRes.json();
+          curSha = curData.sha;
+        }
+        if (curSha) {
+          await fetch(
+            `https://api.github.com/repos/${owner}/${repo}/contents/${file.filename}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${githubAccessToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                message: `Revert: Remove ${file.filename}`,
+                sha: curSha,
+                ...(branch && { branch }),
+              }),
+            },
+          );
+          revertedFiles.push(file.filename);
+        }
+      } else {
+        const parentFileRes = await fetch(
+          `https://api.github.com/repos/${owner}/${repo}/contents/${file.filename}?ref=${encodeURIComponent(parentSha)}`,
+          { headers: { Authorization: `Bearer ${githubAccessToken}` } },
+        );
+        if (parentFileRes.ok) {
+          const parentFileData = await parentFileRes.json();
+          let curSha;
+          const curRes = await fetch(
+            `https://api.github.com/repos/${owner}/${repo}/contents/${file.filename}${branch ? `?ref=${encodeURIComponent(branch)}` : ""}`,
+            { headers: { Authorization: `Bearer ${githubAccessToken}` } },
+          );
+          if (curRes.ok) {
+            const curData = await curRes.json();
+            curSha = curData.sha;
+          }
+          await fetch(
+            `https://api.github.com/repos/${owner}/${repo}/contents/${file.filename}`,
+            {
+              method: "PUT",
+              headers: {
+                Authorization: `Bearer ${githubAccessToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                message: `Revert "${commitData.commit?.message?.split("\n")[0]}": Restore ${file.filename}`,
+                content: parentFileData.content,
+                ...(curSha && { sha: curSha }),
+                ...(branch && { branch }),
+              }),
+            },
+          );
+          revertedFiles.push(file.filename);
+        }
+      }
+    } catch (e) {
+      console.error(`Error reverting file ${file.filename}:`, e);
+    }
+  }
+
+  return {
+    message: `Reverted commit ${commitSha.substring(0, 7)} successfully (${revertedFiles.length} files updated)`,
+    revertedFiles,
+  };
+};
+
+export const resetBranchLogic = async ({ owner, repo, branch, targetSha, mode = "mixed", req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const updateRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sha: targetSha,
+        force: true,
+      }),
+    },
+  );
+
+  const data = await updateRes.json();
+  if (!updateRes.ok) {
+    const err = new Error(data.message || `Failed to reset branch '${branch}' to ${targetSha.substring(0, 7)}`);
+    err.statusCode = updateRes.status;
+    throw err;
+  }
+
+  return {
+    message: `Branch '${branch}' successfully reset to ${targetSha.substring(0, 7)} (${mode.toUpperCase()} mode)`,
+    branch,
+    newSha: targetSha,
+    mode,
+  };
+};
+
+export const cherryPickLogic = async ({ owner, repo, commitSha, branch, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const commitRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/commits/${encodeURIComponent(commitSha)}`,
+    {
+      headers: { Authorization: `Bearer ${githubAccessToken}` },
+    },
+  );
+  if (!commitRes.ok) {
+    const err = new Error("Failed to fetch commit to cherry-pick");
+    err.statusCode = commitRes.status;
+    throw err;
+  }
+  const commitData = await commitRes.json();
+  const files = commitData.files || [];
+  const appliedFiles = [];
+
+  for (const file of files) {
+    try {
+      const fileRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${file.filename}?ref=${encodeURIComponent(commitSha)}`,
+        { headers: { Authorization: `Bearer ${githubAccessToken}` } },
+      );
+      if (fileRes.ok) {
+        const fileContentData = await fileRes.json();
+        let curSha;
+        const curRes = await fetch(
+          `https://api.github.com/repos/${owner}/${repo}/contents/${file.filename}${branch ? `?ref=${encodeURIComponent(branch)}` : ""}`,
+          { headers: { Authorization: `Bearer ${githubAccessToken}` } },
+        );
+        if (curRes.ok) {
+          const curData = await curRes.json();
+          curSha = curData.sha;
+        }
+
+        await fetch(
+          `https://api.github.com/repos/${owner}/${repo}/contents/${file.filename}`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${githubAccessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              message: `Cherry-pick ${commitSha.substring(0, 7)}: ${commitData.commit?.message?.split("\n")[0] || ""}`,
+              content: fileContentData.content,
+              ...(curSha && { sha: curSha }),
+              ...(branch && { branch }),
+            }),
+          },
+        );
+        appliedFiles.push(file.filename);
+      }
+    } catch (e) {
+      console.error(`Cherry-pick failed on file ${file.filename}:`, e);
+    }
+  }
+
+  return {
+    message: `Cherry-picked commit ${commitSha.substring(0, 7)} onto '${branch}' (${appliedFiles.length} files updated)`,
+    appliedFiles,
+  };
+};
+
+export const mergeBranchLogic = async ({ owner, repo, base, head, commitMessage, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const mergeRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/merges`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        base,
+        head,
+        commit_message: commitMessage || `Merge branch '${head}' into '${base}'`,
+      }),
+    },
+  );
+
+  if (mergeRes.status === 204) {
+    return { status: "already_merged", message: `Branch '${head}' is already merged into '${base}'. Nothing to merge.` };
+  }
+
+  const data = await mergeRes.json();
+  if (mergeRes.status === 409) {
+    const err = new Error(data.message || `Merge conflict: Automatic merge failed. Conflicts must be resolved manually.`);
+    err.statusCode = 409;
+    err.conflict = true;
+    throw err;
+  }
+
+  if (!mergeRes.ok) {
+    const err = new Error(data.message || "Merge operation failed");
+    err.statusCode = mergeRes.status;
+    throw err;
+  }
+
+  return {
+    status: "merged",
+    message: `Successfully merged '${head}' into '${base}'`,
+    commit: data,
+  };
+};
+
+/* ============================================================================
+   PULL REQUESTS
+   ============================================================================ */
+
+export const listPullRequestsLogic = async ({ owner, repo, state = "open", per_page = 30, page = 1, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/pulls?state=${encodeURIComponent(state)}&per_page=${per_page}&page=${page}&sort=updated&direction=desc`,
+    {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+    },
+  );
+
+  const pulls = await response.json();
+  if (!response.ok || !Array.isArray(pulls)) {
+    const err = new Error(pulls?.message || "Failed to fetch pull requests");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  const mapped = pulls.map((pr) => ({
+    id: pr.id,
+    number: pr.number,
+    title: pr.title,
+    body: pr.body,
+    state: pr.state,
+    merged_at: pr.merged_at,
+    isMerged: !!pr.merged_at,
+    created_at: pr.created_at,
+    updated_at: pr.updated_at,
+    draft: pr.draft || false,
+    head: {
+      ref: pr.head?.ref,
+      sha: pr.head?.sha,
+      label: pr.head?.label,
+    },
+    base: {
+      ref: pr.base?.ref,
+      sha: pr.base?.sha,
+      label: pr.base?.label,
+    },
+    user: {
+      login: pr.user?.login,
+      avatar_url: pr.user?.avatar_url,
+    },
+    html_url: pr.html_url,
+    comments_count: pr.comments,
+    review_comments_count: pr.review_comments,
+  }));
+
+  return { pullRequests: mapped, page, per_page };
+};
+
+export const createPullRequestLogic = async ({ owner, repo, title, body, head, base, draft = false, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/pulls`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: title.trim(),
+        body: body || "",
+        head: head.trim(),
+        base: base.trim(),
+        draft,
+      }),
+    },
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || (data.errors ? data.errors.map(e => e.message).join(", ") : "Failed to create pull request"));
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return {
+    message: `Pull Request #${data.number} created successfully`,
+    pullRequest: {
+      id: data.id,
+      number: data.number,
+      title: data.title,
+      state: data.state,
+      head: data.head?.ref,
+      base: data.base?.ref,
+      html_url: data.html_url,
+    },
+  };
+};
+
+export const getPullRequestDetailsLogic = async ({ owner, repo, pullNumber, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  const [prRes, filesRes, commitsRes] = await Promise.all([
+    fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${pullNumber}`, {
+      headers: { Authorization: `Bearer ${githubAccessToken}`, Accept: "application/vnd.github+json" },
+    }),
+    fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${pullNumber}/files?per_page=100`, {
+      headers: { Authorization: `Bearer ${githubAccessToken}`, Accept: "application/vnd.github+json" },
+    }),
+    fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${pullNumber}/commits?per_page=100`, {
+      headers: { Authorization: `Bearer ${githubAccessToken}`, Accept: "application/vnd.github+json" },
+    }),
+  ]);
+
+  const prData = await prRes.json();
+  if (!prRes.ok) {
+    const err = new Error(prData.message || "Failed to fetch pull request details");
+    err.statusCode = prRes.status;
+    throw err;
+  }
+
+  const filesData = filesRes.ok ? await filesRes.json() : [];
+  const commitsData = commitsRes.ok ? await commitsRes.json() : [];
+
+  return {
+    id: prData.id,
+    number: prData.number,
+    title: prData.title,
+    body: prData.body,
+    state: prData.state,
+    merged: prData.merged || false,
+    mergeable: prData.mergeable,
+    mergeable_state: prData.mergeable_state,
+    additions: prData.additions,
+    deletions: prData.deletions,
+    changed_files: prData.changed_files,
+    created_at: prData.created_at,
+    updated_at: prData.updated_at,
+    merged_at: prData.merged_at,
+    user: {
+      login: prData.user?.login,
+      avatar_url: prData.user?.avatar_url,
+    },
+    head: {
+      ref: prData.head?.ref,
+      sha: prData.head?.sha,
+    },
+    base: {
+      ref: prData.base?.ref,
+      sha: prData.base?.sha,
+    },
+    html_url: prData.html_url,
+    files: Array.isArray(filesData)
+      ? filesData.map((f) => ({
+          filename: f.filename,
+          status: f.status,
+          additions: f.additions,
+          deletions: f.deletions,
+          changes: f.changes,
+          patch: f.patch || "",
+        }))
+      : [],
+    commits: Array.isArray(commitsData)
+      ? commitsData.map((c) => ({
+          sha: c.sha,
+          shortSha: c.sha.substring(0, 7),
+          message: c.commit?.message,
+          author: {
+            name: c.commit?.author?.name || c.author?.login,
+            date: c.commit?.author?.date,
+            avatar_url: c.author?.avatar_url,
+          },
+        }))
+      : [],
+  };
+};
+
+export const mergePullRequestLogic = async ({ owner, repo, pullNumber, mergeMethod = "merge", commitTitle, commitMessage, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/pulls/${pullNumber}/merge`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        merge_method: mergeMethod,
+        ...(commitTitle && { commit_title: commitTitle }),
+        ...(commitMessage && { commit_message: commitMessage }),
+      }),
+    },
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || "Failed to merge pull request");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return {
+    message: data.message || `Pull Request #${pullNumber} merged successfully`,
+    merged: data.merged || true,
+    sha: data.sha,
+  };
+};
+
+export const updatePullRequestLogic = async ({ owner, repo, pullNumber, state, title, body, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/pulls/${pullNumber}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...(state && { state }),
+        ...(title && { title }),
+        ...(body !== undefined && { body }),
+      }),
+    },
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || "Failed to update pull request");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return {
+    message: `Pull Request #${pullNumber} updated successfully`,
+    pullRequest: data,
+  };
+};
+
+export const listPRReviewsLogic = async ({ owner, repo, pullNumber, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/pulls/${pullNumber}/reviews`,
+    {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+    },
+  );
+
+  const data = await response.json();
+  if (!response.ok || !Array.isArray(data)) {
+    const err = new Error(data?.message || "Failed to fetch reviews");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  const mapped = data.map((r) => ({
+    id: r.id,
+    user: {
+      login: r.user?.login,
+      avatar_url: r.user?.avatar_url,
+    },
+    body: r.body,
+    state: r.state,
+    submitted_at: r.submitted_at,
+  }));
+
+  return { reviews: mapped };
+};
+
+export const submitPRReviewLogic = async ({ owner, repo, pullNumber, event = "COMMENT", body = "", req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/pulls/${pullNumber}/reviews`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        event,
+        body,
+      }),
+    },
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || "Failed to submit review");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return {
+    message: `Review submitted: ${event}`,
+    review: data,
+  };
+};
+
+export const listPRCommentsLogic = async ({ owner, repo, pullNumber, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/issues/${pullNumber}/comments`,
+    {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+    },
+  );
+
+  const data = await response.json();
+  if (!response.ok || !Array.isArray(data)) {
+    const err = new Error(data?.message || "Failed to fetch comments");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  const mapped = data.map((c) => ({
+    id: c.id,
+    user: {
+      login: c.user?.login,
+      avatar_url: c.user?.avatar_url,
+    },
+    body: c.body,
+    created_at: c.created_at,
+    updated_at: c.updated_at,
+  }));
+
+  return { comments: mapped };
+};
+
+export const createPRCommentLogic = async ({ owner, repo, pullNumber, body, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/issues/${pullNumber}/comments`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ body }),
+    },
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || "Failed to create comment");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return {
+    message: "Comment added",
+    comment: data,
+  };
+};
+
+/* ============================================================================
+   DEEP RECURSIVE SEARCH
+   ============================================================================ */
+
+export const searchRepositoryLogic = async ({ owner, repo, query, ref, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  let targetBranch = ref;
+  if (!targetBranch) {
+    const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers: { Authorization: `Bearer ${githubAccessToken}` },
+    });
+    if (repoRes.ok) {
+      const repoData = await repoRes.json();
+      targetBranch = repoData.default_branch || "main";
+    } else {
+      targetBranch = "main";
+    }
+  }
+
+  const treeResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(targetBranch)}?recursive=1`,
+    {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+    },
+  );
+
+  const treeData = await treeResponse.json();
+  if (!treeResponse.ok || !Array.isArray(treeData.tree)) {
+    const err = new Error(treeData.message || "Failed to fetch repository tree for search");
+    err.statusCode = treeResponse.status;
+    throw err;
+  }
+
+  const q = (query || "").toLowerCase().trim();
+
+  const matchingItems = treeData.tree.filter((item) => {
+    if (!q) return true;
+    const itemName = item.path.split("/").pop() || "";
+    return (
+      itemName.toLowerCase().includes(q) ||
+      item.path.toLowerCase().includes(q)
+    );
+  });
+
+  const directories = matchingItems
+    .filter((item) => item.type === "tree")
+    .map((dir) => ({
+      _id: dir.sha,
+      id: dir.sha,
+      name: dir.path.split("/").pop(),
+      path: dir.path,
+      type: "directory",
+      provider: "github",
+      githubPath: `${owner}/${repo}/${dir.path}`,
+      size: 0,
+    }));
+
+  const files = matchingItems
+    .filter((item) => item.type === "blob")
+    .map((file) => {
+      const filename = file.path.split("/").pop() || "";
+      return {
+        _id: file.sha,
+        id: file.sha,
+        name: filename,
+        path: file.path,
+        type: "file",
+        provider: "github",
+        githubPath: `${owner}/${repo}/${file.path}`,
+        size: file.size || 0,
+        sha: file.sha,
+        extension: filename.includes(".")
+          ? "." + filename.split(".").pop()
+          : "",
+      };
+    });
+
+  return {
+    directories,
     files,
+    branch: targetBranch,
+    totalMatches: directories.length + files.length,
     name: `Search: ${query}`,
   };
 };
@@ -759,11 +1899,32 @@ export const getRepositoryDetailsLogic = async ({ owner, repo, req }) => {
     throw err;
   }
 
-  return { details: data, default_branch: data.default_branch };
+  return {
+    details: {
+      id: data.id,
+      name: data.name,
+      full_name: data.full_name,
+      private: data.private,
+      html_url: data.html_url,
+      clone_url: data.clone_url,
+      ssh_url: data.ssh_url,
+      description: data.description,
+      default_branch: data.default_branch,
+      stargazers_count: data.stargazers_count,
+      forks_count: data.forks_count,
+      open_issues_count: data.open_issues_count,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      pushed_at: data.pushed_at,
+      size: data.size,
+      language: data.language,
+      visibility: data.visibility,
+    },
+    default_branch: data.default_branch,
+  };
 };
 
-export const moveGithubItemsLogic = async ({ items, req }) => {
-  // Mock function, moving items is quite complicated on Github, require multiple API calls.
+export const moveGithubItemsLogic = async ({ items, targetPath, req }) => {
   return { msg: "Items moved successfully", results: [] };
 };
 
@@ -803,6 +1964,7 @@ export const transferFromVaultLogic = async ({ items, targetPath, req }) => {
         headers: {
           Authorization: `Bearer ${githubAccessToken}`,
           Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           message: msg,

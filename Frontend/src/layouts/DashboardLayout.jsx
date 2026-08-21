@@ -99,11 +99,23 @@ export default function DashboardLayout() {
     const path = location.pathname;
     const isTrashPage = path.startsWith("/dashboard/trash");
 
+    const isDriveOrGithub =
+      path.startsWith("/dashboard/google-drive") ||
+      path.startsWith("/dashboard/github");
+
     if (!term.trim() && !ext && !size) {
       setGlobalSearchQuery("");
       setShowRecentSearches(false);
       if (isTrashPage) {
         navigate("/dashboard/trash");
+      } else if (isDriveOrGithub) {
+        const currentParams = new URLSearchParams(location.search);
+        currentParams.delete("q");
+        currentParams.delete("search");
+        currentParams.delete("ext");
+        currentParams.delete("size");
+        const remainingQuery = currentParams.toString();
+        navigate(`${location.pathname}${remainingQuery ? `?${remainingQuery}` : ""}`);
       } else if (currentFolderId) {
         navigate(`/dashboard/folder/${currentFolderId}`);
       } else {
@@ -115,10 +127,6 @@ export default function DashboardLayout() {
     setGlobalSearchQuery(term);
     setShowRecentSearches(false);
 
-    const isDriveOrGithub =
-      path.startsWith("/dashboard/google-drive") ||
-      path.startsWith("/dashboard/github");
-
     if (scope === "global") {
       navigate(`/dashboard/search?q=${encodeURIComponent(term)}${filterQuery}`);
     } else {
@@ -127,7 +135,11 @@ export default function DashboardLayout() {
           `/dashboard/trash?q=${encodeURIComponent(term)}${filterQuery}`,
         );
       } else if (isDriveOrGithub) {
-        navigate(`${path}?q=${encodeURIComponent(term)}${filterQuery}`);
+        const currentParams = new URLSearchParams(location.search);
+        currentParams.set("q", term);
+        if (ext) currentParams.set("ext", ext); else currentParams.delete("ext");
+        if (size) currentParams.set("size", size); else currentParams.delete("size");
+        navigate(`${path}?${currentParams.toString()}`);
       } else if (currentFolderId) {
         navigate(
           `/dashboard/folder/${currentFolderId}?search=${encodeURIComponent(term)}${filterQuery}`,

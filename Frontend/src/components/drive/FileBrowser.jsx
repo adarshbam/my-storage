@@ -53,6 +53,9 @@ import {
   Lock,
   Globe,
   GitBranch,
+  GitCommit,
+  GitPullRequest,
+  Folder,
   Share2,
   Clock,
   Star,
@@ -73,6 +76,12 @@ import EmptyState from "./EmptyState";
 import FileOperationModals from "./FileOperationModals";
 import FilePreviewSkeleton from "./FilePreviewSkeleton";
 import { prefetchFileContent } from "../../lib/fileCache";
+
+import GitCommitHistoryView from "../git/GitCommitHistoryView";
+import GitBranchManager from "../git/GitBranchManager";
+import GitPullRequestsView from "../git/GitPullRequestsView";
+import GitOperationsPanel from "../git/GitOperationsPanel";
+import GitFileHistoryModal from "../git/GitFileHistoryModal";
 
 // Preload the preview modal module immediately in the background for zero-delay instant opening
 const filePreviewPromise = import("./FilePreviewModal");
@@ -118,7 +127,11 @@ export default function FileBrowser({ specialView }) {
   const folderCache = useRef(new Map());
 
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlBranch = searchParams.get("ref");
+  const activeGitTab = searchParams.get("tab") || "files";
+  const [fileForHistory, setFileForHistory] = useState(null);
+
   const searchQuery = searchParams.get("q") || searchParams.get("search");
   const searchExt = searchParams.get("ext");
   const searchSize = searchParams.get("size");
@@ -134,6 +147,32 @@ export default function FileBrowser({ specialView }) {
     specialView === "admin" ||
     !planAllowsMutation;
   const ownerId = searchParams.get("ownerId");
+
+  const githubParts = (githubPath || "").split("/");
+  const githubOwner = githubParts[0] || "";
+  const githubRepo = githubParts[1] || "";
+  const githubSubpath = githubParts.slice(2).join("/");
+
+  const handleBranchChange = (newBranch) => {
+    setSelectedBranch(newBranch);
+    const nextParams = new URLSearchParams(searchParams);
+    if (newBranch) {
+      nextParams.set("ref", newBranch);
+    } else {
+      nextParams.delete("ref");
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const handleGitTabChange = (newTab) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (newTab && newTab !== "files") {
+      nextParams.set("tab", newTab);
+    } else {
+      nextParams.delete("tab");
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
 
   const {
     clipboard,
@@ -618,7 +657,7 @@ export default function FileBrowser({ specialView }) {
         setBranches(branchList);
 
         const targetBranch =
-          defaultBranchName || (branchList.length > 0 ? branchList[0] : "");
+          urlBranch || defaultBranchName || (branchList.length > 0 ? branchList[0] : "");
         if (targetBranch) {
           // Pre-populate folderCache for the resolved default branch using the root fetch cache if available
           const emptyBranchKey = `${specialView || "drive"}:${folderId || "root"}:${isSearch ? searchQuery || "" : ""}:${""}:${driveFolderId || ""}:${githubPath || ""}:${ownerId || ""}`;
@@ -627,7 +666,7 @@ export default function FileBrowser({ specialView }) {
             const defaultBranchKey = `${specialView || "drive"}:${folderId || "root"}:${isSearch ? searchQuery || "" : ""}:${targetBranch}:${driveFolderId || ""}:${githubPath || ""}:${ownerId || ""}`;
             folderCache.current?.set(defaultBranchKey, cached);
           }
-          setSelectedBranch((prev) => prev || targetBranch);
+          setSelectedBranch(targetBranch);
         }
       }
     } catch (error) {
@@ -1797,21 +1836,18 @@ export default function FileBrowser({ specialView }) {
           </div>
 
           {specialView === "github-repo" && branches.length > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-white/50 dark:bg-white/[0.04] backdrop-blur-sm border border-black/10 dark:border-white/10 rounded-lg shadow-sm">
-              <GitBranch size={14} className="text-[#14b8a6] shrink-0" />
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/60 dark:bg-white/[0.05] backdrop-blur-sm border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
+              <GitBranch size={14} className="text-accent-primary shrink-0" />
               <select
                 value={selectedBranch}
-                onChange={(e) => setSelectedBranch(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
+                onChange={(e) => handleBranchChange(e.target.value)}
+                className="bg-transparent text-xs font-bold text-slate-800 dark:text-white outline-none cursor-pointer"
               >
-                <option value="" className="dark:bg-[#1a1a1c]">
-                  Default
-                </option>
                 {branches.map((branch) => (
                   <option
                     key={branch}
                     value={branch}
-                    className="dark:bg-[#1a1a1c]"
+                    className="dark:bg-[#1a1a1c] text-slate-900 dark:text-white font-mono"
                   >
                     {branch}
                   </option>
@@ -1848,6 +1884,43 @@ export default function FileBrowser({ specialView }) {
           </div>
         </div>
       </div>
+
+      {/* ── GIT REPOSITORY WORKSPACE TABS ── */}
+      {specialView === "github-repo" && (
+        <div className="flex items-center gap-1.5 p-1 bg-white/40 dark:bg-[#111113]/60 backdrop-blur-md border border-slate-200 dark:border-white/5 rounded-2xl mb-4 overflow-x-auto custom-scrollbar">
+          {[
+            { id: "files", label: "Files", icon: Folder, count: data.files.length + data.directories.length },
+            { id: "commits", label: "Commits", icon: GitCommit },
+            { id: "branches", label: "Branches", icon: GitBranch, count: branches.length },
+            { id: "pulls", label: "Pull Requests", icon: GitPullRequest },
+            { id: "operations", label: "Git Ops", icon: SlidersHorizontal },
+          ].map((t) => {
+            const Icon = t.icon;
+            const isActive = activeGitTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => handleGitTabChange(t.id)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 shrink-0 ${
+                  isActive
+                    ? "bg-accent-soft text-accent-primary border border-accent-border shadow-sm"
+                    : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5"
+                }`}
+              >
+                <Icon size={14} className={isActive ? "text-accent-primary" : "text-slate-400"} />
+                <span>{t.label}</span>
+                {t.count !== undefined && t.count > 0 && (
+                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                    isActive ? "bg-accent-primary text-accent-foreground" : "bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-white/70"
+                  }`}>
+                    {t.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {error ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-8 max-w-lg mx-auto">
@@ -1917,6 +1990,46 @@ export default function FileBrowser({ specialView }) {
               {SERVER_URL}
             </code>
           </p>
+        </div>
+      ) : specialView === "github-repo" && activeGitTab !== "files" ? (
+        <div className="flex-1 pb-16">
+          {activeGitTab === "commits" && (
+            <GitCommitHistoryView
+              owner={githubOwner}
+              repo={githubRepo}
+              selectedBranch={selectedBranch}
+              branches={branches}
+              onBranchChange={handleBranchChange}
+              onRefreshRepo={() => fetchFiles(true)}
+            />
+          )}
+          {activeGitTab === "branches" && (
+            <GitBranchManager
+              owner={githubOwner}
+              repo={githubRepo}
+              selectedBranch={selectedBranch}
+              onBranchSelect={handleBranchChange}
+              onRefreshRepo={() => fetchFiles(true)}
+            />
+          )}
+          {activeGitTab === "pulls" && (
+            <GitPullRequestsView
+              owner={githubOwner}
+              repo={githubRepo}
+              selectedBranch={selectedBranch}
+              branches={branches}
+              onRefreshRepo={() => fetchFiles(true)}
+            />
+          )}
+          {activeGitTab === "operations" && (
+            <GitOperationsPanel
+              owner={githubOwner}
+              repo={githubRepo}
+              selectedBranch={selectedBranch}
+              branches={branches}
+              onRefreshRepo={() => fetchFiles(true)}
+            />
+          )}
         </div>
       ) : loading ? (
         <FileBrowserSkeleton viewMode={viewMode} count={12} />
@@ -1989,6 +2102,7 @@ export default function FileBrowser({ specialView }) {
                 (specialView === "github" && dir.provider === "github")
               }
               onShare={openShareModal}
+              onViewHistory={(item) => setFileForHistory(item)}
             />
           ))}
           {data.files.map((file) => (
@@ -2026,6 +2140,7 @@ export default function FileBrowser({ specialView }) {
               isBeingDragged={activeDraggedIds.includes(file._id)}
               isDragOver={dragOverTargetId === file._id}
               onShare={openShareModal}
+              onViewHistory={(item) => setFileForHistory(item)}
             />
           ))}
 
@@ -2215,9 +2330,31 @@ export default function FileBrowser({ specialView }) {
             isOpen={!!previewFile}
             onClose={() => setPreviewFile(null)}
             ownerId={ownerId}
+            selectedBranch={selectedBranch}
+            onViewHistory={(file) => {
+              setPreviewFile(null);
+              setFileForHistory(file);
+            }}
           />
         )}
       </Suspense>
+
+      {/* ── GIT FILE HISTORY & 1-CLICK RESTORE MODAL ── */}
+      {fileForHistory && (
+        <GitFileHistoryModal
+          isOpen={!!fileForHistory}
+          onClose={() => setFileForHistory(null)}
+          owner={githubOwner || fileForHistory?.githubPath?.split("/")[0]}
+          repo={githubRepo || fileForHistory?.githubPath?.split("/")[1]}
+          filePath={
+            fileForHistory?.githubPath
+              ? fileForHistory.githubPath.split("/").slice(2).join("/")
+              : fileForHistory?.name
+          }
+          selectedBranch={selectedBranch}
+          onFileRestored={() => fetchFiles(true)}
+        />
+      )}
 
       {/* Floating Clipboard Bar */}
       {clipboard && (

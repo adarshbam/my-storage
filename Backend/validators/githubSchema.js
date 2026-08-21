@@ -11,6 +11,16 @@ export const createRepositorySchema = {
   }),
 };
 
+export const deleteRepositorySchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
 export const getRepositoryContentsSchema = {
   params: z.object({
     owner: z.string().min(1),
@@ -138,6 +148,8 @@ export const downloadFolderSchema = {
   }).optional(),
 };
 
+/* --- Branches --- */
+
 export const listBranchesSchema = {
   params: z.object({
     owner: z.string().min(1),
@@ -148,13 +160,306 @@ export const listBranchesSchema = {
   }).optional(),
 };
 
+export const createBranchSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  body: z.object({
+    branchName: z.string().min(1, "Branch name required"),
+    fromRef: z.string().optional(),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const deleteBranchSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    branch: z.string().min(1),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const compareBranchesSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  query: z.object({
+    base: z.string().min(1, "Base ref required"),
+    head: z.string().min(1, "Head ref required"),
+    ownerId: z.string().optional(),
+  }),
+};
+
+/* --- Commits & History --- */
+
+export const listCommitsSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  query: z.object({
+    ref: z.string().optional(),
+    path: z.string().optional(),
+    per_page: z.string().optional(),
+    page: z.string().optional(),
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const getCommitDetailsSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    sha: z.string().min(1),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const getFileHistorySchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    "0": wildcardPathSchema,
+    path: wildcardPathSchema,
+  }),
+  query: z.object({
+    ref: z.string().optional(),
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const getBlobSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    sha: z.string().min(1),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+/* --- Git Operations --- */
+
+export const restoreFileSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  body: z.object({
+    path: z.string().min(1, "Path required"),
+    commitSha: z.string().min(1, "Commit SHA required"),
+    branch: z.string().optional(),
+  }),
+  query: z.object({
+    ref: z.string().optional(),
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const revertCommitSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  body: z.object({
+    commitSha: z.string().min(1, "Commit SHA required"),
+    branch: z.string().optional(),
+  }),
+  query: z.object({
+    ref: z.string().optional(),
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const resetBranchSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  body: z.object({
+    branch: z.string().min(1, "Branch name required"),
+    targetSha: z.string().min(1, "Target commit SHA required"),
+    mode: z.enum(["soft", "mixed", "hard"]).optional(),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const cherryPickSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  body: z.object({
+    commitSha: z.string().min(1, "Commit SHA required"),
+    branch: z.string().min(1, "Branch name required"),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const mergeBranchSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  body: z.object({
+    base: z.string().min(1, "Base branch required"),
+    head: z.string().min(1, "Head branch required"),
+    commitMessage: z.string().optional(),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+/* --- Pull Requests --- */
+
+export const listPullRequestsSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  query: z.object({
+    state: z.string().optional(),
+    per_page: z.string().optional(),
+    page: z.string().optional(),
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const createPullRequestSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  body: z.object({
+    title: z.string().min(1, "Title required"),
+    body: z.string().optional(),
+    head: z.string().min(1, "Head branch required"),
+    base: z.string().min(1, "Base branch required"),
+    draft: z.boolean().optional(),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const getPullRequestDetailsSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    pull_number: z.string().min(1),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const mergePullRequestSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    pull_number: z.string().min(1),
+  }),
+  body: z.object({
+    mergeMethod: z.enum(["merge", "squash", "rebase"]).optional(),
+    commitTitle: z.string().optional(),
+    commitMessage: z.string().optional(),
+  }).optional(),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const updatePullRequestSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    pull_number: z.string().min(1),
+  }),
+  body: z.object({
+    state: z.enum(["open", "closed"]).optional(),
+    title: z.string().optional(),
+    body: z.string().optional(),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const listPRReviewsSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    pull_number: z.string().min(1),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const submitPRReviewSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    pull_number: z.string().min(1),
+  }),
+  body: z.object({
+    event: z.enum(["APPROVE", "REQUEST_CHANGES", "COMMENT"]),
+    body: z.string().optional(),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const listPRCommentsSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    pull_number: z.string().min(1),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const createPRCommentSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    pull_number: z.string().min(1),
+  }),
+  body: z.object({
+    body: z.string().min(1, "Comment body required"),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+/* --- Search & Vault Transfer --- */
+
 export const searchRepositorySchema = {
   params: z.object({
     owner: z.string().min(1),
     repo: z.string().min(1),
   }),
   query: z.object({
-    q: z.string().min(1, "Search query required"),
+    q: z.string().optional(),
     ref: z.string().optional(),
     path: z.string().optional(),
     ownerId: z.string().optional(),
