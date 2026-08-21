@@ -1,3 +1,39 @@
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const envPath = path.resolve(__dirname, "../.env");
+
+if (fs.existsSync(envPath)) {
+  if (typeof process.loadEnvFile === "function") {
+    try {
+      process.loadEnvFile(envPath);
+    } catch (e) {
+      console.warn("Could not load .env via process.loadEnvFile:", e.message);
+    }
+  } else {
+    try {
+      const envContent = fs.readFileSync(envPath, "utf-8");
+      for (const line of envContent.split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eqIdx = trimmed.indexOf("=");
+        if (eqIdx !== -1) {
+          const key = trimmed.slice(0, eqIdx).trim();
+          const val = trimmed.slice(eqIdx + 1).trim();
+          if (!process.env[key]) {
+            process.env[key] = val.replace(/^["']|["']$/g, "");
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Could not parse .env manually:", e.message);
+    }
+  }
+}
+
 export const PORT = process.env.PORT || 4000;
 export const DB_URL = process.env.DB_URL;
 export const REDIS_URL = process.env.REDIS_URL || "redis://127.0.0.1:6379";

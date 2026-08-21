@@ -52,7 +52,12 @@ export const connectGoogleDrive = async (req, res, next) => {
     });
     return res.status(200).json(result);
   } catch (error) {
-    return handleDriveError(error, req, res, "Failed to connect Google Drive");
+    console.error("[Connect Google Drive Error]:", error?.response?.data || error?.message);
+    const msg =
+      error?.response?.data?.error_description ||
+      error?.message ||
+      "Failed to connect Google Drive";
+    return res.status(error.statusCode || 400).json({ error: msg });
   }
 };
 
