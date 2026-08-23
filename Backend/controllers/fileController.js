@@ -217,6 +217,37 @@ export const uploadVaultInitate = async (req, res, next) => {
   }
 };
 
+export const uploadVaultComplete = async (req, res, next) => {
+  try {
+    const data = await fileService.uploadVaultCompleteLogic({
+      userId: req.user.id,
+      userRole: req.user.role,
+      fileId: req.body.fileId,
+      key: req.body.key,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status) return res.status(error.status).send(error.message);
+    next(error);
+  }
+};
+
+export const uploadVaultAbort = async (req, res, next) => {
+  try {
+    const data = await fileService.uploadVaultAbortLogic({
+      userId: req.user.id,
+      userRole: req.user.role,
+      fileId: req.body.fileId,
+      uploadId: req.body.uploadId,
+      key: req.body.key,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status) return res.status(error.status).send(error.message);
+    next(error);
+  }
+};
+
 export const renameFile = async (req, res, next) => {
   try {
     await fileService.renameFileLogic({

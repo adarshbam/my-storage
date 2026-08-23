@@ -18,6 +18,8 @@ import {
   getAllRecentItems,
   setStarredItem,
   uploadVaultInitate,
+  uploadVaultComplete,
+  uploadVaultAbort,
   uploadVaultMultipartInitiate,
   uploadVaultMultipartPartUrl,
   uploadVaultMultipartComplete,
@@ -36,6 +38,8 @@ import {
   saveFileSchema,
   deleteFileSchema,
   uploadVaultInitiateSchema,
+  uploadVaultCompleteSchema,
+  uploadVaultAbortSchema,
   uploadVaultMultipartInitiateSchema,
   uploadVaultMultipartPartUrlSchema,
   uploadVaultMultipartCompleteSchema,
@@ -143,6 +147,22 @@ router.post(
   validate(uploadVaultInitiateSchema),
   enforceUploadLimit,
   uploadVaultInitate,
+);
+
+router.post(
+  "/upload-vault/complete",
+  checkAuth,
+  standardWriteLimiter,
+  validate(uploadVaultCompleteSchema),
+  uploadVaultComplete,
+);
+
+router.post(
+  "/upload-vault/abort",
+  checkAuth,
+  standardWriteLimiter,
+  validate(uploadVaultAbortSchema),
+  uploadVaultAbort,
 );
 
 router.post(

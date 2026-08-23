@@ -50,6 +50,8 @@ export const uploadFile = (parentDirId, body, headers = {}) =>
   apiClient.stream(parentDirId ? `/file/${parentDirId}` : '/file', { method: 'POST', body, headers });
 
 export const initiateVaultUpload = (data) => apiClient.post('/file/upload-vault/initiate', data);
+export const completeVaultUpload = (data) => apiClient.post('/file/upload-vault/complete', data);
+export const abortVaultUpload = (data) => apiClient.post('/file/upload-vault/abort', data);
 export const initiateVaultMultipartUpload = (data) => apiClient.post('/file/upload-vault/multipart/initiate', data);
 export const getVaultMultipartPartUrl = (data) => apiClient.post('/file/upload-vault/multipart/part-url', data);
 export const completeVaultMultipartUpload = (data) => apiClient.post('/file/upload-vault/multipart/complete', data);

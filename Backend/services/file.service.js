@@ -188,7 +188,8 @@ export const searchFiles = async ({ query, ext, maxSize, userId, userRole, rootD
     : matchingDirs;
 
   // Filter FilesDB
-  const matchingFiles = await File.find(searchFilter).select("-__v").lean();
+  const fileSearchFilter = { ...searchFilter, uploadStatus: { $ne: "uploading" } };
+  const matchingFiles = await File.find(fileSearchFilter).select("-__v").lean();
 
   const finalMatchingFiles = validParentIds
     ? matchingFiles.filter((f) => validParentIds.has(f.parentDir))
@@ -964,7 +965,9 @@ const mediaExts = [
 ];
 
 export const getStarredItems = async (userId, rootDirId) => {
-  const fileFilter = userId ? { userId, starred: true } : { starred: true };
+  const fileFilter = userId
+    ? { userId, starred: true, uploadStatus: { $ne: "uploading" } }
+    : { starred: true, uploadStatus: { $ne: "uploading" } };
   const dirFilter = userId
     ? { userId, starred: true, ...(rootDirId ? { _id: { $ne: rootDirId } } : {}) }
     : { starred: true };
@@ -1042,7 +1045,7 @@ export const setStarredItem = async ({ itemId, type }) => {
 
 export const getRecentItems = async (userId, rootDirId) => {
   const [recentFiles, recentDirectories] = await Promise.all([
-    File.find({ userId, openedAt: { $ne: null } })
+    File.find({ userId, openedAt: { $ne: null }, uploadStatus: { $ne: "uploading" } })
       .sort({ openedAt: -1 })
       .limit(10)
       .lean(),
@@ -1246,7 +1249,7 @@ export const uploadVaultInitiateLogic = async ({ userId, parentDirId, rootDirId,
     imageExtensions.includes(ext.toLowerCase()) ||
     videoExtensions.includes(ext.toLowerCase());
 
-  // Create the initial file entry
+  // Create the initial file entry with uploading status
   await File.create({
     _id: id,
     extension: ext,
@@ -1257,6 +1260,7 @@ export const uploadVaultInitiateLogic = async ({ userId, parentDirId, rootDirId,
     name: name,
     parentDir: dirId,
     hasThumbnail: isMedia,
+    uploadStatus: "uploading",
   });
 
   if (size) {
@@ -1270,6 +1274,82 @@ export const uploadVaultInitiateLogic = async ({ userId, parentDirId, rootDirId,
     fileId: id,
     signedUrl: signedUrl,
     fileName: fullFileName,
+  };
+};
+
+export const uploadVaultCompleteLogic = async ({
+  userId,
+  userRole,
+  fileId,
+  key,
+}) => {
+  const req = { user: { id: userId, role: userRole } };
+  const file = await File.findOne({ _id: fileId })
+    .select("userId path parentDir size extension name uploadStatus")
+    .lean();
+
+  if (!file) {
+    const error = new Error("File not found");
+    error.status = 404;
+    throw error;
+  }
+
+  if (file.userId.toString() !== req.user.id) {
+    const hasAccess = await verifyItemAccess(
+      file.userId,
+      req,
+      fileId,
+      "file",
+      "write",
+      file.path,
+    );
+    if (!hasAccess) {
+      const error = new Error("Unauthorized to complete upload");
+      error.status = 403;
+      throw error;
+    }
+  }
+
+  // Mark file upload as completed in DB
+  await File.updateOne(
+    { _id: fileId },
+    {
+      $set: {
+        uploadStatus: "completed",
+        uploadId: null,
+      },
+    }
+  );
+
+  // Trigger background thumbnail generation for media files
+  const ext = (file.extension || "").toLowerCase();
+  const imageExtensions = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    ".tiff",
+    ".svg",
+  ];
+  const videoExtensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"];
+
+  if (imageExtensions.includes(ext) || videoExtensions.includes(ext)) {
+    ensureWebpThumbnailExists({ file, fileId }).catch((err) =>
+      console.warn("Async thumbnail generation after single-part complete:", err.message),
+    );
+  }
+
+  if (file.parentDir) {
+    await cacheDel("dir:contents:" + file.parentDir.toString());
+    await cacheDel("dir:meta:" + file.parentDir.toString());
+  }
+
+  return {
+    fileId,
+    success: true,
+    name: file.name,
+    size: file.size,
   };
 };
 
@@ -1497,7 +1577,7 @@ export const uploadVaultMultipartAbortLogic = async ({
   key,
 }) => {
   const req = { user: { id: userId, role: userRole } };
-  const file = await File.findOne({ _id: fileId }).select("userId path parentDir size uploadId").lean();
+  const file = await File.findOne({ _id: fileId }).select("userId path parentDir size uploadId extension").lean();
 
   if (!file) {
     return { success: true };
@@ -1528,6 +1608,17 @@ export const uploadVaultMultipartAbortLogic = async ({
     }
   }
 
+  // Also delete any direct object from Backblaze B2 if key is passed or fileId+extension
+  const fileKey = key || (file.extension ? `${file._id}${file.extension}` : `${file._id}`);
+  if (fileKey) {
+    try {
+      await deleteFromB2({ key: fileKey });
+      await deleteFromB2({ key: `thumbnails/${file._id}.jpg` });
+    } catch (delErr) {
+      // ignore
+    }
+  }
+
   if (file.size && file.parentDir) {
     await updateParentDirectorySize(file.parentDir, -file.size);
   }
@@ -1541,6 +1632,8 @@ export const uploadVaultMultipartAbortLogic = async ({
 
   return { success: true };
 };
+
+export const uploadVaultAbortLogic = uploadVaultMultipartAbortLogic;
 
 export const renameFileLogic = async ({ fileId, name, userId, userRole }) => {
   const req = { user: { id: userId, role: userRole } };

@@ -183,10 +183,16 @@ export async function cleanFiles() {
       externalUrl: null,
     }).lean();
 
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
     const brokenFiles = [];
     for (const f of activeLocalFiles) {
       const s3Key = `${f._id}${f.extension}`;
-      if (!allS3Keys.has(s3Key)) {
+      const isMissingFromS3 = !allS3Keys.has(s3Key);
+      const isStaleUploading =
+        f.uploadStatus === "uploading" &&
+        (!f.createdAt || new Date(f.createdAt) < twoHoursAgo);
+
+      if (isMissingFromS3 || isStaleUploading) {
         brokenFiles.push(f);
       }
     }

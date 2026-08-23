@@ -15,7 +15,7 @@ import {
   Maximize2,
   RotateCcw,
   Gauge,
-  Layers,
+  Lock,
 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
 import { getFileCdnUrl } from "../../api/files.api";
@@ -24,6 +24,7 @@ import getFileImage from "../../lib/FileImages";
 import Card from "../ui/Card";
 import { useUploadManager } from "../../hooks/useUploadManager";
 import { useDownloadManager } from "../../hooks/useDownloadManager";
+import { usePlan } from "../../context/PlanContext";
 
 const generateObjectId = () => {
   return [...Array(24)]
@@ -31,23 +32,97 @@ const generateObjectId = () => {
     .join("");
 };
 
-const SPEED_PRESETS = [
-  { label: "Unlimited (Max)", value: 0 },
-  { label: "10 MB/s", value: 10 * 1024 * 1024 },
-  { label: "5 MB/s", value: 5 * 1024 * 1024 },
-  { label: "2 MB/s", value: 2 * 1024 * 1024 },
-  { label: "500 KB/s", value: 500 * 1024 },
+export const SPEED_LEVELS = [
+  {
+    level: 1,
+    id: "level-1",
+    label: "Level 1: 500 KB/s",
+    shortLabel: "500 KB/s",
+    bytesPerSec: 500 * 1024,
+    minTier: "Novice",
+    tierBadge: "Novice",
+    description: "Standard Speed (Lowest)",
+  },
+  {
+    level: 2,
+    id: "level-2",
+    label: "Level 2: 2 MB/s",
+    shortLabel: "2 MB/s",
+    bytesPerSec: 2 * 1024 * 1024,
+    minTier: "Professional",
+    tierBadge: "Pro",
+    description: "Fast Speed",
+  },
+  {
+    level: 3,
+    id: "level-3",
+    label: "Level 3: 5 MB/s",
+    shortLabel: "5 MB/s",
+    bytesPerSec: 5 * 1024 * 1024,
+    minTier: "Professional",
+    tierBadge: "Pro",
+    description: "Turbo Speed",
+  },
+  {
+    level: 4,
+    id: "level-4",
+    label: "Level 4: 10 MB/s",
+    shortLabel: "10 MB/s",
+    bytesPerSec: 10 * 1024 * 1024,
+    minTier: "Ultimate",
+    tierBadge: "Ultimate",
+    description: "Ultra Fast Speed",
+  },
+  {
+    level: 5,
+    id: "level-5",
+    label: "Level 5: Unlimited (No Limit)",
+    shortLabel: "Unlimited",
+    bytesPerSec: 0,
+    minTier: "Ultimate",
+    tierBadge: "Ultimate",
+    description: "Maximum Speed (Infinite)",
+  },
 ];
 
 const TransferManager = forwardRef((props, ref) => {
   const [transfers, setTransfers] = useState([]);
   const [minimized, setMinimized] = useState(false);
-  const [speedLimit, setSpeedLimit] = useState(0);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [maxFileSize, setMaxFileSize] = useState(50 * 1024 * 1024);
   const downloadReaders = useRef({});
   const abortControllers = useRef({});
   const downloadWritables = useRef({});
+
+  const { planTier, isNoSubscription, isFreeTrial } = usePlan();
+  const planSlug = (planTier?.slug || planTier?.type || "").toLowerCase();
+  const isTrial = isFreeTrial || planSlug.includes("trial");
+  const isUltimate = isTrial || planSlug.includes("ultimate") || planSlug.includes("enterprise");
+  const isProfessional = planSlug.includes("pro");
+  const isNovice = !isUltimate && !isProfessional;
+
+  // Max unlocked speed level based on plan:
+  // Novice / Free: Level 1 only (500 KB/s)
+  // Professional: Levels 1, 2, 3 (up to 5 MB/s)
+  // Ultimate / Trial: All 5 Levels (up to Unlimited)
+  const maxAllowedLevel = isUltimate ? 5 : isProfessional ? 3 : 1;
+
+  const [selectedLevel, setSelectedLevel] = useState(() => {
+    const saved = localStorage.getItem("vault_speed_level");
+    const parsed = saved ? parseInt(saved, 10) : (isUltimate ? 5 : isProfessional ? 3 : 1);
+    return Math.min(Math.max(parsed || 1, 1), maxAllowedLevel);
+  });
+
+  useEffect(() => {
+    setSelectedLevel((prev) => {
+      const clamped = Math.min(prev, maxAllowedLevel);
+      localStorage.setItem("vault_speed_level", clamped.toString());
+      return clamped;
+    });
+  }, [maxAllowedLevel]);
+
+  const currentLevelObj = SPEED_LEVELS.find((l) => l.level === selectedLevel) || SPEED_LEVELS[0];
+  const speedLimit = currentLevelObj.bytesPerSec;
 
   useEffect(() => {
     async function loadConfig() {
@@ -170,55 +245,6 @@ const TransferManager = forwardRef((props, ref) => {
       const separator = url.includes("?") ? "&" : "?";
       url = `${url}${separator}ownerId=${ownerId}`;
     }
-    // Check if this is a Vault Storage file
-    const isVaultFile =
-      typeof url === "string" &&
-      url.includes("/file/") &&
-      !url.includes("/drive/file/") &&
-      !url.includes("/github/file/") &&
-      !url.includes("/directory/");
-
-    if (!hasFileSystemAccess) {
-      let downloadHref = url;
-
-      if (isVaultFile) {
-        try {
-          const match = url.match(/\/file\/([a-fA-F0-9]{24})/);
-          if (match) {
-            const fileId = match[1];
-            const cdnData = await getFileCdnUrl(fileId, {
-              ...(ownerId ? { ownerId } : {}),
-              action: "download",
-            });
-            if (cdnData && cdnData.url) {
-              downloadHref = cdnData.url;
-            }
-          }
-        } catch (err) {
-          console.error(
-            "Failed to obtain CDN download URL for fallback anchor, using direct route:",
-            err.message,
-          );
-        }
-      }
-
-      if (downloadHref === url) {
-        // Fallback for directory/external providers or if CDN fetch fails
-        const urlObj = new URL(url, window.location.origin);
-        if (!urlObj.searchParams.has("action")) {
-          urlObj.searchParams.set("action", "download");
-        }
-        downloadHref = urlObj.toString();
-      }
-
-      const a = document.createElement("a");
-      a.href = downloadHref;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      return;
-    }
 
     if (startByte === 0) {
       setTransfers((prev) => [
@@ -243,6 +269,13 @@ const TransferManager = forwardRef((props, ref) => {
 
     // Determine if this is a Vault Storage file and obtain signed CDN URL
     let streamUrl = url;
+
+    const isVaultFile =
+      typeof url === "string" &&
+      url.includes("/file/") &&
+      !url.includes("/drive/file/") &&
+      !url.includes("/github/file/") &&
+      !url.includes("/directory/");
 
     if (isVaultFile) {
       try {
@@ -344,39 +377,85 @@ const TransferManager = forwardRef((props, ref) => {
               <button
                 type="button"
                 onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-                className="px-2 py-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 flex items-center gap-1 text-xs font-medium transition-colors border border-slate-300/60 dark:border-slate-600/60"
-                title="Throttle / Pace Speed"
+                className={cn(
+                  "px-2 py-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-colors border",
+                  isNovice
+                    ? "border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/5"
+                    : isProfessional
+                      ? "border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/5"
+                      : "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5"
+                )}
+                title="Transfer Speed Governor"
               >
-                <Gauge size={13} className={speedLimit > 0 ? "text-amber-500" : "text-emerald-500"} />
-                <span className="text-[11px]">
-                  {speedLimit === 0 ? "Max" : formatSpeed(speedLimit)}
+                <Gauge size={13} className={currentLevelObj.bytesPerSec > 0 ? "text-amber-500" : "text-emerald-500"} />
+                <span className="text-[11px] font-semibold">
+                  {currentLevelObj.shortLabel}
                 </span>
+                {isNovice && <Lock size={10} className="text-purple-500 shrink-0" />}
               </button>
 
               {showSpeedMenu && (
-                <div className="absolute right-0 bottom-full mb-1.5 w-40 py-1 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 text-xs backdrop-blur-xl">
-                  <div className="px-2.5 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Speed Regulator
-                  </div>
-                  {SPEED_PRESETS.map((preset) => (
-                    <button
-                      key={preset.value}
-                      type="button"
-                      onClick={() => {
-                        setSpeedLimit(preset.value);
-                        setShowSpeedMenu(false);
-                      }}
+                <div className="absolute right-0 bottom-full mb-1.5 w-56 py-1.5 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 text-xs backdrop-blur-xl">
+                  <div className="px-3 py-1 flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-1.5 mb-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Speed Governor
+                    </span>
+                    <span
                       className={cn(
-                        "w-full text-left px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors flex items-center justify-between",
-                        speedLimit === preset.value
-                          ? "text-blue-500 font-semibold bg-blue-500/5"
-                          : "text-slate-700 dark:text-slate-300"
+                        "text-[9px] font-bold px-1.5 py-0.5 rounded-full border",
+                        isUltimate
+                          ? "bg-sky-500/10 text-sky-500 border-sky-500/20"
+                          : isProfessional
+                            ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                            : "bg-purple-500/10 text-purple-500 border-purple-500/20"
                       )}
                     >
-                      <span>{preset.label}</span>
-                      {speedLimit === preset.value && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
-                    </button>
-                  ))}
+                      {isUltimate ? "Ultimate Plan" : isProfessional ? "Pro Plan" : "Novice Plan"}
+                    </span>
+                  </div>
+
+                  {SPEED_LEVELS.map((level) => {
+                    const isUnlocked = level.level <= maxAllowedLevel;
+                    const isSelected = selectedLevel === level.level;
+
+                    return (
+                      <button
+                        key={level.id}
+                        type="button"
+                        disabled={!isUnlocked}
+                        onClick={() => {
+                          if (isUnlocked) {
+                            setSelectedLevel(level.level);
+                            localStorage.setItem("vault_speed_level", level.level.toString());
+                            setShowSpeedMenu(false);
+                          }
+                        }}
+                        className={cn(
+                          "w-full text-left px-3 py-2 transition-colors flex items-center justify-between",
+                          !isUnlocked
+                            ? "opacity-50 cursor-not-allowed bg-slate-50/50 dark:bg-slate-900/30"
+                            : isSelected
+                              ? "text-blue-600 dark:text-blue-400 font-semibold bg-blue-50 dark:bg-blue-500/10"
+                              : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60"
+                        )}
+                      >
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs">{level.label}</span>
+                            {!isUnlocked && (
+                              <span className="text-[8px] font-bold px-1 py-0.2 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center gap-0.5">
+                                <Lock size={8} /> {level.tierBadge}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            {level.description}
+                          </span>
+                        </div>
+                        {isSelected && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0 ml-2" />}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -403,7 +482,7 @@ const TransferManager = forwardRef((props, ref) => {
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <p className="text-sm font-medium truncate text-slate-900 dark:text-slate-100" title={transfer.name}>{transfer.name}</p>
-                        {transfer.total >= 50 * 1024 * 1024 && (
+                        {transfer.total >= 5 * 1024 * 1024 && (
                           <span className="px-1 py-0.2 rounded text-[9px] font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20 shrink-0">
                             Multipart
                           </span>

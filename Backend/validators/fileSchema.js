@@ -92,11 +92,25 @@ export const uploadVaultMultipartCompleteSchema = {
   }),
 };
 
+export const uploadVaultCompleteSchema = {
+  body: z.object({
+    fileId: objectIdSchema,
+    key: z.string().optional(),
+  }),
+};
+
+export const uploadVaultAbortSchema = {
+  body: z.object({
+    fileId: objectIdSchema,
+    key: z.string().optional(),
+  }),
+};
+
 export const uploadVaultMultipartAbortSchema = {
   body: z.object({
     fileId: objectIdSchema,
-    uploadId: z.string().min(1, "uploadId is required"),
-    key: z.string().min(1, "key is required"),
+    uploadId: z.string().optional().nullable(),
+    key: z.string().optional().nullable(),
   }),
 };
 

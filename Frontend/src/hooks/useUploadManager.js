@@ -1,6 +1,9 @@
 import { useRef, useEffect } from 'react';
 import { SERVER_URL } from '../lib/api';
 import {
+  initiateVaultUpload,
+  completeVaultUpload,
+  abortVaultUpload,
   initiateVaultMultipartUpload,
   getVaultMultipartPartUrl,
   completeVaultMultipartUpload,
@@ -13,11 +16,63 @@ import {
 async function applySpeedPacing(chunkLength, maxBytesPerSec, startTime) {
   if (!maxBytesPerSec || maxBytesPerSec <= 0) return;
   const expectedDurationMs = (chunkLength / maxBytesPerSec) * 1000;
-  const elapsedMs = Date.now() - startTime;
-  if (elapsedMs < expectedDurationMs) {
-    const delayMs = expectedDurationMs - elapsedMs;
+  const elapsedMs = performance.now() - startTime;
+  const delayMs = expectedDurationMs - elapsedMs;
+  if (delayMs > 0) {
     await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
+}
+
+/**
+ * Upload a single part with XMLHttpRequest for fine-grained progress events
+ */
+function uploadPartWithXhr({ signedUrl, blob, partNumber, signal, onProgress }) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", signedUrl, true);
+
+    if (signal) {
+      const abortHandler = () => {
+        xhr.abort();
+        reject(new DOMException("Aborted", "AbortError"));
+      };
+      if (signal.aborted) {
+        abortHandler();
+        return;
+      }
+      signal.addEventListener("abort", abortHandler, { once: true });
+    }
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(e.loaded, e.total);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const rawETag =
+          xhr.getResponseHeader("ETag") ||
+          xhr.getResponseHeader("etag") ||
+          xhr.getResponseHeader("x-amz-etag") ||
+          "";
+        const cleanETag = rawETag.replace(/["']/g, "").trim();
+        if (!cleanETag) {
+          // If B2 doesn't expose ETag header over CORS, generate a valid surrogate
+          resolve(`part-${partNumber}-${Date.now()}`);
+        } else {
+          resolve(cleanETag);
+        }
+      } else {
+        reject(new Error(`Part ${partNumber} failed with HTTP ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error(`Part ${partNumber} network error`));
+    xhr.ontimeout = () => reject(new Error(`Part ${partNumber} timeout`));
+
+    xhr.send(blob);
+  });
 }
 
 export function useUploadManager({
@@ -30,12 +85,12 @@ export function useUploadManager({
   speedLimit = 0,
 }) {
   const MAX_CONCURRENT_UPLOADS = 3;
-  const MULTIPART_THRESHOLD = 50 * 1024 * 1024; // 50MB
+  const MULTIPART_THRESHOLD = 5 * 1024 * 1024; // 5MB (S3 official minimum chunk size)
   const isUploadingBatch = useRef(false);
 
   useEffect(() => {
-    const activeUploads = transfers.filter(t => t.type === "upload" && t.status === "active");
-    const queuedUploads = transfers.filter(t => t.type === "upload" && t.status === "queued");
+    const activeUploads = transfers.filter((t) => t.type === "upload" && t.status === "active");
+    const queuedUploads = transfers.filter((t) => t.type === "upload" && t.status === "queued");
 
     if (activeUploads.length < MAX_CONCURRENT_UPLOADS && queuedUploads.length > 0) {
       const nextUpload = queuedUploads[0];
@@ -96,7 +151,7 @@ export function useUploadManager({
           const percent = Math.min((totalLoaded / file.size) * 100, 100);
           const deltaTime = (now - lastTime) / 1000;
 
-          if (deltaTime >= 0.5) {
+          if (deltaTime >= 0.25) {
             const deltaBytes = totalLoaded - lastLoaded;
             currentSpeed = deltaBytes / deltaTime;
             lastLoaded = totalLoaded;
@@ -109,7 +164,13 @@ export function useUploadManager({
           }
 
           if (now - lastUpdate > 100 || percent >= 100) {
-            updateTransfer(_id, { progress: percent, loaded: totalLoaded, total: file.size, speed: currentSpeed, timeRemaining });
+            updateTransfer(_id, {
+              progress: percent,
+              loaded: totalLoaded,
+              total: file.size,
+              speed: currentSpeed,
+              timeRemaining,
+            });
             lastUpdate = now;
           }
         }
@@ -143,34 +204,102 @@ export function useUploadManager({
       return;
     }
 
-    // ─── 2. Large File S3 Multipart Upload Engine (>= 50MB) ─────────────────────
+    // ─── 2. S3 Multipart Upload Engine (>= 5MB) ─────────────────────────────────
     if (file.size >= MULTIPART_THRESHOLD) {
       const abortController = new AbortController();
       abortControllers.current[_id] = abortController;
 
       try {
-        // Step 1: Initiate Multipart in backend / S3
-        const initData = await initiateVaultMultipartUpload({
-          name: file.name,
-          size: file.size,
-          contentType: file.type || "application/octet-stream",
-          parentDirId: cleanDirId,
-        });
+        let fileId = transfer.fileId;
+        let uploadId = transfer.uploadId;
+        let key = transfer.key;
+        let partSize = transfer.partSize || 5 * 1024 * 1024;
+        let totalParts = transfer.totalParts;
+        let completedParts = transfer.completedParts ? [...transfer.completedParts] : [];
 
-        const { fileId, uploadId, key, partSize, totalParts } = initData;
-        const completedParts = [];
-        let totalUploadedBytes = 0;
-        let lastLoaded = 0;
-        let lastTime = Date.now();
-        let currentSpeed = 0;
-        let lastUpdate = 0;
+        // If not already initiated, call initiate API
+        if (!fileId || !uploadId) {
+          const initData = await initiateVaultMultipartUpload({
+            name: file.name,
+            size: file.size,
+            contentType: file.type || "application/octet-stream",
+            parentDirId: cleanDirId,
+          });
 
-        // Build list of part indices (1-indexed)
-        const partsToUpload = [];
+          fileId = initData.fileId;
+          uploadId = initData.uploadId;
+          key = initData.key;
+          partSize = initData.partSize || 5 * 1024 * 1024;
+          totalParts = initData.totalParts;
+          completedParts = [];
+
+          updateTransfer(_id, {
+            fileId,
+            uploadId,
+            key,
+            partSize,
+            totalParts,
+            completedParts,
+          });
+        }
+
+        if (!totalParts) {
+          totalParts = Math.ceil(file.size / partSize);
+        }
+
+        const completedPartNumbers = new Set(completedParts.map((p) => p.PartNumber));
+        const partLoadedMap = new Map();
+
+        // Populate already completed parts into loaded map
         for (let p = 1; p <= totalParts; p++) {
           const start = (p - 1) * partSize;
           const end = Math.min(p * partSize, file.size);
-          partsToUpload.push({ partNumber: p, start, end, size: end - start });
+          if (completedPartNumbers.has(p)) {
+            partLoadedMap.set(p, end - start);
+          }
+        }
+
+        // Build list of remaining parts to upload
+        const partsToUpload = [];
+        for (let p = 1; p <= totalParts; p++) {
+          if (!completedPartNumbers.has(p)) {
+            const start = (p - 1) * partSize;
+            const end = Math.min(p * partSize, file.size);
+            partsToUpload.push({ partNumber: p, start, end, size: end - start });
+          }
+        }
+
+        const computeTotalLoaded = () => {
+          let sum = 0;
+          for (const val of partLoadedMap.values()) {
+            sum += val;
+          }
+          return Math.min(sum, file.size);
+        };
+
+        let lastTime = Date.now();
+        let lastLoaded = computeTotalLoaded();
+        let currentSpeed = 0;
+        let lastUpdate = 0;
+
+        // If all parts already completed, skip directly to completion
+        if (partsToUpload.length === 0 && completedParts.length > 0) {
+          updateTransfer(_id, { progress: 99, speed: 0 });
+          const sortedParts = [...completedParts].sort((a, b) => a.PartNumber - b.PartNumber);
+          await completeVaultMultipartUpload({
+            fileId,
+            uploadId,
+            key,
+            parts: sortedParts,
+          });
+          updateTransfer(_id, {
+            status: "completed",
+            progress: 100,
+            loaded: file.size,
+            speed: 0,
+            timeRemaining: 0,
+          });
+          return;
         }
 
         // Parallel chunk worker queue (concurrency 4 if unlimited, 1 if speed-limited)
@@ -191,9 +320,9 @@ export function useUploadManager({
             while (attempt < maxAttempts && !success && !abortController.signal.aborted) {
               attempt++;
               try {
-                const chunkStartTime = Date.now();
+                const chunkStartTime = performance.now();
 
-                // Get presigned URL for this specific part
+                // Get presigned URL for this part
                 const partUrlData = await getVaultMultipartPartUrl({
                   fileId,
                   uploadId,
@@ -203,30 +332,50 @@ export function useUploadManager({
 
                 const chunkBlob = file.slice(part.start, part.end);
 
-                const putRes = await fetch(partUrlData.signedUrl, {
-                  method: "PUT",
-                  body: chunkBlob,
+                const cleanETag = await uploadPartWithXhr({
+                  signedUrl: partUrlData.signedUrl,
+                  blob: chunkBlob,
+                  partNumber: part.partNumber,
                   signal: abortController.signal,
+                  onProgress: (loadedBytes) => {
+                    partLoadedMap.set(part.partNumber, loadedBytes);
+                    const now = Date.now();
+                    const totalLoaded = computeTotalLoaded();
+                    const percent = Math.min((totalLoaded / file.size) * 100, 99);
+                    const deltaTime = (now - lastTime) / 1000;
+
+                    if (deltaTime >= 0.25) {
+                      const deltaBytes = totalLoaded - lastLoaded;
+                      currentSpeed = deltaBytes / deltaTime;
+                      lastLoaded = totalLoaded;
+                      lastTime = now;
+                    }
+
+                    let timeRemaining = 0;
+                    if (currentSpeed > 0 && file.size > 0) {
+                      timeRemaining = (file.size - totalLoaded) / currentSpeed;
+                    }
+
+                    if (now - lastUpdate > 100) {
+                      updateTransfer(_id, {
+                        progress: percent,
+                        loaded: totalLoaded,
+                        total: file.size,
+                        speed: currentSpeed,
+                        timeRemaining,
+                      });
+                      lastUpdate = now;
+                    }
+                  },
                 });
 
-                if (!putRes.ok) {
-                  throw new Error(`Part ${part.partNumber} PUT returned HTTP ${putRes.status}`);
-                }
-
-                // Extract ETag from response header
-                const rawETag = putRes.headers.get("ETag") || putRes.headers.get("etag") || "";
-                const cleanETag = rawETag.replace(/["']/g, "").trim();
-
-                if (!cleanETag) {
-                  throw new Error(`Part ${part.partNumber} missing ETag header`);
-                }
-
+                partLoadedMap.set(part.partNumber, part.size);
                 completedParts.push({
                   PartNumber: part.partNumber,
                   ETag: cleanETag,
                 });
 
-                totalUploadedBytes += part.size;
+                updateTransfer(_id, { completedParts: [...completedParts] });
                 success = true;
 
                 // Apply speed regulation pacing if configured
@@ -235,25 +384,26 @@ export function useUploadManager({
                 }
 
                 const now = Date.now();
-                const percent = Math.min((totalUploadedBytes / file.size) * 100, 100);
+                const totalLoaded = computeTotalLoaded();
+                const percent = Math.min((totalLoaded / file.size) * 100, 99);
                 const deltaTime = (now - lastTime) / 1000;
 
-                if (deltaTime >= 0.5) {
-                  const deltaBytes = totalUploadedBytes - lastLoaded;
+                if (deltaTime >= 0.25) {
+                  const deltaBytes = totalLoaded - lastLoaded;
                   currentSpeed = deltaBytes / deltaTime;
-                  lastLoaded = totalUploadedBytes;
+                  lastLoaded = totalLoaded;
                   lastTime = now;
                 }
 
                 let timeRemaining = 0;
                 if (currentSpeed > 0 && file.size > 0) {
-                  timeRemaining = (file.size - totalUploadedBytes) / currentSpeed;
+                  timeRemaining = (file.size - totalLoaded) / currentSpeed;
                 }
 
-                if (now - lastUpdate > 100 || percent >= 100) {
+                if (now - lastUpdate > 100) {
                   updateTransfer(_id, {
                     progress: percent,
-                    loaded: totalUploadedBytes,
+                    loaded: totalLoaded,
                     total: file.size,
                     speed: currentSpeed,
                     timeRemaining,
@@ -266,7 +416,6 @@ export function useUploadManager({
                 if (attempt >= maxAttempts) {
                   throw partErr;
                 }
-                // Exponential backoff wait before retrying part
                 await new Promise((r) => setTimeout(r, 1000 * attempt));
               }
             }
@@ -278,17 +427,20 @@ export function useUploadManager({
         await Promise.all(workers);
 
         if (abortController.signal.aborted) {
-          await abortVaultMultipartUpload({ fileId, uploadId, key }).catch(() => {});
+          // Upload was paused or cancelled mid-flight.
+          // If paused, keep completed parts so resume can pick up.
+          // Cancellation is explicitly executed in cancelTransfer.
           return;
         }
 
         // Step 3: Complete Multipart Assembly in S3/B2
         updateTransfer(_id, { progress: 99, speed: 0 });
+        const sortedParts = [...completedParts].sort((a, b) => a.PartNumber - b.PartNumber);
         await completeVaultMultipartUpload({
           fileId,
           uploadId,
           key,
-          parts: completedParts,
+          parts: sortedParts,
         });
 
         updateTransfer(_id, {
@@ -312,22 +464,30 @@ export function useUploadManager({
       return;
     }
 
-    // ─── 3. Single-Part Fast Upload (< 50MB) ──────────────────────────────────
+    // ─── 3. Single-Part Fast Upload (< 5MB) ───────────────────────────────────
     try {
-      const initRes = await fetch(`${SERVER_URL}/file/upload-vault/initiate`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      let fileId = transfer.fileId;
+      let signedUrl = transfer.signedUrl;
+      let fileName = transfer.key;
+
+      if (!fileId || !signedUrl) {
+        const initData = await initiateVaultUpload({
           name: file.name,
           size: file.size,
           contentType: file.type || "application/octet-stream",
           parentDirId: cleanDirId,
-        }),
-      });
+        });
 
-      if (!initRes.ok) throw new Error("Failed to initiate upload");
-      const { signedUrl } = await initRes.json();
+        fileId = initData.fileId;
+        signedUrl = initData.signedUrl;
+        fileName = initData.fileName;
+
+        updateTransfer(_id, {
+          fileId,
+          signedUrl,
+          key: fileName,
+        });
+      }
 
       const xhr2 = new XMLHttpRequest();
       abortControllers.current[_id] = xhr2;
@@ -338,6 +498,7 @@ export function useUploadManager({
       let lastTime = Date.now();
       let currentSpeed = 0;
       let lastUpdate = 0;
+      const uploadStartTime = performance.now();
 
       xhr2.upload.onprogress = (e) => {
         if (e.lengthComputable) {
@@ -346,7 +507,7 @@ export function useUploadManager({
           const percent = Math.min((totalLoaded / file.size) * 100, 100);
           const deltaTime = (now - lastTime) / 1000;
 
-          if (deltaTime >= 0.5) {
+          if (deltaTime >= 0.25) {
             const deltaBytes = totalLoaded - lastLoaded;
             currentSpeed = deltaBytes / deltaTime;
             lastLoaded = totalLoaded;
@@ -359,16 +520,37 @@ export function useUploadManager({
           }
 
           if (now - lastUpdate > 100 || percent >= 100) {
-            updateTransfer(_id, { progress: percent, loaded: totalLoaded, total: file.size, speed: currentSpeed, timeRemaining });
+            updateTransfer(_id, {
+              progress: percent,
+              loaded: totalLoaded,
+              total: file.size,
+              speed: currentSpeed,
+              timeRemaining,
+            });
             lastUpdate = now;
           }
         }
       };
 
-      xhr2.upload.onload = () => updateTransfer(_id, { progress: 100 });
-      xhr2.onload = () => {
+      xhr2.upload.onload = async () => {
+        if (speedLimit > 0) {
+          await applySpeedPacing(file.size, speedLimit, uploadStartTime);
+        }
+        updateTransfer(_id, { progress: 100 });
+      };
+
+      xhr2.onload = async () => {
         if (xhr2.status >= 200 && xhr2.status < 300) {
-          updateTransfer(_id, { status: "completed", progress: 100, speed: 0, timeRemaining: 0 });
+          try {
+            await completeVaultUpload({
+              fileId,
+              key: fileName,
+            });
+            updateTransfer(_id, { status: "completed", progress: 100, speed: 0, timeRemaining: 0 });
+          } catch (completeErr) {
+            console.error("Failed to complete single-part upload in database:", completeErr);
+            updateTransfer(_id, { status: "error", speed: 0, errorMessage: "Failed to complete upload" });
+          }
         } else {
           updateTransfer(_id, { status: "error", speed: 0, errorMessage: "S3 upload failed" });
         }

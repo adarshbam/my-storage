@@ -186,7 +186,7 @@ export const populateDirectoryItemCounts = async (directories = []) => {
   if (missDirIds.length > 0) {
     const [filesCounts, dirsCounts] = await Promise.all([
       File.aggregate([
-        { $match: { parentDir: { $in: missDirIds } } },
+        { $match: { parentDir: { $in: missDirIds }, uploadStatus: { $ne: "uploading" } } },
         { $group: { _id: "$parentDir", count: { $sum: 1 } } },
       ]),
       Directory.aggregate([
@@ -485,7 +485,7 @@ export const getDirectoryContents = async ({ dirId, userId, userRole, action, re
   // 2. Parallelize initial fetching of directory, files, and childDirs on cache miss
   const [directoryDataRaw, files, childDirs] = await Promise.all([
     Directory.findOne({ _id: dirId }).select("-__v").lean(),
-    File.find({ parentDir: dirId }).select("-__v").lean(),
+    File.find({ parentDir: dirId, uploadStatus: { $ne: "uploading" } }).select("-__v").lean(),
     Directory.find({ parentDir: dirId }).select("-__v").lean(),
   ]);
 
@@ -573,7 +573,7 @@ export const getDirectoryContents = async ({ dirId, userId, userRole, action, re
     const childDirIds = childDirs.map((dir) => dir._id);
     const [filesCounts, dirsCounts] = await Promise.all([
       File.aggregate([
-        { $match: { parentDir: { $in: childDirIds } } },
+        { $match: { parentDir: { $in: childDirIds }, uploadStatus: { $ne: "uploading" } } },
         { $group: { _id: "$parentDir", count: { $sum: 1 } } },
       ]),
       Directory.aggregate([
