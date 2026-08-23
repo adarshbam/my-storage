@@ -18,7 +18,7 @@ import {
   Lock,
 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
-import { getFileCdnUrl } from "../../api/files.api";
+import { getFileCdnUrl, abortVaultMultipartUpload, abortVaultUpload } from "../../api/files.api";
 import { formatSpeed, formatTime, cn } from "../../lib/utils";
 import getFileImage from "../../lib/FileImages";
 import Card from "../ui/Card";
@@ -142,6 +142,41 @@ const TransferManager = forwardRef((props, ref) => {
     }
     loadConfig();
   }, []);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const activeIncomplete = transfers.filter(
+        (t) => t.type === "upload" && t.fileId && t.status !== "completed"
+      );
+      for (const t of activeIncomplete) {
+        const payload = JSON.stringify({
+          fileId: t.fileId,
+          uploadId: t.uploadId || undefined,
+          key: t.key || undefined,
+        });
+        const url = t.uploadId
+          ? `${SERVER_URL}/file/upload-vault/multipart/abort`
+          : `${SERVER_URL}/file/upload-vault/abort`;
+        if (navigator.sendBeacon) {
+          const blob = new Blob([payload], { type: "application/json" });
+          navigator.sendBeacon(url, blob);
+        } else {
+          fetch(url, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+            keepalive: true,
+          }).catch(() => {});
+        }
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [transfers]);
 
   const searchParams = new URLSearchParams(window.location.search);
   const ownerId = searchParams.get("ownerId");
@@ -298,23 +333,102 @@ const TransferManager = forwardRef((props, ref) => {
     startDownload({ _id: id, url: streamUrl, name: filename });
   };
 
-  const cancelTransfer = (id) => {
+  const cancelTransfer = async (id) => {
     const transfer = transfers.find((t) => t._id === id);
-    if (transfer && transfer.status === "active") {
-      if (downloadReaders.current[id]) {
-        downloadReaders.current[id].cancel(new DOMException("Aborted", "AbortError")).catch(() => {});
+    if (!transfer) return;
+
+    if (downloadReaders.current[id]) {
+      downloadReaders.current[id].cancel(new DOMException("Aborted", "AbortError")).catch(() => {});
+      delete downloadReaders.current[id];
+    }
+    if (abortControllers.current[id]) {
+      if (abortControllers.current[id].abort) {
+        abortControllers.current[id].abort();
       }
-      if (abortControllers.current[id]) {
-        if (abortControllers.current[id].abort) {
-          abortControllers.current[id].abort();
-        }
-      }
+      delete abortControllers.current[id];
     }
     if (downloadWritables.current[id]) {
       downloadWritables.current[id].abort().catch(() => {});
       delete downloadWritables.current[id];
     }
+
+    // Backend cleanup if upload was started and not yet completed
+    if (transfer.type === "upload" && transfer.fileId && transfer.status !== "completed") {
+      try {
+        if (transfer.uploadId) {
+          await abortVaultMultipartUpload({
+            fileId: transfer.fileId,
+            uploadId: transfer.uploadId,
+            key: transfer.key,
+          });
+        } else {
+          await abortVaultUpload({
+            fileId: transfer.fileId,
+            key: transfer.key,
+          });
+        }
+      } catch (abortErr) {
+        console.warn("Failed to abort upload on backend:", abortErr);
+      }
+    }
+
     setTransfers((prev) => prev.filter((t) => t._id !== id));
+    if (props.onUploadComplete) {
+      props.onUploadComplete();
+    }
+  };
+
+  const closeManager = async () => {
+    const incompleteUploads = transfers.filter(
+      (t) => t.type === "upload" && t.fileId && t.status !== "completed"
+    );
+
+    Object.keys(abortControllers.current).forEach((id) => {
+      try {
+        if (abortControllers.current[id]?.abort) {
+          abortControllers.current[id].abort();
+        }
+      } catch (e) {}
+      delete abortControllers.current[id];
+    });
+    Object.keys(downloadReaders.current).forEach((id) => {
+      try {
+        downloadReaders.current[id]?.cancel(new DOMException("Aborted", "AbortError")).catch(() => {});
+      } catch (e) {}
+      delete downloadReaders.current[id];
+    });
+    Object.keys(downloadWritables.current).forEach((id) => {
+      try {
+        downloadWritables.current[id]?.abort().catch(() => {});
+      } catch (e) {}
+      delete downloadWritables.current[id];
+    });
+
+    await Promise.all(
+      incompleteUploads.map(async (t) => {
+        try {
+          if (t.uploadId) {
+            await abortVaultMultipartUpload({
+              fileId: t.fileId,
+              uploadId: t.uploadId,
+              key: t.key,
+            });
+          } else {
+            await abortVaultUpload({
+              fileId: t.fileId,
+              key: t.key,
+            });
+          }
+        } catch (err) {
+          console.warn("Failed to abort incomplete transfer on close:", err);
+        }
+      })
+    );
+
+    setTransfers([]);
+    if (props.onUploadComplete) {
+      props.onUploadComplete();
+    }
   };
 
   const pauseTransfer = (id) => {
@@ -465,8 +579,11 @@ const TransferManager = forwardRef((props, ref) => {
                 <Trash2 size={14} />
               </button>
             )}
-            <button onClick={() => setMinimized(!minimized)} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400">
+            <button onClick={() => setMinimized(!minimized)} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400" title={minimized ? "Expand" : "Minimize"}>
               {minimized ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
+            </button>
+            <button onClick={closeManager} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors" title="Close & Cancel All Transfers">
+              <X size={14} />
             </button>
           </div>
         </div>
