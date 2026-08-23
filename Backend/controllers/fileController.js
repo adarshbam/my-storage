@@ -1,5 +1,6 @@
 import * as fileService from '../services/file.service.js';
 import { updateParentDirectorySize as updateSize, getDirectoryPath as getPath } from '../services/directory.service.js';
+import { logLegacyEndpointUsage } from '../utils/legacyObservability.js';
 
 export const updateParentDirectorySize = updateSize;
 export const getDirectoryPath = getPath;
@@ -23,6 +24,32 @@ export const search = async (req, res, next) => {
 };
 
 export const getThumbnail = async (req, res, next) => {
+  const startTime = Date.now();
+  let bytesStreamed = false;
+
+  const originalWrite = res.write;
+  res.write = function (...args) {
+    if (args[0] && (Buffer.isBuffer(args[0]) || typeof args[0] === 'string')) {
+      bytesStreamed = true;
+    }
+    return originalWrite.apply(this, args);
+  };
+
+  res.on('finish', () => {
+    logLegacyEndpointUsage({
+      endpoint: 'GET /file/:fileId/thumbnail',
+      fileId: req.params.fileId,
+      userId: req.user?.id,
+      action: 'thumbnail',
+      range: Boolean(req.headers.range),
+      statusCode: res.statusCode,
+      streamedBytes: bytesStreamed || (res.statusCode >= 200 && res.statusCode < 300 && res.statusCode !== 204),
+      durationMs: Date.now() - startTime,
+      userAgent: req.get('user-agent'),
+      referer: req.get('referer'),
+    });
+  });
+
   try {
     await fileService.getThumbnailLogic({
       fileId: req.params.fileId,
@@ -36,7 +63,77 @@ export const getThumbnail = async (req, res, next) => {
   }
 };
 
+export const getThumbnailCdnUrl = async (req, res, next) => {
+  try {
+    const data = await fileService.createThumbnailCdnUrlLogic({
+      fileId: req.params.fileId,
+      userId: req.user.id,
+      userRole: req.user.role,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status && !res.headersSent) return res.status(error.status).send(error.message);
+    next(error);
+  }
+};
+
+export const getCdnUrl = async (req, res, next) => {
+  try {
+    const data = await fileService.createFileCdnUrlLogic({
+      fileId: req.params.fileId,
+      userId: req.user.id,
+      userRole: req.user.role,
+      action: req.query.action,
+      ownerId: req.query.ownerId,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status && !res.headersSent) return res.status(error.status).send(error.message);
+    next(error);
+  }
+};
+
+export const markFileOpened = async (req, res, next) => {
+  try {
+    const data = await fileService.markFileOpenedLogic({
+      fileId: req.params.fileId,
+      userId: req.user.id,
+      userRole: req.user.role,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status && !res.headersSent) return res.status(error.status).send(error.message);
+    next(error);
+  }
+};
+
 export const getFileById = async (req, res, next) => {
+  const startTime = Date.now();
+  let bytesStreamed = false;
+
+  const originalWrite = res.write;
+  res.write = function (...args) {
+    if (args[0] && (Buffer.isBuffer(args[0]) || typeof args[0] === 'string')) {
+      bytesStreamed = true;
+    }
+    return originalWrite.apply(this, args);
+  };
+
+  res.on('finish', () => {
+    logLegacyEndpointUsage({
+      endpoint: 'GET /file/:fileId',
+      fileId: req.params.fileId,
+      userId: req.user?.id,
+      action: req.query.action || 'inline',
+      range: Boolean(req.headers.range),
+      statusCode: res.statusCode,
+      streamedBytes: bytesStreamed || (res.statusCode >= 200 && res.statusCode < 300 && res.statusCode !== 204 && res.statusCode !== 304),
+      durationMs: Date.now() - startTime,
+      userAgent: req.get('user-agent'),
+      referer: req.get('referer'),
+    });
+  });
+
   try {
     await fileService.getFileLogic({
       fileId: req.params.fileId,

@@ -2143,7 +2143,12 @@ export default function FileBrowser({ specialView }) {
               onPreview={handlePreview}
               onDetails={(item) => {
                 setDetailsItem(item);
-                fetch(`${SERVER_URL}/file/${item._id}`, { credentials: "include" }).catch(() => {});
+                if (!item.provider || item.provider === "local") {
+                  fetch(`${SERVER_URL}/file/${item._id}/opened`, {
+                    method: "POST",
+                    credentials: "include",
+                  }).catch(() => {});
+                }
               }}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}

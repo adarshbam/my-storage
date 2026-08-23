@@ -23,13 +23,17 @@ import {
   deleteFromB2,
   getObjectFromB2,
 } from "../integrations/storage/s3.client.js";
-import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import {
   updateParentDirectorySize,
   getDirectoryPath,
   populateDirectoryItemCounts,
 } from "./directory.service.js";
 import { processThumbnailInWorker } from "./workerPool.service.js";
+import {
+  createCloudflareCdnDownloadUrl,
+  createCdnDownloadUrl,
+} from "../integrations/cdn/cloudflare.service.js";
 
 const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 const THUMBNAILS_DIR = path.join(STORAGE_DIR, "thumbnails");
@@ -321,10 +325,24 @@ export const searchFiles = async ({ query, ext, maxSize, userId, userRole, rootD
       .filter(Boolean);
 
     sortedPath.push({ name: f.name });
+    const ext = f.extension ? f.extension.toLowerCase() : "";
+    const hasThumb = f.hasThumbnail || mediaExts.includes(ext);
+    const fileIdStr = f._id.toString();
+    const thumbnailUrl = hasThumb
+      ? createCloudflareCdnDownloadUrl({
+          fileId: fileIdStr,
+          extension: ".webp",
+          version: f.contentVersion || 1,
+          isThumbnail: true,
+          filename: f.name,
+        })
+      : null;
 
     return {
       ...f,
-      id: f._id.toString(),
+      id: fileIdStr,
+      hasThumbnail: hasThumb,
+      thumbnailUrl,
       path: sortedPath,
     };
   });
@@ -497,6 +515,281 @@ export const getThumbnailLogic = async ({ fileId, userId, userRole, res }) => {
   const error = new Error("Thumbnail not available");
   error.status = 404;
   throw error;
+};
+
+const SUPPORTED_IMAGE_THUMBNAIL_EXTENSIONS = [
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".webp",
+  ".tiff",
+  ".svg",
+];
+const SUPPORTED_VIDEO_THUMBNAIL_EXTENSIONS = [
+  ".mp4",
+  ".webm",
+  ".mkv",
+  ".avi",
+  ".mov",
+];
+
+export const ensureWebpThumbnailExists = async ({
+  file,
+  fileId,
+  isTrash = false,
+}) => {
+  const fileExt = file.extension ? file.extension.toLowerCase() : "";
+
+  if (
+    !SUPPORTED_IMAGE_THUMBNAIL_EXTENSIONS.includes(fileExt) &&
+    !SUPPORTED_VIDEO_THUMBNAIL_EXTENSIONS.includes(fileExt)
+  ) {
+    const error = new Error("Thumbnail not available");
+    error.status = 404;
+    throw error;
+  }
+
+  // 1. Check if WebP thumbnail already exists in B2
+  if (file.hasThumbnail) {
+    try {
+      const headParams = {
+        Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+        Key: `thumbnails/${fileId}.webp`,
+      };
+      await s3Client.send(new HeadObjectCommand(headParams));
+      return true; // Already exists as WebP
+    } catch (headErr) {
+      console.warn(
+        "Thumbnail was marked in DB but WebP not found in B2, regenerating:",
+        headErr.name,
+      );
+    }
+  }
+
+  // 2. Generate on-demand in Worker Thread purely in-memory (Zero Disk I/O)
+  try {
+    let workerResult;
+
+    if (SUPPORTED_IMAGE_THUMBNAIL_EXTENSIONS.includes(fileExt)) {
+      const s3Params = {
+        Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+        Key: `${fileId}${file.extension}`,
+      };
+      const command = new GetObjectCommand(s3Params);
+      const s3Response = await s3Client.send(command);
+      const chunks = [];
+      for await (const chunk of s3Response.Body) {
+        chunks.push(chunk);
+      }
+      const buffer = Buffer.concat(chunks);
+      workerResult = await processThumbnailInWorker({
+        type: "image",
+        buffer,
+        width: 256,
+        height: 144,
+        quality: 75,
+      });
+    } else if (SUPPORTED_VIDEO_THUMBNAIL_EXTENSIONS.includes(fileExt)) {
+      const videoUrl = await createDownloadSignedUrl({
+        key: `${fileId}${file.extension}`,
+      });
+      workerResult = await processThumbnailInWorker({
+        type: "video",
+        videoUrl,
+        width: 256,
+        height: 144,
+        quality: 75,
+      });
+    }
+
+    if (workerResult && workerResult.data) {
+      // Upload directly to Backblaze B2 in-memory
+      const uploadCommand = new PutObjectCommand({
+        Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+        Key: `thumbnails/${fileId}.webp`,
+        Body: workerResult.data,
+        ContentType: "image/webp",
+      });
+      await s3Client.send(uploadCommand);
+
+      // Update database
+      if (isTrash) {
+        await Trash.updateOne(
+          { _id: fileId },
+          { $set: { hasThumbnail: true } },
+        );
+      } else {
+        await File.updateOne({ _id: fileId }, { $set: { hasThumbnail: true } });
+      }
+
+      return true;
+    }
+  } catch (genErr) {
+    console.error(
+      "Failed multithreaded on-demand thumbnail generation:",
+      genErr,
+    );
+    const error = new Error("Thumbnail not available");
+    error.status = 404;
+    throw error;
+  }
+
+  const error = new Error("Thumbnail not available");
+  error.status = 404;
+  throw error;
+};
+
+export const createThumbnailCdnUrlLogic = async ({
+  fileId,
+  userId,
+  userRole,
+  expiresInSeconds = 3600,
+}) => {
+  const req = { user: { id: userId, role: userRole } };
+
+  let isTrash = false;
+  let file = await File.findOne({ _id: fileId })
+    .select("userId path name extension hasThumbnail contentVersion")
+    .lean();
+
+  // If not found in File collection, check Trash collection
+  if (!file) {
+    file = await Trash.findOne({ _id: fileId })
+      .select("userId path name extension hasThumbnail contentVersion")
+      .lean();
+    if (file) isTrash = true;
+  }
+
+  if (!file) {
+    const error = new Error("File not found");
+    error.status = 404;
+    throw error;
+  }
+
+  if (file.userId.toString() !== req.user.id) {
+    const hasAccess = await verifyItemAccess(
+      file.userId,
+      req,
+      fileId,
+      "file",
+      "read",
+      file.path,
+    );
+    if (!hasAccess) {
+      const error = new Error("Unauthorized");
+      error.status = 403;
+      throw error;
+    }
+  }
+
+  const url = createCloudflareCdnDownloadUrl({
+    fileId,
+    extension: ".webp",
+    version: file.contentVersion || 1,
+    isThumbnail: true,
+    filename: file.name,
+    expiresInSeconds,
+  });
+
+  return {
+    url,
+    expiresInSeconds,
+  };
+};
+
+export const markFileOpenedLogic = async ({ fileId, userId, userRole }) => {
+  const req = { user: { id: userId, role: userRole } };
+
+  const file = await File.findOne({ _id: fileId })
+    .select("userId path")
+    .lean();
+
+  if (!file) {
+    const error = new Error("File not found");
+    error.status = 404;
+    throw error;
+  }
+
+  if (file.userId.toString() !== req.user.id) {
+    const hasAccess = await verifyItemAccess(
+      file.userId,
+      req,
+      fileId,
+      "file",
+      "read",
+      file.path,
+    );
+    if (!hasAccess) {
+      const error = new Error("Unauthorized to access this file");
+      error.status = 403;
+      throw error;
+    }
+  }
+
+  const now = new Date();
+  await File.updateOne({ _id: fileId }, { $set: { openedAt: now } });
+
+  return {
+    success: true,
+    fileId,
+    openedAt: now,
+  };
+};
+
+export const createFileCdnUrlLogic = async ({
+  fileId,
+  userId,
+  userRole,
+  action,
+  expiresInSeconds = 3600,
+}) => {
+  const req = { user: { id: userId, role: userRole } };
+
+  const file = await File.findOne({ _id: fileId })
+    .select("userId name extension path contentVersion")
+    .lean();
+
+  if (!file) {
+    const error = new Error("File not found");
+    error.status = 404;
+    throw error;
+  }
+
+  if (file.userId.toString() !== req.user.id) {
+    const hasAccess = await verifyItemAccess(
+      file.userId,
+      req,
+      fileId,
+      "file",
+      "read",
+      file.path,
+    );
+    if (!hasAccess) {
+      const error = new Error("You are not authorized to access this file");
+      error.status = 403;
+      throw error;
+    }
+  }
+
+  // Asynchronously update openedAt timestamp without blocking CDN URL response
+  File.updateOne({ _id: fileId }, { $set: { openedAt: new Date() } }).catch((err) =>
+    console.error("openedAt async update failed in createFileCdnUrlLogic:", err),
+  );
+
+  const url = createCloudflareCdnDownloadUrl({
+    fileId,
+    extension: file.extension,
+    version: file.contentVersion || 1,
+    filename: file.name,
+    expiresInSeconds,
+    action,
+  });
+
+  return {
+    url,
+    expiresInSeconds,
+  };
 };
 
 export const getFileLogic = async ({ fileId, userId, userRole, range, action, ifNoneMatch, res }) => {
@@ -681,11 +974,24 @@ export const getStarredItems = async (userId, rootDirId) => {
 
   const processedFiles = starredFiles.map((file) => {
     const ext = file.extension ? file.extension.toLowerCase() : "";
+    const hasThumb = file.hasThumbnail || mediaExts.includes(ext);
+    const fileIdStr = file._id.toString();
+    const thumbnailUrl = hasThumb
+      ? createCloudflareCdnDownloadUrl({
+          fileId: fileIdStr,
+          extension: ".webp",
+          version: file.contentVersion || 1,
+          isThumbnail: true,
+          filename: file.name,
+        })
+      : null;
+
     return {
       ...file,
-      _id: file._id.toString(),
+      _id: fileIdStr,
       type: "file",
-      hasThumbnail: file.hasThumbnail || mediaExts.includes(ext),
+      hasThumbnail: hasThumb,
+      thumbnailUrl,
     };
   });
 
@@ -750,11 +1056,24 @@ export const getRecentItems = async (userId, rootDirId) => {
 
   const processedFiles = recentFiles.map((file) => {
     const ext = file.extension ? file.extension.toLowerCase() : "";
+    const hasThumb = file.hasThumbnail || mediaExts.includes(ext);
+    const fileIdStr = file._id.toString();
+    const thumbnailUrl = hasThumb
+      ? createCloudflareCdnDownloadUrl({
+          fileId: fileIdStr,
+          extension: ".webp",
+          version: file.contentVersion || 1,
+          isThumbnail: true,
+          filename: file.name,
+        })
+      : null;
+
     return {
       ...file,
-      _id: file._id.toString(),
+      _id: fileIdStr,
       type: "file",
-      hasThumbnail: file.hasThumbnail || mediaExts.includes(ext),
+      hasThumbnail: hasThumb,
+      thumbnailUrl,
     };
   });
 
@@ -1054,7 +1373,7 @@ export const deleteFileLogic = async ({ fileId, userId, permanent, userRole }) =
 export const saveFileLogic = async ({ fileId, userId, userRole, content }) => {
   const req = { user: { id: userId, role: userRole } };
   const file = await File.findOne({ _id: fileId })
-    .select("userId extension parentDir size path")
+    .select("userId extension parentDir size path contentVersion")
     .lean();
 
   if (!file) {
@@ -1086,7 +1405,16 @@ export const saveFileLogic = async ({ fileId, userId, userRole, content }) => {
 
   const newSize = fileBuffer.length;
   const sizeDiff = newSize - (file.size || 0);
-  await File.updateOne({ _id: fileId }, { size: newSize });
+
+  // Atomically increment contentVersion only after successful B2 overwrite.
+  // If the document is a legacy document lacking contentVersion, set to 2 (1 -> 2).
+  const updateOperation =
+    typeof file.contentVersion === "number"
+      ? { $set: { size: newSize }, $inc: { contentVersion: 1 } }
+      : { $set: { size: newSize, contentVersion: 2 } };
+
+  await File.updateOne({ _id: fileId }, updateOperation);
+
   if (sizeDiff !== 0) {
     await updateParentDirectorySize(file.parentDir, sizeDiff);
   }

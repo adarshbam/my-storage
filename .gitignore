@@ -15,3 +15,8 @@ Backend/node_modules
 Backend/server.cert
 Backend/server.key
 /db/
+
+# Cloudflare Worker local secrets & cache
+.dev.vars
+.dev.vars.*
+.wrangler/

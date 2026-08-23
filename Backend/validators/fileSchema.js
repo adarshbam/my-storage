@@ -14,6 +14,15 @@ export const getThumbnailSchema = {
   }),
 };
 
+export const getThumbnailCdnUrlSchema = {
+  params: z.object({
+    fileId: objectIdSchema,
+  }),
+  query: z.object({
+    ownerId: optionalObjectIdSchema.optional(),
+  }).optional(),
+};
+
 export const getFileByIdSchema = {
   params: z.object({
     fileId: objectIdSchema,
@@ -21,6 +30,16 @@ export const getFileByIdSchema = {
   query: z.object({
     action: z.string().optional(),
   }),
+};
+
+export const getCdnUrlSchema = {
+  params: z.object({
+    fileId: objectIdSchema,
+  }),
+  query: z.object({
+    action: z.string().optional(),
+    ownerId: optionalObjectIdSchema.optional(),
+  }).optional(),
 };
 
 export const uploadFileSchema = {
@@ -68,3 +87,10 @@ export const deleteFileSchema = {
     permanent: z.string().optional(),
   }).optional(),
 };
+
+export const markFileOpenedSchema = {
+  params: z.object({
+    fileId: objectIdSchema,
+  }),
+};
+

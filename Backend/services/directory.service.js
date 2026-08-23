@@ -18,6 +18,7 @@ import {
 } from "../databases/redis.js";
 import { deleteByParentChain } from "./trash.service.js";
 import { copyInB2 } from "../integrations/storage/s3.client.js";
+import { createCloudflareCdnDownloadUrl } from "../integrations/cdn/cloudflare.service.js";
 import User from "../models/userModel.js";
 import {
   storageThresholdReached,
@@ -541,10 +542,25 @@ export const getDirectoryContents = async ({ dirId, userId, userRole, action, re
   directoryData.files = files.map((file) => {
     const ext = file.extension ? file.extension.toLowerCase() : "";
     const canHaveThumb = mediaExts.includes(ext);
+    const hasThumb = file.hasThumbnail || canHaveThumb;
+    const fileIdStr = file._id.toString();
+
+    let thumbnailUrl = null;
+    if (hasThumb) {
+      thumbnailUrl = createCloudflareCdnDownloadUrl({
+        fileId: fileIdStr,
+        extension: ".webp",
+        version: file.contentVersion || 1,
+        isThumbnail: true,
+        filename: file.name,
+      });
+    }
+
     return {
       ...file,
-      _id: file._id.toString(),
-      hasThumbnail: file.hasThumbnail || canHaveThumb,
+      _id: fileIdStr,
+      hasThumbnail: hasThumb,
+      thumbnailUrl,
       path: [...baseSharedPathNames, { name: file.name }],
     };
   });

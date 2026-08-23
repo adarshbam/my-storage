@@ -16,6 +16,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
+import { getFileCdnUrl } from "../../api/files.api";
 import { formatSpeed, formatTime, cn } from "../../lib/utils";
 import getFileImage from "../../lib/FileImages";
 import Card from "../ui/Card";
@@ -155,15 +156,49 @@ const TransferManager = forwardRef((props, ref) => {
       const separator = url.includes("?") ? "&" : "?";
       url = `${url}${separator}ownerId=${ownerId}`;
     }
-    const hasFileSystemAccess = "showSaveFilePicker" in window;
+    // Check if this is a Vault Storage file
+    const isVaultFile =
+      typeof url === "string" &&
+      url.includes("/file/") &&
+      !url.includes("/drive/file/") &&
+      !url.includes("/github/file/") &&
+      !url.includes("/directory/");
 
     if (!hasFileSystemAccess) {
-      const urlObj = new URL(url, window.location.origin);
-      if (!urlObj.searchParams.has("action")) {
-        urlObj.searchParams.set("action", "download");
+      let downloadHref = url;
+
+      if (isVaultFile) {
+        try {
+          const match = url.match(/\/file\/([a-fA-F0-9]{24})/);
+          if (match) {
+            const fileId = match[1];
+            const cdnData = await getFileCdnUrl(fileId, {
+              ...(ownerId ? { ownerId } : {}),
+              action: "download",
+            });
+            if (cdnData && cdnData.url) {
+              downloadHref = cdnData.url;
+            }
+          }
+        } catch (err) {
+          console.error(
+            "Failed to obtain CDN download URL for fallback anchor, using direct route:",
+            err.message,
+          );
+        }
       }
+
+      if (downloadHref === url) {
+        // Fallback for directory/external providers or if CDN fetch fails
+        const urlObj = new URL(url, window.location.origin);
+        if (!urlObj.searchParams.has("action")) {
+          urlObj.searchParams.set("action", "download");
+        }
+        downloadHref = urlObj.toString();
+      }
+
       const a = document.createElement("a");
-      a.href = urlObj.toString();
+      a.href = downloadHref;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
@@ -192,7 +227,28 @@ const TransferManager = forwardRef((props, ref) => {
       updateTransfer(id, { status: "active", speed: 0 });
     }
 
-    startDownload({ _id: id, url, name: filename });
+    // Determine if this is a Vault Storage file and obtain signed CDN URL
+    let streamUrl = url;
+
+    if (isVaultFile) {
+      try {
+        const match = url.match(/\/file\/([a-fA-F0-9]{24})/);
+        if (match) {
+          const fileId = match[1];
+          const cdnData = await getFileCdnUrl(fileId, {
+            ...(ownerId ? { ownerId } : {}),
+            action: "download",
+          });
+          if (cdnData && cdnData.url) {
+            streamUrl = cdnData.url;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to obtain CDN download URL, falling back to direct route:", err.message);
+      }
+    }
+
+    startDownload({ _id: id, url: streamUrl, name: filename });
   };
 
   const cancelTransfer = (id) => {

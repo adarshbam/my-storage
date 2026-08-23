@@ -11,6 +11,7 @@ import {
 import { formatSize } from "../../lib/utils";
 import { SERVER_URL } from "../../lib/api";
 import { prefetchFileContent } from "../../lib/fileCache";
+import { useThumbnailUrl } from "../../lib/thumbnailCache";
 import {
   VectorFolderIcon,
   VectorCodeIcon,
@@ -45,6 +46,7 @@ export default function FileCard({
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const { thumbnailUrl, error: thumbCdnError } = useThumbnailUrl(item);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -160,13 +162,12 @@ export default function FileCard({
           </>
         ) : (
           <>
-            {viewMode === "grid" && item.hasThumbnail && !imageError ? (
+            {viewMode === "grid" && item.hasThumbnail && !imageError && !thumbCdnError && thumbnailUrl ? (
               <img
-                src={`${SERVER_URL}/file/${item._id}/thumbnail`}
+                src={thumbnailUrl}
                 alt="thumbnail"
                 className="w-full h-full object-cover rounded-xl"
                 onError={() => setImageError(true)}
-                crossOrigin="use-credentials"
                 loading="lazy"
               />
             ) : (

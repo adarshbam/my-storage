@@ -1,4 +1,5 @@
 import { SERVER_URL } from "./api";
+import { getFileCdnUrl } from "../api/files.api";
 
 // High-performance In-Memory LRU Cache for File Content
 const MAX_CACHE_SIZE = 100;
@@ -127,23 +128,49 @@ export function prefetchFileContent(file, ownerId) {
   if (!isTextOrCode(file.extension)) return;
   if (file.size && file.size > 500 * 1024) return;
 
-  const url = getFileUrl(file, ownerId);
-  if (!url) return;
-
   activePrefetches.add(cacheKey);
 
-  fetch(url, { credentials: "include" })
-    .then((res) => {
-      if (!res.ok) throw new Error("Prefetch failed");
-      return res.text();
-    })
-    .then((text) => {
-      setCachedContent(cacheKey, text);
-    })
-    .catch(() => {
-      // Silently ignore prefetch failures (will be fetched normally on click)
-    })
-    .finally(() => {
+  const isVaultStorage = !file.provider || file.provider === "local";
+
+  if (isVaultStorage) {
+    getFileCdnUrl(file._id, ownerId ? { ownerId } : {})
+      .then((data) => {
+        if (!data?.url) throw new Error("No CDN URL returned");
+        return fetch(data.url);
+      })
+      .then((res) => {
+        if (!res.ok) throw new Error(`CDN prefetch error: ${res.status}`);
+        return res.text();
+      })
+      .then((text) => {
+        setCachedContent(cacheKey, text);
+      })
+      .catch(() => {
+        // Silently ignore prefetch failures (will be fetched normally on preview/open)
+      })
+      .finally(() => {
+        activePrefetches.delete(cacheKey);
+      });
+  } else {
+    const url = getFileUrl(file, ownerId);
+    if (!url) {
       activePrefetches.delete(cacheKey);
-    });
+      return;
+    }
+
+    fetch(url, { credentials: "include" })
+      .then((res) => {
+        if (!res.ok) throw new Error("Prefetch failed");
+        return res.text();
+      })
+      .then((text) => {
+        setCachedContent(cacheKey, text);
+      })
+      .catch(() => {
+        // Silently ignore prefetch failures (will be fetched normally on click)
+      })
+      .finally(() => {
+        activePrefetches.delete(cacheKey);
+      });
+  }
 }

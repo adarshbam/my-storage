@@ -7,8 +7,11 @@ import {
 } from "../ui/VaultIcons";
 import { SERVER_URL } from "../../lib/api";
 import getFileImage, { renderFileIcon } from "../../lib/FileImages";
+import { useThumbnailUrl } from "../../lib/thumbnailCache";
 
 export default function FileDetailsModal({ item, onClose }) {
+  const { thumbnailUrl, error: thumbCdnError } = useThumbnailUrl(item);
+
   if (!item) return null;
 
   const isDirectory =
@@ -81,9 +84,9 @@ export default function FileDetailsModal({ item, onClose }) {
                   </svg>
                 </div>
               )
-            ) : item.hasThumbnail ? (
+            ) : item.hasThumbnail && !thumbCdnError && thumbnailUrl ? (
               <img
-                src={`${SERVER_URL}/file/${item._id}/thumbnail`}
+                src={thumbnailUrl}
                 alt="thumbnail"
                 className="w-full h-full object-cover drop-shadow-[0_5px_10px_rgba(0,0,0,0.5)]"
                 draggable={false}

@@ -35,7 +35,16 @@ export const searchFiles = (params) => {
 };
 
 export const getFileById = (fileId, options = {}) => apiClient.stream(`/file/${fileId}`, options);
+export const markFileOpened = (fileId) => apiClient.post(`/file/${fileId}/opened`);
+export const getFileCdnUrl = (fileId, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.get(`/file/${fileId}/cdn-url${query ? `?${query}` : ''}`);
+};
 export const getThumbnail = (fileId) => apiClient.stream(`/file/${fileId}/thumbnail`);
+export const getThumbnailCdnUrl = (fileId, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.get(`/file/${fileId}/thumbnail/cdn-url${query ? `?${query}` : ''}`);
+};
 
 export const uploadFile = (parentDirId, body, headers = {}) => 
   apiClient.stream(parentDirId ? `/file/${parentDirId}` : '/file', { method: 'POST', body, headers });

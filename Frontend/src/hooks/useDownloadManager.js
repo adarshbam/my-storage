@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { SERVER_URL } from '../lib/api';
 
 export function useDownloadManager({ updateTransfer, abortControllers, downloadReaders, downloadWritables }) {
   const startDownload = useCallback(async (transfer) => {
@@ -9,9 +10,11 @@ export function useDownloadManager({ updateTransfer, abortControllers, downloadR
     abortControllers.current[_id] = controller;
 
     try {
+      const isCdnUrl = typeof url === 'string' && (url.includes('cdn.') || !url.startsWith(SERVER_URL));
+
       const response = await fetch(url, {
         signal: controller.signal,
-        credentials: "include",
+        credentials: isCdnUrl ? undefined : "include",
       });
 
       if (!response.ok) {

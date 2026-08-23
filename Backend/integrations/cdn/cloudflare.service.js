@@ -5,33 +5,39 @@ import {
 import { createHmac } from "node:crypto";
 
 // Cloudflare CDN integration - placeholder for future implementation
-export const createCdnDownloadUrl = ({
+export const createCloudflareCdnDownloadUrl = ({
   fileId,
   extension,
+  version = 1,
   isThumbnail = false,
   filename,
   expiresInSeconds = 3600,
+  action,
 }) => {
   const expires = Math.floor(Date.now() / 1000) + expiresInSeconds;
   const path = `/files/${isThumbnail ? "thumbnails/" : ""}${fileId}${extension || ""}`;
+  const v = version || 1;
 
-  // Create HMAC SHA-256 signature
+  // Create HMAC SHA-256 signature covering path, contentVersion, and expiration
   const hmac = createHmac("sha256", CLOUDFLARE_CDN_SECRET);
-  hmac.update(`${path}:${expires}`);
+  hmac.update(`${path}:${v}:${expires}`);
   const signature = hmac.digest("hex");
+
   const queryParams = new URLSearchParams({
+    v: v.toString(),
     exp: expires.toString(),
     sig: signature,
-    name: filename || "",
   });
+
+  if (filename) {
+    queryParams.set("name", filename);
+  }
+
+  if (action) {
+    queryParams.set("action", action);
+  }
+
   return `${CLOUDFLARE_CDN_DOMAIN}${path}?${queryParams.toString()}`;
 };
 
-console.log(
-  createCdnDownloadUrl({
-    fileId: "6a832f8faa66500d0fc78eb5",
-    extension: ".jpeg",
-    filename: "6a832f8faa66500d0fc78eb5.jpeg",
-    expiresInSeconds: 60,
-  }),
-);
+export const createCdnDownloadUrl = createCloudflareCdnDownloadUrl;

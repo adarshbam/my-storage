@@ -5,8 +5,11 @@ import checkAuth from "../middlewares/authMiddleware.js";
 
 import {
   deleteFile,
+  getCdnUrl,
   getFileById,
   getThumbnail,
+  getThumbnailCdnUrl,
+  markFileOpened,
   renameFile,
   search,
   uploadFile,
@@ -20,7 +23,10 @@ import { validate } from "../middlewares/validationMiddleware.js";
 import {
   searchSchema,
   getThumbnailSchema,
+  getThumbnailCdnUrlSchema,
+  getCdnUrlSchema,
   getFileByIdSchema,
+  markFileOpenedSchema,
   uploadFileSchema,
   renameFileSchema,
   saveFileSchema,
@@ -55,6 +61,14 @@ router.get(
 );
 
 router.get(
+  "/:fileId/thumbnail/cdn-url",
+  checkAuth,
+  thumbnailLimiter,
+  validate(getThumbnailCdnUrlSchema),
+  getThumbnailCdnUrl,
+);
+
+router.get(
   "/:fileId/thumbnail",
   checkAuth,
   thumbnailLimiter,
@@ -82,6 +96,22 @@ router.get(
   checkAuth,
   directoryReadLimiter,
   getAllRecentItems,
+);
+
+router.post(
+  "/:fileId/opened",
+  checkAuth,
+  directoryReadLimiter,
+  validate(markFileOpenedSchema),
+  markFileOpened,
+);
+
+router.get(
+  "/:fileId/cdn-url",
+  checkAuth,
+  directoryReadLimiter,
+  validate(getCdnUrlSchema),
+  getCdnUrl,
 );
 
 router.get(

@@ -12,8 +12,22 @@ import {
 } from "../controllers/planController.js";
 import { lightReadLimiter, adminLimiter } from "../middlewares/rateLimiter.js";
 import throttle from "../utils/throttle.js";
+import { getLegacyTrafficMetrics } from "../utils/legacyObservability.js";
 
 const router = express.Router();
+
+// GET /owner-settings/legacy-traffic — Inspect legacy byte endpoint traffic metrics
+router.get(
+  "/legacy-traffic",
+  checkAuth,
+  lightReadLimiter,
+  (req, res) => {
+    if (req.user?.role !== "Owner" && req.user?.role !== "Admin") {
+      return res.status(403).json({ error: "Forbidden: Owner or Admin role required" });
+    }
+    return res.status(200).json(getLegacyTrafficMetrics());
+  },
+);
 
 // GET /owner-settings — Fetch all owner settings
 router.get(

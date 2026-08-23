@@ -1,0 +1,15 @@
+{
+  "name": "vault-storage-cdn",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker CDN for Vault Storage private B2 delivery",
+  "main": "src/worker.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^3.109.2"
+  }
+}

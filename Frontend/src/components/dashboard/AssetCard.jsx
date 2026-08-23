@@ -27,6 +27,7 @@ import { SERVER_URL } from "../../lib/api";
 import { usePlan } from "../../context/PlanContext";
 import Skeleton from "../ui/Skeleton";
 import { prefetchFileContent } from "../../lib/fileCache";
+import { useThumbnailUrl } from "../../lib/thumbnailCache";
 
 const formatRelativeTime = (dateString) => {
   if (!dateString) return "";
@@ -165,6 +166,7 @@ export default function AssetCard({
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const { thumbnailUrl, error: thumbCdnError } = useThumbnailUrl(item);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
   const { isNoPlan, rules } = usePlan();
@@ -476,13 +478,13 @@ export default function AssetCard({
                 className="text-vault-emerald drop-shadow-[0_0_15px_rgba(0,212,165,0.4)]"
               />
             )
-          ) : item.hasThumbnail && !imageError ? (
+          ) : item.hasThumbnail && !imageError && !thumbCdnError && thumbnailUrl ? (
             <>
               {!imageLoaded && (
                 <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
               )}
               <img
-                src={`${SERVER_URL}/file/${item._id}/thumbnail`}
+                src={thumbnailUrl}
                 alt="thumbnail"
                 className={`w-full h-full object-cover transition-opacity duration-300 ${
                   imageLoaded ? "opacity-100" : "opacity-0"
@@ -492,7 +494,6 @@ export default function AssetCard({
                   setImageError(true);
                   setImageLoaded(true);
                 }}
-                crossOrigin="use-credentials"
                 loading="lazy"
                 draggable={false}
               />

@@ -22,6 +22,11 @@ const fileSchema = new Schema(
     },
     hasThumbnail: { type: Boolean, default: false },
     externalUrl: { type: String, default: null },
+    contentVersion: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
   },
   { strict: "throw", timestamps: true },
 );

@@ -19,6 +19,7 @@ import {
   History,
 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
+import { getFileCdnUrl } from "../../api/files.api";
 import Button from "../ui/Button";
 import Editor from "react-simple-code-editor";
 import { usePlan } from "../../context/PlanContext";
@@ -206,6 +207,7 @@ export default function FilePreviewModal({
   const [tempName, setTempName] = useState(file?.name || "");
   const [imgLoaded, setImgLoaded] = useState(false);
   const [wrapText, setWrapText] = useState(false);
+  const [cdnUrl, setCdnUrl] = useState(null);
   const modalRef = useRef(null);
 
   useEffect(() => {
@@ -281,67 +283,135 @@ export default function FilePreviewModal({
   };
 
   useEffect(() => {
-    if (!isOpen || !file) return;
+    if (!isOpen || !file) {
+      setCdnUrl(null);
+      return;
+    }
 
-    // Reset image loading state
+    // Reset preview and loading states
     setImgLoaded(false);
+    setCdnUrl(null);
+    setError(null);
 
     // Abort controller for fast network cancellation
     const abortController = new AbortController();
 
+    const isVaultStorage =
+      file.provider !== "github" && file.provider !== "google_drive";
+
     const fetchContent = async () => {
-      // Only fetch content for text/code files
-      if (isTextOrCode(file.extension)) {
-        // 1. Check RAM cache first for 0ms instant display
-        const cached = getCachedContent(file._id);
-        if (cached !== null) {
-          setContent(cached);
-          setEditedContent(cached);
-          setLoading(false);
-          setError(null);
-          return;
+      const ext = file.extension?.toLowerCase();
+      const isText = isTextOrCode(ext);
+
+      if (isVaultStorage) {
+        // 1. Check RAM cache for text/code first for 0ms instant display
+        if (isText) {
+          const cached = getCachedContent(file._id);
+          if (cached !== null) {
+            setContent(cached);
+            setEditedContent(cached);
+            setLoading(false);
+            setError(null);
+            return;
+          }
         }
 
         setLoading(true);
         setError(null);
 
         try {
-          let url =
-            file.provider === "github"
-              ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}${
-                  selectedBranch ? `?ref=${encodeURIComponent(selectedBranch)}` : ""
-                }`
-              : file.provider === "google_drive"
-                ? `${SERVER_URL}/drive/file/${file._id}`
-                : `${SERVER_URL}/file/${file._id}`;
-
-          if (ownerId) {
-            url += (url.includes("?") ? "&" : "?") + `ownerId=${ownerId}`;
+          // Fetch signed CDN URL from Express backend
+          const params = ownerId ? { ownerId } : {};
+          const cdnData = await getFileCdnUrl(file._id, params);
+          if (!cdnData || !cdnData.url) {
+            throw new Error("Failed to obtain CDN preview URL");
           }
 
-          const res = await fetch(url, {
-            credentials: "include",
-            signal: abortController.signal,
-          });
+          if (abortController.signal.aborted) return;
+          setCdnUrl(cdnData.url);
 
-          if (!res.ok) throw new Error("Failed to load content");
-          const text = await res.text();
+          // For text/code, fetch content directly from the signed CDN URL
+          if (isText) {
+            const res = await fetch(cdnData.url, {
+              signal: abortController.signal,
+            });
 
-          // Store in high-performance RAM cache
-          setCachedContent(file._id, text);
+            if (!res.ok) throw new Error("Failed to load content from CDN");
+            const text = await res.text();
 
-          setContent(text);
-          setEditedContent(text);
+            if (abortController.signal.aborted) return;
+
+            // Store in high-performance RAM cache
+            setCachedContent(file._id, text);
+
+            setContent(text);
+            setEditedContent(text);
+          } else {
+            setContent(null);
+          }
         } catch (err) {
-          if (err.name === "AbortError") return;
-          console.error(err);
-          setError("Failed to load file content");
+          if (err.name === "AbortError" || abortController.signal.aborted) return;
+          console.error("CDN Preview fetch error:", err);
+          setError(err.message || "Failed to load file content");
         } finally {
-          setLoading(false);
+          if (!abortController.signal.aborted) {
+            setLoading(false);
+          }
         }
       } else {
-        setContent(null);
-        setLoading(false);
+        // External provider (GitHub or Google Drive)
+        if (isText) {
+          const cached = getCachedContent(file._id);
+          if (cached !== null) {
+            setContent(cached);
+            setEditedContent(cached);
+            setLoading(false);
+            setError(null);
+            return;
+          }
+
+          setLoading(true);
+          setError(null);
+
+          try {
+            let url =
+              file.provider === "github"
+                ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}${
+                    selectedBranch ? `?ref=${encodeURIComponent(selectedBranch)}` : ""
+                  }`
+                : `${SERVER_URL}/drive/file/${file._id}`;
+
+            if (ownerId) {
+              url += (url.includes("?") ? "&" : "?") + `ownerId=${ownerId}`;
+            }
+
+            const res = await fetch(url, {
+              credentials: "include",
+              signal: abortController.signal,
+            });
+
+            if (!res.ok) throw new Error("Failed to load content");
+            const text = await res.text();
+
+            if (abortController.signal.aborted) return;
+
+            setCachedContent(file._id, text);
+
+            setContent(text);
+            setEditedContent(text);
+          } catch (err) {
+            if (err.name === "AbortError" || abortController.signal.aborted) return;
+            console.error(err);
+            setError("Failed to load file content");
+          } finally {
+            if (!abortController.signal.aborted) {
+              setLoading(false);
+            }
+          }
+        } else {
+          setContent(null);
+          setLoading(false);
+        }
       }
     };
 
@@ -357,18 +427,25 @@ export default function FilePreviewModal({
 
   if (!isOpen || !file) return null;
 
-  let fileUrl =
-    file.provider === "github"
-      ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}${
-          selectedBranch ? `?ref=${encodeURIComponent(selectedBranch)}` : ""
-        }`
-      : file.provider === "google_drive"
-        ? `${SERVER_URL}/drive/file/${file._id}`
-        : `${SERVER_URL}/file/${file._id}`;
+  const isVaultStorage =
+    file.provider !== "github" && file.provider !== "google_drive";
 
-  if (ownerId) {
-    fileUrl += (fileUrl.includes("?") ? "&" : "?") + `ownerId=${ownerId}`;
+  let externalFileUrl = "";
+  if (!isVaultStorage) {
+    externalFileUrl =
+      file.provider === "github"
+        ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}${
+            selectedBranch ? `?ref=${encodeURIComponent(selectedBranch)}` : ""
+          }`
+        : `${SERVER_URL}/drive/file/${file._id}`;
+
+    if (ownerId) {
+      externalFileUrl +=
+        (externalFileUrl.includes("?") ? "&" : "?") + `ownerId=${ownerId}`;
+    }
   }
+
+  const previewSrc = isVaultStorage ? cdnUrl : externalFileUrl;
 
   const handleSave = async () => {
     setSaving(true);
@@ -429,7 +506,7 @@ export default function FilePreviewModal({
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     let downloadUrl =
       file.provider === "github"
         ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}?action=download`
@@ -439,6 +516,24 @@ export default function FilePreviewModal({
     if (ownerId) {
       downloadUrl += `&ownerId=${ownerId}`;
     }
+
+    if (isVaultStorage) {
+      try {
+        const cdnData = await getFileCdnUrl(file._id, {
+          ...(ownerId ? { ownerId } : {}),
+          action: "download",
+        });
+        if (cdnData && cdnData.url) {
+          downloadUrl = cdnData.url;
+        }
+      } catch (err) {
+        console.error(
+          "Failed to obtain CDN download URL for modal download, falling back to direct route:",
+          err.message,
+        );
+      }
+    }
+
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.download = file.name;
@@ -485,20 +580,23 @@ export default function FilePreviewModal({
     if (isImage(ext)) {
       return (
         <div className="relative flex items-center justify-center h-full bg-slate-950/50 rounded-2xl overflow-hidden border border-white/5">
-          {!imgLoaded && (
+          {(!imgLoaded || (isVaultStorage && !cdnUrl)) && (
             <div className="absolute inset-0 z-0">
               <FilePreviewSkeleton type="image" />
             </div>
           )}
-          <img
-            src={fileUrl}
-            alt={file.name}
-            className={`max-w-full max-h-full object-contain transition-opacity duration-300 relative z-10 ${
-              imgLoaded ? "opacity-100" : "opacity-0"
-            }`}
-            crossOrigin="use-credentials"
-            onLoad={() => setImgLoaded(true)}
-          />
+          {previewSrc && (
+            <img
+              src={previewSrc}
+              alt={file.name}
+              className={`max-w-full max-h-full object-contain transition-opacity duration-300 relative z-10 ${
+                imgLoaded ? "opacity-100" : "opacity-0"
+              }`}
+              crossOrigin={isVaultStorage ? undefined : "use-credentials"}
+              onLoad={() => setImgLoaded(true)}
+              onError={() => setError("Failed to load image")}
+            />
+          )}
         </div>
       );
     }
@@ -506,35 +604,49 @@ export default function FilePreviewModal({
     if (isVideo(ext)) {
       return (
         <div className="flex items-center justify-center h-full bg-slate-950/50 rounded-2xl overflow-hidden border border-white/5">
-          <video
-            src={fileUrl}
-            controls
-            className="max-w-full max-h-full rounded-lg"
-            crossOrigin="use-credentials"
-          />
+          {previewSrc ? (
+            <video
+              src={previewSrc}
+              controls
+              className="max-w-full max-h-full rounded-lg"
+              crossOrigin={isVaultStorage ? undefined : "use-credentials"}
+            />
+          ) : (
+            <FilePreviewSkeleton type="video" />
+          )}
         </div>
       );
     }
 
     if (isPdf(ext)) {
       return (
-        <iframe
-          src={fileUrl}
-          className="w-full h-full rounded-2xl bg-white border-0"
-          title={file.name}
-        />
+        <div className="w-full h-full">
+          {previewSrc ? (
+            <iframe
+              src={previewSrc}
+              className="w-full h-full rounded-2xl bg-white border-0"
+              title={file.name}
+            />
+          ) : (
+            <FilePreviewSkeleton type="pdf" />
+          )}
+        </div>
       );
     }
 
     if (isAudio(ext)) {
       return (
         <div className="flex items-center justify-center h-full bg-slate-950/50 rounded-2xl overflow-hidden border border-white/5">
-          <audio
-            src={fileUrl}
-            controls
-            className="w-full max-w-md"
-            crossOrigin="use-credentials"
-          />
+          {previewSrc ? (
+            <audio
+              src={previewSrc}
+              controls
+              className="w-full max-w-md"
+              crossOrigin={isVaultStorage ? undefined : "use-credentials"}
+            />
+          ) : (
+            <div className="text-slate-400 text-sm">Loading audio preview...</div>
+          )}
         </div>
       );
     }
