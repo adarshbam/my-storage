@@ -54,9 +54,21 @@ export const copyDirectorySchema = moveDirectorySchema;
 
 export const deleteDirectoryBatchSchema = {
   body: z.array(
-    z.object({
-      _id: objectIdSchema,
-      type: z.enum(["file", "directory"]),
-    })
+    z
+      .object({
+        _id: optionalObjectIdSchema.optional(),
+        id: optionalObjectIdSchema.optional(),
+        type: z.enum(["file", "directory"]),
+      })
+      .refine((data) => data._id || data.id, {
+        message: "Either _id or id is required",
+      })
   ),
+  query: z
+    .object({
+      ownerId: z.string().optional(),
+      permanent: z.string().optional(),
+    })
+    .optional(),
 };
+

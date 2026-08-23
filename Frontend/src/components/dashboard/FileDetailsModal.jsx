@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import { X, Calendar, HardDrive, Shield, FileType, User } from "lucide-react";
 import { formatSize, formatDate, isSpecialFolder } from "../../lib/utils";
 import {
@@ -11,6 +12,15 @@ import { useThumbnailUrl } from "../../lib/thumbnailCache";
 
 export default function FileDetailsModal({ item, onClose }) {
   const { thumbnailUrl, error: thumbCdnError } = useThumbnailUrl(item);
+  const [thumbSrc, setThumbSrc] = useState(thumbnailUrl);
+  const [triedFallback, setTriedFallback] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setThumbSrc(thumbnailUrl);
+    setTriedFallback(false);
+    setImageError(false);
+  }, [thumbnailUrl]);
 
   if (!item) return null;
 
@@ -19,6 +29,15 @@ export default function FileDetailsModal({ item, onClose }) {
   const provider = item.provider || "local";
   const ext = item.name.split(".").pop()?.toLowerCase() || "";
   const isSpecial = isSpecialFolder(item);
+
+  const handleImageError = () => {
+    if (!triedFallback && item?._id && provider === "local") {
+      setTriedFallback(true);
+      setThumbSrc(`${SERVER_URL}/file/${item._id}/thumbnail`);
+    } else {
+      setImageError(true);
+    }
+  };
 
   // Environment styling
   let envClass =
@@ -55,7 +74,7 @@ export default function FileDetailsModal({ item, onClose }) {
           />
 
           <div
-            className={`rounded-lg ${item.type === "file" && item.hasThumbnail ? "bg-slate-100 dark:bg-vault-black border-4 border-slate-200 dark:border-white shadow-xl" : ""} flex overflow-hidden items-center justify-center shrink-0 mb-4 relative z-10`}
+            className={`rounded-lg ${item.type === "file" && item.hasThumbnail && !imageError && thumbSrc ? "bg-slate-100 dark:bg-vault-black border-4 border-slate-200 dark:border-white shadow-xl" : ""} flex overflow-hidden items-center justify-center shrink-0 mb-4 relative z-10`}
           >
             {isDirectory ? (
               provider === "google_drive" || item.name?.toLowerCase() === "google drive" ? (
@@ -84,11 +103,12 @@ export default function FileDetailsModal({ item, onClose }) {
                   </svg>
                 </div>
               )
-            ) : item.hasThumbnail && !thumbCdnError && thumbnailUrl ? (
+            ) : item.hasThumbnail && !imageError && thumbSrc ? (
               <img
-                src={thumbnailUrl}
+                src={thumbSrc}
                 alt="thumbnail"
                 className="w-full h-full object-cover drop-shadow-[0_5px_10px_rgba(0,0,0,0.5)]"
+                onError={handleImageError}
                 draggable={false}
               />
             ) : (

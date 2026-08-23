@@ -1192,7 +1192,7 @@ export default function FileBrowser({ specialView }) {
             const type = data.directories.some((d) => d._id === item._id)
               ? "directory"
               : "file";
-            return { id: item._id, type };
+            return { _id: item._id, id: item._id, type };
           });
 
           const params = new URLSearchParams();
@@ -2340,6 +2340,7 @@ export default function FileBrowser({ specialView }) {
         confirmDeleteGithub={confirmDeleteGithub}
         isPrivate={isPrivate}
         setIsPrivate={setIsPrivate}
+        selectedCount={selectedItems.length}
       />
 
       {/* New Vault OS Details Modal */}

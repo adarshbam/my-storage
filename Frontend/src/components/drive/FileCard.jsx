@@ -47,6 +47,24 @@ export default function FileCard({
   const [showMenu, setShowMenu] = useState(false);
   const [imageError, setImageError] = useState(false);
   const { thumbnailUrl, error: thumbCdnError } = useThumbnailUrl(item);
+  const [thumbSrc, setThumbSrc] = useState(thumbnailUrl);
+  const [triedFallback, setTriedFallback] = useState(false);
+
+  useEffect(() => {
+    setThumbSrc(thumbnailUrl);
+    setTriedFallback(false);
+    setImageError(false);
+  }, [thumbnailUrl]);
+
+  const handleImageError = () => {
+    if (!triedFallback && item?._id && item.provider !== "google_drive" && item.provider !== "github") {
+      setTriedFallback(true);
+      setThumbSrc(`${SERVER_URL}/file/${item._id}/thumbnail`);
+    } else {
+      setImageError(true);
+    }
+  };
+
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -162,12 +180,12 @@ export default function FileCard({
           </>
         ) : (
           <>
-            {viewMode === "grid" && item.hasThumbnail && !imageError && !thumbCdnError && thumbnailUrl ? (
+            {viewMode === "grid" && item.hasThumbnail && !imageError && thumbSrc ? (
               <img
-                src={thumbnailUrl}
+                src={thumbSrc}
                 alt="thumbnail"
                 className="w-full h-full object-cover rounded-xl"
-                onError={() => setImageError(true)}
+                onError={handleImageError}
                 loading="lazy"
               />
             ) : (

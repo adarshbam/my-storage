@@ -72,6 +72,7 @@ export default function FileOperationModals({
   confirmDeleteGithub,
   isPrivate,
   setIsPrivate,
+  selectedCount = 0,
 }) {
   const lineCount = (newFileContent || "").split("\n").length;
   const charCount = (newFileContent || "").length;
@@ -138,12 +139,16 @@ export default function FileOperationModals({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-black text-sm text-slate-900 dark:text-white truncate">
-                  Delete {modalItem?.name || "item"}
+                  Delete {modalItem ? modalItem.name : `${selectedCount || "selected"} items`}
                 </div>
                 <div className="text-xs text-slate-600 dark:text-white/60 mt-0.5 font-medium">
                   {isPermanentDelete
-                    ? "This item will be permanently erased from disk."
-                    : "Item will be moved to the recycle bin."}
+                    ? modalItem
+                      ? "This item will be permanently erased from disk."
+                      : "These items will be permanently erased from disk."
+                    : modalItem
+                      ? "Item will be moved to the recycle bin."
+                      : "Items will be moved to the recycle bin."}
                 </div>
               </div>
             </div>

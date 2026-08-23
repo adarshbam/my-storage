@@ -544,7 +544,10 @@ export const ensureWebpThumbnailExists = async ({
   fileId,
   isTrash = false,
 }) => {
-  const fileExt = file.extension ? file.extension.toLowerCase() : "";
+  let fileExt = file.extension ? file.extension.toLowerCase().trim() : "";
+  if (fileExt && !fileExt.startsWith(".")) {
+    fileExt = `.${fileExt}`;
+  }
 
   if (
     !SUPPORTED_IMAGE_THUMBNAIL_EXTENSIONS.includes(fileExt) &&
@@ -575,11 +578,12 @@ export const ensureWebpThumbnailExists = async ({
   // 2. Generate on-demand in Worker Thread purely in-memory (Zero Disk I/O)
   try {
     let workerResult;
+    const effectiveExt = fileExt || (file.extension ? (file.extension.startsWith(".") ? file.extension : `.${file.extension}`) : "");
 
     if (SUPPORTED_IMAGE_THUMBNAIL_EXTENSIONS.includes(fileExt)) {
       const s3Params = {
         Bucket: process.env.BACKBLAZE_BUCKET_NAME,
-        Key: `${fileId}${file.extension}`,
+        Key: `${fileId}${effectiveExt}`,
       };
       const command = new GetObjectCommand(s3Params);
       const s3Response = await s3Client.send(command);
@@ -597,7 +601,7 @@ export const ensureWebpThumbnailExists = async ({
       });
     } else if (SUPPORTED_VIDEO_THUMBNAIL_EXTENSIONS.includes(fileExt)) {
       const videoUrl = await createDownloadSignedUrl({
-        key: `${fileId}${file.extension}`,
+        key: `${fileId}${effectiveExt}`,
       });
       workerResult = await processThumbnailInWorker({
         type: "video",
@@ -687,6 +691,11 @@ export const createThumbnailCdnUrlLogic = async ({
       throw error;
     }
   }
+
+  // Ensure WebP thumbnail exists in B2 before returning CDN URL
+  await ensureWebpThumbnailExists({ file, fileId, isTrash }).catch((err) =>
+    console.warn("ensureWebpThumbnailExists warning in createThumbnailCdnUrlLogic:", err.message)
+  );
 
   const url = createCloudflareCdnDownloadUrl({
     fileId,
@@ -1322,7 +1331,8 @@ export const uploadVaultCompleteLogic = async ({
   );
 
   // Trigger background thumbnail generation for media files
-  const ext = (file.extension || "").toLowerCase();
+  const rawExt = (file.extension || "").toLowerCase().trim();
+  const ext = rawExt.startsWith(".") ? rawExt : `.${rawExt}`;
   const imageExtensions = [
     ".jpg",
     ".jpeg",
@@ -1538,7 +1548,8 @@ export const uploadVaultMultipartCompleteLogic = async ({
   );
 
   // Trigger background thumbnail generation for media files
-  const ext = (file.extension || "").toLowerCase();
+  const rawExt = (file.extension || "").toLowerCase().trim();
+  const ext = rawExt.startsWith(".") ? rawExt : `.${rawExt}`;
   const imageExtensions = [
     ".jpg",
     ".jpeg",

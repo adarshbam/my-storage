@@ -167,6 +167,16 @@ export default function AssetCard({
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const { thumbnailUrl, error: thumbCdnError } = useThumbnailUrl(item);
+  const [thumbSrc, setThumbSrc] = useState(thumbnailUrl);
+  const [triedFallback, setTriedFallback] = useState(false);
+
+  useEffect(() => {
+    setThumbSrc(thumbnailUrl);
+    setTriedFallback(false);
+    setImageError(false);
+    setImageLoaded(false);
+  }, [thumbnailUrl]);
+
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
   const { isNoPlan, rules } = usePlan();
@@ -177,6 +187,16 @@ export default function AssetCard({
   const isDirectory = item.type === "directory" || provider === "shared_drive";
   const isSpecial = isSpecialFolder(item);
   const typeInfo = getItemTypeInfo(item, isDirectory, provider, specialView);
+
+  const handleImageError = () => {
+    if (!triedFallback && item?._id && provider === "local") {
+      setTriedFallback(true);
+      setThumbSrc(`${SERVER_URL}/file/${item._id}/thumbnail`);
+    } else {
+      setImageError(true);
+      setImageLoaded(true);
+    }
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -478,22 +498,19 @@ export default function AssetCard({
                 className="text-vault-emerald drop-shadow-[0_0_15px_rgba(0,212,165,0.4)]"
               />
             )
-          ) : item.hasThumbnail && !imageError && !thumbCdnError && thumbnailUrl ? (
+          ) : item.hasThumbnail && !imageError && thumbSrc ? (
             <>
               {!imageLoaded && (
                 <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
               )}
               <img
-                src={thumbnailUrl}
+                src={thumbSrc}
                 alt="thumbnail"
                 className={`w-full h-full object-cover transition-opacity duration-300 ${
                   imageLoaded ? "opacity-100" : "opacity-0"
                 }`}
                 onLoad={() => setImageLoaded(true)}
-                onError={() => {
-                  setImageError(true);
-                  setImageLoaded(true);
-                }}
+                onError={handleImageError}
                 loading="lazy"
                 draggable={false}
               />
