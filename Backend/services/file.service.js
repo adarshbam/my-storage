@@ -18,6 +18,10 @@ import { cacheDel, cacheHgetall, cacheHset } from "../databases/redis.js";
 import {
   createUploadSignedUrl,
   createDownloadSignedUrl,
+  initiateMultipartUpload,
+  getUploadPartSignedUrl,
+  completeMultipartUpload,
+  abortMultipartUpload,
   s3Client,
   uploadToB2,
   deleteFromB2,
@@ -1267,6 +1271,275 @@ export const uploadVaultInitiateLogic = async ({ userId, parentDirId, rootDirId,
     signedUrl: signedUrl,
     fileName: fullFileName,
   };
+};
+
+export const uploadVaultMultipartInitiateLogic = async ({
+  userId,
+  parentDirId,
+  rootDirId,
+  name,
+  size,
+  contentType,
+}) => {
+  const dirId =
+    !parentDirId || parentDirId === "root" || parentDirId === "undefined"
+      ? rootDirId
+      : parentDirId;
+
+  let ownerId = userId;
+  if (dirId) {
+    const dir = await Directory.findOne({ _id: dirId }).lean();
+    if (dir && dir.userId) {
+      ownerId = dir.userId.toString();
+    }
+  }
+
+  const id = new mongoose.Types.ObjectId().toString();
+  const ext = path.extname(name);
+  const fullFileName = `${id}${ext}`;
+  const effectiveContentType = contentType || "application/octet-stream";
+
+  // 1. Initiate Multipart upload in S3/B2
+  const multipartRes = await initiateMultipartUpload({
+    key: fullFileName,
+    contentType: effectiveContentType,
+  });
+
+  const uploadId = multipartRes.UploadId;
+  const dirPath = dirId ? await getDirectoryPath(id, dirId) : [];
+
+  const imageExtensions = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    ".tiff",
+    ".svg",
+  ];
+  const videoExtensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"];
+  const isMedia =
+    imageExtensions.includes(ext.toLowerCase()) ||
+    videoExtensions.includes(ext.toLowerCase());
+
+  // 2. Create the placeholder File record with uploading status
+  await File.create({
+    _id: id,
+    extension: ext,
+    type: "file",
+    userId: ownerId,
+    path: dirPath,
+    size: size || 0,
+    name: name,
+    parentDir: dirId,
+    hasThumbnail: isMedia,
+    uploadStatus: "uploading",
+    uploadId: uploadId,
+  });
+
+  if (size) {
+    await updateParentDirectorySize(dirId, size);
+  }
+
+  await cacheDel("dir:contents:" + dirId);
+  await cacheDel("dir:meta:" + dirId);
+
+  // 5MB standard chunk size for S3/B2 multipart uploads
+  const PART_SIZE = 5 * 1024 * 1024;
+
+  return {
+    fileId: id,
+    uploadId,
+    key: fullFileName,
+    partSize: PART_SIZE,
+    totalParts: Math.ceil((size || 1) / PART_SIZE),
+  };
+};
+
+export const uploadVaultMultipartPartUrlLogic = async ({
+  userId,
+  userRole,
+  fileId,
+  uploadId,
+  partNumber,
+  key,
+}) => {
+  const req = { user: { id: userId, role: userRole } };
+  const file = await File.findOne({ _id: fileId }).select("userId path uploadId").lean();
+
+  if (!file) {
+    const error = new Error("File not found");
+    error.status = 404;
+    throw error;
+  }
+
+  if (file.userId.toString() !== req.user.id) {
+    const hasAccess = await verifyItemAccess(
+      file.userId,
+      req,
+      fileId,
+      "file",
+      "write",
+      file.path,
+    );
+    if (!hasAccess) {
+      const error = new Error("Unauthorized to upload parts to this file");
+      error.status = 403;
+      throw error;
+    }
+  }
+
+  const effectiveUploadId = uploadId || file.uploadId;
+  const signedUrl = await getUploadPartSignedUrl({
+    key,
+    uploadId: effectiveUploadId,
+    partNumber,
+    expiresIn: 3600,
+  });
+
+  return {
+    fileId,
+    partNumber,
+    signedUrl,
+  };
+};
+
+export const uploadVaultMultipartCompleteLogic = async ({
+  userId,
+  userRole,
+  fileId,
+  uploadId,
+  key,
+  parts,
+}) => {
+  const req = { user: { id: userId, role: userRole } };
+  const file = await File.findOne({ _id: fileId }).select("userId path parentDir size extension name uploadId").lean();
+
+  if (!file) {
+    const error = new Error("File not found");
+    error.status = 404;
+    throw error;
+  }
+
+  if (file.userId.toString() !== req.user.id) {
+    const hasAccess = await verifyItemAccess(
+      file.userId,
+      req,
+      fileId,
+      "file",
+      "write",
+      file.path,
+    );
+    if (!hasAccess) {
+      const error = new Error("Unauthorized to complete multipart upload");
+      error.status = 403;
+      throw error;
+    }
+  }
+
+  const effectiveUploadId = uploadId || file.uploadId;
+
+  // Complete multipart assembly in Backblaze B2 / S3
+  await completeMultipartUpload({
+    key,
+    uploadId: effectiveUploadId,
+    parts,
+  });
+
+  // Mark file upload as completed in DB
+  await File.updateOne(
+    { _id: fileId },
+    {
+      $set: {
+        uploadStatus: "completed",
+        uploadId: null,
+      },
+    }
+  );
+
+  // Trigger background thumbnail generation for media files
+  const ext = (file.extension || "").toLowerCase();
+  const imageExtensions = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    ".tiff",
+    ".svg",
+  ];
+  const videoExtensions = [".mp4", ".webm", ".mkv", ".avi", ".mov"];
+
+  if (imageExtensions.includes(ext) || videoExtensions.includes(ext)) {
+    ensureWebpThumbnailExists({ file, fileId }).catch((err) =>
+      console.warn("Async thumbnail generation after multipart complete:", err.message),
+    );
+  }
+
+  if (file.parentDir) {
+    await cacheDel("dir:contents:" + file.parentDir.toString());
+    await cacheDel("dir:meta:" + file.parentDir.toString());
+  }
+
+  return {
+    fileId,
+    success: true,
+    name: file.name,
+    size: file.size,
+  };
+};
+
+export const uploadVaultMultipartAbortLogic = async ({
+  userId,
+  userRole,
+  fileId,
+  uploadId,
+  key,
+}) => {
+  const req = { user: { id: userId, role: userRole } };
+  const file = await File.findOne({ _id: fileId }).select("userId path parentDir size uploadId").lean();
+
+  if (!file) {
+    return { success: true };
+  }
+
+  if (file.userId.toString() !== req.user.id) {
+    const hasAccess = await verifyItemAccess(
+      file.userId,
+      req,
+      fileId,
+      "file",
+      "write",
+      file.path,
+    );
+    if (!hasAccess) {
+      const error = new Error("Unauthorized to abort upload");
+      error.status = 403;
+      throw error;
+    }
+  }
+
+  const effectiveUploadId = uploadId || file.uploadId;
+  if (effectiveUploadId && key) {
+    try {
+      await abortMultipartUpload({ key, uploadId: effectiveUploadId });
+    } catch (abortErr) {
+      console.warn("S3 abort multipart warning:", abortErr.message);
+    }
+  }
+
+  if (file.size && file.parentDir) {
+    await updateParentDirectorySize(file.parentDir, -file.size);
+  }
+
+  await File.deleteOne({ _id: fileId });
+
+  if (file.parentDir) {
+    await cacheDel("dir:contents:" + file.parentDir.toString());
+    await cacheDel("dir:meta:" + file.parentDir.toString());
+  }
+
+  return { success: true };
 };
 
 export const renameFileLogic = async ({ fileId, name, userId, userRole }) => {

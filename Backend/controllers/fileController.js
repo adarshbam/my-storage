@@ -261,3 +261,70 @@ export const saveFile = async (req, res, next) => {
     next(error);
   }
 };
+
+export const uploadVaultMultipartInitiate = async (req, res, next) => {
+  try {
+    const data = await fileService.uploadVaultMultipartInitiateLogic({
+      userId: req.user.id,
+      parentDirId: req.body.parentDirId,
+      rootDirId: req.user.rootDirId,
+      name: req.body.name,
+      size: req.body.size,
+      contentType: req.body.contentType,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status) return res.status(error.status).send(error.message);
+    next(error);
+  }
+};
+
+export const uploadVaultMultipartPartUrl = async (req, res, next) => {
+  try {
+    const data = await fileService.uploadVaultMultipartPartUrlLogic({
+      userId: req.user.id,
+      userRole: req.user.role,
+      fileId: req.body.fileId,
+      uploadId: req.body.uploadId,
+      partNumber: req.body.partNumber,
+      key: req.body.key,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status) return res.status(error.status).send(error.message);
+    next(error);
+  }
+};
+
+export const uploadVaultMultipartComplete = async (req, res, next) => {
+  try {
+    const data = await fileService.uploadVaultMultipartCompleteLogic({
+      userId: req.user.id,
+      userRole: req.user.role,
+      fileId: req.body.fileId,
+      uploadId: req.body.uploadId,
+      key: req.body.key,
+      parts: req.body.parts,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status) return res.status(error.status).send(error.message);
+    next(error);
+  }
+};
+
+export const uploadVaultMultipartAbort = async (req, res, next) => {
+  try {
+    const data = await fileService.uploadVaultMultipartAbortLogic({
+      userId: req.user.id,
+      userRole: req.user.role,
+      fileId: req.body.fileId,
+      uploadId: req.body.uploadId,
+      key: req.body.key,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status) return res.status(error.status).send(error.message);
+    next(error);
+  }
+};

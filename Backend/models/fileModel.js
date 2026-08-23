@@ -27,6 +27,15 @@ const fileSchema = new Schema(
       default: 1,
       min: 1,
     },
+    uploadStatus: {
+      type: String,
+      enum: ["completed", "uploading", "failed"],
+      default: "completed",
+    },
+    uploadId: {
+      type: String,
+      default: null,
+    },
   },
   { strict: "throw", timestamps: true },
 );

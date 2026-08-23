@@ -4,6 +4,10 @@ import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
   CopyObjectCommand,
+  CreateMultipartUploadCommand,
+  UploadPartCommand,
+  CompleteMultipartUploadCommand,
+  AbortMultipartUploadCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -50,6 +54,47 @@ export const createDownloadSignedUrl = async ({ key }) => {
   });
 
   return url;
+};
+
+export const initiateMultipartUpload = async ({ key, contentType }) => {
+  const command = new CreateMultipartUploadCommand({
+    Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+    Key: key,
+    ContentType: contentType || "application/octet-stream",
+  });
+  return await s3Client.send(command);
+};
+
+export const getUploadPartSignedUrl = async ({ key, uploadId, partNumber, expiresIn = 3600 }) => {
+  const command = new UploadPartCommand({
+    Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+    Key: key,
+    UploadId: uploadId,
+    PartNumber: partNumber,
+  });
+  return await getSignedUrl(s3Client, command, { expiresIn });
+};
+
+export const completeMultipartUpload = async ({ key, uploadId, parts }) => {
+  const sortedParts = [...parts].sort((a, b) => a.PartNumber - b.PartNumber);
+  const command = new CompleteMultipartUploadCommand({
+    Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+    Key: key,
+    UploadId: uploadId,
+    MultipartUpload: {
+      Parts: sortedParts,
+    },
+  });
+  return await s3Client.send(command);
+};
+
+export const abortMultipartUpload = async ({ key, uploadId }) => {
+  const command = new AbortMultipartUploadCommand({
+    Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+    Key: key,
+    UploadId: uploadId,
+  });
+  return await s3Client.send(command);
 };
 
 export const uploadToB2 = async ({ key, body, contentType }) => {

@@ -14,6 +14,8 @@ import {
   Minimize2,
   Maximize2,
   RotateCcw,
+  Gauge,
+  Layers,
 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
 import { getFileCdnUrl } from "../../api/files.api";
@@ -29,9 +31,19 @@ const generateObjectId = () => {
     .join("");
 };
 
+const SPEED_PRESETS = [
+  { label: "Unlimited (Max)", value: 0 },
+  { label: "10 MB/s", value: 10 * 1024 * 1024 },
+  { label: "5 MB/s", value: 5 * 1024 * 1024 },
+  { label: "2 MB/s", value: 2 * 1024 * 1024 },
+  { label: "500 KB/s", value: 500 * 1024 },
+];
+
 const TransferManager = forwardRef((props, ref) => {
   const [transfers, setTransfers] = useState([]);
   const [minimized, setMinimized] = useState(false);
+  const [speedLimit, setSpeedLimit] = useState(0);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [maxFileSize, setMaxFileSize] = useState(50 * 1024 * 1024);
   const downloadReaders = useRef({});
   const abortControllers = useRef({});
@@ -69,7 +81,8 @@ const TransferManager = forwardRef((props, ref) => {
     updateTransfer,
     ownerId,
     abortControllers,
-    onUploadComplete: props.onUploadComplete
+    onUploadComplete: props.onUploadComplete,
+    speedLimit,
   });
 
   const uploadFile = useCallback(
@@ -148,7 +161,8 @@ const TransferManager = forwardRef((props, ref) => {
     updateTransfer,
     abortControllers,
     downloadReaders,
-    downloadWritables
+    downloadWritables,
+    speedLimit,
   });
 
   const downloadFile = async (url, filename, id = generateObjectId(), startByte = 0) => {
@@ -319,12 +333,54 @@ const TransferManager = forwardRef((props, ref) => {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 w-80 md:w-96 shadow-2xl">
-      <Card className="p-0 overflow-hidden border-black/10 dark:border-white/[0.08] bg-white/90 dark:bg-white/[0.05] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)]">
-        <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+      <Card className="p-0 overflow-visible border-black/10 dark:border-white/[0.08] bg-white/90 dark:bg-white/[0.05] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)]">
+        <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 rounded-t-2xl">
           <span className="font-medium text-sm text-slate-900 dark:text-white">
             Transfers ({transfers.length})
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            {/* Speed Regulation Governor */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                className="px-2 py-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 flex items-center gap-1 text-xs font-medium transition-colors border border-slate-300/60 dark:border-slate-600/60"
+                title="Throttle / Pace Speed"
+              >
+                <Gauge size={13} className={speedLimit > 0 ? "text-amber-500" : "text-emerald-500"} />
+                <span className="text-[11px]">
+                  {speedLimit === 0 ? "Max" : formatSpeed(speedLimit)}
+                </span>
+              </button>
+
+              {showSpeedMenu && (
+                <div className="absolute right-0 bottom-full mb-1.5 w-40 py-1 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 text-xs backdrop-blur-xl">
+                  <div className="px-2.5 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Speed Regulator
+                  </div>
+                  {SPEED_PRESETS.map((preset) => (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      onClick={() => {
+                        setSpeedLimit(preset.value);
+                        setShowSpeedMenu(false);
+                      }}
+                      className={cn(
+                        "w-full text-left px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors flex items-center justify-between",
+                        speedLimit === preset.value
+                          ? "text-blue-500 font-semibold bg-blue-500/5"
+                          : "text-slate-700 dark:text-slate-300"
+                      )}
+                    >
+                      <span>{preset.label}</span>
+                      {speedLimit === preset.value && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {transfers.some((t) => t.status === "completed") && (
               <button onClick={clearCompleted} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400" title="Clear completed">
                 <Trash2 size={14} />
@@ -336,7 +392,7 @@ const TransferManager = forwardRef((props, ref) => {
           </div>
         </div>
         {!minimized && (
-          <div className="max-h-80 overflow-y-auto p-0">
+          <div className="max-h-80 overflow-y-auto p-0 rounded-b-2xl">
             {transfers.map((transfer) => (
               <div key={transfer._id} className="p-3 border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <div className="flex items-start gap-3">
@@ -345,7 +401,14 @@ const TransferManager = forwardRef((props, ref) => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <p className="text-sm font-medium truncate text-slate-900 dark:text-slate-100" title={transfer.name}>{transfer.name}</p>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="text-sm font-medium truncate text-slate-900 dark:text-slate-100" title={transfer.name}>{transfer.name}</p>
+                        {transfer.total >= 50 * 1024 * 1024 && (
+                          <span className="px-1 py-0.2 rounded text-[9px] font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20 shrink-0">
+                            Multipart
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1 ml-2">
                         {transfer.status === "active" ? (
                           <button onClick={() => pauseTransfer(transfer._id)} className="text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors" title="Pause"><Pause size={14} /></button>

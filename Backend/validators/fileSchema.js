@@ -60,6 +60,46 @@ export const uploadVaultInitiateSchema = {
   }),
 };
 
+export const uploadVaultMultipartInitiateSchema = {
+  body: z.object({
+    name: z.string().min(1, "Name is required"),
+    size: z.number().min(1, "File size must be greater than 0"),
+    contentType: z.string().optional(),
+    parentDirId: z.string().nullable().optional(),
+  }),
+};
+
+export const uploadVaultMultipartPartUrlSchema = {
+  body: z.object({
+    fileId: objectIdSchema,
+    uploadId: z.string().min(1, "uploadId is required"),
+    partNumber: z.number().int().positive("partNumber must be positive"),
+    key: z.string().min(1, "key is required"),
+  }),
+};
+
+export const uploadVaultMultipartCompleteSchema = {
+  body: z.object({
+    fileId: objectIdSchema,
+    uploadId: z.string().min(1, "uploadId is required"),
+    key: z.string().min(1, "key is required"),
+    parts: z.array(
+      z.object({
+        ETag: z.string().min(1, "ETag is required"),
+        PartNumber: z.number().int().positive("PartNumber must be positive"),
+      })
+    ).min(1, "At least one part is required"),
+  }),
+};
+
+export const uploadVaultMultipartAbortSchema = {
+  body: z.object({
+    fileId: objectIdSchema,
+    uploadId: z.string().min(1, "uploadId is required"),
+    key: z.string().min(1, "key is required"),
+  }),
+};
+
 export const renameFileSchema = {
   params: z.object({
     fileId: objectIdSchema,

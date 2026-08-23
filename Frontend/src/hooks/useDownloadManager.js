@@ -1,7 +1,29 @@
 import { useCallback } from 'react';
 import { SERVER_URL } from '../lib/api';
 
-export function useDownloadManager({ updateTransfer, abortControllers, downloadReaders, downloadWritables }) {
+/**
+ * Pacing delay calculation for token-bucket rate limiting
+ * @param {number} chunkLength - Size of chunk in bytes
+ * @param {number} maxBytesPerSec - Maximum bytes per second (0 = unlimited)
+ * @param {number} startTime - Timestamp when chunk processing began
+ */
+async function applySpeedPacing(chunkLength, maxBytesPerSec, startTime) {
+  if (!maxBytesPerSec || maxBytesPerSec <= 0) return;
+  const expectedDurationMs = (chunkLength / maxBytesPerSec) * 1000;
+  const elapsedMs = Date.now() - startTime;
+  if (elapsedMs < expectedDurationMs) {
+    const delayMs = expectedDurationMs - elapsedMs;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+}
+
+export function useDownloadManager({
+  updateTransfer,
+  abortControllers,
+  downloadReaders,
+  downloadWritables,
+  speedLimit = 0,
+}) {
   const startDownload = useCallback(async (transfer) => {
     const { _id, url, name } = transfer;
     updateTransfer(_id, { status: "active", speed: 0 });
@@ -44,11 +66,17 @@ export function useDownloadManager({ updateTransfer, abortControllers, downloadR
           let lastUpdate = 0;
 
           while (true) {
+            const chunkStartTime = Date.now();
             const { done, value } = await reader.read();
             if (done) break;
 
             await writable.write(value);
             loaded += value.length;
+
+            // Apply speed regulation pacing if configured
+            if (speedLimit > 0) {
+              await applySpeedPacing(value.length, speedLimit, chunkStartTime);
+            }
 
             const now = Date.now();
             const percent = totalSize > 0 ? Math.min((loaded / totalSize) * 100, 100) : 0;
@@ -97,11 +125,17 @@ export function useDownloadManager({ updateTransfer, abortControllers, downloadR
         let lastUpdate = 0;
 
         while (true) {
+          const chunkStartTime = Date.now();
           const { done, value } = await reader.read();
           if (done) break;
 
           chunks.push(value);
           loaded += value.length;
+
+          // Apply speed regulation pacing if configured
+          if (speedLimit > 0) {
+            await applySpeedPacing(value.length, speedLimit, chunkStartTime);
+          }
 
           const now = Date.now();
           const percent = totalSize > 0 ? Math.min((loaded / totalSize) * 100, 100) : 0;
@@ -157,7 +191,7 @@ export function useDownloadManager({ updateTransfer, abortControllers, downloadR
       delete downloadReaders.current[_id];
       delete downloadWritables.current[_id];
     }
-  }, [updateTransfer, abortControllers, downloadReaders, downloadWritables]);
+  }, [updateTransfer, abortControllers, downloadReaders, downloadWritables, speedLimit]);
 
   return { startDownload };
 }

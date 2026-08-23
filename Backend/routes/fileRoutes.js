@@ -18,6 +18,10 @@ import {
   getAllRecentItems,
   setStarredItem,
   uploadVaultInitate,
+  uploadVaultMultipartInitiate,
+  uploadVaultMultipartPartUrl,
+  uploadVaultMultipartComplete,
+  uploadVaultMultipartAbort,
 } from "../controllers/fileController.js";
 import { validate } from "../middlewares/validationMiddleware.js";
 import {
@@ -32,6 +36,10 @@ import {
   saveFileSchema,
   deleteFileSchema,
   uploadVaultInitiateSchema,
+  uploadVaultMultipartInitiateSchema,
+  uploadVaultMultipartPartUrlSchema,
+  uploadVaultMultipartCompleteSchema,
+  uploadVaultMultipartAbortSchema,
 } from "../validators/fileSchema.js";
 import {
   searchLimiter,
@@ -135,6 +143,42 @@ router.post(
   validate(uploadVaultInitiateSchema),
   enforceUploadLimit,
   uploadVaultInitate,
+);
+
+router.post(
+  "/upload-vault/multipart/initiate",
+  checkAuth,
+  loadPlanContext,
+  requireRule("allowUpload"),
+  uploadLimiter,
+  throttle(300, 8, "file-upload"),
+  validate(uploadVaultMultipartInitiateSchema),
+  enforceUploadLimit,
+  uploadVaultMultipartInitiate,
+);
+
+router.post(
+  "/upload-vault/multipart/part-url",
+  checkAuth,
+  uploadLimiter,
+  validate(uploadVaultMultipartPartUrlSchema),
+  uploadVaultMultipartPartUrl,
+);
+
+router.post(
+  "/upload-vault/multipart/complete",
+  checkAuth,
+  standardWriteLimiter,
+  validate(uploadVaultMultipartCompleteSchema),
+  uploadVaultMultipartComplete,
+);
+
+router.post(
+  "/upload-vault/multipart/abort",
+  checkAuth,
+  standardWriteLimiter,
+  validate(uploadVaultMultipartAbortSchema),
+  uploadVaultMultipartAbort,
 );
 
 router.post(
