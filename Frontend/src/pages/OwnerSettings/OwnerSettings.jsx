@@ -453,15 +453,8 @@ export default function OwnerSettings() {
   };
 
   return (
-    <div className="min-h-screen text-slate-900 dark:text-white font-sans relative bg-vault-bg transition-colors duration-300 pb-24">
-      {/* Background Glow Orbs */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-b from-purple-500/10 via-teal-500/5 to-transparent blur-[140px] rounded-full" />
-        <div className="absolute top-1/3 -left-48 w-96 h-96 bg-blue-500/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-10 -right-48 w-96 h-96 bg-rose-500/5 blur-[120px] rounded-full" />
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+    <div className="space-y-8 pb-24">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Navigation Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { usePlan } from "../../context/PlanContext";
 import { SERVER_URL } from "../../lib/api";
@@ -43,8 +43,20 @@ export default function CommandBar({
 }) {
   const { user, setUser } = useAuth();
   const { isNoPlan, rules, hasFeature } = usePlan();
-  const navigate = useNavigate();
   const location = useLocation();
+
+  const isVaultRoute =
+    location.pathname === "/dashboard" ||
+    location.pathname.startsWith("/dashboard/folder") ||
+    location.pathname.startsWith("/dashboard/shared") ||
+    location.pathname.startsWith("/dashboard/recent") ||
+    location.pathname.startsWith("/dashboard/starred") ||
+    location.pathname.startsWith("/dashboard/google-drive") ||
+    location.pathname.startsWith("/dashboard/github") ||
+    location.pathname.startsWith("/dashboard/trash") ||
+    location.pathname.startsWith("/dashboard/admin") ||
+    location.pathname.startsWith("/dashboard/owner/folder") ||
+    location.pathname === "/dashboard/search";
 
   const allowUpload = !isNoPlan && (rules?.permissions?.allowUpload ?? true);
 
@@ -347,166 +359,178 @@ export default function CommandBar({
         >
           <PanelLeft size={20} />
         </button>
-        <div className="bg-accent-soft border border-accent-border p-1 sm:p-1.5 rounded-xl shadow-sm relative group-hover:border-accent-primary transition-colors">
-          <VaultLogo className="text-accent-primary" size={18} />
-        </div>
-        <span className="text-base sm:text-lg font-black tracking-widest text-slate-900 dark:text-white uppercase">
-          Vault OS
-        </span>
+        <Link
+          to="/"
+          className="flex items-center gap-2 sm:gap-3 group cursor-pointer"
+          title="Go to Home"
+        >
+          <div className="bg-accent-soft border border-accent-border p-1 sm:p-1.5 rounded-xl shadow-sm relative group-hover:border-accent-primary transition-colors">
+            <VaultLogo className="text-accent-primary" size={18} />
+          </div>
+          <span className="text-base sm:text-lg font-black tracking-widest text-slate-900 dark:text-white uppercase group-hover:text-accent-primary transition-colors">
+            Vault OS
+          </span>
+        </Link>
       </div>
 
-      {/* CENTER: Neural Search */}
-      <div
-        data-tour="command-bar-search"
-        className="flex-1 max-w-2xl mx-4 hidden sm:flex justify-center"
-      >
-        <div className="relative w-full max-w-lg group">
-          <div className="absolute inset-0 bg-accent-soft rounded-2xl blur-md group-hover:opacity-100 opacity-60 transition-opacity" />
-          <div className="relative flex items-center bg-slate-100/90 dark:bg-vault-black/80 border border-slate-200/90 dark:border-white/10 rounded-2xl px-4 py-2 hover:border-accent-border focus-within:border-accent-primary focus-within:ring-2 focus-within:ring-accent-primary/20 transition-all shadow-sm">
-            <NeuralSearchIcon
-              size={18}
-              className="text-accent-primary group-focus-within:text-accent-primary transition-colors"
-            />
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search classified assets..."
-              value={globalSearchQuery}
-              onChange={(e) => setGlobalSearchQuery(e.target.value)}
-              onKeyDown={onSearchExecute}
-              onFocus={() => setShowRecentSearches(true)}
-              onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
-              className="w-full bg-transparent border-none outline-none text-sm text-slate-900 dark:text-white px-3 placeholder:text-slate-400 dark:placeholder:text-white/30 font-medium"
-            />
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`p-1.5 rounded-md transition-colors ${showFilters ? "bg-vault-emerald/20 text-vault-emerald" : "text-white/40 hover:text-white hover:bg-white/10"}`}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+      {/* CENTER: Neural Search (Vault Only) */}
+      {isVaultRoute && (
+        <div
+          data-tour="command-bar-search"
+          className="flex-1 max-w-2xl mx-4 hidden sm:flex justify-center"
+        >
+          <div className="relative w-full max-w-lg group">
+            <div className="absolute inset-0 bg-accent-soft rounded-2xl blur-md group-hover:opacity-100 opacity-60 transition-opacity" />
+            <div className="relative flex items-center bg-slate-100/90 dark:bg-vault-black/80 border border-slate-200/90 dark:border-white/10 rounded-2xl px-4 py-2 hover:border-accent-border focus-within:border-accent-primary focus-within:ring-2 focus-within:ring-accent-primary/20 transition-all shadow-sm">
+              <NeuralSearchIcon
+                size={18}
+                className="text-accent-primary group-focus-within:text-accent-primary transition-colors"
+              />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search classified assets..."
+                value={globalSearchQuery}
+                onChange={(e) => setGlobalSearchQuery(e.target.value)}
+                onKeyDown={onSearchExecute}
+                onFocus={() => setShowRecentSearches(true)}
+                onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
+                className="w-full bg-transparent border-none outline-none text-sm text-slate-900 dark:text-white px-3 placeholder:text-slate-400 dark:placeholder:text-white/30 font-medium"
+              />
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`p-1.5 rounded-md transition-colors ${showFilters ? "bg-vault-emerald/20 text-vault-emerald" : "text-white/40 hover:text-white hover:bg-white/10"}`}
               >
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-              </svg>
-            </button>
-            <div className="flex items-center gap-1 opacity-50 ml-2">
-              <kbd className="font-sans text-[10px] px-1.5 py-0.5 rounded bg-white/10 border border-white/20">
-                ⌘
-              </kbd>
-              <kbd className="font-sans text-[10px] px-1.5 py-0.5 rounded bg-white/10 border border-white/20">
-                K
-              </kbd>
-            </div>
-          </div>
-
-          {/* Filter Dropdown */}
-          {showFilters && (
-            <div className="absolute top-full sm:top-[calc(100%+8px)] left-0 mt-2 sm:mt-0 w-[100vw] sm:w-full -ml-4 sm:ml-0 bg-white/95 dark:bg-vault-surface/95 backdrop-blur-xl border-y sm:border border-slate-200 dark:border-white/10 sm:rounded-2xl shadow-2xl z-50 p-4 text-slate-900 dark:text-white">
-              <h3 className="text-xs font-bold tracking-widest text-accent-primary uppercase mb-4 border-b border-slate-200 dark:border-white/10 pb-2">
-                Advanced Search
-              </h3>
-              <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                  <label className="text-xs text-slate-500 dark:text-white/50 w-20">Scope</label>
-                  <div className="flex gap-2 flex-1 w-full">
-                    <button
-                      onClick={() => setSearchScope("current")}
-                      className={`flex-1 text-xs py-1.5 rounded-xl border transition-all ${searchScope === "current" ? "bg-accent-soft border-accent-primary text-accent-primary font-bold shadow-sm" : "bg-slate-100 dark:bg-black/40 border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
-                    >
-                      Current Context
-                    </button>
-                    <button
-                      onClick={() => setSearchScope("global")}
-                      className={`flex-1 text-xs py-1.5 rounded-xl border transition-all ${searchScope === "global" ? "bg-accent-soft border-accent-primary text-accent-primary font-bold shadow-sm" : "bg-slate-100 dark:bg-black/40 border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
-                    >
-                      Global Vault
-                    </button>
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                  <label className="text-xs text-slate-500 dark:text-white/50 w-20">
-                    Type (Ext)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. pdf, txt"
-                    value={searchExt}
-                    onChange={(e) => setSearchExt(e.target.value)}
-                    className="w-full sm:flex-1 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white outline-none focus:border-accent-primary"
-                  />
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                  <label className="text-xs text-slate-500 dark:text-white/50 w-20">Max Size</label>
-                  <select
-                    value={searchSize}
-                    onChange={(e) => setSearchSize(e.target.value)}
-                    className="w-full sm:flex-1 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white outline-none focus:border-accent-primary [&>option]:bg-white dark:[&>option]:bg-vault-black"
-                  >
-                    <option value="">Any Size</option>
-                    <option value="1">Under 1 MB</option>
-                    <option value="10">Under 10 MB</option>
-                    <option value="100">Under 100 MB</option>
-                    <option value="1000">Under 1 GB</option>
-                  </select>
-                </div>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+              </button>
+              <div className="flex items-center gap-1 opacity-50 ml-2">
+                <kbd className="font-sans text-[10px] px-1.5 py-0.5 rounded bg-white/10 border border-white/20">
+                  ⌘
+                </kbd>
+                <kbd className="font-sans text-[10px] px-1.5 py-0.5 rounded bg-white/10 border border-white/20">
+                  K
+                </kbd>
               </div>
             </div>
-          )}
+
+            {/* Filter Dropdown */}
+            {showFilters && (
+              <div className="absolute top-full sm:top-[calc(100%+8px)] left-0 mt-2 sm:mt-0 w-[100vw] sm:w-full -ml-4 sm:ml-0 bg-white/95 dark:bg-vault-surface/95 backdrop-blur-xl border-y sm:border border-slate-200 dark:border-white/10 sm:rounded-2xl shadow-2xl z-50 p-4 text-slate-900 dark:text-white">
+                <h3 className="text-xs font-bold tracking-widest text-accent-primary uppercase mb-4 border-b border-slate-200 dark:border-white/10 pb-2">
+                  Advanced Search
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                    <label className="text-xs text-slate-500 dark:text-white/50 w-20">Scope</label>
+                    <div className="flex gap-2 flex-1 w-full">
+                      <button
+                        onClick={() => setSearchScope("current")}
+                        className={`flex-1 text-xs py-1.5 rounded-xl border transition-all ${searchScope === "current" ? "bg-accent-soft border-accent-primary text-accent-primary font-bold shadow-sm" : "bg-slate-100 dark:bg-black/40 border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
+                      >
+                        Current Context
+                      </button>
+                      <button
+                        onClick={() => setSearchScope("global")}
+                        className={`flex-1 text-xs py-1.5 rounded-xl border transition-all ${searchScope === "global" ? "bg-accent-soft border-accent-primary text-accent-primary font-bold shadow-sm" : "bg-slate-100 dark:bg-black/40 border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
+                      >
+                        Global Vault
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                    <label className="text-xs text-slate-500 dark:text-white/50 w-20">
+                      Type (Ext)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. pdf, txt"
+                      value={searchExt}
+                      onChange={(e) => setSearchExt(e.target.value)}
+                      className="w-full sm:flex-1 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white outline-none focus:border-accent-primary"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                    <label className="text-xs text-slate-500 dark:text-white/50 w-20">Max Size</label>
+                    <select
+                      value={searchSize}
+                      onChange={(e) => setSearchSize(e.target.value)}
+                      className="w-full sm:flex-1 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white outline-none focus:border-accent-primary [&>option]:bg-white dark:[&>option]:bg-vault-black"
+                    >
+                      <option value="">Any Size</option>
+                      <option value="1">Under 1 MB</option>
+                      <option value="10">Under 10 MB</option>
+                      <option value="100">Under 100 MB</option>
+                      <option value="1000">Under 1 GB</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* RIGHT: Quick Actions & Status */}
       <div className="flex items-center gap-3 shrink-0">
-        {/* Quick Create Actions — Color-Coded (Contextual for GitHub) */}
-        <div
-          data-tour="quick-actions"
-          className="hidden lg:flex items-center gap-1 border-r border-slate-200 dark:border-white/10 pr-3 mr-1"
-        >
-          {location.pathname === "/dashboard/github" ? (
-            <button
-              onClick={() => document.dispatchEvent(new CustomEvent("createRepoTrigger"))}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-soft text-accent-primary border border-accent-border hover:bg-accent-primary hover:text-accent-foreground text-xs font-bold transition-all shadow-sm active:scale-95"
-              title="Create New GitHub Repository"
-            >
-              <Plus size={14} />
-              <span>New Repository</span>
-            </button>
-          ) : (
-            quickActions.map((action) => (
-              <button
-                key={action.label}
-                data-tour={action.tourId}
-                onClick={() => {
-                  action.onClick();
-                }}
-                className={`p-2 text-slate-500 dark:text-white/50 ${action.hoverText} ${action.hoverBg} ${action.glowHover} rounded-xl transition-all duration-200`}
-                title={action.label}
-              >
-                <action.icon size={18} />
-              </button>
-            ))
-          )}
-        </div>
-
-        {/* Mobile Control Center Toggle */}
-        <div className="lg:hidden relative">
-          <button
-            onClick={() => setShowMobileMenu(!showMobileMenu)}
-            className={`p-1.5 sm:p-2 rounded-xl transition-all duration-200 ${
-              showMobileMenu
-                ? "bg-accent-soft text-accent-primary border border-accent-border"
-                : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent"
-            }`}
+        {/* Quick Create Actions (Vault Only) */}
+        {isVaultRoute && (
+          <div
+            data-tour="quick-actions"
+            className="hidden lg:flex items-center gap-1 border-r border-slate-200 dark:border-white/10 pr-3 mr-1"
           >
-            {showMobileMenu ? <X size={20} /> : <MoreVertical size={20} />}
-          </button>
-        </div>
+            {location.pathname === "/dashboard/github" ? (
+              <button
+                onClick={() => document.dispatchEvent(new CustomEvent("createRepoTrigger"))}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-soft text-accent-primary border border-accent-border hover:bg-accent-primary hover:text-accent-foreground text-xs font-bold transition-all shadow-sm active:scale-95"
+                title="Create New GitHub Repository"
+              >
+                <Plus size={14} />
+                <span>New Repository</span>
+              </button>
+            ) : (
+              quickActions.map((action) => (
+                <button
+                  key={action.label}
+                  data-tour={action.tourId}
+                  onClick={() => {
+                    action.onClick();
+                  }}
+                  className={`p-2 text-slate-500 dark:text-white/50 ${action.hoverText} ${action.hoverBg} ${action.glowHover} rounded-xl transition-all duration-200`}
+                  title={action.label}
+                >
+                  <action.icon size={18} />
+                </button>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Mobile Control Center Toggle (Vault Only) */}
+        {isVaultRoute && (
+          <div className="lg:hidden relative">
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className={`p-1.5 sm:p-2 rounded-xl transition-all duration-200 ${
+                showMobileMenu
+                  ? "bg-accent-soft text-accent-primary border border-accent-border"
+                  : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent"
+              }`}
+            >
+              {showMobileMenu ? <X size={20} /> : <MoreVertical size={20} />}
+            </button>
+          </div>
+        )}
 
         {/* Integration Status */}
         <div className="hidden md:flex items-center gap-2 border-r border-slate-200 dark:border-white/10 pr-3 mr-1">

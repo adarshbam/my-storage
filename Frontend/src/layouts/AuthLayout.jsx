@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Shield, Zap, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import { VaultLogo } from "../components/ui/VaultIcons";
@@ -25,14 +26,18 @@ export default function AuthLayout({ children }) {
 
           <div className="w-full p-10 xl:p-14 flex flex-col justify-between relative z-10 h-full">
             <div>
-              <div className="flex items-center gap-3.5 mb-14">
-                <div className="p-2.5 rounded-2xl bg-accent-soft border border-accent-border text-accent-primary shadow-sm">
+              <Link
+                to="/"
+                className="flex items-center gap-3.5 mb-14 group cursor-pointer"
+                title="Go to Home"
+              >
+                <div className="p-2.5 rounded-2xl bg-accent-soft border border-accent-border text-accent-primary shadow-sm group-hover:border-accent-primary transition-colors">
                   <VaultLogo size={22} />
                 </div>
-                <span className="text-xl font-black tracking-widest uppercase">
+                <span className="text-xl font-black tracking-widest uppercase group-hover:text-accent-primary transition-colors">
                   VAULT
                 </span>
-              </div>
+              </Link>
 
               <motion.h2
                 initial={{ opacity: 0, y: 15 }}

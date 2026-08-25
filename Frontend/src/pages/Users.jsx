@@ -236,15 +236,8 @@ export default function Users() {
   });
 
   return (
-    <div className="min-h-screen bg-vault-bg text-slate-900 dark:text-white p-4 sm:p-6 lg:p-8 relative overflow-hidden font-sans transition-colors duration-300">
-      {/* Subtle Atmospheric Gradient Orbs */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-accent-primary/15 via-accent-soft/10 to-transparent blur-[140px] rounded-full" />
-        <div className="absolute top-1/3 -left-48 w-96 h-96 bg-blue-500/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-10 -right-48 w-96 h-96 bg-purple-500/10 blur-[120px] rounded-full" />
-      </div>
-
-      <div className="max-w-7xl mx-auto relative z-10 space-y-8">
+    <div className="space-y-8 pb-16">
+      <div className="max-w-7xl mx-auto space-y-8">
         
         {/* ── TOP HEADER ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-white/10 pb-6">

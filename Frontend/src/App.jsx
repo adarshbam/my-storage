@@ -28,6 +28,7 @@ import Footer from "./components/sections/Footer";
 
 // Dashboard Components
 import DashboardLayout from "./layouts/DashboardLayout";
+import StandaloneLayout from "./layouts/StandaloneLayout";
 import FileBrowser from "./components/drive/FileBrowser";
 import TrashView from "./components/drive/TrashView";
 import BillingPlansPage from "./pages/BillingPlansPage";
@@ -117,18 +118,20 @@ function App() {
                     <Route path="/reset-password" element={<ResetPassword />} />
                   </Route>
 
+                  {/* Dedicated Non-Vault Pages (Storage, Tutorials, Settings, User & Owner Portals) */}
                   <Route element={<ProtectedRoute />}>
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/users" element={<Users />} />
-                    <Route path="/owner/settings" element={<OwnerSettings />} />
+                    <Route element={<StandaloneLayout />}>
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/users" element={<Users />} />
+                      <Route path="/owner/settings" element={<OwnerSettings />} />
+                      <Route path="/dashboard/billing" element={<BillingPlansPage />} />
+                      <Route path="/billing" element={<BillingPlansPage />} />
+                      <Route path="/dashboard/tutorials" element={<WallyAcademyPage />} />
+                      <Route path="/tutorials" element={<WallyAcademyPage />} />
+                    </Route>
                   </Route>
 
-                  {/* Redirect /billing to /dashboard/billing */}
-                  <Route
-                    path="/billing"
-                    element={<Navigate to="/dashboard/billing" replace />}
-                  />
-
+                  {/* Core Vault Chamber Routes with CommandBar & NavigationRail */}
                   <Route path="/dashboard" element={<ProtectedRoute />}>
                     <Route element={<DashboardLayout />}>
                       <Route index element={<FileBrowser />} />
@@ -175,8 +178,6 @@ function App() {
                         element={<FileBrowser specialView="github-repo" />}
                       />
                       <Route path="trash" element={<TrashView />} />
-                      <Route path="billing" element={<BillingPlansPage />} />
-                      <Route path="tutorials" element={<WallyAcademyPage />} />
                     </Route>
                   </Route>
 
