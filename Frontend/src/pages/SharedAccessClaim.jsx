@@ -176,13 +176,13 @@ export default function SharedAccessClaim() {
   };
 
   return (
-    <div className="min-h-screen text-slate-900 dark:text-white font-sans transition-colors duration-300 relative flex items-center justify-center p-4">
+    <div className="min-h-[100dvh] text-slate-900 dark:text-white font-sans transition-colors duration-300 relative flex items-center justify-center p-3 sm:p-4">
       {/* Background radial effects */}
       <div className="fixed inset-0 z-[0] bg-[#f0f9f7] dark:bg-[#020b08] pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vh] bg-[radial-gradient(ellipse,rgba(20,184,166,0.12)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse,rgba(20,184,166,0.08)_0%,transparent_70%)]" />
       </div>
 
-      <div className="relative z-10 w-full max-w-lg bg-white/70 dark:bg-vault-surface/90 backdrop-blur-2xl border border-black/5 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl dark:shadow-[0_12px_40px_rgba(0,0,0,0.8)]">
+      <div className="relative z-10 w-full max-w-lg bg-white/70 dark:bg-vault-surface/90 backdrop-blur-2xl border border-black/5 dark:border-white/10 rounded-3xl p-5 sm:p-8 shadow-2xl dark:shadow-[0_12px_40px_rgba(0,0,0,0.8)]">
         
         {loading ? (
           <div className="flex flex-col items-center text-center py-6 space-y-4">

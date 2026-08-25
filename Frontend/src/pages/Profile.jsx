@@ -217,10 +217,10 @@ export default function Profile() {
           <div className="lg:col-span-2 space-y-8">
             
             {/* 1. Identity Hero Card */}
-            <div className="rounded-3xl p-6 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 group">
+            <div className="rounded-3xl p-5 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 group">
               <div className="absolute top-0 right-0 w-64 h-64 bg-accent-soft/20 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="flex items-center gap-6 z-10 w-full sm:w-auto">
+              <div className="flex flex-col xs:flex-row items-start xs:items-center gap-4 sm:gap-6 z-10 w-full sm:w-auto">
                 <UserAvatar
                   user={user}
                   src={profilePicUrl}

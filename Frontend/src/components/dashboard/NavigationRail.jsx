@@ -177,7 +177,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
       <aside
         data-tour="nav-rail"
         className={`
-        fixed md:sticky top-[64px] left-0 h-[calc(100vh-64px)] z-40
+        fixed md:sticky top-[64px] left-0 h-[calc(100dvh-64px)] z-40
         w-[72px] md:hover:w-[240px] group transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
         bg-white/95 dark:bg-vault-surface/95 backdrop-blur-3xl border-r border-slate-200 dark:border-white/5
         flex flex-col overflow-hidden shrink-0
@@ -185,7 +185,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
       `}
       >
         {/* Main Nav Items */}
-        <div className="flex-1 py-6 flex flex-col gap-1.5 px-3 overflow-y-auto overflow-x-hidden scrollbar-none">
+        <div className="flex-1 py-6 flex flex-col gap-1.5 px-3 overflow-y-auto overflow-x-hidden custom-scrollbar no-scrollbar">
           {navItems.map((item) => {
             const active = isActive(item.path, item.exact);
             const hovered = hoveredPath === item.path && !active;
@@ -375,7 +375,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
         </div>
 
         {/* Bottom Actions — System Core with Electric Blue */}
-        <div className="p-3 border-t border-white/5 mt-auto bg-vault-black/50 backdrop-blur-xl">
+        <div className="p-3 border-t border-white/5 mt-auto bg-vault-black/50 backdrop-blur-xl shrink-0">
           <Link
             to="/profile"
             data-tour="system-core"

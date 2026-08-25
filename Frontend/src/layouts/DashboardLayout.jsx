@@ -318,7 +318,7 @@ export default function DashboardLayout() {
 
   return (
     <div
-      className="h-screen flex flex-col bg-vault-bg text-white overflow-hidden relative font-sans"
+      className="h-[100dvh] flex flex-col bg-vault-bg text-white overflow-hidden relative font-sans"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEndHandler}
@@ -359,7 +359,7 @@ export default function DashboardLayout() {
           setIsMobileOpen={setIsMobileOpen}
         />
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 sm:p-6 lg:p-8 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-3 sm:p-6 lg:p-8 custom-scrollbar">
           <div className="mx-auto max-w-7xl h-full flex flex-col">
             <Outlet context={contextValue} />
           </div>

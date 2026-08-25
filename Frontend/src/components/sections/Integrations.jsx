@@ -128,7 +128,7 @@ const Integrations = () => {
         </div>
 
         {/* Accordion Container */}
-        <div className="w-full h-[700px] lg:h-[500px] flex flex-col lg:flex-row gap-3 bg-slate-50 dark:bg-[#040c09] p-3 sm:p-4 rounded-3xl border border-slate-200 dark:border-white/10 relative overflow-hidden shadow-sm">
+        <div className="w-full min-h-[520px] h-[620px] sm:h-[680px] lg:h-[500px] flex flex-col lg:flex-row gap-3 bg-slate-50 dark:bg-[#040c09] p-3 sm:p-4 rounded-3xl border border-slate-200 dark:border-white/10 relative overflow-hidden shadow-sm">
           {PANELS.map((panel, idx) => {
             const isActive = activePanel === idx;
 

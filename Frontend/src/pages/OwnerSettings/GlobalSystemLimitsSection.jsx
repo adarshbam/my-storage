@@ -21,12 +21,12 @@ export default function GlobalSystemLimitsSection({
   );
 
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden transition-all duration-300 hover:border-purple-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-8 shadow-xl relative overflow-hidden transition-all duration-300 hover:border-purple-500/30">
       <div className="absolute top-0 right-0 w-72 h-72 bg-purple-500/5 blur-[90px] rounded-full pointer-events-none" />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shadow-lg shadow-purple-500/5">
+          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shadow-lg shadow-purple-500/5 shrink-0">
             <Cpu size={22} />
           </div>
           <div>
@@ -48,7 +48,7 @@ export default function GlobalSystemLimitsSection({
 
       <form
         onSubmit={handleSave}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6"
       >
         {/* Max Connected Devices */}
         <div className="space-y-2">

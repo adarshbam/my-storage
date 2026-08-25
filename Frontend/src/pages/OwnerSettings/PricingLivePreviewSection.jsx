@@ -50,10 +50,10 @@ export default function PricingLivePreviewSection({
   };
 
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-sky-500/30">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-sky-500/30">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center shadow-lg shadow-sky-500/5">
+          <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center shadow-lg shadow-sky-500/5 shrink-0">
             <Eye size={22} />
           </div>
           <div>
@@ -151,10 +151,11 @@ export default function PricingLivePreviewSection({
                 return (
                   <div
                     key={freeTrialTier.slug}
-                    className="relative rounded-3xl p-6 border border-accent-border/40 bg-accent-soft/20 dark:bg-accent-soft/10 flex flex-col md:flex-row items-center justify-between gap-6 transition-all duration-300 shadow-lg shadow-accent-glow/10"
+                    className="relative rounded-3xl p-5 sm:p-7 border border-accent-border/40 bg-accent-soft/20 dark:bg-accent-soft/10 flex flex-col xl:flex-row xl:items-center justify-between gap-5 transition-all duration-300 shadow-lg shadow-accent-glow/10"
                   >
-                    <div className="flex-1 flex flex-col md:flex-row md:items-center gap-6 w-full">
-                      <div className="min-w-[240px]">
+                    {/* Left Info: Badge, Title, Description, Price */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 min-w-0">
+                      <div className="min-w-0">
                         {freeTrialTier.badge && (
                           <div className="mb-2">
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-accent-soft text-accent-primary border border-accent-border shadow-accent-glow-sm">
@@ -162,32 +163,43 @@ export default function PricingLivePreviewSection({
                             </span>
                           </div>
                         )}
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white">{freeTrialTier.title}</h3>
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-white truncate">
+                          {freeTrialTier.title}
+                        </h3>
                         <p className="text-xs text-slate-600 dark:text-white/50 font-medium mt-1">
                           {storageText} • Inheriting features from {inheritedTier?.title || inheritedSlug}
                         </p>
                       </div>
 
                       {/* Price Display */}
-                      <div className="md:border-l md:border-slate-200 dark:md:border-white/10 md:pl-6 flex items-baseline gap-1 shrink-0">
-                        <span className="text-4xl font-black text-slate-900 dark:text-white">{symbol}0</span>
-                        <span className="text-xs text-slate-500 dark:text-white/40 font-semibold">/30-day trial</span>
+                      <div className="sm:border-l sm:border-slate-200 dark:sm:border-white/10 sm:pl-6 flex items-baseline gap-1 shrink-0">
+                        <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
+                          {symbol}0
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-white/40 font-semibold">
+                          /30-day trial
+                        </span>
                       </div>
+                    </div>
 
+                    {/* Right Info: Rule Highlights, Feature Pills & CTA */}
+                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-start xl:justify-end">
                       {/* Highlights */}
-                      <div className="hidden lg:flex flex-wrap items-center gap-3 text-[11px] font-semibold rounded-2xl p-3 border border-accent-border/30 bg-accent-soft/30 text-accent-primary">
+                      <div className="flex flex-wrap items-center gap-2.5 text-[11px] font-semibold rounded-2xl p-2.5 px-3.5 border border-accent-border/30 bg-accent-soft/30 text-accent-primary">
                         <div>Max Devices: <span className="font-bold">{getRuleVal(tierRules, "maxConnectedDevices", 3)} Sessions</span></div>
                         <div className="w-px h-3 bg-accent-border/40" />
                         <div>Speed: <span className="font-bold">{getRuleVal(tierRules, "uploadSpeedMultiplier", 1)}x</span></div>
                         <div className="w-px h-3 bg-accent-border/40" />
-                        <div>History: <span className="font-bold">{getRuleVal(tierRules, "versionHistoryDays", 30)} Days</span></div>
+                        <div>History: <span className="font-bold">{getRuleVal(tierRules, "versionHistoryDays", 30)}d</span></div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-4 w-full md:w-auto shrink-0 justify-between md:justify-end">
-                      <div className="hidden sm:flex items-center gap-2">
+                      {/* Feature Pills */}
+                      <div className="hidden sm:flex flex-wrap items-center gap-2">
                         {tierFeatures.slice(0, 2).map((feat) => (
-                          <div key={feat._id} className="flex items-center gap-1.5 bg-white/10 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-3 py-1.5 rounded-xl text-xs text-slate-800 dark:text-white/80 font-medium">
+                          <div
+                            key={feat._id}
+                            className="flex items-center gap-1.5 bg-white/10 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-3 py-1.5 rounded-xl text-xs text-slate-800 dark:text-white/80 font-medium"
+                          >
                             <Check size={12} className="text-accent-primary shrink-0" />
                             <span>{feat.title}</span>
                           </div>
@@ -196,7 +208,7 @@ export default function PricingLivePreviewSection({
 
                       <button
                         type="button"
-                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs shadow-accent-glow bg-accent-primary hover:opacity-90 active:scale-95 text-accent-foreground transition-all duration-300"
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs shadow-accent-glow bg-accent-primary hover:opacity-90 active:scale-95 text-accent-foreground transition-all duration-300 shrink-0"
                       >
                         Get Started Free
                       </button>
@@ -205,8 +217,8 @@ export default function PricingLivePreviewSection({
                 );
               })()}
 
-              {/* Spacious 3-Column Grid for Main Tiers */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8 items-stretch relative z-10">
+              {/* Spacious Responsive Grid for Main Tiers */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch relative z-10">
                 {mainTiers.map((tier) => {
                   const planObj = billingPlans.find(
                     (p) => p.slug === tier.slug && p.period === period

@@ -123,7 +123,7 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="lg:col-span-6 relative flex flex-col items-center justify-center"
           >
-            <div className="relative w-full max-w-[540px] aspect-square rounded-3xl p-4 flex items-center justify-center">
+            <div className="relative w-full max-w-[320px] sm:max-w-[540px] aspect-square rounded-3xl p-4 flex items-center justify-center">
               
               {/* Concentric Orbital Radar System */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -143,12 +143,12 @@ const Hero = () => {
               </div>
 
               {/* Central Glowing Vault Shield */}
-              <div className="relative z-20 w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-white dark:bg-vault-surface border-2 border-accent-primary flex items-center justify-center shadow-xl shadow-accent-glow/40">
-                <VaultLogo size={48} className="text-accent-primary" />
+              <div className="relative z-20 w-20 h-20 sm:w-28 sm:h-28 rounded-3xl bg-white dark:bg-vault-surface border-2 border-accent-primary flex items-center justify-center shadow-xl shadow-accent-glow/40">
+                <VaultLogo size={42} className="text-accent-primary" />
               </div>
 
-              {/* Connected Interactive Feature Cards Stack (Right Column Overlay) */}
-              <div className="absolute right-0 sm:-right-4 inset-y-4 flex flex-col justify-between z-20 w-44 sm:w-56 pointer-events-auto">
+              {/* Connected Interactive Feature Cards Stack (Tablet/Desktop Overlay) */}
+              <div className="hidden sm:flex absolute -right-4 inset-y-4 flex-col justify-between z-20 w-52 sm:w-56 pointer-events-auto">
                 {FEATURE_NODES.map((node, idx) => {
                   const isActive = activeNode === idx;
                   const Icon = node.icon;
@@ -187,6 +187,45 @@ const Hero = () => {
                 })}
               </div>
 
+            </div>
+
+            {/* Mobile Feature Cards List (< sm) */}
+            <div className="sm:hidden grid grid-cols-1 xs:grid-cols-2 gap-2 mt-4 w-full max-w-[340px] z-20 pointer-events-auto">
+              {FEATURE_NODES.map((node, idx) => {
+                const isActive = activeNode === idx;
+                const Icon = node.icon;
+                return (
+                  <div
+                    key={node.id}
+                    onClick={() => setActiveNode(idx)}
+                    className={`p-3 rounded-2xl transition-all duration-200 cursor-pointer border backdrop-blur-xl ${
+                      isActive
+                        ? "bg-white dark:bg-vault-surface border-accent-primary shadow-lg shadow-accent-glow/20"
+                        : "bg-white/75 dark:bg-vault-surface/70 border-slate-200 dark:border-white/10"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                          isActive
+                            ? "bg-accent-primary text-accent-foreground"
+                            : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/60"
+                        }`}
+                      >
+                        <Icon size={14} />
+                      </div>
+                      <div className="overflow-hidden">
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {node.title}
+                        </h4>
+                        <p className="text-[10px] text-slate-500 dark:text-white/50 truncate">
+                          {node.desc}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
 

@@ -316,7 +316,7 @@ const ScaleSecurity = () => {
           </div>
 
           {/* Right Monolith Visualizer */}
-          <div className="lg:col-span-6 w-full aspect-[4/3] rounded-3xl overflow-hidden bg-slate-50 dark:bg-[#020806] border border-slate-200 dark:border-white/10 relative shadow-inner flex items-center justify-center">
+          <div className="lg:col-span-6 w-full min-h-[280px] sm:min-h-[340px] aspect-[4/3] rounded-3xl overflow-hidden bg-slate-50 dark:bg-[#020806] border border-slate-200 dark:border-white/10 relative shadow-inner flex items-center justify-center">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeIndex}

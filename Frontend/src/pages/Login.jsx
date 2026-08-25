@@ -255,7 +255,7 @@ export default function Login() {
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2 text-center">
                     6-Digit Security Code
                   </label>
-                  <div className="flex gap-2 justify-center py-2" onPaste={handleTwoFactorPaste}>
+                  <div className="flex gap-1.5 sm:gap-2 justify-center py-2" onPaste={handleTwoFactorPaste}>
                     {twoFactorCode.map((digit, idx) => (
                       <input
                         key={idx}
@@ -268,7 +268,7 @@ export default function Login() {
                           handleTwoFactorCodeChange(idx, e.target.value.replace(/\D/, ""))
                         }
                         onKeyDown={(e) => handleTwoFactorKeyDown(idx, e)}
-                        className="w-11 h-12 text-center text-lg font-black rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all caret-accent-primary"
+                        className="w-9 sm:w-11 h-11 sm:h-12 text-center text-base sm:text-lg font-black rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all caret-accent-primary"
                       />
                     ))}
                   </div>

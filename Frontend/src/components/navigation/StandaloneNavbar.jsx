@@ -229,7 +229,7 @@ export default function StandaloneNavbar() {
 
       {/* MOBILE SECTION NAVIGATION OVERLAY */}
       {mobileMenuOpen && (
-        <div className="absolute top-[64px] left-0 right-0 bg-white/95 dark:bg-vault-surface/95 backdrop-blur-2xl border-b border-slate-200 dark:border-white/10 shadow-2xl p-4 lg:hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-[64px] left-0 right-0 bg-white/95 dark:bg-vault-surface/95 backdrop-blur-2xl border-b border-slate-200 dark:border-white/10 shadow-2xl p-4 lg:hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200 max-h-[calc(100dvh-64px)] overflow-y-auto custom-scrollbar">
           <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-white/40 px-2 mb-2">
             Navigate Sections
           </div>

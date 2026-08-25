@@ -304,7 +304,7 @@ export default function Register() {
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                   Verification Code
                 </label>
-                <div className="flex gap-2 justify-center mb-3" onPaste={handleOtpPaste}>
+                <div className="flex gap-1.5 sm:gap-2 justify-center mb-3" onPaste={handleOtpPaste}>
                   {otp.map((digit, idx) => (
                     <input
                       key={idx}
@@ -315,7 +315,7 @@ export default function Register() {
                       value={digit}
                       onChange={(e) => handleOtpChange(idx, e.target.value.replace(/\D/, ""))}
                       onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                      className="w-10 h-11 text-center text-base font-bold rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all caret-accent-primary"
+                      className="w-9 sm:w-10 h-11 text-center text-sm sm:text-base font-bold rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all caret-accent-primary"
                     />
                   ))}
                 </div>

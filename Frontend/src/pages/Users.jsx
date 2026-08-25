@@ -286,8 +286,8 @@ export default function Users() {
         </div>
 
         {/* ── METRIC STAT CARDS ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-3xl p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-2">
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="rounded-3xl p-4 sm:p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-2">
             <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
               <span>Total Accounts</span>
               <UsersIcon size={16} className="text-accent-primary" />
@@ -455,7 +455,7 @@ export default function Users() {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div
                   key={i}
@@ -485,7 +485,7 @@ export default function Users() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               <AnimatePresence>
                 {filteredUsers.map((user) => {
                   const displayStatus = getDisplayStatus(user);

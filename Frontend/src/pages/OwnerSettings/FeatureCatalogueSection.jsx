@@ -43,10 +43,10 @@ export default function FeatureCatalogueSection({
       : features.filter((f) => f.category === selectedCategoryFilter);
 
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-blue-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-blue-500/30">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center shadow-lg shadow-blue-500/5">
+          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center shadow-lg shadow-blue-500/5 shrink-0">
             <Layers size={22} />
           </div>
           <div>
@@ -86,14 +86,14 @@ export default function FeatureCatalogueSection({
           <button
             type="button"
             onClick={handleSave}
-            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:opacity-95 active:scale-95 transition-all"
+            className="flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:opacity-95 active:scale-95 transition-all w-full xs:w-auto"
           >
             <Check size={14} /> Save Features
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         {filteredFeatures.map((feature) => {
           const IconComp = categoryIcons[feature.category] || Layers;
           const badgeClass = categoryBadgeColors[feature.category] || "bg-slate-500/10 text-slate-400 border-slate-500/20";

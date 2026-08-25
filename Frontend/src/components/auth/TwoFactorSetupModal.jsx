@@ -171,7 +171,7 @@ export default function TwoFactorSetupModal({ isOpen, onClose, onSuccess }) {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-lg bg-vault-surface border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 overflow-hidden text-white"
+          className="relative w-full max-w-lg bg-vault-surface border border-white/10 rounded-3xl p-5 sm:p-8 shadow-2xl z-10 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden text-white"
         >
           {/* Ambient Glow */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-3xl pointer-events-none" />
@@ -287,7 +287,7 @@ export default function TwoFactorSetupModal({ isOpen, onClose, onSuccess }) {
                 <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-3 text-center">
                   6-Digit Authenticator Code
                 </label>
-                <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
+                <div className="flex gap-1.5 sm:gap-2 justify-center" onPaste={handleOtpPaste}>
                   {totpCode.map((digit, idx) => (
                     <input
                       key={idx}
@@ -300,7 +300,7 @@ export default function TwoFactorSetupModal({ isOpen, onClose, onSuccess }) {
                         handleOtpChange(idx, e.target.value.replace(/\D/, ""))
                       }
                       onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                      className="w-11 h-12 text-center text-lg font-black rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors caret-emerald-400 shadow-inner"
+                      className="w-9 sm:w-11 h-11 sm:h-12 text-center text-sm sm:text-lg font-black rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors caret-emerald-400 shadow-inner"
                     />
                   ))}
                 </div>

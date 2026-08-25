@@ -309,14 +309,14 @@ export default function TrashView() {
 
   return (
     <div className="flex-1 flex flex-col relative h-full">
-      <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-2 pb-5 mb-5 border-b border-white/5 shrink-0 px-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-3 gap-x-2 pb-4 mb-4 border-b border-white/5 shrink-0 px-1 sm:px-2">
         <div className="flex items-center gap-2 shrink-0">
-          <h2 className="text-2xl capitalize font-bold text-white flex items-center gap-2 drop-shadow-md tracking-wide">
+          <h2 className="text-xl sm:text-2xl capitalize font-bold text-white flex items-center gap-2 drop-shadow-md tracking-wide">
             Recycle Vault
           </h2>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="flex items-center bg-black/40 backdrop-blur-sm rounded-xl p-1 border border-white/5">
             <button
               onClick={() => setViewMode("grid")}
@@ -346,7 +346,7 @@ export default function TrashView() {
             <>
               <button
                 onClick={selectedItems.length > 0 ? () => handleRestore(selectedItems) : handleRestoreAll}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-vault-emerald/10 border border-vault-emerald/30 text-vault-emerald hover:bg-vault-emerald/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,212,165,0.3)] shrink-0"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-vault-emerald/10 border border-vault-emerald/30 text-vault-emerald hover:bg-vault-emerald/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,212,165,0.3)] shrink-0"
               >
                 <RotateCcw size={16} />
                 <span className="hidden sm:inline">
@@ -355,7 +355,7 @@ export default function TrashView() {
               </button>
               <button
                 onClick={selectedItems.length > 0 ? () => handleDeleteForever(selectedItems) : handleEmptyTrash}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-danger-accent/10 border border-danger-accent/30 text-danger-accent hover:bg-danger-accent/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,90,122,0.3)] shrink-0"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-danger-accent/10 border border-danger-accent/30 text-danger-accent hover:bg-danger-accent/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,90,122,0.3)] shrink-0"
               >
                 <Trash2 size={18} />
                 <span className="hidden sm:inline">
@@ -374,15 +374,15 @@ export default function TrashView() {
           className={`pb-20 relative select-none flex-1 content-start ${
             viewMode === "list"
               ? "flex flex-col gap-1"
-              : "grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-6 p-6 rounded-[2.5rem] vault-glass-panel"
+              : "grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 sm:gap-6 p-3 sm:p-6 rounded-2xl sm:rounded-[2.5rem] vault-glass-panel"
           }`}
           onMouseDown={handleMouseDown}
         >
           {viewMode === "list" && (
-            <div className="grid grid-cols-[1fr,100px,150px,40px] gap-4 px-4 py-3 text-sm font-semibold text-slate-500 border-b border-slate-200/50 dark:border-slate-800/50 mb-2 items-center sticky top-0 bg-transparent z-10">
+            <div className="grid grid-cols-[1fr,40px] sm:grid-cols-[1fr,100px,40px] md:grid-cols-[1fr,100px,150px,40px] gap-2 sm:gap-4 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-500 border-b border-slate-200/50 dark:border-slate-800/50 mb-2 items-center sticky top-0 bg-transparent z-10">
               <div>Name</div>
-              <div className="text-right">Size</div>
-              <div className="text-right pr-4">Modified</div>
+              <div className="text-right hidden sm:block">Size</div>
+              <div className="text-right pr-4 hidden md:block">Modified</div>
               <div></div>
             </div>
           )}
@@ -441,7 +441,7 @@ export default function TrashView() {
 
       {/* Floating Bulk Action Bar */}
       {selectedItems.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/80 dark:bg-white/[0.06] backdrop-blur-2xl text-slate-900 dark:text-white px-6 py-3 rounded-full shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-black/10 dark:border-white/[0.08] flex items-center gap-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar bg-white/90 dark:bg-vault-surface/90 backdrop-blur-2xl text-slate-900 dark:text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-black/10 dark:border-white/[0.08] flex items-center gap-3 sm:gap-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
           <span className="font-medium text-sm">
             {selectedItems.length} selected
           </span>

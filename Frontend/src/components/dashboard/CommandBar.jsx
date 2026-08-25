@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { usePlan } from "../../context/PlanContext";
@@ -26,6 +27,12 @@ import {
   MoreVertical,
   Share2,
   X,
+  HardDrive,
+  User,
+  Sparkles,
+  Shield,
+  Sliders,
+  FolderLock,
 } from "lucide-react";
 
 export default function CommandBar({
@@ -189,6 +196,75 @@ export default function CommandBar({
     },
   ];
 
+  const userRole = user?.role?.toUpperCase() || "USER";
+  const isOwner = userRole === "OWNER";
+  const isManagerOrAdmin = ["OWNER", "ADMIN", "MANAGER"].includes(userRole);
+
+  const navSections = [
+    {
+      name: "Vault Chamber",
+      path: "/dashboard",
+      icon: FolderLock,
+      exact: true,
+    },
+    {
+      name: "Storage & Plans",
+      path: "/dashboard/billing",
+      aliases: ["/billing"],
+      icon: HardDrive,
+    },
+    {
+      name: "Account Settings",
+      path: "/profile",
+      icon: User,
+    },
+    {
+      name: "Wally's Academy",
+      path: "/dashboard/tutorials",
+      aliases: ["/tutorials"],
+      icon: Sparkles,
+    },
+    ...(isManagerOrAdmin
+      ? [
+          {
+            name: "User Management",
+            path: "/users",
+            icon: Shield,
+          },
+        ]
+      : []),
+    ...(isOwner
+      ? [
+          {
+            name: "Owner Settings",
+            path: "/owner/settings",
+            icon: Sliders,
+          },
+        ]
+      : []),
+  ];
+
+  const isSectionActive = (item) => {
+    if (item.exact) {
+      return location.pathname === item.path;
+    }
+    if (
+      location.pathname === item.path ||
+      location.pathname.startsWith(`${item.path}/`)
+    ) {
+      return true;
+    }
+    if (
+      item.aliases &&
+      item.aliases.some(
+        (a) => location.pathname === a || location.pathname.startsWith(`${a}/`),
+      )
+    ) {
+      return true;
+    }
+    return false;
+  };
+
   return (
     <header className="h-[64px] shrink-0 bg-white/95 dark:bg-vault-surface/95 backdrop-blur-3xl border-b border-slate-200 dark:border-white/10 z-50 flex items-center justify-between px-3 sm:px-6 sticky top-0 shadow-sm">
       {/* Mobile Search Overlay */}
@@ -252,7 +328,7 @@ export default function CommandBar({
 
           {/* Mobile Filter Panel */}
           {showFilters && (
-            <div className="px-5 pb-6 pt-3 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#030706]">
+            <div className="px-5 pb-6 pt-3 border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#030706] max-h-[65vh] overflow-y-auto custom-scrollbar">
               <h3 className="text-[10px] font-bold tracking-widest text-accent-primary uppercase mb-4 pb-2 border-b border-accent-border/30 flex items-center justify-between">
                 <span>Advanced Search Filters</span>
                 <span className="text-[9px] text-slate-500 dark:text-white/30 font-medium lowercase">
@@ -426,7 +502,7 @@ export default function CommandBar({
 
             {/* Filter Dropdown */}
             {showFilters && (
-              <div className="absolute top-full sm:top-[calc(100%+8px)] left-0 mt-2 sm:mt-0 w-[100vw] sm:w-full -ml-4 sm:ml-0 bg-white/95 dark:bg-vault-surface/95 backdrop-blur-xl border-y sm:border border-slate-200 dark:border-white/10 sm:rounded-2xl shadow-2xl z-50 p-4 text-slate-900 dark:text-white">
+              <div className="absolute top-full sm:top-[calc(100%+8px)] left-0 mt-2 sm:mt-0 w-[100vw] sm:w-full -ml-4 sm:ml-0 bg-white/95 dark:bg-vault-surface/95 backdrop-blur-xl border-y sm:border border-slate-200 dark:border-white/10 sm:rounded-2xl shadow-2xl z-50 p-4 text-slate-900 dark:text-white max-h-[75vh] overflow-y-auto custom-scrollbar">
                 <h3 className="text-xs font-bold tracking-widest text-accent-primary uppercase mb-4 border-b border-slate-200 dark:border-white/10 pb-2">
                   Advanced Search
                 </h3>
@@ -516,21 +592,20 @@ export default function CommandBar({
           </div>
         )}
 
-        {/* Mobile Control Center Toggle (Vault Only) */}
-        {isVaultRoute && (
-          <div className="lg:hidden relative">
-            <button
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className={`p-1.5 sm:p-2 rounded-xl transition-all duration-200 ${
-                showMobileMenu
-                  ? "bg-accent-soft text-accent-primary border border-accent-border"
-                  : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent"
-              }`}
-            >
-              {showMobileMenu ? <X size={20} /> : <MoreVertical size={20} />}
-            </button>
-          </div>
-        )}
+        {/* Mobile Navigation & Control Center Toggle */}
+        <div className="lg:hidden relative">
+          <button
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+            className={`p-1.5 sm:p-2 rounded-xl border transition-all ${
+              showMobileMenu
+                ? "bg-accent-soft text-accent-primary border-accent-border shadow-accent-glow-sm"
+                : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10"
+            }`}
+            title="Navigation Menu"
+          >
+            {showMobileMenu ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
 
         {/* Integration Status */}
         <div className="hidden md:flex items-center gap-2 border-r border-slate-200 dark:border-white/10 pr-3 mr-1">
@@ -565,114 +640,107 @@ export default function CommandBar({
         />
       </div>
 
-      {/* ── Mobile Control Center ── */}
-      {showMobileMenu &&
-        createPortal(
-          <>
-            {/* Backdrop */}
-            <div
-              className="control-center-backdrop fixed inset-0 bg-black/70 backdrop-blur-xl z-[100] lg:hidden"
-              onClick={() => setShowMobileMenu(false)}
-            />
+      {/* ── Mobile Control Center & Navigation Dropdown (Aligned with Standalone Pages) ── */}
+      {showMobileMenu && (
+        <div className="absolute top-[64px] left-0 right-0 bg-white/95 dark:bg-vault-surface/95 backdrop-blur-2xl border-b border-slate-200 dark:border-white/10 shadow-2xl p-4 lg:hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200 max-h-[calc(100dvh-64px)] overflow-y-auto custom-scrollbar">
+          {/* Quick Search Shortcut */}
+          <button
+            onClick={() => {
+              setShowMobileMenu(false);
+              setMobileSearchOpen(true);
+            }}
+            className="w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/70 hover:bg-slate-100 dark:hover:bg-white/5 mb-4 sm:hidden"
+          >
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-accent-soft text-accent-primary border border-accent-border">
+              <Search size={16} />
+            </div>
+            <span className="text-xs font-semibold">Search Vault Assets...</span>
+          </button>
 
-            {/* Panel */}
-            <div className="control-center-panel">
-              {/* Handle bar */}
-              <div className="flex justify-center mb-4">
-                <div className="w-10 h-1 rounded-full bg-white/20" />
+          {/* Quick Actions (Vault Only) */}
+          {isVaultRoute && (
+            <div className="mb-4">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-white/40 px-2 mb-2">
+                Vault Actions
               </div>
-
-              {/* Search Row */}
-              <button
-                onClick={() => {
-                  setShowMobileMenu(false);
-                  setMobileSearchOpen(true);
-                }}
-                className="w-full flex items-center gap-3 p-4 rounded-2xl bg-vault-surface/80 border border-white/10 backdrop-blur-md mb-4 active:scale-[0.98] transition-transform sm:hidden"
-              >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-vault-emerald/10">
-                  <Search size={20} className="text-vault-emerald" />
-                </div>
-                <span className="text-sm font-semibold text-white/70">
-                  Search Vault
-                </span>
-              </button>
-
-              {/* Action Grid — Contextual for GitHub */}
               {location.pathname === "/dashboard/github" ? (
-                <div className="mb-4">
-                  <button
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      document.dispatchEvent(new CustomEvent("createRepoTrigger"));
-                    }}
-                    className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl bg-accent-primary text-accent-foreground font-bold text-sm shadow-accent-glow active:scale-95 transition-transform"
-                  >
-                    <Plus size={18} />
-                    <span>Create New Repository</span>
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    setShowMobileMenu(false);
+                    document.dispatchEvent(new CustomEvent("createRepoTrigger"));
+                  }}
+                  className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-accent-primary text-accent-foreground font-bold text-xs shadow-accent-glow active:scale-95 transition-transform"
+                >
+                  <Plus size={16} />
+                  <span>Create New Repository</span>
+                </button>
               ) : (
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {quickActions.map((action, idx) => (
+                <div className="grid grid-cols-2 gap-2">
+                  {quickActions.map((action) => (
                     <button
                       key={action.label}
                       onClick={() => {
                         setShowMobileMenu(false);
                         action.onClick();
                       }}
-                      className="control-center-tile relative flex flex-col items-center justify-center gap-2 p-4 sm:p-5 rounded-2xl border border-white/10 backdrop-blur-md bg-vault-surface/80 active:scale-95 transition-transform duration-150"
-                      style={{
-                        animationDelay: `${idx * 50}ms`,
-                      }}
+                      className="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/5 active:scale-95 transition-all text-left group"
                     >
-                      {/* Colored glow behind icon */}
                       <div
-                        className="absolute inset-0 rounded-2xl opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                        style={{ boxShadow: `inset 0 0 30px ${action.color}15` }}
-                      />
-
-                      {/* Icon with color */}
-                      <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center border border-white/10 relative"
+                        className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border border-slate-200/80 dark:border-white/10 transition-transform group-hover:scale-105"
                         style={{
                           backgroundColor: `${action.color}15`,
-                          boxShadow: `0 0 20px ${action.color}10`,
                         }}
                       >
-                        <action.icon
-                          size={22}
-                          style={{ color: action.color }}
-                          className="relative z-10"
-                        />
+                        <action.icon size={16} style={{ color: action.color }} />
                       </div>
-
-                      {/* Label */}
-                      <span className="text-[11px] sm:text-xs font-semibold text-white/70 tracking-wide text-center leading-tight">
+                      <span className="text-xs font-bold text-slate-800 dark:text-white/90 truncate">
                         {action.label}
                       </span>
-
-                      {/* Colored bottom accent line */}
-                      <div
-                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full opacity-40"
-                        style={{ backgroundColor: action.color }}
-                      />
                     </button>
                   ))}
                 </div>
               )}
-
-              {/* Cancel */}
-              <button
-                onClick={() => setShowMobileMenu(false)}
-                className="w-full py-3 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold text-white/50 active:scale-[0.98] transition-transform"
-              >
-                Cancel
-              </button>
             </div>
-          </>,
-          document.body,
-        )}
+          )}
+
+          {/* Navigate Sections */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-white/40 px-2 mb-2">
+              Navigate Sections
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {navSections.map((item) => {
+                const active = isSectionActive(item);
+                const Icon = item.icon;
+
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setShowMobileMenu(false)}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
+                      active
+                        ? "bg-accent-soft border-accent-border text-accent-primary font-bold shadow-sm"
+                        : "bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/70 hover:bg-slate-100 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                        active
+                          ? "bg-accent-primary text-accent-foreground"
+                          : "bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-white/50"
+                      }`}
+                    >
+                      <Icon size={16} />
+                    </div>
+                    <span className="text-xs font-semibold">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

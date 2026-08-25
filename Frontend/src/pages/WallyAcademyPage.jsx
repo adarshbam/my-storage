@@ -234,7 +234,7 @@ export default function WallyAcademyPage() {
       {/* ─────────────────────────────────────────────────────────────
           1. HEADER BANNER WITH WALLY MASCOT
          ───────────────────────────────────────────────────────────── */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-[#071B16]/90 via-[#04100D]/90 to-[#0B1528]/90 border border-white/15 p-6 sm:p-8 backdrop-blur-3xl overflow-hidden shadow-2xl">
+      <div className="relative rounded-3xl bg-gradient-to-br from-[#071B16]/90 via-[#04100D]/90 to-[#0B1528]/90 border border-white/15 p-5 sm:p-8 backdrop-blur-3xl overflow-hidden shadow-2xl">
         {/* Glow ambient background */}
         <div className="absolute top-0 right-1/4 w-96 h-96 rounded-full bg-[radial-gradient(ellipse,rgba(0,207,255,0.15)_0%,transparent_70%)] pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-[radial-gradient(ellipse,rgba(16,185,129,0.15)_0%,transparent_70%)] pointer-events-none" />
@@ -282,7 +282,7 @@ export default function WallyAcademyPage() {
       {/* ─────────────────────────────────────────────────────────────
           2. LIVE INTERACTIVE PRACTICE ARENA / SANDBOX
          ───────────────────────────────────────────────────────────── */}
-      <div className="rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-6 sm:p-7 space-y-5 shadow-xl">
+      <div className="rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-5 sm:p-7 space-y-5 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
           <div className="space-y-1">
             <h2 className="text-lg font-black text-white flex items-center gap-2">
@@ -304,7 +304,7 @@ export default function WallyAcademyPage() {
         </div>
 
         {/* Quest Mastery Progress Pills */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { id: "arrowNav", label: "1. Arrow Navigation", hint: "Press ← → ↑ ↓", done: completedQuests.arrowNav },
             { id: "shiftSelect", label: "2. Shift Multi-Select", hint: "Hold Shift + Arrow", done: completedQuests.shiftSelect },
@@ -390,7 +390,7 @@ export default function WallyAcademyPage() {
       {/* ─────────────────────────────────────────────────────────────
           3. ALL SHORTCUTS CATALOG & CUSTOMIZATION MANAGER
          ───────────────────────────────────────────────────────────── */}
-      <div className="rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-6 sm:p-7 space-y-6 shadow-xl">
+      <div className="rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-5 sm:p-7 space-y-6 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
           <div>
             <h2 className="text-lg font-black text-white flex items-center gap-2">
@@ -453,10 +453,10 @@ export default function WallyAcademyPage() {
             return (
               <div
                 key={item.id}
-                className="group flex items-center justify-between p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-all duration-200"
+                className="group flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-all duration-200 gap-3 sm:gap-4"
               >
-                <div className="space-y-1 pr-4">
-                  <div className="flex items-center gap-2">
+                <div className="space-y-1 pr-0 sm:pr-4 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h4 className="text-sm font-bold text-white">{item.name}</h4>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/60 font-medium">
                       {item.category}
@@ -470,7 +470,7 @@ export default function WallyAcademyPage() {
                   <p className="text-xs text-white/50 leading-relaxed">{item.description}</p>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-end sm:self-auto">
                   {/* Keyboard Badge */}
                   <kbd className="px-3 py-1.5 rounded-xl bg-black/60 border border-white/20 text-xs font-mono font-black text-accent-primary shadow-sm tracking-wider">
                     {activeKey}
@@ -504,7 +504,7 @@ export default function WallyAcademyPage() {
       {/* ─────────────────────────────────────────────────────────────
           4. INTERACTIVE TUTORIAL WALKTROUGHS WITH WALLY
          ───────────────────────────────────────────────────────────── */}
-      <div className="rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-6 sm:p-7 space-y-5 shadow-xl">
+      <div className="rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-5 sm:p-7 space-y-5 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
           <div className="space-y-1">
             <h2 className="text-lg font-black text-white flex items-center gap-2">

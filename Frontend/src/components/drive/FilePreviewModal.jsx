@@ -866,7 +866,7 @@ export default function FilePreviewModal({
   return (
     <div
       className={`fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-200 ${
-        isFullscreen ? "p-0" : "p-3 sm:p-6"
+        isFullscreen ? "p-0" : "p-2 sm:p-6"
       }`}
     >
       {!isFullscreen && <div className="absolute inset-0" onClick={onClose} />}
@@ -875,13 +875,13 @@ export default function FilePreviewModal({
         className={`relative bg-white/95 dark:bg-[#0c0c0e]/95 backdrop-blur-2xl shadow-[0_25px_80px_rgba(0,0,0,0.35)] dark:shadow-[0_30px_90px_rgba(0,0,0,0.9),0_0_35px_var(--accent-glow)] flex flex-col border border-slate-200/90 dark:border-white/10 overflow-hidden animate-in zoom-in-95 duration-150 transition-all ${
           isFullscreen
             ? "w-full h-full rounded-none"
-            : "w-full max-w-6xl h-[82vh] rounded-3xl"
+            : "w-full max-w-6xl h-[92dvh] sm:h-[85vh] rounded-2xl sm:rounded-3xl"
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.03]">
-          <div className="flex items-center gap-3.5 overflow-hidden">
-            <div className="p-2.5 bg-accent-soft border border-accent-border rounded-2xl text-accent-primary shrink-0 shadow-sm shadow-accent-glow/10">
+        <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.03] shrink-0 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0 overflow-hidden">
+            <div className="p-2 sm:p-2.5 bg-accent-soft border border-accent-border rounded-xl sm:rounded-2xl text-accent-primary shrink-0 shadow-sm shadow-accent-glow/10">
               {(() => {
                 const ext = getFileExt(file);
                 if (isTextOrCode(ext, file.name)) return <FileCode size={20} />;
@@ -955,7 +955,7 @@ export default function FilePreviewModal({
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0 flex-wrap justify-end">
             {isTextOrCode(file.extension) && !loading && (
               <>
                 {!isEditing && (

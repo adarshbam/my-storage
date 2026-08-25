@@ -95,7 +95,7 @@ const Pricing = () => {
         </div>
 
         {/* Pricing Tiers */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-center relative">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-center relative">
             {/* Background ambient glow behind middle card */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[500px] bg-[#14b8a6]/10 blur-[120px] rounded-full pointer-events-none" />
 

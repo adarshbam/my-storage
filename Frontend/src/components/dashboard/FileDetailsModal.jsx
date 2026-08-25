@@ -52,10 +52,10 @@ export default function FileDetailsModal({ item, onClose }) {
       "text-linkgit-accent bg-linkgit-accent/10 border-linkgit-accent/30";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md bg-white dark:bg-vault-surface text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
+      <div className="w-full max-w-md max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)] flex flex-col bg-white dark:bg-vault-surface text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 px-6 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5">
+        <div className="flex items-center justify-between p-4 px-6 border-b border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5 shrink-0">
           <h2 className="text-xs font-bold tracking-widest text-slate-700 dark:text-white/70 uppercase">
             Asset Details
           </h2>
@@ -67,8 +67,10 @@ export default function FileDetailsModal({ item, onClose }) {
           </button>
         </div>
 
-        {/* Hero Section */}
-        <div className="p-8 flex flex-col items-center border-b border-slate-100 dark:border-white/5 relative overflow-hidden">
+        {/* Scrollable Content */}
+        <div className="overflow-y-auto custom-scrollbar flex-1">
+          {/* Hero Section */}
+          <div className="p-6 sm:p-8 flex flex-col items-center border-b border-slate-100 dark:border-white/5 relative overflow-hidden">
           <div
             className={`absolute inset-0 opacity-10 bg-gradient-radial to-transparent from-slate-400 dark:from-white`}
           />
@@ -311,5 +313,6 @@ export default function FileDetailsModal({ item, onClose }) {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

@@ -11,7 +11,7 @@ const features = [
 
 export default function AuthLayout({ children }) {
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-vault-bg p-4 sm:p-6 lg:p-8 transition-colors duration-300">
+    <div className="min-h-[100dvh] flex items-center justify-center relative overflow-hidden bg-vault-bg p-3 sm:p-6 lg:p-8 transition-colors duration-300">
       {/* Ambient glows */}
       <div className="fixed inset-0 z-[0] pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-15%] w-[50vw] h-[50vw] bg-accent-soft rounded-full blur-[140px] opacity-70" />
@@ -19,7 +19,7 @@ export default function AuthLayout({ children }) {
       </div>
 
       {/* Frame */}
-      <div className="w-full max-w-[1100px] min-h-[600px] bg-white/80 dark:bg-vault-surface/80 backdrop-blur-2xl border border-slate-200 dark:border-white/10 shadow-2xl rounded-3xl lg:rounded-[2.5rem] flex overflow-hidden relative z-10 transition-all duration-300">
+      <div className="w-full max-w-[1100px] min-h-0 sm:min-h-[560px] lg:min-h-[600px] bg-white/80 dark:bg-vault-surface/80 backdrop-blur-2xl border border-slate-200 dark:border-white/10 shadow-2xl rounded-3xl lg:rounded-[2.5rem] flex overflow-hidden relative z-10 transition-all duration-300">
         {/* Left Promo Panel */}
         <div className="hidden lg:flex lg:w-[46%] relative bg-slate-900 dark:bg-black/50 border-r border-slate-200 dark:border-white/10 overflow-hidden text-white">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,var(--accent-soft)_0%,transparent_70%)] pointer-events-none" />
@@ -85,7 +85,7 @@ export default function AuthLayout({ children }) {
         </div>
 
         {/* Right Form Panel */}
-        <div className="flex-1 flex items-center justify-center relative p-8 sm:p-12">
+        <div className="flex-1 flex items-center justify-center relative p-4 sm:p-8 md:p-12 py-6 sm:py-10">
           <div className="w-full max-w-[380px] relative z-10">{children}</div>
         </div>
       </div>

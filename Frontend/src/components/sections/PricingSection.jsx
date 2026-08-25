@@ -248,9 +248,9 @@ const PricingSection = () => {
           </p>
 
           {/* Billing Controls */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mt-10 max-w-full">
             {/* Monthly / Yearly Toggle */}
-            <div className="flex items-center gap-3 bg-white/70 dark:bg-vault-surface/70 border border-slate-200 dark:border-white/10 px-4 py-2 rounded-2xl shadow-sm backdrop-blur-md">
+            <div className="flex flex-wrap sm:flex-nowrap items-center justify-center gap-2 sm:gap-3 bg-white/70 dark:bg-vault-surface/70 border border-slate-200 dark:border-white/10 px-3 sm:px-4 py-2 rounded-2xl shadow-sm backdrop-blur-md max-w-full">
               <span
                 className={`text-xs font-bold uppercase tracking-wider transition-colors ${
                   !isYearly ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-white/40"
@@ -348,7 +348,7 @@ const PricingSection = () => {
         </div>
 
         {/* Pricing Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch max-w-6xl mx-auto">
           {planDetails
             .filter((detail) => (detail.period?.toLowerCase() === "yearly") === isYearly)
             .map((detail) => (

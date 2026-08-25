@@ -106,7 +106,7 @@ export default function VerifyOtp() {
   const otpComplete = otp.join("").length === 6;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#faf5f7] dark:bg-[#020b08] transition-colors duration-300">
+    <div className="min-h-[100dvh] flex items-center justify-center p-3 sm:p-4 relative overflow-hidden bg-[#faf5f7] dark:bg-[#020b08] transition-colors duration-300">
       {/* Layered Gradient Background */}
       <div className="fixed inset-0 z-[0] pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-15%] w-[50vw] h-[50vw] bg-[#14b8a6]/15 dark:bg-[#14b8a6]/10 rounded-full blur-[120px]" />
@@ -123,7 +123,7 @@ export default function VerifyOtp() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="bg-white/60 dark:bg-white/[0.04] backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] rounded-[24px] p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)] transition-all duration-300"
+          className="bg-white/60 dark:bg-white/[0.04] backdrop-blur-2xl border border-black/10 dark:border-white/[0.08] rounded-[24px] p-5 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)] transition-all duration-300"
         >
           {/* Logo + Header */}
           <div className="flex flex-col items-center mb-8">
@@ -219,7 +219,7 @@ export default function VerifyOtp() {
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                     Verification Code
                   </label>
-                  <div className="flex justify-between gap-2" onPaste={handleOtpPaste}>
+                  <div className="flex justify-between gap-1.5 sm:gap-2" onPaste={handleOtpPaste}>
                     {otp.map((digit, idx) => (
                       <input
                         key={idx}
@@ -230,7 +230,7 @@ export default function VerifyOtp() {
                         value={digit}
                         onChange={(e) => handleOtpChange(idx, e.target.value.replace(/\D/, ""))}
                         onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                        className="w-full aspect-square max-w-[52px] text-center text-xl font-bold rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#14b8a6]/50 focus:border-[#14b8a6]/50 dark:focus:shadow-[0_0_15px_rgba(20,184,166,0.15)] outline-none transition-all duration-300 caret-[#14b8a6]"
+                        className="w-full aspect-square max-w-[52px] min-w-0 text-center text-lg sm:text-xl font-bold rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#14b8a6]/50 focus:border-[#14b8a6]/50 dark:focus:shadow-[0_0_15px_rgba(20,184,166,0.15)] outline-none transition-all duration-300 caret-[#14b8a6]"
                       />
                     ))}
                   </div>

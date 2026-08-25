@@ -150,7 +150,7 @@ export default function TwoFactorManageModal({
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-lg bg-vault-surface border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 overflow-hidden text-white"
+          className="relative w-full max-w-lg bg-vault-surface border border-white/10 rounded-3xl p-5 sm:p-8 shadow-2xl z-10 max-h-[calc(100dvh-2rem)] flex flex-col overflow-y-auto custom-scrollbar text-white"
         >
           {/* Close button */}
           <button

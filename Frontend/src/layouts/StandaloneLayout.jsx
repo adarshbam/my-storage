@@ -6,11 +6,11 @@ import WallLauncher from "../components/guide/WallLauncher";
 
 export default function StandaloneLayout() {
   return (
-    <div className="min-h-screen flex flex-col bg-vault-bg text-white overflow-x-hidden relative font-sans">
+    <div className="min-h-[100dvh] flex flex-col bg-vault-bg text-white overflow-x-hidden relative font-sans">
       <VaultBackground />
       <StandaloneNavbar />
 
-      <main className="flex-1 relative z-10 p-4 sm:p-6 lg:p-8 custom-scrollbar">
+      <main className="flex-1 relative z-10 p-3 sm:p-6 lg:p-8 custom-scrollbar">
         <div className="mx-auto max-w-7xl h-full flex flex-col">
           <Outlet />
         </div>

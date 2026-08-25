@@ -28,7 +28,7 @@ export default function AppearanceSection() {
   ];
 
   return (
-    <div className="rounded-3xl p-6 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-8">
+    <div className="rounded-3xl p-5 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-8">
       {/* ── Section Title & Subtitle ── */}
       <div className="border-b border-slate-100 dark:border-white/10 pb-5">
         <div className="flex items-center gap-3">
@@ -193,7 +193,7 @@ export default function AppearanceSection() {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {palettes.map((p) => {
             const isSelected = accent === p.id;
             const accentColor = p.colorHex || p.swatch;

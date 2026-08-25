@@ -461,7 +461,7 @@ export default function BillingPlansPage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Current Plan Hero Card */}
-          <div className="lg:col-span-2 rounded-3xl p-6 sm:p-8 bg-white dark:bg-gradient-to-br dark:from-vault-surface dark:via-slate-900 dark:to-slate-950 border border-slate-200 dark:border-accent-border/30 shadow-md relative overflow-hidden flex flex-col justify-between text-slate-900 dark:text-white">
+          <div className="lg:col-span-2 rounded-3xl p-5 sm:p-8 bg-white dark:bg-gradient-to-br dark:from-vault-surface dark:via-slate-900 dark:to-slate-950 border border-slate-200 dark:border-accent-border/30 shadow-md relative overflow-hidden flex flex-col justify-between text-slate-900 dark:text-white">
             {/* Background Ambient Glow */}
             <div className="absolute top-0 right-0 w-80 h-80 bg-accent-soft/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -598,7 +598,7 @@ export default function BillingPlansPage() {
           </div>
 
           {/* ── SECTION 5 & 8: BILLING SUMMARY & QUICK STORAGE CARD ── */}
-          <div className="rounded-3xl p-6 sm:p-8 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 backdrop-blur-xl flex flex-col justify-between space-y-6 shadow-sm">
+          <div className="rounded-3xl p-5 sm:p-8 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 backdrop-blur-xl flex flex-col justify-between space-y-6 shadow-sm">
             <div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <CreditCard size={18} className="text-emerald-500" /> Billing Summary
@@ -686,8 +686,8 @@ export default function BillingPlansPage() {
 
         {/* Plans Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
+            {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
                 className="h-96 rounded-3xl bg-white dark:bg-vault-surface/40 border border-slate-200 dark:border-white/10 animate-pulse shadow-sm"
@@ -695,7 +695,7 @@ export default function BillingPlansPage() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
             {filteredPlans.map((plan) => {
               const isPlanMatch =
                 subscription?.razorpayPlanId === plan.razorpayPlanId ||

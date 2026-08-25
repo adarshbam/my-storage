@@ -356,7 +356,7 @@ export default function ProfileMenu({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="absolute right-0 top-[calc(100%+12px)] w-[340px] origin-top-right"
+            className="absolute right-0 top-[calc(100%+12px)] w-[calc(100vw-24px)] max-w-[340px] origin-top-right"
             style={{ zIndex: 9999 }}
           >
             <div className="rounded-3xl overflow-hidden bg-white/95 dark:bg-vault-surface/95 text-slate-900 dark:text-white backdrop-blur-2xl border border-slate-200 dark:border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]">
@@ -515,7 +515,7 @@ export default function ProfileMenu({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="absolute right-0 top-[calc(100%+12px)] w-[340px] origin-top-right"
+            className="absolute right-0 top-[calc(100%+12px)] w-[calc(100vw-24px)] max-w-[340px] origin-top-right"
             style={{ zIndex: 9999 }}
           >
             <div className="rounded-3xl overflow-hidden bg-white/95 dark:bg-[#121614]/95 text-slate-900 dark:text-white backdrop-blur-2xl border border-slate-200 dark:border-white/10 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.6)] flex flex-col max-h-[85vh]">

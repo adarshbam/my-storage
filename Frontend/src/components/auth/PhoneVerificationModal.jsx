@@ -374,7 +374,7 @@ export default function PhoneVerificationModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="relative w-full max-w-md my-auto bg-white dark:bg-[#0d1614] text-slate-900 dark:text-white border border-slate-200 dark:border-emerald-500/20 rounded-3xl p-6 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.25)] dark:shadow-[0_30px_90px_rgba(0,0,0,0.85),0_0_40px_rgba(16,185,129,0.15)] z-10 overflow-hidden"
+            className="relative w-full max-w-md my-auto bg-white dark:bg-[#0d1614] text-slate-900 dark:text-white border border-slate-200 dark:border-emerald-500/20 rounded-3xl p-5 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.25)] dark:shadow-[0_30px_90px_rgba(0,0,0,0.85),0_0_40px_rgba(16,185,129,0.15)] z-10 max-h-[calc(100dvh-2rem)] flex flex-col overflow-y-auto custom-scrollbar"
           >
             {/* Top Right Ambient Glow */}
             <div className="absolute -top-12 -right-12 w-44 h-44 bg-emerald-500/15 dark:bg-emerald-500/20 blur-3xl pointer-events-none rounded-full" />
@@ -558,7 +558,7 @@ export default function PhoneVerificationModal({
                     </label>
 
                     {/* 6 Digit Inputs */}
-                    <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
+                    <div className="flex gap-1.5 sm:gap-2 justify-center" onPaste={handleOtpPaste}>
                       {otp.map((digit, idx) => (
                         <input
                           key={idx}
@@ -572,7 +572,7 @@ export default function PhoneVerificationModal({
                           onChange={(e) => handleOtpChange(idx, e.target.value)}
                           onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                           disabled={verifyingOtp || verifiedSuccess}
-                          className="w-11 h-12 sm:w-12 sm:h-13 text-center text-xl font-mono font-bold rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 transition-all caret-emerald-500 disabled:opacity-50"
+                          className="w-9 sm:w-11 h-11 sm:h-12 sm:w-12 sm:h-13 text-center text-base sm:text-xl font-mono font-bold rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 transition-all caret-emerald-500 disabled:opacity-50"
                         />
                       ))}
                     </div>

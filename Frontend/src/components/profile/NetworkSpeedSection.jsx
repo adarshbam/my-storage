@@ -16,7 +16,7 @@ export default function NetworkSpeedSection() {
   } = useSpeedGovernor();
 
   return (
-    <div className="rounded-3xl p-6 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-6">
+    <div className="rounded-3xl p-5 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-6">
       {/* ── Section Title & Subtitle ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-white/10 pb-5">
         <div className="flex items-center gap-3">

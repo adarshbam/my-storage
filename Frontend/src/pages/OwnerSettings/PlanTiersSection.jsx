@@ -46,10 +46,10 @@ export default function PlanTiersSection({
   };
 
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-rose-500/30">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-rose-500/30">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center shadow-lg shadow-rose-500/5">
+          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center shadow-lg shadow-rose-500/5 shrink-0">
             <Sparkles size={22} />
           </div>
           <div>
@@ -62,7 +62,7 @@ export default function PlanTiersSection({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {savedMessage && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 text-xs font-bold border border-emerald-500/20 animate-fade-in">
               <Check size={14} /> Tiers Saved
@@ -76,7 +76,7 @@ export default function PlanTiersSection({
           <button
             type="button"
             onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-500/25 hover:bg-rose-600 transition-colors"
+            className="flex-1 xs:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-500/25 hover:bg-rose-600 transition-colors"
           >
             <Plus size={16} /> Add New Tier
           </button>
@@ -84,7 +84,7 @@ export default function PlanTiersSection({
           <button
             type="button"
             onClick={handleSave}
-            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-bold shadow-lg shadow-rose-500/20 hover:opacity-95 active:scale-95 transition-all"
+            className="flex-1 xs:flex-none flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-bold shadow-lg shadow-rose-500/20 hover:opacity-95 active:scale-95 transition-all"
           >
             <Check size={14} /> Save Tiers
           </button>
@@ -198,7 +198,7 @@ export default function PlanTiersSection({
       )}
 
       {/* Plan Tiers Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         {planTiers.map((tier) => (
           <div
             key={tier.slug}

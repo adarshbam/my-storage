@@ -31,7 +31,7 @@ const Navbar = () => {
   };
 
   return (
-    <div className="fixed top-0 w-full z-50 flex justify-center pt-4 px-4 pointer-events-none">
+    <div className="fixed top-0 w-full z-50 flex justify-center pt-3 sm:pt-4 px-2 sm:px-4 pointer-events-none">
       <nav
         className={`pointer-events-auto transition-all duration-300 w-full max-w-[1200px] rounded-2xl md:rounded-full ${
           scrolled
@@ -39,19 +39,19 @@ const Navbar = () => {
             : "bg-white/40 dark:bg-vault-surface/40 backdrop-blur-md border border-black/[0.04] dark:border-white/[0.05]"
         }`}
       >
-        <div className="px-5 md:px-7 py-3 flex items-center justify-between">
+        <div className="px-4 sm:px-5 md:px-7 py-3 flex items-center justify-between min-w-0">
           {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group shrink-0">
             <div className="p-2 rounded-xl bg-accent-soft border border-accent-border text-accent-primary group-hover:scale-105 transition-transform duration-200 shadow-sm">
               <VaultLogo size={20} />
             </div>
-            <span className="text-xl font-black text-slate-900 dark:text-white tracking-widest uppercase">
+            <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-widest uppercase">
               VAULT
             </span>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center gap-8 px-6 py-2 rounded-full bg-slate-100/70 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.06]">
+          <div className="hidden lg:flex items-center gap-5 xl:gap-8 px-5 xl:px-6 py-2 rounded-full bg-slate-100/70 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.06] shrink-0">
             {navLinks.map((link) => (
               <a
                 key={link.name}
@@ -64,18 +64,18 @@ const Navbar = () => {
           </div>
 
           {/* Actions & Theme Toggles */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-2.5 xl:gap-3 shrink-0">
             {/* Theme Mode Toggle */}
             <button
               onClick={toggleThemeMode}
-              className="p-2 rounded-xl text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] border border-transparent hover:border-slate-200 dark:hover:border-white/10 transition-all"
+              className="p-2 rounded-xl text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] border border-transparent hover:border-slate-200 dark:hover:border-white/10 transition-all shrink-0"
               title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
               {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
             </button>
 
             {/* Accent Color Dropdown */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 onClick={() => setThemeDropdownOpen(!themeDropdownOpen)}
                 className="p-2 rounded-xl text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] border border-transparent hover:border-slate-200 dark:hover:border-white/10 transition-all flex items-center gap-1.5"
@@ -133,30 +133,30 @@ const Navbar = () => {
             </div>
 
             {user ? (
-              <Link to="/dashboard">
-                <button className="px-5 py-2.5 rounded-full text-xs font-bold tracking-wide bg-accent-primary hover:opacity-90 text-accent-foreground shadow-md shadow-accent-glow/20 transition-all duration-200 flex items-center gap-2">
+              <Link to="/dashboard" className="shrink-0">
+                <button className="px-4 xl:px-5 py-2.5 rounded-full text-xs font-bold tracking-wide bg-accent-primary hover:opacity-90 text-accent-foreground shadow-md shadow-accent-glow/20 transition-all duration-200 flex items-center gap-2 shrink-0 whitespace-nowrap">
                   <Lock size={14} /> Dashboard
                 </button>
               </Link>
             ) : (
-              <>
+              <div className="flex items-center gap-2 shrink-0">
                 <Link
                   to="/login"
-                  className="text-xs font-bold tracking-wider uppercase text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white px-3 py-2 transition-colors"
+                  className="text-xs font-bold tracking-wider uppercase text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white px-3 py-2 transition-colors whitespace-nowrap"
                 >
                   Log in
                 </Link>
-                <Link to="/register">
-                  <button className="px-5 py-2.5 rounded-full text-xs font-bold tracking-wide bg-accent-primary hover:opacity-90 text-accent-foreground shadow-md shadow-accent-glow/20 transition-all duration-200">
+                <Link to="/register" className="shrink-0">
+                  <button className="px-4 xl:px-5 py-2.5 rounded-full text-xs font-bold tracking-wide bg-accent-primary hover:opacity-90 text-accent-foreground shadow-md shadow-accent-glow/20 transition-all duration-200 whitespace-nowrap">
                     Get Started
                   </button>
                 </Link>
-              </>
+              </div>
             )}
           </div>
 
           {/* Mobile Menu Trigger */}
-          <div className="md:hidden flex items-center gap-2">
+          <div className="lg:hidden flex items-center gap-1 sm:gap-2 shrink-0">
             <button
               onClick={toggleThemeMode}
               className="p-2 rounded-xl text-slate-600 dark:text-white/70 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
@@ -180,7 +180,7 @@ const Navbar = () => {
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="md:hidden border-t border-slate-100 dark:border-white/10 px-5 py-5 overflow-hidden"
+              className="lg:hidden border-t border-slate-100 dark:border-white/10 px-5 py-5 max-h-[calc(100dvh-5rem)] overflow-y-auto custom-scrollbar"
             >
               <div className="flex flex-col gap-3">
                 {navLinks.map((link) => (

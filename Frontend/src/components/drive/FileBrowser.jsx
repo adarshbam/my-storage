@@ -1869,8 +1869,8 @@ export default function FileBrowser({ specialView }) {
       onDragOver={handleZoneDragOver}
     >
       <PlanStatusBanner />
-      <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-2 pb-5 mb-5 border-b border-white/5 shrink-0 px-2">
-        <div className="flex items-center gap-2 shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-3 gap-x-2 pb-4 mb-4 border-b border-white/5 shrink-0 px-1 sm:px-2">
+        <div className="flex items-center gap-2 min-w-0 max-w-full flex-wrap">
           {(data.parentDir ||
             (specialView === "shared" && folderId) ||
             specialView === "admin" ||
@@ -1969,7 +1969,7 @@ export default function FileBrowser({ specialView }) {
               </svg>
             </button>
           )}
-          <div className="flex items-center flex-wrap gap-1 text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+          <div className="flex items-center flex-wrap gap-1 text-lg sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight min-w-0">
             {breadcrumbs.map((crumb, idx) => {
               const isLast = idx === breadcrumbs.length - 1;
               return (
@@ -1980,7 +1980,7 @@ export default function FileBrowser({ specialView }) {
                     </span>
                   )}
                   {isLast ? (
-                    <span className="text-slate-900 dark:text-white font-black capitalize truncate max-w-[280px] select-none">
+                    <span className="text-slate-900 dark:text-white font-black capitalize truncate max-w-[150px] sm:max-w-[280px] select-none">
                       {crumb.label}
                     </span>
                   ) : (
@@ -2232,15 +2232,15 @@ export default function FileBrowser({ specialView }) {
           className={`pb-20 relative select-none flex-1 content-start ${
             viewMode === "list"
               ? "flex flex-col gap-1"
-              : "grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-6 p-6 rounded-[2.5rem] vault-glass-panel"
+              : "grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 sm:gap-6 p-3 sm:p-6 rounded-2xl sm:rounded-[2.5rem] vault-glass-panel"
           }`}
           onMouseDown={handleMouseDown}
         >
           {viewMode === "list" && (
-            <div className="grid grid-cols-[1fr,100px,150px,40px] gap-4 px-4 py-3 text-sm font-semibold text-slate-500 border-b border-slate-200/50 dark:border-slate-800/50 mb-2 items-center sticky top-0 bg-transparent z-10">
+            <div className="grid grid-cols-[1fr,40px] sm:grid-cols-[1fr,100px,40px] md:grid-cols-[1fr,100px,150px,40px] gap-2 sm:gap-4 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-500 border-b border-slate-200/50 dark:border-slate-800/50 mb-2 items-center sticky top-0 bg-transparent z-10">
               <div>Name</div>
-              <div className="text-right">Size</div>
-              <div className="text-right pr-4">Modified</div>
+              <div className="text-right hidden sm:block">Size</div>
+              <div className="text-right pr-4 hidden md:block">Modified</div>
               <div></div>
             </div>
           )}
@@ -2434,7 +2434,7 @@ export default function FileBrowser({ specialView }) {
 
       {/* Floating Bulk Action Bar */}
       {selectedItems.length > 0 && !isReadOnly && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/80 dark:bg-white/[0.06] backdrop-blur-2xl text-slate-900 dark:text-white px-6 py-3 rounded-full shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-black/10 dark:border-white/[0.08] flex items-center gap-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar bg-white/90 dark:bg-vault-surface/90 backdrop-blur-2xl text-slate-900 dark:text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-black/10 dark:border-white/[0.08] flex items-center gap-3 sm:gap-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
           <span className="font-medium text-sm">
             {selectedItems.length} selected
           </span>
@@ -2563,7 +2563,7 @@ export default function FileBrowser({ specialView }) {
 
       {/* Floating Clipboard Bar */}
       {clipboard && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-4 py-2.5 bg-[#111113]/90 border border-vault-emerald/30 shadow-[0_8px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(0,212,165,0.1)] rounded-full text-sm backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar bg-[#111113]/95 border border-vault-emerald/30 shadow-[0_8px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(0,212,165,0.1)] rounded-full text-xs sm:text-sm backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
           <span className="text-white/60 font-medium whitespace-nowrap">
             {clipboard.action === "cut" ? "Cut" : "Copied"}{" "}
             <strong className="text-white">{clipboard.items.length}</strong>{" "}

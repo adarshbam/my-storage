@@ -189,10 +189,10 @@ export default function PlanTierConfigurationSection({
   };
 
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-emerald-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-emerald-500/30">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/5">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/5 shrink-0">
             <Grid size={22} />
           </div>
           <div>
@@ -206,7 +206,7 @@ export default function PlanTierConfigurationSection({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {savedMessage && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 text-xs font-bold border border-emerald-500/20 animate-fade-in">
               <Check size={14} /> Configurations Saved
@@ -214,11 +214,11 @@ export default function PlanTierConfigurationSection({
           )}
 
           {/* Tab 1 (Features) / Tab 2 (Rules) Switcher */}
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-white/[0.04] p-1.5 rounded-2xl border border-slate-200 dark:border-white/10">
+          <div className="flex items-center gap-1 sm:gap-2 bg-slate-100 dark:bg-white/[0.04] p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 w-full sm:w-auto justify-center">
             <button
               type="button"
               onClick={() => setActiveTab("features")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 activeTab === "features"
                   ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
                   : "text-slate-600 dark:text-white/60 hover:text-white"
@@ -229,7 +229,7 @@ export default function PlanTierConfigurationSection({
             <button
               type="button"
               onClick={() => setActiveTab("rules")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 activeTab === "rules"
                   ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
                   : "text-slate-600 dark:text-white/60 hover:text-white"
@@ -242,7 +242,7 @@ export default function PlanTierConfigurationSection({
           <button
             type="button"
             onClick={handleSave}
-            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 hover:opacity-95 active:scale-95 transition-all"
+            className="flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 hover:opacity-95 active:scale-95 transition-all w-full xs:w-auto"
           >
             <Check size={14} /> Save Configurations
           </button>
@@ -251,7 +251,7 @@ export default function PlanTierConfigurationSection({
 
       {/* TAB 1: FEATURES MATRIX */}
       {activeTab === "features" && (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 animate-fade-in">
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 animate-fade-in custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="border-b border-slate-200/60 dark:border-white/10 bg-slate-100/50 dark:bg-white/[0.03]">
@@ -329,7 +329,7 @@ export default function PlanTierConfigurationSection({
 
       {/* TAB 2: RULES MATRIX */}
       {activeTab === "rules" && (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 animate-fade-in">
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 animate-fade-in custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[750px]">
             <thead>
               <tr className="border-b border-slate-200/60 dark:border-white/10 bg-slate-100/50 dark:bg-white/[0.03]">
