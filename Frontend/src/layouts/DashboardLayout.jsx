@@ -66,6 +66,28 @@ export default function DashboardLayout() {
     }
   };
 
+  const fetchRecentSearches = async () => {
+    try {
+      const res = await fetch(`${SERVER_URL}/user/searchedItems`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        let parsed = data;
+        if (typeof data === "string") {
+          try {
+            parsed = JSON.parse(data);
+          } catch {
+            console.log("Failed to parse recent searches, using raw string");
+          }
+        }
+        setRecentSearches(parsed || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch recent searches", err);
+    }
+  };
+
   useEffect(() => {
     fetchRecentSearches();
   }, []);
@@ -142,28 +164,6 @@ export default function DashboardLayout() {
     const q = searchParams.get("q") || searchParams.get("search") || "";
     setGlobalSearchQuery(q);
   }, [location.pathname, location.search]);
-
-  const fetchRecentSearches = async () => {
-    try {
-      const res = await fetch(`${SERVER_URL}/user/searchedItems`, {
-        credentials: "include",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        let parsed = data;
-        if (typeof data === "string") {
-          try {
-            parsed = JSON.parse(data);
-          } catch {
-            console.log("Failed to parse recent searches, using raw string");
-          }
-        }
-        setRecentSearches(parsed || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch recent searches", err);
-    }
-  };
 
   const handleSearch = async (term, filters = {}) => {
     const { scope = "current", ext = "", size = "" } = filters;

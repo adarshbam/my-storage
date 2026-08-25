@@ -15,6 +15,7 @@ import {
   stashChanges,
   popStash,
   dropStash,
+  getWorkspaceStatus,
 } from "../../api/gitWorkspace.api";
 import Button from "../ui/Button";
 
@@ -22,6 +23,7 @@ export default function GitStashDrawer({
   isOpen,
   onClose,
   workspaceId,
+  folderId,
   onStashUpdated,
 }) {
   const [stashes, setStashes] = useState([]);
@@ -29,13 +31,23 @@ export default function GitStashDrawer({
   const [stashMessage, setStashMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [selectedStash, setSelectedStash] = useState(null);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState(workspaceId);
 
   const fetchStashes = async () => {
-    if (!workspaceId) return;
     try {
       setLoading(true);
-      const res = await getStashes(workspaceId);
-      setStashes(res.stashes || []);
+      let targetWId = workspaceId || activeWorkspaceId;
+      if (!targetWId && folderId) {
+        const statusRes = await getWorkspaceStatus({ folderId });
+        if (statusRes.workspace?._id) {
+          targetWId = statusRes.workspace._id;
+          setActiveWorkspaceId(targetWId);
+        }
+      }
+      if (targetWId) {
+        const res = await getStashes(targetWId, folderId ? { folderId } : {});
+        setStashes(res.stashes || []);
+      }
     } catch (err) {
       console.error("Error loading stashes:", err);
     } finally {
@@ -45,22 +57,25 @@ export default function GitStashDrawer({
 
   useEffect(() => {
     if (isOpen) {
+      setActiveWorkspaceId(workspaceId);
       fetchStashes();
       setStashMessage("");
       setSelectedStash(null);
     }
-  }, [isOpen, workspaceId]);
+  }, [isOpen, workspaceId, folderId]);
 
   if (!isOpen) return null;
 
   const handleSaveStash = async (e) => {
     e.preventDefault();
-    if (!workspaceId) return;
+    const targetWId = workspaceId || activeWorkspaceId;
+    if (!targetWId && !folderId) return;
 
     try {
       setSubmitting(true);
       const res = await stashChanges({
-        workspaceId,
+        workspaceId: targetWId,
+        folderId,
         message: stashMessage.trim() || "WIP on branch",
       });
       alert(res.message || "Working changes stashed successfully!");

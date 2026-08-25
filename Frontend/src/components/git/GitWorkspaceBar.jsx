@@ -55,6 +55,13 @@ export default function GitWorkspaceBar({
       if (res.workspace?.branch) {
         setSelectedBranch(res.workspace.branch);
       }
+      const ownerToUse = res.workspace?.repoOwner || repoOwner;
+      const repoToUse = res.workspace?.repoName || repoName;
+      if (ownerToUse && repoToUse) {
+        getRepoBranches(ownerToUse, repoToUse)
+          .then((bRes) => setBranches(bRes.branches || []))
+          .catch(() => {});
+      }
     } catch (err) {
       console.error("Error fetching workspace status:", err);
     } finally {
@@ -63,9 +70,11 @@ export default function GitWorkspaceBar({
   };
 
   const fetchBranches = async () => {
-    if (!repoOwner || !repoName) return;
+    const ownerToUse = repoOwner || statusData?.workspace?.repoOwner;
+    const repoToUse = repoName || statusData?.workspace?.repoName;
+    if (!ownerToUse || !repoToUse) return;
     try {
-      const res = await getRepoBranches(repoOwner, repoName);
+      const res = await getRepoBranches(ownerToUse, repoToUse);
       setBranches(res.branches || []);
     } catch (err) {
       console.error("Error fetching branches:", err);
@@ -78,10 +87,13 @@ export default function GitWorkspaceBar({
   }, [workspaceId, folderId, repoOwner, repoName]);
 
   const handlePull = async () => {
-    if (!resolvedWorkspaceId) return;
+    if (!resolvedWorkspaceId && !folderId) return;
     try {
       setPulling(true);
-      const res = await pullRemoteChanges({ workspaceId: resolvedWorkspaceId });
+      const res = await pullRemoteChanges({
+        workspaceId: resolvedWorkspaceId,
+        folderId,
+      });
       alert(res.message || "Pull completed successfully");
       fetchStatus();
       if (onRefresh) onRefresh();
@@ -93,7 +105,8 @@ export default function GitWorkspaceBar({
   };
 
   const handleBranchChange = async (targetBranch) => {
-    if (!targetBranch || targetBranch === selectedBranch || !resolvedWorkspaceId) return;
+    if (!targetBranch || targetBranch === selectedBranch) return;
+    if (!resolvedWorkspaceId && !folderId) return;
     if (
       statusData &&
       (statusData.untracked.length > 0 || statusData.modified.length > 0)
@@ -108,6 +121,7 @@ export default function GitWorkspaceBar({
       setSwitchingBranch(true);
       await switchWorkspaceBranch({
         workspaceId: resolvedWorkspaceId,
+        folderId,
         targetBranch,
       });
       setSelectedBranch(targetBranch);
@@ -122,12 +136,13 @@ export default function GitWorkspaceBar({
 
   const handleCreateBranch = async (e) => {
     e.preventDefault();
-    if (!newBranchName.trim() || !resolvedWorkspaceId) return;
+    if (!newBranchName.trim() || (!resolvedWorkspaceId && !folderId)) return;
 
     try {
       setSwitchingBranch(true);
       await switchWorkspaceBranch({
         workspaceId: resolvedWorkspaceId,
+        folderId,
         targetBranch: newBranchName.trim(),
         createNew: true,
       });

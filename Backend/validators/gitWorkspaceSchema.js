@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const cloneRepoSchema = z.object({
+export const cloneRepoSchema = {
   body: z.object({
     owner: z.string().min(1, "Owner is required"),
     repo: z.string().min(1, "Repo name is required"),
@@ -8,79 +8,88 @@ export const cloneRepoSchema = z.object({
     destinationFolderId: z.string().nullable().optional(),
     folderName: z.string().optional(),
   }),
-});
+};
 
-export const getWorkspaceStatusSchema = z.object({
+export const getWorkspaceStatusSchema = {
   query: z.object({
     workspaceId: z.string().optional(),
     folderId: z.string().optional(),
   }),
-});
+};
 
-export const stageFilesSchema = z.object({
+export const stageFilesSchema = {
   body: z.object({
-    workspaceId: z.string().min(1, "workspaceId is required"),
+    workspaceId: z.string().optional(),
+    folderId: z.string().optional(),
     filePaths: z.array(z.string()).optional(),
     stageAll: z.boolean().optional(),
   }),
-});
+};
 
-export const unstageFilesSchema = z.object({
+export const unstageFilesSchema = {
   body: z.object({
-    workspaceId: z.string().min(1, "workspaceId is required"),
+    workspaceId: z.string().optional(),
+    folderId: z.string().optional(),
     filePaths: z.array(z.string()).optional(),
     unstageAll: z.boolean().optional(),
   }),
-});
+};
 
-export const commitWorkspaceSchema = z.object({
+export const commitWorkspaceSchema = {
   body: z.object({
-    workspaceId: z.string().min(1, "workspaceId is required"),
+    workspaceId: z.string().optional(),
+    folderId: z.string().optional(),
     message: z.string().min(1, "Commit message is required"),
     description: z.string().optional(),
   }),
-});
+};
 
-export const pullRemoteChangesSchema = z.object({
+export const pullRemoteChangesSchema = {
   body: z.object({
-    workspaceId: z.string().min(1, "workspaceId is required"),
+    workspaceId: z.string().optional(),
+    folderId: z.string().optional(),
   }),
-});
+};
 
-export const switchWorkspaceBranchSchema = z.object({
+export const switchWorkspaceBranchSchema = {
   body: z.object({
-    workspaceId: z.string().min(1, "workspaceId is required"),
+    workspaceId: z.string().optional(),
+    folderId: z.string().optional(),
     targetBranch: z.string().min(1, "targetBranch is required"),
     createNew: z.boolean().optional(),
   }),
-});
+};
 
-export const stashChangesSchema = z.object({
+export const stashChangesSchema = {
   body: z.object({
-    workspaceId: z.string().min(1, "workspaceId is required"),
+    workspaceId: z.string().optional(),
+    folderId: z.string().optional(),
     message: z.string().optional(),
   }),
-});
+};
 
-export const listStashesSchema = z.object({
+export const listStashesSchema = {
   params: z.object({
-    workspaceId: z.string().min(1, "workspaceId is required"),
+    workspaceId: z.string().optional(),
   }),
-});
+  query: z.object({
+    folderId: z.string().optional(),
+  }).optional(),
+};
 
-export const popStashSchema = z.object({
-  params: z.object({
-    stashId: z.string().min(1, "stashId is required"),
-  }),
-});
-
-export const dropStashSchema = z.object({
+export const popStashSchema = {
   params: z.object({
     stashId: z.string().min(1, "stashId is required"),
   }),
-});
+};
 
-export const configureFolderBackupSchema = z.object({
+export const dropStashSchema = {
+  params: z.object({
+    stashId: z.string().min(1, "stashId is required"),
+  }),
+};
+
+export const configureFolderBackupSchema = {
   body: z.object({
     directoryId: z.string().min(1, "directoryId is required"),
     repoOwner: z.string().min(1, "repoOwner is required"),
@@ -88,13 +97,13 @@ export const configureFolderBackupSchema = z.object({
     targetBranch: z.string().optional(),
     frequency: z.enum(["manual", "on_change", "daily", "weekly"]).optional(),
   }),
-});
+};
 
-export const runFolderBackupSyncSchema = z.object({
+export const runFolderBackupSyncSchema = {
   body: z.object({
     directoryId: z.string().min(1, "directoryId is required"),
     repoOwner: z.string().optional(),
     repoName: z.string().optional(),
     targetBranch: z.string().optional(),
   }),
-});
+};

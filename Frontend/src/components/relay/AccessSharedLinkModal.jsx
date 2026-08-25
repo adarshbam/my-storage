@@ -85,6 +85,7 @@ export default function AccessSharedLinkModal({ isOpen, onClose, onClaimSuccess 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [linkData, setLinkData] = useState(null);
+  const [ownerImgError, setOwnerImgError] = useState(false);
 
   // Password state
   const [password, setPassword] = useState("");

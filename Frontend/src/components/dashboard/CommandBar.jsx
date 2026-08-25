@@ -48,6 +48,7 @@ export default function CommandBar({
   isMobileOpen,
   setIsMobileOpen,
 }) {
+  const navigate = useNavigate();
   const { user, setUser } = useAuth();
   const { isNoPlan, rules, hasFeature } = usePlan();
   const location = useLocation();

@@ -34,9 +34,31 @@ export default function GitCloneRepoModal({
     if (isOpen) {
       fetchRepos();
       if (preselectedRepo) {
-        const repoStr = preselectedRepo.githubPath || `${preselectedRepo.owner || ""}/${preselectedRepo.name}`;
-        setSelectedRepo(repoStr);
-        setFolderName(preselectedRepo.name || "");
+        let repoStr = "";
+        let ownerStr = "";
+        let nameStr = "";
+        if (typeof preselectedRepo === "string") {
+          repoStr = preselectedRepo;
+        } else if (preselectedRepo.githubPath) {
+          repoStr = preselectedRepo.githubPath;
+        } else if (preselectedRepo.owner && preselectedRepo.name) {
+          ownerStr = typeof preselectedRepo.owner === "object" ? preselectedRepo.owner.login : preselectedRepo.owner;
+          nameStr = preselectedRepo.name;
+          repoStr = `${ownerStr}/${nameStr}`;
+        } else if (preselectedRepo.name && preselectedRepo.name.includes("/")) {
+          repoStr = preselectedRepo.name;
+        } else if (preselectedRepo.name) {
+          nameStr = preselectedRepo.name;
+        }
+        if (repoStr) {
+          setSelectedRepo(repoStr);
+          const parts = repoStr.split("/");
+          if (parts.length >= 2) {
+            setFolderName(parts[1]);
+          }
+        } else if (nameStr) {
+          setFolderName(nameStr);
+        }
         if (preselectedRepo.default_branch) {
           setSelectedBranch(preselectedRepo.default_branch);
         }

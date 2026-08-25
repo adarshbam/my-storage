@@ -47,8 +47,6 @@ export async function fetchThumbnailCdnUrl(fileId, options = {}) {
         return data.url;
       }
       return null;
-    } catch (err) {
-      throw err;
     } finally {
       pendingRequests.delete(fileId);
     }

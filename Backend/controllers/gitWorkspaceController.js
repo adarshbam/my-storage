@@ -47,9 +47,10 @@ export const getWorkspaceStatus = async (req, res, next) => {
 
 export const stageFiles = async (req, res, next) => {
   try {
-    const { workspaceId, filePaths, stageAll } = req.body;
+    const { workspaceId, folderId, filePaths, stageAll } = req.body;
     const result = await stageFilesLogic({
       workspaceId,
+      folderId,
       filePaths,
       stageAll,
       req,
@@ -62,9 +63,10 @@ export const stageFiles = async (req, res, next) => {
 
 export const unstageFiles = async (req, res, next) => {
   try {
-    const { workspaceId, filePaths, unstageAll } = req.body;
+    const { workspaceId, folderId, filePaths, unstageAll } = req.body;
     const result = await unstageFilesLogic({
       workspaceId,
+      folderId,
       filePaths,
       unstageAll,
       req,
@@ -77,9 +79,10 @@ export const unstageFiles = async (req, res, next) => {
 
 export const commitWorkspace = async (req, res, next) => {
   try {
-    const { workspaceId, message, description } = req.body;
+    const { workspaceId, folderId, message, description } = req.body;
     const result = await commitWorkspaceLogic({
       workspaceId,
+      folderId,
       message,
       description,
       req,
@@ -92,9 +95,10 @@ export const commitWorkspace = async (req, res, next) => {
 
 export const pullRemoteChanges = async (req, res, next) => {
   try {
-    const { workspaceId } = req.body;
+    const { workspaceId, folderId } = req.body;
     const result = await pullRemoteChangesLogic({
       workspaceId,
+      folderId,
       req,
     });
     res.status(200).json(result);
@@ -105,9 +109,10 @@ export const pullRemoteChanges = async (req, res, next) => {
 
 export const switchWorkspaceBranch = async (req, res, next) => {
   try {
-    const { workspaceId, targetBranch, createNew } = req.body;
+    const { workspaceId, folderId, targetBranch, createNew } = req.body;
     const result = await switchWorkspaceBranchLogic({
       workspaceId,
+      folderId,
       targetBranch,
       createNew,
       req,
@@ -120,9 +125,10 @@ export const switchWorkspaceBranch = async (req, res, next) => {
 
 export const stashChanges = async (req, res, next) => {
   try {
-    const { workspaceId, message } = req.body;
+    const { workspaceId, folderId, message } = req.body;
     const result = await stashChangesLogic({
       workspaceId,
+      folderId,
       message,
       req,
     });
@@ -135,8 +141,10 @@ export const stashChanges = async (req, res, next) => {
 export const listStashes = async (req, res, next) => {
   try {
     const { workspaceId } = req.params;
+    const { folderId } = req.query;
     const result = await listStashesLogic({
       workspaceId,
+      folderId,
       req,
     });
     res.status(200).json(result);

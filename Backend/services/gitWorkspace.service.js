@@ -27,6 +27,30 @@ async function getGithubToken(req) {
   };
 }
 
+// Helper: Resolve GitWorkspace from workspaceId or folderId
+export async function resolveWorkspace(workspaceId, folderId, ownerId) {
+  let workspace;
+  if (workspaceId) {
+    workspace = await GitWorkspace.findOne({ _id: workspaceId, userId: ownerId });
+  }
+  if (!workspace && folderId) {
+    workspace = await GitWorkspace.findOne({ rootDirectoryId: folderId, userId: ownerId });
+    if (!workspace) {
+      const dir = await Directory.findOne({ _id: folderId, userId: ownerId }).lean();
+      if (dir?.gitWorkspace?.workspaceId) {
+        workspace = await GitWorkspace.findOne({ _id: dir.gitWorkspace.workspaceId, userId: ownerId });
+      } else if (dir?.path?.length > 0) {
+        const ancestorIds = dir.path.map((p) => p._id || p);
+        workspace = await GitWorkspace.findOne({
+          rootDirectoryId: { $in: ancestorIds },
+          userId: ownerId,
+        });
+      }
+    }
+  }
+  return workspace;
+}
+
 // Compute Git blob SHA for text/buffer: sha1("blob " + size + "\0" + content)
 function computeGitBlobSha(buffer) {
   const header = `blob ${buffer.length}\0`;
@@ -267,12 +291,7 @@ export const cloneRepoToVaultLogic = async ({ owner, repo, branch, destinationFo
 export const getWorkspaceStatusLogic = async ({ workspaceId, folderId, req }) => {
   const { githubAccessToken, ownerId } = await getGithubToken(req);
 
-  let workspace;
-  if (workspaceId) {
-    workspace = await GitWorkspace.findOne({ _id: workspaceId, userId: ownerId });
-  } else if (folderId) {
-    workspace = await GitWorkspace.findOne({ rootDirectoryId: folderId, userId: ownerId });
-  }
+  const workspace = await resolveWorkspace(workspaceId, folderId, ownerId);
 
   if (!workspace) {
     const err = new Error("Git Workspace not found");
@@ -292,20 +311,19 @@ export const getWorkspaceStatusLogic = async ({ workspaceId, folderId, req }) =>
     parentDir: { $in: dirIds },
   }).lean();
 
-  // Build map of directory paths relative to rootDirectory
-  const dirPathMap = new Map();
-  dirPathMap.set(workspace.rootDirectoryId.toString(), "");
-
-  // Resolve directory tree paths
-  const resolveRelPath = (dirDoc) => {
-    if (!dirDoc || dirDoc._id.toString() === workspace.rootDirectoryId.toString()) return "";
-    const parentId = dirDoc.parentDir?.toString();
-    const parentRel = dirPathMap.get(parentId) !== undefined ? dirPathMap.get(parentId) : "";
-    return parentRel ? `${parentRel}/${dirDoc.name}` : dirDoc.name;
+  // Deterministic relative path map using ancestor graph
+  const dirMapById = new Map(allWorkspaceDirs.map((d) => [d._id.toString(), d]));
+  const getRelativePathForDir = (dirId) => {
+    if (!dirId || dirId.toString() === workspace.rootDirectoryId.toString()) return "";
+    const dir = dirMapById.get(dirId.toString());
+    if (!dir) return "";
+    const parentRel = getRelativePathForDir(dir.parentDir);
+    return parentRel ? `${parentRel}/${dir.name}` : dir.name;
   };
 
+  const dirPathMap = new Map();
   for (const dir of allWorkspaceDirs) {
-    dirPathMap.set(dir._id.toString(), resolveRelPath(dir));
+    dirPathMap.set(dir._id.toString(), getRelativePathForDir(dir._id));
   }
 
   // Inspect files to classify status (untracked/added, modified, unmodified)
@@ -415,12 +433,16 @@ export const getWorkspaceStatusLogic = async ({ workspaceId, folderId, req }) =>
    3. STAGE & UNSTAGE FILES
    ============================================================================ */
 
+/* ============================================================================
+   3. STAGE & UNSTAGE FILES
+   ============================================================================ */
+
 export const stageFilesLogic = async ({ workspaceId, filePaths = [], stageAll = false, req }) => {
   const { ownerId } = await getGithubToken(req);
-  const workspace = await GitWorkspace.findOne({ _id: workspaceId, userId: ownerId });
+  const workspace = await resolveWorkspace(workspaceId, req?.body?.folderId || req?.query?.folderId, ownerId);
   if (!workspace) throw new Error("Git Workspace not found");
 
-  const status = await getWorkspaceStatusLogic({ workspaceId, req });
+  const status = await getWorkspaceStatusLogic({ workspaceId: workspace._id, req });
   const candidates = [...status.untracked, ...status.modified];
 
   const targetPaths = stageAll ? candidates.map((c) => c.path) : filePaths;
@@ -448,7 +470,7 @@ export const stageFilesLogic = async ({ workspaceId, filePaths = [], stageAll = 
 
 export const unstageFilesLogic = async ({ workspaceId, filePaths = [], unstageAll = false, req }) => {
   const { ownerId } = await getGithubToken(req);
-  const workspace = await GitWorkspace.findOne({ _id: workspaceId, userId: ownerId });
+  const workspace = await resolveWorkspace(workspaceId, req?.body?.folderId || req?.query?.folderId, ownerId);
   if (!workspace) throw new Error("Git Workspace not found");
 
   if (unstageAll) {
@@ -477,7 +499,7 @@ export const unstageFilesLogic = async ({ workspaceId, filePaths = [], unstageAl
 
 export const commitWorkspaceLogic = async ({ workspaceId, message, description, req }) => {
   const { githubAccessToken, ownerId } = await getGithubToken(req);
-  const workspace = await GitWorkspace.findOne({ _id: workspaceId, userId: ownerId });
+  const workspace = await resolveWorkspace(workspaceId, req?.body?.folderId || req?.query?.folderId, ownerId);
   if (!workspace) throw new Error("Git Workspace not found");
 
   if (!workspace.stagedFiles || workspace.stagedFiles.length === 0) {
@@ -659,7 +681,7 @@ export const commitWorkspaceLogic = async ({ workspaceId, message, description, 
 
 export const pullRemoteChangesLogic = async ({ workspaceId, req }) => {
   const { githubAccessToken, ownerId } = await getGithubToken(req);
-  const workspace = await GitWorkspace.findOne({ _id: workspaceId, userId: ownerId });
+  const workspace = await resolveWorkspace(workspaceId, req?.body?.folderId || req?.query?.folderId, ownerId);
   if (!workspace) throw new Error("Git Workspace not found");
 
   const { repoOwner, repoName, branch, baseSha } = workspace;
@@ -698,18 +720,19 @@ export const pullRemoteChangesLogic = async ({ workspaceId, req }) => {
     $or: [{ _id: workspace.rootDirectoryId }, { "gitWorkspace.workspaceId": workspace._id }],
   }).lean();
 
-  const dirPathMap = new Map();
-  dirPathMap.set("", workspace.rootDirectoryId);
-
-  const resolveRelPath = (dirDoc) => {
-    if (!dirDoc || dirDoc._id.toString() === workspace.rootDirectoryId.toString()) return "";
-    const parentId = dirDoc.parentDir?.toString();
-    const parentRel = dirPathMap.get(parentId) || "";
-    return parentRel ? `${parentRel}/${dirDoc.name}` : dirDoc.name;
+  const dirMapById = new Map(allWorkspaceDirs.map((d) => [d._id.toString(), d]));
+  const getRelativePathForDir = (dirId) => {
+    if (!dirId || dirId.toString() === workspace.rootDirectoryId.toString()) return "";
+    const dir = dirMapById.get(dirId.toString());
+    if (!dir) return "";
+    const parentRel = getRelativePathForDir(dir.parentDir);
+    return parentRel ? `${parentRel}/${dir.name}` : dir.name;
   };
 
+  const dirPathMap = new Map();
+  dirPathMap.set("", workspace.rootDirectoryId);
   for (const dir of allWorkspaceDirs) {
-    dirPathMap.set(resolveRelPath(dir), dir._id);
+    dirPathMap.set(getRelativePathForDir(dir._id), dir._id);
   }
 
   // Create any new remote directories
@@ -739,6 +762,7 @@ export const pullRemoteChangesLogic = async ({ workspaceId, req }) => {
       });
       await newDir.save();
       dirPathMap.set(item.path, newDir._id);
+      dirMapById.set(newDir._id.toString(), newDir.toObject());
     }
   }
 
@@ -828,7 +852,7 @@ export const pullRemoteChangesLogic = async ({ workspaceId, req }) => {
 
 export const switchWorkspaceBranchLogic = async ({ workspaceId, targetBranch, createNew = false, req }) => {
   const { githubAccessToken, ownerId } = await getGithubToken(req);
-  const workspace = await GitWorkspace.findOne({ _id: workspaceId, userId: ownerId });
+  const workspace = await resolveWorkspace(workspaceId, req?.body?.folderId || req?.query?.folderId, ownerId);
   if (!workspace) throw new Error("Git Workspace not found");
 
   const { repoOwner, repoName } = workspace;
@@ -867,7 +891,7 @@ export const switchWorkspaceBranchLogic = async ({ workspaceId, targetBranch, cr
   );
 
   // Trigger full pull on the target branch
-  const pullResult = await pullRemoteChangesLogic({ workspaceId, req });
+  const pullResult = await pullRemoteChangesLogic({ workspaceId: workspace._id, req });
 
   return {
     message: `Switched to branch '${cleanBranch}' successfully!`,
@@ -882,10 +906,10 @@ export const switchWorkspaceBranchLogic = async ({ workspaceId, targetBranch, cr
 
 export const stashChangesLogic = async ({ workspaceId, message = "WIP stash", req }) => {
   const { ownerId } = await getGithubToken(req);
-  const workspace = await GitWorkspace.findOne({ _id: workspaceId, userId: ownerId });
+  const workspace = await resolveWorkspace(workspaceId, req?.body?.folderId || req?.query?.folderId, ownerId);
   if (!workspace) throw new Error("Git Workspace not found");
 
-  const status = await getWorkspaceStatusLogic({ workspaceId, req });
+  const status = await getWorkspaceStatusLogic({ workspaceId: workspace._id, req });
   const dirtyFiles = [...status.untracked, ...status.modified];
 
   if (dirtyFiles.length === 0) {
@@ -951,7 +975,10 @@ export const stashChangesLogic = async ({ workspaceId, message = "WIP stash", re
 
 export const listStashesLogic = async ({ workspaceId, req }) => {
   const { ownerId } = await getGithubToken(req);
-  const stashes = await GitStash.find({ workspaceId, userId: ownerId })
+  const workspace = await resolveWorkspace(workspaceId, req?.query?.folderId, ownerId);
+  const queryWorkspaceId = workspace ? workspace._id : workspaceId;
+
+  const stashes = await GitStash.find({ workspaceId: queryWorkspaceId, userId: ownerId })
     .sort({ createdAt: -1 })
     .lean();
 
@@ -975,28 +1002,64 @@ export const popStashLogic = async ({ stashId, req }) => {
   const workspace = await GitWorkspace.findById(stash.workspaceId);
   if (!workspace) throw new Error("Git Workspace not found");
 
-  // Restore stashed files
+  // Restore stashed files preserving nested subdirectories
   for (const stashedFile of stash.files || []) {
     const buffer = Buffer.from(stashedFile.content || "", "base64");
     const parts = stashedFile.path.split("/");
     const fileName = parts.pop();
+    const parentPath = parts.join("/");
 
-    // Find or create file
+    let parentId = workspace.rootDirectoryId;
+    if (parentPath) {
+      const segs = parentPath.split("/");
+      let currentParentId = workspace.rootDirectoryId;
+      for (const seg of segs) {
+        let existingDir = await Directory.findOne({
+          userId: ownerId,
+          parentDir: currentParentId,
+          name: seg,
+        });
+        if (!existingDir) {
+          const currentPathArr = await getDirectoryPath(currentParentId);
+          existingDir = new Directory({
+            name: seg,
+            userId: ownerId,
+            parentDir: currentParentId,
+            type: "directory",
+            provider: "git_workspace",
+            path: currentPathArr,
+            gitWorkspace: {
+              workspaceId: workspace._id,
+              repoOwner: workspace.repoOwner,
+              repoName: workspace.repoName,
+              branch: workspace.branch,
+            },
+          });
+          await existingDir.save();
+        }
+        currentParentId = existingDir._id;
+      }
+      parentId = currentParentId;
+    }
+
     let fileDoc = await File.findOne({
       userId: ownerId,
+      parentDir: parentId,
       name: fileName,
     });
 
+    const currentPath = await getDirectoryPath(parentId);
     if (!fileDoc) {
       fileDoc = new File({
         name: fileName,
         userId: ownerId,
-        parentDir: workspace.rootDirectoryId,
+        parentDir: parentId,
+        path: currentPath,
         type: "file",
         extension: stashedFile.extension || path.extname(fileName) || "",
         size: buffer.length,
         gitStatus: {
-          status: stashedFile.status,
+          status: stashedFile.status || "modified",
           staged: false,
         },
       });
@@ -1004,7 +1067,7 @@ export const popStashLogic = async ({ stashId, req }) => {
     } else {
       fileDoc.size = buffer.length;
       fileDoc.gitStatus = {
-        status: stashedFile.status,
+        status: stashedFile.status || "modified",
         staged: false,
       };
       await fileDoc.save();
@@ -1129,7 +1192,7 @@ export const runFolderBackupSyncLogic = async ({ directoryId, req }) => {
     });
   }
 
-  // 2. Traverse all files in the Vault directory subtree
+  // 2. Traverse all files in the Vault directory subtree preserving relative paths
   const allSubDirs = await Directory.find({
     userId: ownerId,
     $or: [{ _id: directoryId }, { "path._id": directoryId }],
@@ -1142,8 +1205,19 @@ export const runFolderBackupSyncLogic = async ({ directoryId, req }) => {
     return { message: "Folder has no files to backup. Add files to backup." };
   }
 
+  const dirMapById = new Map(allSubDirs.map((d) => [d._id.toString(), d]));
+  const getRelativePathForDir = (dirId) => {
+    if (!dirId || dirId.toString() === directoryId.toString()) return "";
+    const dir = dirMapById.get(dirId.toString());
+    if (!dir) return "";
+    const parentRel = getRelativePathForDir(dir.parentDir);
+    return parentRel ? `${parentRel}/${dir.name}` : dir.name;
+  };
+
   const treeEntries = [];
   for (const file of files) {
+    const parentRel = getRelativePathForDir(file.parentDir);
+    const relPath = parentRel ? `${parentRel}/${file.name}` : file.name;
     const s3Key = `${file._id}${file.extension || ""}`;
     try {
       const objectData = await getObjectFromB2({ key: s3Key });
@@ -1166,7 +1240,7 @@ export const runFolderBackupSyncLogic = async ({ directoryId, req }) => {
       if (blobRes.ok) {
         const blobData = await blobRes.json();
         treeEntries.push({
-          path: file.name,
+          path: relPath,
           mode: "100644",
           type: "blob",
           sha: blobData.sha,

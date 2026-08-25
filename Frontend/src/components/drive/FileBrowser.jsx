@@ -2667,6 +2667,7 @@ export default function FileBrowser({ specialView }) {
         isOpen={showStashDrawer}
         onClose={() => setShowStashDrawer(false)}
         workspaceId={data.gitWorkspace?.workspaceId}
+        folderId={folderId}
         onStashUpdated={() => fetchFiles(true)}
       />
 

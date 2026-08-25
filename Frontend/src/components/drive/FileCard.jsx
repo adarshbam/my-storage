@@ -115,6 +115,7 @@ export default function FileCard({
   };
 
   return (
+    <div
       className={`relative group transition-all duration-200 cursor-pointer select-none ${
         showMenu ? "z-40" : "z-0"
       } ${

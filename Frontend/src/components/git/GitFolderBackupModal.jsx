@@ -155,11 +155,14 @@ export default function GitFolderBackupModal({
               className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-xl outline-none font-mono text-slate-900 dark:text-white focus:border-cyan-500 cursor-pointer"
             >
               <option value="">-- Select a repository --</option>
-              {repositories.map((r) => (
-                <option key={r._id || r.githubPath} value={r.githubPath || `${r.name}`}>
-                  {r.githubPath || r.name}
-                </option>
-              ))}
+              {repositories.map((r) => {
+                const fullPath = r.githubPath || (r.owner?.login ? `${r.owner.login}/${r.name}` : r.name);
+                return (
+                  <option key={r._id || fullPath} value={fullPath}>
+                    {fullPath}
+                  </option>
+                );
+              })}
               <option value="__custom__">+ Enter custom owner/repo...</option>
             </select>
           </div>
