@@ -28,7 +28,7 @@ const userSchema = new Schema(
     resetPasswordToken: { type: String, default: null },
     resetPasswordTokenExpires: { type: Date, default: Date.now },
     profilepic: { type: Schema.Types.ObjectId, default: null, ref: "File" },
-    rootDirId: { type: Schema.Types.ObjectId, required: true },
+    rootDirId: { type: Schema.Types.ObjectId, default: null },
     maxStorage: { type: Number, default: 1024 * 1024 * 1024 },
     recentlySearchedItems: { type: Array, default: [] },
     role: {
@@ -38,7 +38,7 @@ const userSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["Active", "Deleted"],
+      enum: ["Active", "Deleted", "Deactivated", "Terminated"],
       default: "Active",
     },
     integrations: {

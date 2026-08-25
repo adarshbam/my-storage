@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 import { rzInstance } from "../integrations/razorpay/razorpay.client.js";
 import Subscription from "../models/subscriptionModel.js";
 import BillingPlan from "../models/billingPlanModel.js";
+import PlanTier from "../models/planTierModel.js";
+import PlanTierConfiguration from "../models/planTierConfigurationModel.js";
+import SystemConfig from "../models/systemConfigModel.js";
 import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import {
@@ -11,6 +14,7 @@ import {
   subscriptionResumed,
 } from "./notification.service.js";
 import { invalidatePlanContextCache } from "../middlewares/loadPlanContext.js";
+import { withTransaction } from "../utils/transaction.js";
 
 const findUserSubscription = async (subscriptionId, userId) => {
   let sub = null;
@@ -155,29 +159,6 @@ export const confirmSubscriptionPaymentLogic = async ({
     subscription.chargeAt = new Date(rzSub.charge_at * 1000);
   }
 
-  await subscription.save();
-
-  // Cancel prior active subscriptions for this user to avoid duplicate recurring debits
-  const previousActiveSubscriptions = await Subscription.find({
-    userId,
-    status: { $in: ["active", "paused"] },
-    _id: { $ne: subscription._id },
-  });
-
-  for (const prevSub of previousActiveSubscriptions) {
-    try {
-      await rzInstance.subscriptions.cancel(prevSub.razorpaySubscriptionId, false);
-    } catch (cancelErr) {
-      console.warn(
-        `[confirmPayment] Could not cancel prior sub ${prevSub.razorpaySubscriptionId}:`,
-        cancelErr.message,
-      );
-    }
-    prevSub.status = "cancelled";
-    prevSub.cancellationReason = "system";
-    await prevSub.save();
-  }
-
   // Update user storage limits and clear grace markers
   const updateUserData = {
     subscription: subscription._id,
@@ -189,7 +170,27 @@ export const confirmSubscriptionPaymentLogic = async ({
     updateUserData.maxStorage = subscription.billingPlan.storage;
   }
 
-  await User.findByIdAndUpdate(userId, { $set: updateUserData });
+  await withTransaction(async (session) => {
+    await subscription.save({ session });
+
+    await Subscription.updateMany(
+      {
+        userId,
+        status: { $in: ["active", "paused"] },
+        _id: { $ne: subscription._id },
+      },
+      {
+        $set: {
+          status: "cancelled",
+          cancellationReason: "system",
+        },
+      },
+      { session },
+    );
+
+    await User.findByIdAndUpdate(userId, { $set: updateUserData }, { session });
+  });
+
   await invalidatePlanContextCache(userId);
 
   // Trigger activation notification
@@ -289,12 +290,6 @@ export const getCurrentSubscriptionLogic = async ({
     }
   }
 
-  const userStorage = {
-    usedStorage: usedStorage || 0,
-    maxStorage:
-      subscription?.billingPlan?.storage || userMaxStorage || 5368709120,
-  };
-
   if (!subscription) {
     return {
       status: "NO_SUBSCRIPTION",
@@ -304,21 +299,69 @@ export const getCurrentSubscriptionLogic = async ({
       currency: "INR",
       period: "Monthly",
       nextBillingDate: null,
-      usedStorage: userStorage.usedStorage,
-      maxStorage: userStorage.maxStorage,
+      usedStorage: usedStorage || 0,
+      maxStorage: userMaxStorage || 0,
+      storageLimit: userMaxStorage || 0,
       razorpaySubscriptionId: null,
     };
   }
 
-  const planName =
-    subscription.billingPlan?.tier?.title ||
-    (subscription.billingPlan?.slug
-      ? subscription.billingPlan.slug.charAt(0).toUpperCase() +
-        subscription.billingPlan.slug.slice(1)
-      : "Novice Vault");
+  const slug = subscription.billingPlan?.slug?.replace("trail", "trial");
+  const isTrial = Boolean(subscription.isFreeTrial || slug === "free-trial");
+
+  let effectiveMaxStorage =
+    subscription.billingPlan?.storage || userMaxStorage || 5368709120;
+  let inheritedTierDoc = null;
+
+  if (isTrial) {
+    const sysConfig = await SystemConfig.findOne({ key: "global" }).lean();
+    const inheritedSlug = sysConfig?.freeTrialInheritedTier || "ultimate";
+    inheritedTierDoc = await PlanTier.findOne({ slug: inheritedSlug }).lean();
+
+    let freeTrialPlanDoc = null;
+    if (subscription.billingPlan) {
+      const planId = subscription.billingPlan._id || subscription.billingPlan;
+      freeTrialPlanDoc = await BillingPlan.findById(planId).lean();
+    }
+    if (!freeTrialPlanDoc) {
+      freeTrialPlanDoc =
+        (await BillingPlan.findOne({
+          slug: { $in: ["free-trial", "free-trail"] },
+          active: true,
+        }).lean()) ||
+        (await BillingPlan.findOne({
+          slug: { $in: ["free-trial", "free-trail"] },
+        }).lean()) ||
+        subscription.billingPlan;
+    }
+
+    effectiveMaxStorage =
+      freeTrialPlanDoc?.storage ||
+      subscription.billingPlan?.storage ||
+      5368709120;
+  } else if (subscription.billingPlan) {
+    const planId = subscription.billingPlan._id || subscription.billingPlan;
+    const freshPlan = await BillingPlan.findById(planId).lean();
+    if (freshPlan?.storage) {
+      effectiveMaxStorage = freshPlan.storage;
+    }
+  }
+
+  const planName = isTrial
+    ? (inheritedTierDoc?.title
+        ? `Free Trial (${inheritedTierDoc.title})`
+        : "Free Trial")
+    : (subscription.billingPlan?.tier?.title ||
+      (subscription.billingPlan?.slug
+        ? subscription.billingPlan.slug.charAt(0).toUpperCase() +
+          subscription.billingPlan.slug.slice(1)
+        : "Novice Vault"));
+
+  const isCancelled = subscription.status?.toLowerCase() === "cancelled";
+  const isPaused = subscription.status?.toLowerCase() === "paused";
 
   const isCycleStillValid = Boolean(
-    subscription.status?.toLowerCase() === "cancelled" &&
+    isCancelled &&
       subscription.cancelAtCycleEnd &&
       ((subscription.currentEnd &&
         new Date(subscription.currentEnd).getTime() > Date.now()) ||
@@ -333,6 +376,14 @@ export const getCurrentSubscriptionLogic = async ({
       isCycleStillValid,
   );
 
+  const isNoSubscription = Boolean(
+    !subscription ||
+      (isCancelled && !isCycleStillValid) ||
+      ["expired", "failed", "completed"].includes(
+        subscription.status?.toLowerCase(),
+      ),
+  );
+
   let nextBillingDate = null;
   if (isActuallyActive) {
     if (subscription.currentEnd) {
@@ -342,19 +393,24 @@ export const getCurrentSubscriptionLogic = async ({
         new Date(subscription.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000,
       ).toISOString();
     }
+  } else if (isPaused && subscription.currentEnd) {
+    nextBillingDate = new Date(subscription.currentEnd).toISOString();
   }
 
   return {
     ...subscription,
-    isNoSubscription: !isActuallyActive,
+    isNoSubscription,
+    isPaused,
+    isFreeTrial: isTrial,
     isCycleValid: isCycleStillValid,
     planName,
     amount: subscription.billingPlan?.amount ?? subscription.amount ?? 0,
     currency: subscription.billingPlan?.currency || "INR",
     period: subscription.billingPlan?.period || "Monthly",
     status: (subscription.status || "active").toUpperCase(),
-    usedStorage: userStorage.usedStorage,
-    maxStorage: subscription.billingPlan?.storage || userStorage.maxStorage,
+    usedStorage: usedStorage || 0,
+    maxStorage: effectiveMaxStorage,
+    storageLimit: effectiveMaxStorage,
     nextBillingDate,
   };
 };
@@ -366,16 +422,39 @@ export const pauseSubscriptionLogic = async ({ subscriptionId, userId }) => {
       status: 404,
     });
 
-  // 1. Tell Razorpay to pause
-  await rzInstance.subscriptions.pause(sub.razorpaySubscriptionId, {
-    pause_at: "now",
-  });
+  const isInternalTrial = Boolean(
+    sub.isFreeTrial ||
+      (sub.razorpaySubscriptionId &&
+        (sub.razorpaySubscriptionId.startsWith("trial_") ||
+          sub.razorpaySubscriptionId.startsWith("legacy_"))),
+  );
+
+  // 1. Tell Razorpay to pause if it is an external gateway subscription
+  if (!isInternalTrial && sub.razorpaySubscriptionId) {
+    try {
+      await rzInstance.subscriptions.pause(sub.razorpaySubscriptionId, {
+        pause_at: "now",
+      });
+    } catch (rzErr) {
+      console.warn(
+        `[pauseSubscription] Razorpay pause note for ${sub.razorpaySubscriptionId}:`,
+        rzErr?.error?.description || rzErr.message || rzErr,
+      );
+    }
+  }
 
   sub.status = "paused";
   sub.pausedAt = new Date();
   await sub.save();
 
   await invalidatePlanContextCache(userId);
+
+  await subscriptionPaused({
+    userId,
+    subscriptionId: sub._id,
+  }).catch((nErr) => {
+    console.warn("[pauseSubscription] Notification trigger error:", nErr.message);
+  });
 
   return { success: true, status: "PAUSED", subscriptionId: sub._id };
 };
@@ -387,17 +466,57 @@ export const resumeSubscriptionLogic = async ({ subscriptionId, userId }) => {
       status: 404,
     });
 
-  // 1. Tell Razorpay to resume
-  await rzInstance.subscriptions.resume(sub.razorpaySubscriptionId, {
-    resume_at: "now",
-  });
+  const isInternalTrial = Boolean(
+    sub.isFreeTrial ||
+      (sub.razorpaySubscriptionId &&
+        (sub.razorpaySubscriptionId.startsWith("trial_") ||
+          sub.razorpaySubscriptionId.startsWith("legacy_"))),
+  );
+
+  // 1. Tell Razorpay to resume if it is an external gateway subscription
+  if (!isInternalTrial && sub.razorpaySubscriptionId) {
+    try {
+      await rzInstance.subscriptions.resume(sub.razorpaySubscriptionId, {
+        resume_at: "now",
+      });
+    } catch (rzErr) {
+      console.warn(
+        `[resumeSubscription] Razorpay resume note for ${sub.razorpaySubscriptionId}:`,
+        rzErr?.error?.description || rzErr.message || rzErr,
+      );
+    }
+  }
 
   sub.status = "active";
   sub.resumedAt = new Date();
   sub.pausedAt = null;
-  await sub.save();
+
+  await withTransaction(async (session) => {
+    await sub.save({ session });
+
+    // Clear any grace markers on the user
+    await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          subscription: sub._id,
+          billingPlan: sub.billingPlan,
+          noSubscriptionSince: null,
+          noPlanSince: null,
+        },
+      },
+      { session },
+    );
+  });
 
   await invalidatePlanContextCache(userId);
+
+  await subscriptionResumed({
+    userId,
+    subscriptionId: sub._id,
+  }).catch((nErr) => {
+    console.warn("[resumeSubscription] Notification trigger error:", nErr.message);
+  });
 
   return { success: true, status: "RESUMED", subscriptionId: sub._id };
 };
@@ -411,12 +530,28 @@ export const cancelSubscriptionLogic = async ({
   if (!sub)
     throw Object.assign(new Error("Subscription not found"), { status: 404 });
 
-  // 1. Cancel on Razorpay (default to cancel_at_cycle_end: 1)
-  const cancelAtEndNum = cancelAtCycleEnd ? 1 : 0;
-  await rzInstance.subscriptions.cancel(
-    sub.razorpaySubscriptionId,
-    cancelAtEndNum,
+  const isInternalTrial = Boolean(
+    sub.isFreeTrial ||
+      (sub.razorpaySubscriptionId &&
+        (sub.razorpaySubscriptionId.startsWith("trial_") ||
+          sub.razorpaySubscriptionId.startsWith("legacy_"))),
   );
+
+  // 1. Cancel on Razorpay if it is an external gateway subscription
+  if (!isInternalTrial && sub.razorpaySubscriptionId) {
+    try {
+      const cancelAtEndNum = cancelAtCycleEnd ? 1 : 0;
+      await rzInstance.subscriptions.cancel(
+        sub.razorpaySubscriptionId,
+        cancelAtEndNum,
+      );
+    } catch (rzErr) {
+      console.warn(
+        `[cancelSubscription] Razorpay cancellation note for ${sub.razorpaySubscriptionId}:`,
+        rzErr?.error?.description || rzErr.message || rzErr,
+      );
+    }
+  }
 
   // 2. Record lifecycle metadata
   const now = new Date();
@@ -430,14 +565,21 @@ export const cancelSubscriptionLogic = async ({
     sub.currentEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
   }
 
-  // If immediate cancellation (not cycle end), mark grace period start now
-  if (!cancelAtCycleEnd) {
-    await User.findByIdAndUpdate(userId, {
-      $set: { noSubscriptionSince: now, noPlanSince: now },
-    });
-  }
+  await withTransaction(async (session) => {
+    // If immediate cancellation (not cycle end), mark grace period start now
+    if (!cancelAtCycleEnd) {
+      await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: { noSubscriptionSince: now, noPlanSince: now },
+        },
+        { session },
+      );
+    }
 
-  await sub.save();
+    await sub.save({ session });
+  });
+
   await invalidatePlanContextCache(userId);
 
   return {

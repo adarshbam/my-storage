@@ -1,13 +1,13 @@
-import { useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { SERVER_URL } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { handleGoogleAuth } from "../lib/googleAuth";
 import Button from "../components/ui/Button";
 import GoogleSignInButton from "../components/ui/GoogleSignInButton";
 import AuthLayout from "../layouts/AuthLayout";
-import { Eye, EyeOff, Cloud, Send, Loader2, CheckCircle2, Box, ShieldCheck, Key, ArrowLeft } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Eye, EyeOff, Loader2, ShieldCheck, Key, ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion";
 import { verifyTwoFactorLogin } from "../api/auth.api";
 import { VaultLogo } from "../components/ui/VaultIcons";
 
@@ -15,11 +15,8 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [sendingOtp, setSendingOtp] = useState(false);
   const [sendingForgot, setSendingForgot] = useState(false);
   const [twoFactorRequired, setTwoFactorRequired] = useState(false);
   const [twoFactorToken, setTwoFactorToken] = useState("");
@@ -28,81 +25,41 @@ export default function Login() {
   const [recoveryCodeInput, setRecoveryCodeInput] = useState("");
   const [verifying2FA, setVerifying2FA] = useState(false);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { setUser } = useAuth();
 
   const isEmailValid = useMemo(() => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }, [email]);
 
-  const isOtpComplete = true; // BYPASSED
+  // ── Process Query Parameters for OAuth 2FA and Errors ──
+  useEffect(() => {
+    const is2FA = searchParams.get("twoFactorRequired") === "true";
+    const token = searchParams.get("tempToken");
+    const oauthError = searchParams.get("error");
 
-  const handleSendOtp = async () => {
-    if (!isEmailValid) return;
-    setError("");
-    setSendingOtp(true);
-
-    try {
-      const response = await fetch(`${SERVER_URL}/otp/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        setOtpSent(true);
-        setTimeout(() => document.getElementById("otp-0")?.focus(), 300);
+    if (oauthError) {
+      if (oauthError === "AccountTerminated") {
+        setError("This account has been permanently terminated by system administration.");
+      } else if (oauthError === "AccountDeactivated") {
+        setError("This account is deactivated. Contact system administration to reactivate your account.");
+      } else if (oauthError === "InvalidToken" || oauthError === "AuthFailed") {
+        setError("Authentication failed. Please try again.");
+      } else if (oauthError === "NoEmailFound") {
+        setError("No verified email found on your GitHub account.");
       } else {
-        const data = await response.json();
-        setError(data.error || "Failed to send OTP");
+        setError("Authentication failed. Please try again.");
       }
-    } catch (err) {
-      setError("An error occurred. Please try again.");
-    } finally {
-      setSendingOtp(false);
     }
-  };
 
-
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) return;
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    if (value && index < 5) {
-      document.getElementById(`otp-${index + 1}`)?.focus();
+    if (is2FA && token) {
+      setTwoFactorToken(token);
+      setTwoFactorRequired(true);
+      setTwoFactorCode(["", "", "", "", "", ""]);
+      setSearchParams({}, { replace: true });
+      setTimeout(() => document.getElementById("2fa-login-code-0")?.focus(), 300);
     }
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      document.getElementById(`otp-${index - 1}`)?.focus();
-    }
-  };
-
-  const handleOtpPaste = (e) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData("text").trim().slice(0, 6);
-    if (/^\d+$/.test(pasted)) {
-      const newOtp = [...otp];
-      for (let i = 0; i < pasted.length; i++) {
-        newOtp[i] = pasted[i];
-      }
-      setOtp(newOtp);
-      const nextEmpty = Math.min(pasted.length, 5);
-      document.getElementById(`otp-${nextEmpty}`)?.focus();
-    }
-  };
-
-  const handleEmailChange = (e) => {
-    const newEmail = e.target.value;
-    setEmail(newEmail);
-    if (otpSent) {
-      setOtpSent(false);
-      setOtp(["", "", "", "", "", ""]);
-    }
-  };
+  }, [searchParams, setSearchParams]);
 
   const handleForgotPassword = async () => {
     if (!isEmailValid) {
@@ -227,7 +184,7 @@ export default function Login() {
       const response = await fetch(`${SERVER_URL}/user/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, otp: otp.join("") }),
+        body: JSON.stringify({ email, password }),
         credentials: "include",
       });
 
@@ -411,181 +368,102 @@ export default function Login() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email + Send OTP */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Email Address
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={handleEmailChange}
-                disabled={isOtpComplete && otpSent}
-                className="flex-1 min-w-0 px-4 py-2.5 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                placeholder="name@example.com"
-              />
-
-              <AnimatePresence>
-                {isEmailValid && !(isOtpComplete && otpSent) && (
-                  <motion.button
-                    id="send-otp-btn"
-                    type="button"
-                    onClick={handleSendOtp}
-                    disabled={sendingOtp}
-                    initial={{ opacity: 0, scale: 0.85, width: 0 }}
-                    animate={{ opacity: 1, scale: 1, width: "auto" }}
-                    exit={{ opacity: 0, scale: 0.85, width: 0 }}
-                    transition={{ duration: 0.2 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={`
-                      flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition-all duration-200 overflow-hidden flex-shrink-0 cursor-pointer
-                      ${
-                        otpSent
-                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                          : "bg-accent-primary text-accent-foreground shadow-md shadow-accent-glow/20"
-                      }
-                      disabled:opacity-40 disabled:cursor-not-allowed
-                    `}
-                  >
-                    {sendingOtp ? (
-                      <Loader2 className="animate-spin" size={15} />
-                    ) : (
-                      <>
-                        <Send size={13} />
-                        {otpSent ? "Resend" : "Send"}
-                      </>
-                    )}
-                  </motion.button>
-                )}
-
-                {isOtpComplete && otpSent && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex-shrink-0"
-                  >
-                    <CheckCircle2 size={15} />
-                    Ready
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          {/* OTP input */}
-          <AnimatePresence>
-            {otpSent && !isOtpComplete && (
-              <motion.div
-                initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                animate={{ opacity: 1, height: "auto", marginTop: 16 }}
-                exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className="overflow-hidden"
-              >
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                  Verification Code
+              {/* Email */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Email Address
                 </label>
-                <div
-                  className="flex gap-2 justify-center"
-                  onPaste={handleOtpPaste}
-                >
-                  {otp.map((digit, idx) => (
-                    <input
-                      key={idx}
-                      id={`otp-${idx}`}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) =>
-                        handleOtpChange(idx, e.target.value.replace(/\D/, ""))
-                      }
-                      onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                      className="w-10 h-11 text-center text-base font-bold rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all caret-accent-primary"
-                    />
-                  ))}
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all text-sm font-semibold"
+                  placeholder="name@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="flex text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 justify-between items-center">
+                  <span>Password</span>
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    disabled={sendingForgot}
+                    className="text-accent-primary hover:opacity-80 text-xs font-semibold transition-colors disabled:opacity-50 lowercase tracking-normal"
+                  >
+                    {sendingForgot ? "Sending..." : "Forgot password?"}
+                  </button>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-2.5 pr-11 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all text-sm font-semibold"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </div>
 
-          <div>
-            <label className="flex text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 justify-between items-center">
-              <span>Password</span>
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                disabled={sendingForgot}
-                className="text-accent-primary hover:opacity-80 text-xs font-semibold transition-colors disabled:opacity-50 lowercase tracking-normal"
-              >
-                {sendingForgot ? "Sending..." : "Forgot password?"}
-              </button>
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 pr-11 rounded-xl bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm border border-black/10 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-accent-primary focus:border-accent-primary outline-none transition-all text-sm font-semibold"
-                placeholder="••••••••"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+              <div className="w-full pt-1">
+                <Button
+                  type="submit"
+                  className="w-full py-3 text-xs uppercase tracking-wider font-bold"
+                >
+                  Sign In
+                </Button>
+              </div>
+            </form>
+
+            {/* Divider */}
+            <div className="flex items-center gap-4 my-5">
+              <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
+              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                or
+              </span>
+              <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
             </div>
-          </div>
 
-          <div className="w-full pt-1">
-            <Button
-              type="submit"
-              className="w-full py-3 text-xs uppercase tracking-wider font-bold"
-            >
-              Sign In
-            </Button>
-          </div>
-        </form>
+            {/* Google & GitHub Sign In */}
+            <div className="flex flex-col gap-2.5">
+              <GoogleSignInButton
+                label="Sign in with Google"
+                onSuccess={(response) => {
+                  if (response.credential) {
+                    handleGoogleAuth(response.credential, {
+                      setUser,
+                      navigate,
+                      setError,
+                      onTwoFactorRequired: (tempToken) => {
+                        setTwoFactorToken(tempToken);
+                        setTwoFactorRequired(true);
+                        setTwoFactorCode(["", "", "", "", "", ""]);
+                        setTimeout(() => document.getElementById("2fa-login-code-0")?.focus(), 300);
+                      },
+                    });
+                  }
+                }}
+                onError={() => setError("Google sign-in failed")}
+              />
 
-        {/* Divider */}
-        <div className="flex items-center gap-4 my-5">
-          <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
-          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-            or
-          </span>
-          <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
-        </div>
-
-        {/* Google & GitHub Sign In */}
-        <div className="flex flex-col gap-2.5">
-          <GoogleSignInButton
-            label="Sign in with Google"
-            onSuccess={(response) => {
-              if (response.credential) {
-                handleGoogleAuth(response.credential, {
-                  setUser,
-                  navigate,
-                  setError,
-                });
-              }
-            }}
-            onError={() => setError("Google sign-in failed")}
-          />
-
-          <button
-            type="button"
-            onClick={() => {
-              const clientId = import.meta.env.VITE_GITHUB_CLIENTID;
-              const redirectUri = `${SERVER_URL}/user/auth/github`;
-              window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user:email`;
-            }}
-            className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-50 dark:hover:bg-white/10 transition-colors"
-          >
+              <button
+                type="button"
+                onClick={() => {
+                  const clientId = import.meta.env.VITE_GITHUB_CLIENTID;
+                  const redirectUri = `${SERVER_URL}/user/auth/github`;
+                  window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user:email`;
+                }}
+                className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-50 dark:hover:bg-white/10 transition-colors"
+              >
             <svg
               className="w-4 h-4 fill-current"
               viewBox="0 0 24 24"

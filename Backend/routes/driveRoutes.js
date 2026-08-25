@@ -11,6 +11,7 @@ import {
   searchDriveFiles,
   disconnectGoogleDrive,
   updateDriveItem,
+  saveDriveFile,
   moveDriveItems,
   transferToVault,
   transferFromVault,
@@ -24,6 +25,7 @@ import {
   deleteFromDriveSchema,
   uploadFileToDriveSchema,
   updateDriveItemSchema,
+  saveDriveFileSchema,
   moveDriveItemsSchema,
   transferToVaultSchema,
   transferFromVaultSchema,
@@ -130,6 +132,17 @@ router.patch(
   throttle(300, 8, "drive-update"),
   validate(updateDriveItemSchema),
   updateDriveItem,
+);
+// Save/edit file content
+router.put(
+  "/file/:fileId/save",
+  checkAuth,
+  loadPlanContext,
+  requireFeature("gdrive_sync"),
+  mediumWriteLimiter,
+  throttle(300, 8, "drive-file-save"),
+  validate(saveDriveFileSchema),
+  saveDriveFile,
 );
 // Bulk move items
 router.post(

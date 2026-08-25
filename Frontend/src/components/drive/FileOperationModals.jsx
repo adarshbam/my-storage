@@ -73,9 +73,25 @@ export default function FileOperationModals({
   isPrivate,
   setIsPrivate,
   selectedCount = 0,
+  specialView = null,
 }) {
   const lineCount = (newFileContent || "").split("\n").length;
   const charCount = (newFileContent || "").length;
+
+  const currentProvider =
+    modalItem?.provider ||
+    (specialView?.includes("google-drive")
+      ? "google_drive"
+      : specialView?.includes("github")
+      ? "github"
+      : "local");
+  const isIntegrationModal = currentProvider !== "local";
+  const currentProviderName =
+    currentProvider === "google_drive"
+      ? "Google Drive"
+      : currentProvider === "github"
+      ? "GitHub"
+      : "Integration";
 
   const getModalTitle = () => {
     switch (modalType) {
@@ -88,7 +104,7 @@ export default function FileOperationModals({
       case "rename":
         return "Rename Asset";
       case "delete":
-        return "Confirm Deletion";
+        return isIntegrationModal ? `Delete from ${currentProviderName}` : "Confirm Deletion";
       case "delete-github":
         return "Delete from GitHub";
       default:
@@ -132,77 +148,94 @@ export default function FileOperationModals({
       >
         {/* ── DELETE MODAL ── */}
         {modalType === "delete" ? (
-          <div className="space-y-5">
-            <div className="flex items-center gap-3.5 p-4 bg-rose-500/10 dark:bg-rose-500/10 rounded-2xl border border-rose-500/20">
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 shadow-sm">
-                <Trash2 size={22} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-black text-sm text-slate-900 dark:text-white truncate">
-                  Delete {modalItem ? modalItem.name : `${selectedCount || "selected"} items`}
-                </div>
-                <div className="text-xs text-slate-600 dark:text-white/60 mt-0.5 font-medium">
-                  {isPermanentDelete
-                    ? modalItem
-                      ? "This item will be permanently erased from disk."
-                      : "These items will be permanently erased from disk."
-                    : modalItem
-                      ? "Item will be moved to the recycle bin."
-                      : "Items will be moved to the recycle bin."}
-                </div>
-              </div>
-            </div>
+          (() => {
+            const provider = modalItem?.provider || "local";
+            const isIntegration = provider !== "local";
+            const providerName =
+              provider === "google_drive"
+                ? "Google Drive"
+                : provider === "github"
+                ? "GitHub"
+                : "Integration";
 
-            <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-vault-panel/60 rounded-2xl border border-slate-200 dark:border-white/10">
-              <div>
-                <span className="text-xs font-bold text-slate-900 dark:text-white block">
-                  Erase Permanently
-                </span>
-                <span className="text-[11px] text-slate-500 dark:text-white/50">
-                  Bypass the recycle bin
-                </span>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isPermanentDelete}
-                onClick={() => setIsPermanentDelete(!isPermanentDelete)}
-                className={cn(
-                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                  isPermanentDelete ? "bg-rose-500 shadow-sm" : "bg-slate-300 dark:bg-white/20",
+            return (
+              <div className="space-y-5">
+                <div className="flex items-center gap-3.5 p-4 bg-rose-500/10 dark:bg-rose-500/10 rounded-2xl border border-rose-500/20">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 shadow-sm">
+                    <Trash2 size={22} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-black text-sm text-slate-900 dark:text-white truncate">
+                      Delete {modalItem ? modalItem.name : `${selectedCount || "selected"} items`}
+                    </div>
+                    <div className="text-xs text-slate-600 dark:text-white/60 mt-0.5 font-medium">
+                      {isIntegration
+                        ? `This item will be permanently deleted from ${providerName}. This action cannot be undone.`
+                        : isPermanentDelete
+                        ? modalItem
+                          ? "This item will be permanently erased from disk."
+                          : "These items will be permanently erased from disk."
+                        : modalItem
+                        ? "Item will be moved to the recycle bin."
+                        : "Items will be moved to the recycle bin."}
+                    </div>
+                  </div>
+                </div>
+
+                {!isIntegration && (
+                  <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-vault-panel/60 rounded-2xl border border-slate-200 dark:border-white/10">
+                    <div>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                        Erase Permanently
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-white/50">
+                        Bypass the recycle bin
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={isPermanentDelete}
+                      onClick={() => setIsPermanentDelete(!isPermanentDelete)}
+                      className={cn(
+                        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                        isPermanentDelete ? "bg-rose-500 shadow-sm" : "bg-slate-300 dark:bg-white/20",
+                      )}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                          isPermanentDelete ? "translate-x-5" : "translate-x-0",
+                        )}
+                      />
+                    </button>
+                  </div>
                 )}
-              >
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                    isPermanentDelete ? "translate-x-5" : "translate-x-0",
-                  )}
-                />
-              </button>
-            </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={() => {
-                  setModalType(null);
-                  setModalItem(null);
-                  setIsPermanentDelete(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant={isPermanentDelete ? "destructive" : "warning"}
-                className="flex-1"
-                onClick={handleDeleteConfirm}
-              >
-                {isPermanentDelete ? "Delete Forever" : "Move to Trash"}
-              </Button>
-            </div>
-          </div>
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={() => {
+                      setModalType(null);
+                      setModalItem(null);
+                      setIsPermanentDelete(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant={isIntegration || isPermanentDelete ? "destructive" : "warning"}
+                    className="flex-1"
+                    onClick={handleDeleteConfirm}
+                  >
+                    {isIntegration || isPermanentDelete ? "Delete Forever" : "Move to Trash"}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()
         ) : modalType === "delete-github" ? (
           <div className="space-y-5">
             <div className="flex items-center gap-4 p-4 bg-rose-500/10 rounded-2xl border border-rose-500/20">
@@ -211,10 +244,16 @@ export default function FileOperationModals({
               </div>
               <div>
                 <h3 className="text-rose-600 dark:text-rose-300 font-bold text-sm leading-tight">
-                  Permanent GitHub Commit
+                  {modalItem?.type === "directory" && (!modalItem?.githubPath || modalItem.githubPath.split("/").length <= 2)
+                    ? "Delete GitHub Repository"
+                    : "Permanent GitHub Commit"}
                 </h3>
                 <p className="text-rose-600/90 dark:text-rose-400/90 text-xs mt-1">
-                  You are about to delete <strong className="text-slate-900 dark:text-white">{modalItem?.name}</strong> from GitHub. This will create an irreversible commit.
+                  {modalItem?.type === "directory" && (!modalItem?.githubPath || modalItem.githubPath.split("/").length <= 2) ? (
+                    <>You are about to permanently delete repository <strong className="text-slate-900 dark:text-white">{modalItem?.name}</strong> from GitHub. This action cannot be undone.</>
+                  ) : (
+                    <>You are about to delete <strong className="text-slate-900 dark:text-white">{modalItem?.name}</strong> from GitHub. This will create an irreversible commit.</>
+                  )}
                 </p>
               </div>
             </div>

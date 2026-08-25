@@ -217,21 +217,52 @@ export default function TrashView() {
   };
 
   const handleRestore = async (itemsToRestore) => {
-    const promises = itemsToRestore.map((item) => {
-      const isDirectory =
-        item.type === "directory" || (!item.extension && item.files);
-      const endpoint = isDirectory
-        ? `${SERVER_URL}/trash/directory/${item._id}/restore`
-        : `${SERVER_URL}/trash/${item._id}/restore`;
-      return fetch(endpoint, { method: "POST", credentials: "include" });
-    });
-
+    if (!itemsToRestore || itemsToRestore.length === 0) return;
     try {
-      await Promise.all(promises);
+      if (itemsToRestore.length === 1) {
+        const item = itemsToRestore[0];
+        const isDirectory =
+          item.type === "directory" || (!item.extension && item.files);
+        const endpoint = isDirectory
+          ? `${SERVER_URL}/trash/directory/${item._id}/restore`
+          : `${SERVER_URL}/trash/${item._id}/restore`;
+        await fetch(endpoint, { method: "POST", credentials: "include" });
+      } else {
+        await fetch(`${SERVER_URL}/trash/restore-batch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: itemsToRestore.map((i) => ({
+              id: i._id,
+              _id: i._id,
+              type:
+                i.type ||
+                (i.extension || i.files === undefined ? "file" : "directory"),
+            })),
+          }),
+          credentials: "include",
+        });
+      }
       fetchTrash();
       setSelectedItems([]);
     } catch (err) {
       console.error("Restore failed", err);
+    }
+  };
+
+  const handleRestoreAll = async () => {
+    if (items.length === 0) return;
+    try {
+      await fetch(`${SERVER_URL}/trash/restore-batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ all: true }),
+        credentials: "include",
+      });
+      fetchTrash();
+      setSelectedItems([]);
+    } catch (err) {
+      console.error("Restore all failed", err);
     }
   };
 
@@ -259,6 +290,7 @@ export default function TrashView() {
           body: JSON.stringify({
             items: itemsToDelete.map((i) => ({
               id: i._id,
+              _id: i._id,
               type:
                 i.type ||
                 (i.extension || i.files === undefined ? "file" : "directory"),
@@ -311,13 +343,26 @@ export default function TrashView() {
           </div>
 
           {items.length > 0 && (
-            <button
-              onClick={handleEmptyTrash}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-danger-accent/10 border border-danger-accent/30 text-danger-accent hover:bg-danger-accent/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,90,122,0.3)] shrink-0"
-            >
-              <Trash2 size={18} />
-              <span className="hidden sm:inline">Empty Trash</span>
-            </button>
+            <>
+              <button
+                onClick={selectedItems.length > 0 ? () => handleRestore(selectedItems) : handleRestoreAll}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-vault-emerald/10 border border-vault-emerald/30 text-vault-emerald hover:bg-vault-emerald/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,212,165,0.3)] shrink-0"
+              >
+                <RotateCcw size={16} />
+                <span className="hidden sm:inline">
+                  {selectedItems.length > 0 ? `Restore (${selectedItems.length})` : "Restore All"}
+                </span>
+              </button>
+              <button
+                onClick={selectedItems.length > 0 ? () => handleDeleteForever(selectedItems) : handleEmptyTrash}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-danger-accent/10 border border-danger-accent/30 text-danger-accent hover:bg-danger-accent/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,90,122,0.3)] shrink-0"
+              >
+                <Trash2 size={18} />
+                <span className="hidden sm:inline">
+                  {selectedItems.length > 0 ? `Delete (${selectedItems.length})` : "Empty Trash"}
+                </span>
+              </button>
+            </>
           )}
         </div>
       </div>

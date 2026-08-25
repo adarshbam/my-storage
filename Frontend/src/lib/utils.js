@@ -76,19 +76,69 @@ export const formatDate = (dateString) => {
   });
 };
 
-export const isSpecialFolder = (item) => {
+export const isSpecialFolder = (item, specialView = null) => {
   if (!item) return false;
+  if (item.isExternalIntegration) return true;
+
+  // When browsing inside an external integration view, items inside are regular files/folders
+  if (
+    specialView === "google-drive" ||
+    specialView === "google-drive-folder" ||
+    specialView === "github" ||
+    specialView === "github-repo"
+  ) {
+    return false;
+  }
+
   const provider = item.provider || "local";
   const name = (item.name || "").trim().toLowerCase();
 
-  return (
+  // Root integration mount points shown on the Vault surface
+  if (
+    name === "github" ||
+    name === "google drive" ||
+    name === "dropbox" ||
     provider === "google_drive" ||
     provider === "github" ||
     provider === "dropbox" ||
-    provider === "shared_drive" ||
-    name === "github" ||
-    name === "google drive" ||
-    name === "dropbox"
-  );
+    provider === "shared_drive"
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+export const getProfilePicUrl = (profilepic) => {
+  if (!profilepic) return null;
+  if (typeof profilepic === "object") {
+    if (profilepic.externalUrl) return profilepic.externalUrl;
+    if (profilepic._id) return `${SERVER_URL}/user/profilepic?id=${profilepic._id}`;
+    return null;
+  }
+  const str = String(profilepic).trim();
+  if (!str) return null;
+  if (
+    str.startsWith("http://") ||
+    str.startsWith("https://") ||
+    str.startsWith("data:") ||
+    str.startsWith("blob:")
+  ) {
+    return str;
+  }
+  if (str.startsWith("/user/profilepic") || str.startsWith("user/profilepic")) {
+    return `${SERVER_URL}${str.startsWith("/") ? "" : "/"}${str}`;
+  }
+  return `${SERVER_URL}/user/profilepic?id=${encodeURIComponent(str)}`;
+};
+
+export const getInitials = (name, email) => {
+  if (name && typeof name === "string" && name.trim()) {
+    return name.trim()[0].toUpperCase();
+  }
+  if (email && typeof email === "string" && email.trim()) {
+    return email.trim()[0].toUpperCase();
+  }
+  return "U";
 };
 

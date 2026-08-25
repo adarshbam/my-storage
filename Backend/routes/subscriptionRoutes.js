@@ -23,14 +23,14 @@ router.get(
   "/current",
   checkAuth,
   lightReadLimiter,
-  throttle(100, 15, "sub-status"),
+  throttle(200, 10, "sub-status"),
   getCurrentSubscription,
 );
 router.get(
   "/status",
   checkAuth,
   lightReadLimiter,
-  throttle(100, 15, "sub-status"),
+  throttle(200, 10, "sub-status"),
   getCurrentSubscription,
 );
 
@@ -39,7 +39,7 @@ router.post(
   "/create-subscription",
   checkAuth,
   subscriptionLimiter,
-  throttle(1000, 3, "sub-create"),
+  throttle(1500, 2, "sub-create"),
   validate(createSubscriptionSchema),
   createSubscription,
 );
@@ -49,14 +49,14 @@ router.post(
   "/confirm-payment",
   checkAuth,
   subscriptionLimiter,
-  throttle(1000, 3, "sub-confirm"),
+  throttle(1000, 2, "sub-confirm"),
   confirmSubscriptionPayment,
 );
 router.post(
   "/verify",
   checkAuth,
   subscriptionLimiter,
-  throttle(1000, 3, "sub-confirm"),
+  throttle(1000, 2, "sub-confirm"),
   confirmSubscriptionPayment,
 );
 
@@ -65,21 +65,21 @@ router.post(
   "/:id/pause",
   checkAuth,
   subscriptionLimiter,
-  throttle(1000, 3, "sub-pause"),
+  throttle(1500, 2, "sub-pause"),
   pauseSubscription,
 );
 router.post(
   "/:id/resume",
   checkAuth,
   subscriptionLimiter,
-  throttle(1000, 3, "sub-resume"),
+  throttle(1500, 2, "sub-resume"),
   resumeSubscription,
 );
 router.post(
   "/:id/cancel",
   checkAuth,
   subscriptionLimiter,
-  throttle(1000, 3, "sub-cancel"),
+  throttle(1500, 2, "sub-cancel"),
   cancelSubscription,
 );
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Share2,
@@ -27,16 +27,21 @@ import {
   Copy,
   Check,
   RefreshCw,
+  Link2,
+  Eye,
 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
 import SharedLinkCard from "./SharedLinkCard";
 import SharedLinkRow from "./SharedLinkRow";
 import EditLinkModal from "./EditLinkModal";
 import LinkQRCodeModal from "./LinkQRCodeModal";
+import AccessSharedLinkModal from "./AccessSharedLinkModal";
 import Skeleton from "../ui/Skeleton";
 import Button from "../ui/Button";
 import { usePlan } from "../../context/PlanContext";
-import { formatSize } from "../../lib/utils";
+import { formatSize, getProfilePicUrl, getInitials } from "../../lib/utils";
+
+const FilePreviewModal = lazy(() => import("../drive/FilePreviewModal"));
 
 // Demo/Dummy incoming shared vaults for realistic preview when user has no incoming invites yet
 const DEMO_INCOMING_DRIVES = [
@@ -125,9 +130,10 @@ export default function SecureRelayView({ openShareModal }) {
   // Modals state
   const [editingLink, setEditingLink] = useState(null);
   const [qrModalData, setQrModalData] = useState(null); // { url, title }
-
-  // Demo Toast / Preview State
-  const [demoActiveDrive, setDemoActiveDrive] = useState(null);
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
+  const [activeDrivePreview, setActiveDrivePreview] = useState(null);
+  const [previewingFile, setPreviewingFile] = useState(null);
+  const [planUpgradeModal, setPlanUpgradeModal] = useState(null);
 
   useEffect(() => {
     fetchOutgoingLinks();
@@ -363,8 +369,45 @@ export default function SecureRelayView({ openShareModal }) {
   };
 
   const handleOpenIncomingDrive = (access) => {
+    const isFullAdmin = (access.permission || []).includes("owner");
+    const hasGithub = (access.items || []).some((i) => i.provider === "github");
+    const hasGdrive = (access.items || []).some((i) => i.provider === "google_drive" || i.provider === "drive");
+    const hasDropbox = (access.items || []).some((i) => i.provider === "dropbox");
+
+    if (isFullAdmin && isNoPlan) {
+      setPlanUpgradeModal({
+        title: "Storage Subscription Required",
+        message: "Full Admin shared vaults require an active storage subscription. Upgrade your plan to use administrative permissions and access this vault.",
+      });
+      return;
+    }
+
+    if (hasGithub && (isNoPlan || !hasFeature("github_backup"))) {
+      setPlanUpgradeModal({
+        title: "Professional Plan Required",
+        message: "Accessing shared GitHub repositories requires a Professional or Ultimate storage plan. Upgrade to unlock external repository integration.",
+      });
+      return;
+    }
+
+    if (hasGdrive && (isNoPlan || !hasFeature("gdrive_sync"))) {
+      setPlanUpgradeModal({
+        title: "Professional Plan Required",
+        message: "Accessing shared Google Drive assets requires a Professional or Ultimate storage plan. Upgrade to unlock external cloud drive integration.",
+      });
+      return;
+    }
+
+    if (hasDropbox && (isNoPlan || !hasFeature("dropbox_sync"))) {
+      setPlanUpgradeModal({
+        title: "Professional Plan Required",
+        message: "Accessing shared Dropbox assets requires a Professional or Ultimate storage plan. Upgrade to unlock external cloud drive integration.",
+      });
+      return;
+    }
+
     if (access.isDemo) {
-      setDemoActiveDrive(access);
+      setActiveDrivePreview(access);
       return;
     }
 
@@ -373,15 +416,16 @@ export default function SecureRelayView({ openShareModal }) {
 
     if (isFullVault && owner?.rootDirId) {
       navigate(`/dashboard/shared/folder/${owner.rootDirId}`);
-    } else if (access.items && access.items.length > 0) {
-      const first = access.items[0];
-      if (first.type === "directory") {
-        navigate(`/dashboard/shared/folder/${first.id}`);
-      } else {
-        // Single file or items list
-        navigate(`/dashboard/shared/folder/${first.id || access._id}`);
-      }
+      return;
     }
+
+    if (access.items && access.items.length === 1 && access.items[0].type === "directory") {
+      navigate(`/dashboard/shared/folder/${access.items[0].id}`);
+      return;
+    }
+
+    // For file-only drives, multiple items, or mixed drives, open the Drive Preview modal
+    setActiveDrivePreview(access);
   };
 
   const currentCount = activeTab === "outgoing" ? filteredLinks.length : filteredIncomingDrives.length;
@@ -457,7 +501,7 @@ export default function SecureRelayView({ openShareModal }) {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
             {/* Quick Refresh Button */}
             <button
               onClick={refreshCurrentTab}
@@ -468,10 +512,21 @@ export default function SecureRelayView({ openShareModal }) {
               <RefreshCw size={16} className={(loadingLinks || loadingIncoming) ? "animate-spin" : ""} />
             </button>
 
+            {/* Access via Link Button */}
+            <Button
+              onClick={() => setAccessModalOpen(true)}
+              variant="secondary"
+              className="py-2.5 px-3.5 text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 bg-slate-100 dark:bg-vault-surface hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white shadow-sm"
+              title="Open or connect a shared relay link"
+            >
+              <Link2 size={14} className="text-accent-primary" />
+              <span>Access via Link</span>
+            </Button>
+
             {/* Create Link CTA */}
             {activeTab === "outgoing" && (
               <Button
-                onClick={() => setCreateModalOpen(true)}
+                onClick={() => openShareModal && openShareModal([])}
                 className="flex-1 sm:flex-initial py-2.5 px-4 text-xs font-bold shadow-accent-glow flex items-center justify-center gap-2 shrink-0"
               >
                 <Plus size={15} />
@@ -850,17 +905,45 @@ export default function SecureRelayView({ openShareModal }) {
                               DEMO
                             </span>
                           )}
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              permission === "owner"
-                                ? "bg-danger-accent/15 text-danger-accent border border-danger-accent/25"
-                                : permission === "write"
-                                ? "bg-media-accent/15 text-media-accent border border-media-accent/25"
-                                : "bg-document-accent/15 text-document-accent border border-document-accent/25"
-                            }`}
-                          >
-                            {permission === "owner" ? "Full Admin" : permission === "write" ? "Read & Write" : "Read Only"}
-                          </span>
+                          {(() => {
+                            const isFullAdmin = permission === "owner";
+                            const hasGithub = (access.items || []).some((i) => i.provider === "github");
+                            const hasGdrive = (access.items || []).some((i) => i.provider === "google_drive" || i.provider === "drive");
+                            const hasDropbox = (access.items || []).some((i) => i.provider === "dropbox");
+                            const isFullAdminBlocked = isFullAdmin && isNoPlan;
+                            const isExternalBlocked =
+                              (hasGithub && (isNoPlan || !hasFeature("github_backup"))) ||
+                              (hasGdrive && (isNoPlan || !hasFeature("gdrive_sync"))) ||
+                              (hasDropbox && (isNoPlan || !hasFeature("dropbox_sync")));
+
+                            if (isFullAdminBlocked) {
+                              return (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/25 flex items-center gap-1">
+                                  <Lock size={10} /> Full Admin
+                                </span>
+                              );
+                            }
+                            if (isExternalBlocked) {
+                              return (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/25 flex items-center gap-1">
+                                  <Lock size={10} /> Pro Plan Req
+                                </span>
+                              );
+                            }
+                            return (
+                              <span
+                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                  permission === "owner"
+                                    ? "bg-danger-accent/15 text-danger-accent border border-danger-accent/25"
+                                    : permission === "write"
+                                    ? "bg-media-accent/15 text-media-accent border border-media-accent/25"
+                                    : "bg-document-accent/15 text-document-accent border border-document-accent/25"
+                                }`}
+                              >
+                                {permission === "owner" ? "Full Admin" : permission === "write" ? "Read & Write" : "Read Only"}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -880,8 +963,26 @@ export default function SecureRelayView({ openShareModal }) {
 
                       {/* Owner Details Card */}
                       <div className="bg-black/30 border border-white/5 rounded-2xl p-2.5 mb-4 flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shrink-0">
-                          <User size={15} />
+                        <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shrink-0 overflow-hidden">
+                          {owner.profilepic ? (
+                            <img
+                              src={getProfilePicUrl(owner.profilepic)}
+                              alt={owner.name || "Owner"}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                                if (e.currentTarget.nextSibling) {
+                                  e.currentTarget.nextSibling.style.display = "block";
+                                }
+                              }}
+                            />
+                          ) : null}
+                          <span
+                            className="font-black text-xs uppercase text-purple-400 select-none"
+                            style={{ display: owner.profilepic ? "none" : "block" }}
+                          >
+                            {getInitials(owner.name, owner.email)}
+                          </span>
                         </div>
                         <div className="overflow-hidden flex-1">
                           <p className="text-xs font-bold text-white truncate">
@@ -895,23 +996,42 @@ export default function SecureRelayView({ openShareModal }) {
                     </div>
 
                     {/* Bottom Action Row */}
-                    <div className="pt-3 border-t border-white/5 flex items-center gap-2">
-                      <button
-                        onClick={() => handleOpenIncomingDrive(access)}
-                        className="flex-1 py-2 px-3.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/25 hover:border-purple-500/40 text-xs font-bold transition-all flex items-center justify-center gap-2"
-                      >
-                        <FolderOpen size={14} />
-                        <span>Open Shared Vault</span>
-                      </button>
+                    {(() => {
+                      const isFullAdmin = permission === "owner";
+                      const hasGithub = (access.items || []).some((i) => i.provider === "github");
+                      const hasGdrive = (access.items || []).some((i) => i.provider === "google_drive" || i.provider === "drive");
+                      const hasDropbox = (access.items || []).some((i) => i.provider === "dropbox");
+                      const isFullAdminBlocked = isFullAdmin && isNoPlan;
+                      const isExternalBlocked =
+                        (hasGithub && (isNoPlan || !hasFeature("github_backup"))) ||
+                        (hasGdrive && (isNoPlan || !hasFeature("gdrive_sync"))) ||
+                        (hasDropbox && (isNoPlan || !hasFeature("dropbox_sync")));
+                      const isAccessBlocked = isFullAdminBlocked || isExternalBlocked;
 
-                      <button
-                        onClick={() => handleOpenIncomingDrive(access)}
-                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white border border-white/10 transition-colors"
-                        title="Browse vault"
-                      >
-                        <ExternalLink size={14} />
-                      </button>
-                    </div>
+                      return (
+                        <div className="pt-3 border-t border-white/5 flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenIncomingDrive(access)}
+                            className={`flex-1 py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                              isAccessBlocked
+                                ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25 hover:border-amber-500/40 shadow-sm"
+                                : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/25 hover:border-purple-500/40"
+                            }`}
+                          >
+                            {isAccessBlocked ? <Lock size={14} /> : <FolderOpen size={14} />}
+                            <span>{isAccessBlocked ? "Plan Required to Open" : "Open Shared Vault"}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenIncomingDrive(access)}
+                            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white border border-white/10 transition-colors"
+                            title="Browse vault"
+                          >
+                            <ExternalLink size={14} />
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -932,6 +1052,17 @@ export default function SecureRelayView({ openShareModal }) {
                       year: "numeric",
                     })
                   : "Recent";
+
+                const isFullAdmin = permission === "owner";
+                const hasGithub = (access.items || []).some((i) => i.provider === "github");
+                const hasGdrive = (access.items || []).some((i) => i.provider === "google_drive" || i.provider === "drive");
+                const hasDropbox = (access.items || []).some((i) => i.provider === "dropbox");
+                const isFullAdminBlocked = isFullAdmin && isNoPlan;
+                const isExternalBlocked =
+                  (hasGithub && (isNoPlan || !hasFeature("github_backup"))) ||
+                  (hasGdrive && (isNoPlan || !hasFeature("gdrive_sync"))) ||
+                  (hasDropbox && (isNoPlan || !hasFeature("dropbox_sync")));
+                const isAccessBlocked = isFullAdminBlocked || isExternalBlocked;
 
                 return (
                   <div
@@ -967,27 +1098,41 @@ export default function SecureRelayView({ openShareModal }) {
 
                     {/* Middle: Clearance Pill */}
                     <div className="hidden sm:flex items-center gap-2 shrink-0">
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          permission === "owner"
-                            ? "bg-danger-accent/15 text-danger-accent border border-danger-accent/25"
-                            : permission === "write"
-                            ? "bg-media-accent/15 text-media-accent border border-media-accent/25"
-                            : "bg-document-accent/15 text-document-accent border border-document-accent/25"
-                        }`}
-                      >
-                        {permission === "owner" ? "Full Admin" : permission === "write" ? "Read & Write" : "Read Only"}
-                      </span>
+                      {isFullAdminBlocked ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/25 flex items-center gap-1">
+                          <Lock size={10} /> Full Admin
+                        </span>
+                      ) : isExternalBlocked ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/25 flex items-center gap-1">
+                          <Lock size={10} /> Pro Plan Req
+                        </span>
+                      ) : (
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            permission === "owner"
+                              ? "bg-danger-accent/15 text-danger-accent border border-danger-accent/25"
+                              : permission === "write"
+                              ? "bg-media-accent/15 text-media-accent border border-media-accent/25"
+                              : "bg-document-accent/15 text-document-accent border border-document-accent/25"
+                          }`}
+                        >
+                          {permission === "owner" ? "Full Admin" : permission === "write" ? "Read & Write" : "Read Only"}
+                        </span>
+                      )}
                     </div>
 
                     {/* Right: Open Button */}
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => handleOpenIncomingDrive(access)}
-                        className="py-1.5 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/25 text-xs font-bold transition-all flex items-center gap-1.5"
+                        className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                          isAccessBlocked
+                            ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25"
+                            : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/25"
+                        }`}
                       >
-                        <FolderOpen size={13} />
-                        <span>Open</span>
+                        {isAccessBlocked ? <Lock size={13} /> : <FolderOpen size={13} />}
+                        <span>{isAccessBlocked ? "Plan Required" : "Open"}</span>
                       </button>
                     </div>
                   </div>
@@ -1007,79 +1152,159 @@ export default function SecureRelayView({ openShareModal }) {
         <Plus size={26} className="group-hover:rotate-90 transition-transform duration-300 font-bold" />
       </button>
 
-      {/* ── Demo Drive Quick Preview Modal ── */}
-      {demoActiveDrive && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {/* ── Drive Quick Preview / File Explorer Modal ── */}
+      {activeDrivePreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="fixed inset-0 bg-black/80 backdrop-blur-md"
-            onClick={() => setDemoActiveDrive(null)}
+            onClick={() => setActiveDrivePreview(null)}
           />
-          <div className="relative z-10 w-full max-w-lg bg-vault-surface border border-purple-500/30 rounded-3xl p-6 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.8)]">
+          <div className="relative z-10 w-full max-w-xl bg-white dark:bg-vault-surface border border-slate-200 dark:border-purple-500/30 rounded-3xl p-6 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.8)] text-slate-900 dark:text-white space-y-4">
             <button
-              onClick={() => setDemoActiveDrive(null)}
-              className="absolute top-5 right-5 p-2 text-white/40 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all"
+              onClick={() => setActiveDrivePreview(null)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl transition-all"
             >
               <X size={16} />
             </button>
 
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center justify-center shrink-0">
                 <FolderOpen size={22} />
               </div>
               <div className="overflow-hidden">
-                <h3 className="font-bold text-white text-lg truncate">
-                  {demoActiveDrive.name}
+                <h3 className="font-bold text-base sm:text-lg truncate">
+                  {activeDrivePreview.name || `${activeDrivePreview.userId?.name || "Member"}'s Shared Relay`}
                 </h3>
-                <p className="text-xs text-purple-300/80">
-                  Shared by {demoActiveDrive.userId.name} ({demoActiveDrive.userId.email})
+                <p className="text-xs text-purple-600 dark:text-purple-300/80 truncate">
+                  Shared by {activeDrivePreview.userId?.name || "Vault User"} ({activeDrivePreview.userId?.email || ""})
                 </p>
               </div>
             </div>
 
-            <div className="p-3 bg-black/40 border border-white/5 rounded-2xl mb-4 space-y-2">
-              <div className="flex items-center justify-between text-xs text-white/60">
+            <div className="p-3 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-2xl space-y-2 text-xs">
+              <div className="flex items-center justify-between text-slate-600 dark:text-white/60">
                 <span>Security Clearance:</span>
-                <span className="font-bold uppercase text-purple-300">
-                  {demoActiveDrive.permission[0]}
+                <span className="font-bold uppercase text-purple-600 dark:text-purple-300">
+                  {activeDrivePreview.permission?.[0] || "read"}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-xs text-white/60">
+              <div className="flex items-center justify-between text-slate-600 dark:text-white/60">
                 <span>Total Size:</span>
-                <span className="font-mono text-white/80">{formatSize(demoActiveDrive.size)}</span>
+                <span className="font-mono text-slate-900 dark:text-white/80">{formatSize(activeDrivePreview.size)}</span>
               </div>
-              <div className="flex items-center justify-between text-xs text-white/60">
-                <span>Files Included:</span>
-                <span className="font-mono text-white/80">{demoActiveDrive.items.length || "Entire Vault"}</span>
+              <div className="flex items-center justify-between text-slate-600 dark:text-white/60">
+                <span>Items Included:</span>
+                <span className="font-mono text-slate-900 dark:text-white/80">{activeDrivePreview.items?.length || "Full Drive"}</span>
               </div>
             </div>
 
-            {demoActiveDrive.items.length > 0 && (
-              <div className="space-y-2 mb-5 max-h-[160px] overflow-y-auto pr-1 custom-scrollbar">
-                {demoActiveDrive.items.map((f) => (
-                  <div
-                    key={f.id}
-                    className="p-2.5 bg-black/60 border border-white/5 rounded-xl flex items-center justify-between text-xs text-white/80"
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <FileText size={14} className="text-purple-400" />
-                      <span className="truncate">{f.name}</span>
+            {activeDrivePreview.items && activeDrivePreview.items.length > 0 ? (
+              <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
+                {activeDrivePreview.items.map((item) => {
+                  const itemId = item.id || item._id;
+                  const isDir = item.type === "directory";
+                  return (
+                    <div
+                      key={itemId}
+                      className="p-3 bg-slate-100 dark:bg-black/60 border border-slate-200 dark:border-white/5 rounded-2xl flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        {isDir ? (
+                          <FolderOpen size={16} className="text-accent-primary shrink-0" />
+                        ) : (
+                          <FileText size={16} className="text-purple-500 dark:text-purple-400 shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-slate-900 dark:text-white truncate" title={item.name}>
+                            {item.name}
+                          </p>
+                          <p className="text-[10px] text-slate-500 dark:text-white/40 font-mono">
+                            {formatSize(item.size || 0)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isDir ? (
+                          <button
+                            onClick={() => {
+                              setActiveDrivePreview(null);
+                              navigate(`/dashboard/shared/folder/${itemId}`);
+                            }}
+                            className="px-2.5 py-1.5 rounded-xl bg-accent-soft text-accent-primary hover:opacity-90 font-bold text-[11px] flex items-center gap-1"
+                          >
+                            <span>Open</span>
+                            <ExternalLink size={12} />
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => {
+                                setPreviewingFile({
+                                  _id: itemId,
+                                  name: item.name,
+                                  extension: item.extension || (item.name.includes(".") ? `.${item.name.split(".").pop()}` : ""),
+                                  size: item.size || 0,
+                                  mimeType: item.mimeType || "",
+                                  provider: item.provider || "local",
+                                  userId: activeDrivePreview.userId?._id || activeDrivePreview.userId,
+                                });
+                              }}
+                              className="px-2.5 py-1.5 rounded-xl bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-white/15 font-medium text-[11px] flex items-center gap-1"
+                              title="Preview file"
+                            >
+                              <Eye size={12} />
+                              <span>Preview</span>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                const downloadUrl = `${SERVER_URL}/file/${itemId}?action=download`;
+                                const link = document.createElement("a");
+                                link.href = downloadUrl;
+                                link.setAttribute("download", item.name || "download");
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }}
+                              className="p-1.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 font-medium text-[11px]"
+                              title="Download file"
+                            >
+                              <Download size={13} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-[10px] font-mono text-white/40 shrink-0">
-                      {formatSize(f.size)}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-6 text-center text-xs text-slate-500 dark:text-white/40">
+                This drive grants access to the full vault chamber.
               </div>
             )}
 
             <Button
-              onClick={() => setDemoActiveDrive(null)}
+              onClick={() => setActiveDrivePreview(null)}
               className="w-full py-2.5 text-xs font-bold"
             >
-              Close Preview
+              Close
             </Button>
           </div>
         </div>
+      )}
+
+      {/* ── File Preview Modal ── */}
+      {previewingFile && (
+        <Suspense fallback={null}>
+          <FilePreviewModal
+            isOpen={Boolean(previewingFile)}
+            onClose={() => setPreviewingFile(null)}
+            file={previewingFile}
+            ownerId={previewingFile.userId}
+          />
+        </Suspense>
       )}
 
       {/* ── Edit Link Modal ── */}
@@ -1097,6 +1322,67 @@ export default function SecureRelayView({ openShareModal }) {
         url={qrModalData?.url}
         title={qrModalData?.title}
       />
+
+      {/* ── Access Shared Link Modal ── */}
+      <AccessSharedLinkModal
+        isOpen={accessModalOpen}
+        onClose={() => setAccessModalOpen(false)}
+        onClaimSuccess={() => {
+          fetchIncomingDrives();
+          setActiveTab("incoming");
+        }}
+      />
+
+      {/* ── Plan Upgrade Prompt Modal ── */}
+      {planUpgradeModal && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-md"
+            onClick={() => setPlanUpgradeModal(null)}
+          />
+          <div className="relative z-10 w-full max-w-md bg-white dark:bg-vault-surface border border-slate-200 dark:border-amber-500/30 rounded-3xl p-6 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.8)] text-slate-900 dark:text-white space-y-4">
+            <button
+              onClick={() => setPlanUpgradeModal(null)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl transition-all"
+            >
+              <X size={16} />
+            </button>
+
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+              <Lock size={22} />
+            </div>
+
+            <div>
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-1.5">
+                {planUpgradeModal.title}
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-white/70 leading-relaxed">
+                {planUpgradeModal.message}
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  setPlanUpgradeModal(null);
+                  navigate("/dashboard/billing");
+                }}
+                className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2"
+              >
+                <Sparkles size={14} />
+                <span>View Plans & Upgrade</span>
+              </button>
+
+              <button
+                onClick={() => setPlanUpgradeModal(null)}
+                className="w-full py-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white/70 text-xs font-semibold transition-all"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

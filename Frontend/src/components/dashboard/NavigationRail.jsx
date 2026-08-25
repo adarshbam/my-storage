@@ -104,6 +104,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
       shadowClass: "shadow-accent-glow-sm",
       barColor: "var(--accent-primary)",
       barGlow: "0 0 12px var(--accent-glow)",
+      tourId: "nav-chamber",
     },
     {
       name: "Secure Relay",
@@ -115,6 +116,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
       shadowClass: "shadow-[inset_0_0_20px_rgba(155,77,255,0.2)]",
       barColor: "#C65CFF",
       barGlow: "0 0 12px rgba(155, 77, 255, 0.6)",
+      tourId: "nav-relay",
     },
     {
       name: "Activity Pulse",
@@ -126,6 +128,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
       shadowClass: "shadow-[inset_0_0_20px_rgba(0,207,255,0.2)]",
       barColor: "#00CFFF",
       barGlow: "0 0 12px rgba(0, 207, 255, 0.6)",
+      tourId: "nav-pulse",
     },
     {
       name: "Priority Beacon",
@@ -137,6 +140,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
       shadowClass: "shadow-[inset_0_0_20px_rgba(255,209,102,0.2)]",
       barColor: "#FFD166",
       barGlow: "0 0 12px rgba(255, 209, 102, 0.6)",
+      tourId: "nav-starred",
     },
     {
       name: "Recycle Vault",
@@ -148,6 +152,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
       shadowClass: "shadow-[inset_0_0_20px_rgba(255,90,122,0.2)]",
       barColor: "#FF5A7A",
       barGlow: "0 0 12px rgba(255, 90, 122, 0.6)",
+      tourId: "nav-trash",
     },
   ];
 
@@ -169,6 +174,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
 
       {/* Navigation Rail */}
       <aside
+        data-tour="nav-rail"
         className={`
         fixed md:sticky top-[64px] left-0 h-[calc(100vh-64px)] z-40
         w-[72px] md:hover:w-[240px] group transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
@@ -189,6 +195,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
               <Link
                 key={item.path}
                 to={item.path}
+                data-tour={item.tourId}
                 onClick={() => setIsMobileOpen(false)}
                 onMouseEnter={() => setHoveredPath(item.path)}
                 onMouseLeave={() => setHoveredPath(null)}
@@ -251,43 +258,78 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
           </div>
           {/* Link Drive — Orange identity */}
           {hasFeature("gdrive_sync") && (
-            <button
-              onClick={() =>
-                driveConnected ? disconnectDrive() : connectDrive()
-              }
-              onMouseEnter={() => setHoveredPath("drive")}
-              onMouseLeave={() => setHoveredPath(null)}
-              className={`relative flex items-center h-12 rounded-xl overflow-hidden text-left transition-all duration-300 ${
-                hoveredPath === "drive"
-                  ? "bg-linkdrive-accent/10 shadow-[inset_0_0_20px_rgba(255,122,61,0.2)]"
-                  : ""
-              }`}
-            >
-              <div
-                className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
-                  driveConnected || hoveredPath === "drive"
-                    ? "text-linkdrive-accent"
-                    : "text-white/30"
-                }`}
-                style={
-                  driveConnected || hoveredPath === "drive"
-                    ? { filter: "drop-shadow(0 0 6px rgba(255, 122, 61, 0.5))" }
-                    : {}
-                }
-              >
-                <VaultDriveIcon size={20} />
-              </div>
-              <span
-                className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
-                  driveConnected ? "text-slate-900 dark:text-white/80" : "text-slate-500 dark:text-white/40"
-                }`}
-              >
-                {driveConnected ? "Drive (Linked)" : "Link Drive"}
-              </span>
-              {driveConnected && (
-                <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkdrive-accent shadow-[0_0_6px_rgba(255,122,61,0.6)] opacity-0 md:group-hover:opacity-100 transition-opacity" />
+            <div className="relative flex items-center group/drive">
+              {driveConnected ? (
+                <Link
+                  to="/dashboard/google-drive"
+                  onClick={() => setIsMobileOpen(false)}
+                  onMouseEnter={() => setHoveredPath("drive")}
+                  onMouseLeave={() => setHoveredPath(null)}
+                  className={`relative flex items-center h-12 w-full rounded-xl overflow-hidden text-left transition-all duration-300 ${
+                    isActive("/dashboard/google-drive") || hoveredPath === "drive"
+                      ? "bg-linkdrive-accent/10 shadow-[inset_0_0_20px_rgba(255,122,61,0.2)]"
+                      : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
+                  }`}
+                >
+                  {isActive("/dashboard/google-drive") && (
+                    <div
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full"
+                      style={{
+                        backgroundColor: "#FF7A3D",
+                        boxShadow: "0 0 12px rgba(255, 122, 61, 0.6)",
+                      }}
+                    />
+                  )}
+                  <div
+                    className="w-12 shrink-0 flex items-center justify-center transition-all duration-300 text-linkdrive-accent"
+                    style={{ filter: "drop-shadow(0 0 6px rgba(255, 122, 61, 0.5))" }}
+                  >
+                    <VaultDriveIcon size={20} />
+                  </div>
+                  <span
+                    className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 text-slate-900 dark:text-white/80 ${
+                      isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"
+                    }`}
+                  >
+                    Google Drive
+                  </span>
+                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkdrive-accent shadow-[0_0_6px_rgba(255,122,61,0.6)] opacity-0 md:group-hover:opacity-100 transition-opacity" />
+                </Link>
+              ) : (
+                <button
+                  onClick={connectDrive}
+                  onMouseEnter={() => setHoveredPath("drive")}
+                  onMouseLeave={() => setHoveredPath(null)}
+                  className={`relative flex items-center h-12 w-full rounded-xl overflow-hidden text-left transition-all duration-300 ${
+                    hoveredPath === "drive"
+                      ? "bg-linkdrive-accent/10 shadow-[inset_0_0_20px_rgba(255,122,61,0.2)]"
+                      : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <div
+                    className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
+                      hoveredPath === "drive"
+                        ? "text-linkdrive-accent"
+                        : "text-slate-400 dark:text-white/30"
+                    }`}
+                    style={
+                      hoveredPath === "drive"
+                        ? { filter: "drop-shadow(0 0 6px rgba(255, 122, 61, 0.5))" }
+                        : {}
+                    }
+                  >
+                    <VaultDriveIcon size={20} />
+                  </div>
+                  <span
+                    className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${
+                      isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"
+                    } text-slate-500 dark:text-white/40`}
+                  >
+                    Link Drive
+                  </span>
+                </button>
               )}
-            </button>
+            </div>
           )}
           {/* Link GitHub — Purple identity */}
           {hasFeature("github_backup") && (
@@ -335,6 +377,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
         <div className="p-3 border-t border-white/5 mt-auto bg-vault-black/50 backdrop-blur-xl">
           <Link
             to="/profile"
+            data-tour="system-core"
             onClick={() => setIsMobileOpen(false)}
             onMouseEnter={() => setHoveredPath("/profile")}
             onMouseLeave={() => setHoveredPath(null)}

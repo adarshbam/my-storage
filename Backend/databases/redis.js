@@ -96,4 +96,35 @@ export async function invalidateUserSessions(userId) {
   }
 }
 
+export async function invalidateAllPlanContexts() {
+  try {
+    const keys = await redis.keys("plan_context:*");
+    if (keys && keys.length > 0) {
+      await redis.del(keys);
+    }
+  } catch (err) {
+    console.error("invalidateAllPlanContexts error:", err.message);
+  }
+}
+
+export async function invalidateAllSessions() {
+  try {
+    const keys = await redis.keys("session:*");
+    if (keys && keys.length > 0) {
+      await redis.del(keys);
+    }
+  } catch (err) {
+    console.error("invalidateAllSessions error:", err.message);
+  }
+}
+
+export async function invalidateGlobalPlanCache() {
+  await Promise.all([
+    invalidateAllPlanContexts(),
+    invalidateAllSessions(),
+  ]).catch((err) => {
+    console.error("invalidateGlobalPlanCache error:", err.message);
+  });
+}
+
 export default redis;

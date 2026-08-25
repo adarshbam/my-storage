@@ -115,7 +115,8 @@ export default {
         }
 
         const targetPath = body.path || url.searchParams.get("path");
-        const purgeVersion = body.v || body.version || url.searchParams.get("v");
+        const purgeVersion =
+          body.v || body.version || url.searchParams.get("v");
         const purgeThumbnail =
           body.purgeThumbnail === true ||
           url.searchParams.get("purgeThumbnail") === "true";
@@ -123,7 +124,7 @@ export default {
         if (!targetPath || !targetPath.startsWith("/files/")) {
           return createCorsJsonResponse(
             { error: "Invalid target path (must start with /files/)" },
-            400
+            400,
           );
         }
 
@@ -131,7 +132,7 @@ export default {
           url.origin,
           targetPath,
           purgeThumbnail,
-          purgeVersion
+          purgeVersion,
         );
         return createCorsJsonResponse(result, 200);
       }
@@ -149,11 +150,9 @@ export default {
       // 4. Public health check (GET /)
       // ------------------------------------------------------------
       if (pathname === "/") {
-        return createCorsResponse(
-          "Vault Storage CDN Worker is running.",
-          200,
-          { "Content-Type": "text/plain; charset=utf-8" }
-        );
+        return createCorsResponse("Vault Storage CDN Worker is running.", 200, {
+          "Content-Type": "text/plain; charset=utf-8",
+        });
       }
 
       // ------------------------------------------------------------
@@ -164,7 +163,7 @@ export default {
 
       if (pathname.startsWith("/files/thumbnails/")) {
         const thumbnailName = decodeURIComponent(
-          pathname.slice("/files/thumbnails/".length)
+          pathname.slice("/files/thumbnails/".length),
         );
 
         if (!thumbnailName || thumbnailName.includes("/")) {
@@ -174,9 +173,7 @@ export default {
         objectKey = `thumbnails/${thumbnailName}`;
         routeType = "thumbnail";
       } else if (pathname.startsWith("/files/")) {
-        const fileName = decodeURIComponent(
-          pathname.slice("/files/".length)
-        );
+        const fileName = decodeURIComponent(pathname.slice("/files/".length));
 
         if (!fileName || fileName.includes("/")) {
           return createCorsResponse("Invalid file path.", 400);
@@ -192,10 +189,7 @@ export default {
       // 6. Validate CDN Signing Secret Configuration
       // ------------------------------------------------------------
       if (!env.CDN_SIGNING_SECRET) {
-        return createCorsResponse(
-          "CDN signing secret is not configured.",
-          500
-        );
+        return createCorsResponse("CDN signing secret is not configured.", 500);
       }
 
       // ------------------------------------------------------------
@@ -237,7 +231,7 @@ export default {
           hash: "SHA-256",
         },
         false,
-        ["verify"]
+        ["verify"],
       );
 
       const providedSignatureBytes = hexToBytes(signature);
@@ -249,7 +243,7 @@ export default {
         "HMAC",
         key,
         providedSignatureBytes,
-        new TextEncoder().encode(dataToVerify)
+        new TextEncoder().encode(dataToVerify),
       );
 
       if (!validSignature) {
@@ -263,7 +257,8 @@ export default {
         url.searchParams.get("action") === "download" ||
         url.searchParams.get("download") === "true" ||
         url.searchParams.get("disposition") === "attachment";
-      const requestedName = url.searchParams.get("name") || objectKey.split("/").pop();
+      const requestedName =
+        url.searchParams.get("name") || objectKey.split("/").pop();
 
       const cache = caches.default;
       const canonicalUrl = `${url.origin}${pathname}?v=${v}`;
@@ -283,14 +278,20 @@ export default {
         }
 
         // Ensure proper MIME type is set even on cached responses
-        const mime = getMimeType(requestedName || objectKey, dynamicHeaders.get("Content-Type"));
+        const mime = getMimeType(
+          requestedName || objectKey,
+          dynamicHeaders.get("Content-Type"),
+        );
         dynamicHeaders.set("Content-Type", mime);
 
-        return new Response(request.method === "HEAD" ? null : cachedResponse.body, {
-          status: cachedResponse.status,
-          statusText: cachedResponse.statusText,
-          headers: dynamicHeaders,
-        });
+        return new Response(
+          request.method === "HEAD" ? null : cachedResponse.body,
+          {
+            status: cachedResponse.status,
+            statusText: cachedResponse.statusText,
+            headers: dynamicHeaders,
+          },
+        );
       }
 
       // ------------------------------------------------------------
@@ -312,15 +313,14 @@ export default {
       // 11. Fetch object from Backblaze B2
       // ------------------------------------------------------------
       const bucketName =
-        env.B2_BUCKET_NAME || env.BACKBLAZE_BUCKET_NAME || "secure-vault-storage";
+        env.B2_BUCKET_NAME ||
+        env.BACKBLAZE_BUCKET_NAME ||
+        "secure-vault-storage";
 
       const downloadUrl =
         `${auth.downloadUrl}/file/` +
         `${encodeURIComponent(bucketName)}/` +
-        `${objectKey
-          .split("/")
-          .map(encodeURIComponent)
-          .join("/")}`;
+        `${objectKey.split("/").map(encodeURIComponent).join("/")}`;
 
       const b2Headers = {
         Authorization: auth.token,
@@ -362,7 +362,7 @@ export default {
       // Detect and enforce accurate MIME type
       const mimeType = getMimeType(
         requestedName || objectKey,
-        downloadResponse.headers.get("Content-Type")
+        downloadResponse.headers.get("Content-Type"),
       );
       headers.set("Content-Type", mimeType);
 
@@ -381,7 +381,7 @@ export default {
       // Cache at edge for 24h, allow stale-while-revalidate
       headers.set(
         "Cache-Control",
-        "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800"
+        "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800",
       );
 
       const disposition = createContentDisposition(requestedName, isDownload);
@@ -406,16 +406,22 @@ export default {
           await cache.put(cachePutKey, responseToCache.clone());
         }
 
-        return new Response(request.method === "HEAD" ? null : responseToCache.body, {
-          status: 200,
-          headers,
-        });
+        return new Response(
+          request.method === "HEAD" ? null : responseToCache.body,
+          {
+            status: 200,
+            headers,
+          },
+        );
       }
 
-      return new Response(request.method === "HEAD" ? null : downloadResponse.body, {
-        status: downloadResponse.status,
-        headers,
-      });
+      return new Response(
+        request.method === "HEAD" ? null : downloadResponse.body,
+        {
+          status: downloadResponse.status,
+          headers,
+        },
+      );
     } catch (error) {
       console.error("Worker error:", error);
       return createCorsResponse("Worker failed.", 500);
@@ -437,7 +443,7 @@ async function getB2Auth(env) {
   }
 
   const basicAuth = btoa(
-    `${env.B2_APPLICATION_KEY_ID}:${env.B2_APPLICATION_KEY}`
+    `${env.B2_APPLICATION_KEY_ID}:${env.B2_APPLICATION_KEY}`,
   );
 
   const authResponse = await fetch(
@@ -446,12 +452,12 @@ async function getB2Auth(env) {
       headers: {
         Authorization: `Basic ${basicAuth}`,
       },
-    }
+    },
   );
 
   if (!authResponse.ok) {
     throw new Error(
-      `B2 auth failed (${authResponse.status}): ${await authResponse.text()}`
+      `B2 auth failed (${authResponse.status}): ${await authResponse.text()}`,
     );
   }
 
@@ -550,13 +556,11 @@ function createContentDisposition(rawFilename, isAttachment = false) {
   const clean = rawFilename.replace(/[\r\n\x00-\x1f\x7f]/g, "").trim();
   if (!clean) return null;
 
-  const asciiName = clean
-    .replace(/["\\]/g, "_")
-    .replace(/[^\x20-\x7E]/g, "_");
+  const asciiName = clean.replace(/["\\]/g, "_").replace(/[^\x20-\x7E]/g, "_");
 
   const utf8Name = encodeURIComponent(clean).replace(
     /['()]/g,
-    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
   );
 
   const type = isAttachment ? "attachment" : "inline";
@@ -570,7 +574,7 @@ async function purgeFileCache(
   origin,
   pathname,
   purgeThumbnail = false,
-  version = null
+  version = null,
 ) {
   const cache = caches.default;
   const purged = [];

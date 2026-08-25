@@ -126,6 +126,8 @@ function createStore(prefix) {
   return new FallbackStore(prefix);
 }
 
+const isDev = process.env.NODE_ENV !== "production";
+
 // Centralized helper to create consistent and professional rate limiters
 const createLimiter = (windowMs, limit, message, prefix) => {
   return rateLimit({
@@ -147,36 +149,53 @@ const createLimiter = (windowMs, limit, message, prefix) => {
 // AUTH LIMITERS (unauthenticated routes — keyed by sessionId cookie or IP)
 // ────────────────────────────────────────────────────────────────────────────────
 
-// 1. Registration Limiter: max 3 account creations per hour (strict — argon2 hashing)
+// 1. Registration Limiter: max 5 account creations per hour (strict — argon2 hashing)
 export const registerLimiter = createLimiter(
   60 * 60 * 1000, // 1 hour
-  3,
+  5,
   "Too many account creation attempts. Please try again after an hour.",
   "register",
 );
 
-// 2. Login Limiter: max 10 requests per 15 minutes
+// 2. Login Limiter: max 15 requests per 15 minutes
 export const loginLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
-  10,
+  15,
   "Too many login attempts. Please try again after 15 minutes.",
   "login",
 );
 
-// 3. OTP Limiter (Send & Verify): max 5 attempts per 15 minutes
-export const otpLimiter = createLimiter(
+// 3. Email OTP Limiters (Decoupled Send vs Verify to prevent UX lockouts while protecting mailers)
+export const otpSendLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   5,
-  "Too many OTP requests or verification attempts. Please try again after 15 minutes.",
-  "otp",
+  "Too many OTP requests. Please wait a few minutes before requesting a new code.",
+  "otp-send",
 );
 
-// 4. Password Reset Limiter: max 5 requests per 15 minutes
+export const otpVerifyLimiter = createLimiter(
+  15 * 60 * 1000, // 15 minutes
+  15,
+  "Too many OTP verification attempts. Please request a new code or try again later.",
+  "otp-verify",
+);
+
+// Backwards compatibility alias
+export const otpLimiter = otpSendLimiter;
+
+// 4. Password Reset Limiters
 export const passwordResetLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   5,
   "Too many password reset requests. Please try again after 15 minutes.",
   "pwd-reset",
+);
+
+export const passwordResetSubmitLimiter = createLimiter(
+  15 * 60 * 1000, // 15 minutes
+  10,
+  "Too many password reset attempts. Please try again after 15 minutes.",
+  "pwd-reset-submit",
 );
 
 // 5. Password Update Limiter: max 10 requests per 15 minutes
@@ -191,82 +210,82 @@ export const passwordUpdateLimiter = createLimiter(
 // OPERATION LIMITERS (authenticated routes — keyed by userId)
 // ────────────────────────────────────────────────────────────────────────────────
 
-// 6. Heavy Operation Limiter (Zips, Cross-provider transfers, Batch Deletes): max 5 / 15min
+// 6. Heavy Operation Limiter (Zips, Cross-provider transfers, Batch Deletes): max 10 / 15min
 export const heavyOpLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
-  5,
+  10,
   "Too many heavy operations performed. Please try again after 15 minutes.",
   "heavy-op",
 );
 
-// 7. File Upload Limiter: max 30 uploads per 15 minutes
+// 7. File Upload Limiter: max 60 uploads per 15 minutes
 export const uploadLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
-  30,
+  60,
   "Too many file upload requests. Please try again after 15 minutes.",
   "upload",
 );
 
-// 8. Directory & File Read Limiter: max 1000 requests per 1 minute (ultra fast, high throughput for navigation & listings)
+// 8. Directory & File Read Limiter: max 1200 requests per 1 minute (high throughput for navigation & listings)
 export const directoryReadLimiter = createLimiter(
   60 * 1000, // 1 minute window
-  1000,
+  1200,
   "Too many directory read requests. Please try again after 1 minute.",
   "dir-read",
 );
 
-// 9. Light Read Limiter: max 300 / 1min (user info, profile pic GET, searched items, theme)
+// 9. Light Read Limiter: max 400 / 1min (user info, profile pic GET, searched items, theme)
 export const lightReadLimiter = createLimiter(
   60 * 1000, // 1 minute window
-  300,
+  400,
   "Too many requests. Please slow down.",
   "light-read",
 );
 
-// 10. Thumbnail Limiter: max 600 requests per 1 minute (ultra fast for UI grid previews)
+// 10. Thumbnail Limiter: max 800 requests per 1 minute (ultra fast for UI grid previews)
 export const thumbnailLimiter = createLimiter(
   60 * 1000, // 1 minute window
-  600,
+  800,
   "Too many thumbnail requests. Please try again after 1 minute.",
   "thumbnail",
 );
 
-// 11. Search Limiter: max 150 searches per 1 minute
+// 11. Search Limiter: max 200 searches per 1 minute
 export const searchLimiter = createLimiter(
   60 * 1000, // 1 minute window
-  150,
+  200,
   "Too many search queries. Please try again after 1 minute.",
   "search",
 );
 
-// 12. Standard Write Limiter: max 60 / 15min (directory CRUD, file rename/delete)
+// 12. Standard Write Limiter: max 80 / 15min (directory CRUD, file rename/delete)
 export const standardWriteLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
-  60,
+  80,
   "Too many requests. Please slow down.",
   "std-write",
 );
 
-// 13. Medium Write Limiter: max 30 / 15min (file save, GitHub/Drive write ops)
+// 13. Medium Write Limiter: max 40 / 15min (file save, GitHub/Drive write ops)
 export const mediumWriteLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
-  30,
+  40,
   "Too many write operations. Please slow down.",
   "med-write",
 );
 
-// 14. Share Limiter: max 20 / 15min (share link generation/claiming)
+// 14. Share Limiter: max 30 / 15min (share link generation/claiming)
 export const shareLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
-  20,
+  30,
   "Too many share requests. Please slow down.",
   "share",
 );
 
-// 15. Admin Limiter: max 60 / 1min (system user management)
+// 15. Admin Limiter: max 100 / 1min (system user management)
 export const adminLimiter = createLimiter(
   60 * 1000, // 1 minute window
-  60,
+  100,
   "Too many admin operations. Please slow down.",
   "admin",
 );
@@ -279,15 +298,23 @@ export const profilePicLimiter = createLimiter(
   "profile-pic",
 );
 
-// 17. Subscription Limiter: max 5 / 15min (Razorpay API calls are expensive)
-export const subscriptionLimiter = createLimiter(
+// 17. Free Trial Activation Limiter: max 5 activation attempts per 15 minutes (prevents race abuse)
+export const trialActivationLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   5,
+  "Too many trial activation attempts. Please try again after 15 minutes.",
+  "trial-activate",
+);
+
+// 18. Subscription Limiter: max 20 requests per 15 minutes (calibrated for real payment & subscription actions)
+export const subscriptionLimiter = createLimiter(
+  15 * 60 * 1000, // 15 minutes
+  20,
   "Too many subscription requests. Please try again after 15 minutes.",
   "subscription",
 );
 
-// 18. Webhook Limiter: max 100 / 15min (Razorpay sends events — generous limit)
+// 19. Webhook Limiter: max 100 / 15min (Razorpay sends events — generous limit)
 export const webhookLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
   100,
@@ -295,26 +322,46 @@ export const webhookLimiter = createLimiter(
   "webhook",
 );
 
-// 19. Phone OTP Limiter: max 6 OTP requests/verifications per 15 minutes
-export const phoneOtpLimiter = createLimiter(
+// 20. Phone OTP Limiters (Decoupled Send vs Verify)
+export const phoneOtpSendLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
-  6,
-  "Too many phone OTP requests or attempts. Please try again after 15 minutes.",
-  "phone-otp",
+  5,
+  "Too many phone verification requests. Please wait a few minutes before requesting another code.",
+  "phone-otp-send",
 );
 
-// 20. Two-Factor Authentication Limiter: max 10 attempts per 15 minutes
+export const phoneOtpVerifyLimiter = createLimiter(
+  15 * 60 * 1000, // 15 minutes
+  15,
+  "Too many phone verification attempts. Please request a new code or try again later.",
+  "phone-otp-verify",
+);
+
+// Backwards compatibility alias
+export const phoneOtpLimiter = phoneOtpSendLimiter;
+
+// 21. Two-Factor Authentication Limiter: max 15 attempts per 15 minutes
 export const twoFactorLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
-  10,
+  15,
   "Too many 2FA verification attempts. Please try again after 15 minutes.",
   "2fa",
 );
 
-// 21. Recovery Email Limiter: max 6 requests per 15 minutes
-export const recoveryEmailLimiter = createLimiter(
+// 22. Secondary Recovery Email Limiters (Decoupled Send vs Verify)
+export const recoveryEmailSendLimiter = createLimiter(
   15 * 60 * 1000, // 15 minutes
-  6,
-  "Too many recovery email requests. Please try again after 15 minutes.",
-  "recovery-email",
+  5,
+  "Too many recovery email verification requests. Please wait before requesting another code.",
+  "rec-email-send",
 );
+
+export const recoveryEmailVerifyLimiter = createLimiter(
+  15 * 60 * 1000, // 15 minutes
+  15,
+  "Too many recovery email verification attempts. Please try again after 15 minutes.",
+  "rec-email-verify",
+);
+
+// Backwards compatibility alias
+export const recoveryEmailLimiter = recoveryEmailSendLimiter;

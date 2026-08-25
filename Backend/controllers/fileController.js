@@ -140,7 +140,7 @@ export const getFileById = async (req, res, next) => {
       userId: req.user.id,
       userRole: req.user.role,
       range: req.headers.range,
-      action: req.query.action,
+      action: req.query.action || (req.path.includes("download") ? "download" : "inline"),
       ifNoneMatch: req.headers["if-none-match"],
       res
     });
@@ -161,9 +161,23 @@ export const getAllStarredItems = async (req, res, next) => {
 
 export const setStarredItem = async (req, res, next) => {
   try {
+    const rawId =
+      req.params.fileId ||
+      req.query.fileId ||
+      req.query.fildId ||
+      req.body.itemId ||
+      req.body._id;
     const item = await fileService.setStarredItem({
-      itemId: req.query.fildId, // Notice original typo
-      type: req.body.type
+      userId: req.user.id,
+      itemId: rawId,
+      type: req.body.type,
+      provider: req.body.provider || "local",
+      name: req.body.name,
+      size: req.body.size,
+      mimeType: req.body.mimeType,
+      metaUrl: req.body.metaUrl,
+      githubPath: req.body.githubPath,
+      metadata: req.body.metadata || {},
     });
     return res.status(200).json(item);
   } catch (error) {
@@ -208,7 +222,8 @@ export const uploadVaultInitate = async (req, res, next) => {
       rootDirId: req.user.rootDirId.toString(),
       name: req.body.name,
       size: req.body.size,
-      contentType: req.body.contentType
+      contentType: req.body.contentType,
+      planContext: req.planContext,
     });
     return res.status(200).json(data);
   } catch (error) {
@@ -302,6 +317,7 @@ export const uploadVaultMultipartInitiate = async (req, res, next) => {
       name: req.body.name,
       size: req.body.size,
       contentType: req.body.contentType,
+      planContext: req.planContext,
     });
     return res.status(200).json(data);
   } catch (error) {

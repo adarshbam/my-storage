@@ -3,6 +3,7 @@ import Subscription from "../../../models/subscriptionModel.js";
 import User from "../../../models/userModel.js";
 import { subscriptionActivated } from "../../../services/notification.service.js";
 import { invalidatePlanContextCache } from "../../../middlewares/loadPlanContext.js";
+import { withTransaction } from "../../../utils/transaction.js";
 
 export async function handleSubscriptionActivated(payload) {
   const entity =
@@ -37,44 +38,33 @@ export async function handleSubscriptionActivated(payload) {
     subUpdate.chargeAt = new Date(entity.charge_at * 1000);
   }
 
-  const subscription = await Subscription.findOneAndUpdate(
-    { razorpaySubscriptionId: entity.id },
-    { $set: subUpdate },
-    { returnDocument: "after" },
-  ).populate("billingPlan");
+  let subscription = null;
+  await withTransaction(async (session) => {
+    subscription = await Subscription.findOneAndUpdate(
+      { razorpaySubscriptionId: entity.id },
+      { $set: subUpdate },
+      { returnDocument: "after", session },
+    ).populate("billingPlan");
 
-  if (!subscription) {
-    console.warn(
-      `[Webhook] subscription.activated: subscription ${entity.id} not found`,
-    );
-    return;
-  }
-
-  const previousActiveSubcriptions = await Subscription.find({
-    userId: subscription.userId,
-    status: { $in: ["active", "paused"] },
-    _id: { $ne: subscription._id },
-  });
-
-  for (const previousSubscription of previousActiveSubcriptions) {
-    try {
-      await rzInstance.subscriptions.cancel(
-        previousSubscription.razorpaySubscriptionId,
-        false,
-      );
-    } catch (cancelErr) {
-      console.warn(
-        `[Webhook] Failed to cancel previous subscription ${previousSubscription.razorpaySubscriptionId}:`,
-        cancelErr.message,
-      );
+    if (!subscription) {
+      return;
     }
 
-    previousSubscription.status = "cancelled";
-    previousSubscription.cancellationReason = "system";
-    await previousSubscription.save();
-  }
+    await Subscription.updateMany(
+      {
+        userId: subscription.userId,
+        status: { $in: ["active", "paused"] },
+        _id: { $ne: subscription._id },
+      },
+      {
+        $set: {
+          status: "cancelled",
+          cancellationReason: "system",
+        },
+      },
+      { session },
+    );
 
-  if (subscription) {
     const updateData = {
       subscription: subscription._id,
       billingPlan: subscription.billingPlan?._id || subscription.billingPlan,
@@ -85,21 +75,30 @@ export async function handleSubscriptionActivated(payload) {
     if (subscription.billingPlan?.storage) {
       updateData.maxStorage = subscription.billingPlan.storage;
     }
-    await User.findByIdAndUpdate(subscription.userId, { $set: updateData });
-    await invalidatePlanContextCache(subscription.userId);
-    console.log(
-      `[Webhook] User ${subscription.userId} subscription activated successfully.`,
-    );
 
-    // Trigger notification and resolve past cancellation/deletion warnings
-    await subscriptionActivated({
-      userId: subscription.userId,
-      subscriptionId: subscription._id,
-      planName: subscription.billingPlan?.slug
-        ? subscription.billingPlan.slug.toUpperCase()
-        : "Vault Storage Plan",
-    }).catch((nErr) => {
-      console.warn("[Webhook] Notification error:", nErr.message);
-    });
+    await User.findByIdAndUpdate(subscription.userId, { $set: updateData }, { session });
+  });
+
+  if (!subscription) {
+    console.warn(
+      `[Webhook] subscription.activated: subscription ${entity.id} not found`,
+    );
+    return;
   }
+
+  await invalidatePlanContextCache(subscription.userId);
+  console.log(
+    `[Webhook] User ${subscription.userId} subscription activated successfully.`,
+  );
+
+  // Trigger notification and resolve past cancellation/deletion warnings
+  await subscriptionActivated({
+    userId: subscription.userId,
+    subscriptionId: subscription._id,
+    planName: subscription.billingPlan?.slug
+      ? subscription.billingPlan.slug.toUpperCase()
+      : "Vault Storage Plan",
+  }).catch((nErr) => {
+    console.warn("[Webhook] Notification error:", nErr.message);
+  });
 }

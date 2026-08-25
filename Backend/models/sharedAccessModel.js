@@ -1,5 +1,18 @@
 import { model, Schema } from "mongoose";
 
+const sharedItemSchema = new Schema(
+  {
+    id: { type: String, required: true },
+    type: { type: String, enum: ["file", "directory"], required: true },
+    provider: { type: String, default: "local" },
+    name: { type: String, required: true },
+    size: { type: Number, default: 0 },
+    extension: { type: String, default: "" },
+    mimeType: { type: String, default: "" },
+  },
+  { _id: false }
+);
+
 const shareAccessSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, required: true, ref: "User" },
@@ -14,18 +27,11 @@ const shareAccessSchema = new Schema(
       },
     },
     items: {
-      type: [
-        {
-          id: { type: String, required: true },
-          type: { type: String, enum: ["file", "directory"], required: true },
-          provider: { type: String, required: true },
-          name: { type: String, required: true },
-        },
-      ],
+      type: [sharedItemSchema],
       default: [],
     },
   },
-  { strict: "throw" },
+  { strict: true }
 );
 
 const ShareAccess = model("SharedAccess", shareAccessSchema);

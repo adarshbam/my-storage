@@ -3,105 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, Sparkles, Eye, Shield, Zap, HardDrive, ChevronDown } from "lucide-react";
 import { currencySymbols } from "../../lib/currency";
 
-const accentThemes = {
-  emerald: {
-    border: "border-emerald-500/40 hover:border-emerald-500/70",
-    shadow: "shadow-[0_10px_40px_rgba(16,185,129,0.15)]",
-    bgTint: "bg-emerald-500/[0.03]",
-    badgeBg: "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
-    text: "text-emerald-400",
-    check: "text-emerald-400",
-    ruleBox: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300",
-    btnGradient: "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_8px_25px_rgba(16,185,129,0.3)] hover:shadow-[0_12px_35px_rgba(16,185,129,0.5)]",
-  },
-  purple: {
-    border: "border-fuchsia-500/40 hover:border-fuchsia-500/70",
-    shadow: "shadow-[0_10px_40px_rgba(217,70,239,0.15)]",
-    bgTint: "bg-fuchsia-500/[0.03]",
-    badgeBg: "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/25",
-    text: "text-fuchsia-400",
-    check: "text-fuchsia-400",
-    ruleBox: "bg-fuchsia-500/10 border-fuchsia-500/20 text-fuchsia-300",
-    btnGradient: "bg-gradient-to-r from-fuchsia-500 to-purple-500 text-white shadow-[0_8px_25px_rgba(217,70,239,0.3)] hover:shadow-[0_12px_35px_rgba(217,70,239,0.5)]",
-  },
-  rose: {
-    border: "border-rose-500/50 hover:border-rose-500/80",
-    shadow: "shadow-[0_10px_40px_rgba(244,63,94,0.2)]",
-    bgTint: "bg-rose-500/[0.04]",
-    badgeBg: "bg-rose-500/15 text-rose-400 border-rose-500/25",
-    text: "text-rose-400",
-    check: "text-rose-400",
-    ruleBox: "bg-rose-500/10 border-rose-500/20 text-rose-300",
-    btnGradient: "bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-[0_8px_25px_rgba(244,63,94,0.35)] hover:shadow-[0_12px_35px_rgba(244,63,94,0.55)]",
-  },
-  sky: {
-    border: "border-blue-500/40 hover:border-blue-500/70",
-    shadow: "shadow-[0_10px_40px_rgba(59,130,246,0.15)]",
-    bgTint: "bg-blue-500/[0.03]",
-    badgeBg: "bg-blue-500/15 text-sky-400 border-blue-500/25",
-    text: "text-sky-400",
-    check: "text-sky-400",
-    ruleBox: "bg-blue-500/10 border-blue-500/20 text-sky-300",
-    btnGradient: "bg-gradient-to-r from-blue-500 to-sky-400 text-white shadow-[0_8px_25px_rgba(59,130,246,0.3)] hover:shadow-[0_12px_35px_rgba(59,130,246,0.5)]",
-  },
-  amber: {
-    border: "border-amber-500/40 hover:border-amber-500/70",
-    shadow: "shadow-[0_10px_40px_rgba(245,158,11,0.15)]",
-    bgTint: "bg-amber-500/[0.03]",
-    badgeBg: "bg-amber-500/15 text-amber-400 border-amber-500/25",
-    text: "text-amber-400",
-    check: "text-amber-400",
-    ruleBox: "bg-amber-500/10 border-amber-500/20 text-amber-300",
-    btnGradient: "bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-[0_8px_25px_rgba(245,158,11,0.3)] hover:shadow-[0_12px_35px_rgba(245,158,11,0.5)]",
-  },
-  indigo: {
-    border: "border-indigo-500/40 hover:border-indigo-500/70",
-    shadow: "shadow-[0_10px_40px_rgba(99,102,241,0.15)]",
-    bgTint: "bg-indigo-500/[0.03]",
-    badgeBg: "bg-indigo-500/15 text-indigo-400 border-indigo-500/25",
-    text: "text-indigo-400",
-    check: "text-indigo-400",
-    ruleBox: "bg-indigo-500/10 border-indigo-500/20 text-indigo-300",
-    btnGradient: "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-[0_8px_25px_rgba(99,102,241,0.3)] hover:shadow-[0_12px_35px_rgba(99,102,241,0.5)]",
-  },
-  cyan: {
-    border: "border-cyan-500/40 hover:border-cyan-500/70",
-    shadow: "shadow-[0_10px_40px_rgba(6,182,212,0.15)]",
-    bgTint: "bg-cyan-500/[0.03]",
-    badgeBg: "bg-cyan-500/15 text-cyan-400 border-cyan-500/25",
-    text: "text-cyan-400",
-    check: "text-cyan-400",
-    ruleBox: "bg-cyan-500/10 border-cyan-500/20 text-cyan-300",
-    btnGradient: "bg-gradient-to-r from-cyan-500 to-teal-400 text-white shadow-[0_8px_25px_rgba(6,182,212,0.3)] hover:shadow-[0_12px_35px_rgba(6,182,212,0.5)]",
-  },
-  pink: {
-    border: "border-pink-500/40 hover:border-pink-500/70",
-    shadow: "shadow-[0_10px_40px_rgba(236,72,153,0.15)]",
-    bgTint: "bg-pink-500/[0.03]",
-    badgeBg: "bg-pink-500/15 text-pink-400 border-pink-500/25",
-    text: "text-pink-400",
-    check: "text-pink-400",
-    ruleBox: "bg-pink-500/10 border-pink-500/20 text-pink-300",
-    btnGradient: "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-[0_8px_25px_rgba(236,72,153,0.3)] hover:shadow-[0_12px_35px_rgba(236,72,153,0.5)]",
-  },
-  violet: {
-    border: "border-violet-500/40 hover:border-violet-500/70",
-    shadow: "shadow-[0_10px_40px_rgba(139,92,246,0.15)]",
-    bgTint: "bg-violet-500/[0.03]",
-    badgeBg: "bg-violet-500/15 text-violet-400 border-violet-500/25",
-    text: "text-violet-400",
-    check: "text-violet-400",
-    ruleBox: "bg-violet-500/10 border-violet-500/20 text-violet-300",
-    btnGradient: "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-[0_8px_25px_rgba(139,92,246,0.3)] hover:shadow-[0_12px_35px_rgba(139,92,246,0.5)]",
-  },
-};
-
 export default function PricingLivePreviewSection({
   billingPlans,
   planTiers,
   tierFeatureConfigs,
   tierRuleConfigs,
   features,
+  limits,
 }) {
   const [isYearly, setIsYearly] = useState(false);
   const [expandedTiers, setExpandedTiers] = useState({});
@@ -122,13 +30,23 @@ export default function PricingLivePreviewSection({
   };
 
   const formatStorageText = (bytes) => {
-    if (!bytes) return "0 GB";
+    if (!bytes) return "0 MB";
     const tb = 1024 * 1024 * 1024 * 1024;
     const gb = 1024 * 1024 * 1024;
-    if (bytes >= tb) {
+    const mb = 1024 * 1024;
+    if (bytes >= tb && bytes % tb === 0) {
       return `${(bytes / tb).toFixed(0)} TB`;
     }
-    return `${(bytes / gb).toFixed(0)} GB`;
+    if (bytes >= gb && bytes % gb === 0) {
+      return `${(bytes / gb).toFixed(0)} GB`;
+    }
+    if (bytes >= gb) {
+      const inGb = bytes / gb;
+      return inGb === Math.round(inGb)
+        ? `${inGb} GB`
+        : `${(bytes / mb).toFixed(0)} MB`;
+    }
+    return `${(bytes / mb).toFixed(0)} MB`;
   };
 
   return (
@@ -199,56 +117,78 @@ export default function PricingLivePreviewSection({
             <>
               {/* Separate Free Trial Top Banner Card */}
               {freeTrialTier && (() => {
-                const planObj = billingPlans.find(
-                  (p) => p.slug === freeTrialTier.slug && p.period === period
-                ) || { amount: 0, currency: "USD", storage: 5368709120 };
-                const tierFeatures = getFeaturesForTier(freeTrialTier.slug);
-                const tierRules = tierRuleConfigs[freeTrialTier.slug] || {};
+                const inheritedSlug = limits?.freeTrialInheritedTier || "ultimate";
+                const inheritedPlan =
+                  billingPlans.find(
+                    (p) => p.slug === inheritedSlug && p.period === period
+                  ) ||
+                  billingPlans.find((p) => p.slug === inheritedSlug);
+                const inheritedTier = planTiers.find((t) => t.slug === inheritedSlug);
+
+                const planObj =
+                  billingPlans.find(
+                    (p) => p.slug === freeTrialTier.slug && p.period === "Monthly",
+                  ) ||
+                  billingPlans.find((p) => p.slug === freeTrialTier.slug) || {
+                    amount: 0,
+                    currency: "USD",
+                    storage: 5368709120,
+                  };
+
+                const effectiveStorage = planObj.storage || 5368709120;
+                const tierFeatures = getFeaturesForTier(inheritedSlug).length > 0
+                  ? getFeaturesForTier(inheritedSlug)
+                  : getFeaturesForTier(freeTrialTier.slug);
+                const tierRules =
+                  tierRuleConfigs[inheritedSlug] ||
+                  tierRuleConfigs[freeTrialTier.slug] ||
+                  {};
+
                 const symbol = currencySymbols[planObj.currency] || planObj.currency + " ";
-                const storageText = formatStorageText(planObj.storage);
-                const theme = accentThemes[freeTrialTier.accentColor] || accentThemes.emerald;
+                const storageText = formatStorageText(effectiveStorage);
+                const isFreeTrial = true;
 
                 return (
                   <div
                     key={freeTrialTier.slug}
-                    className={`relative rounded-3xl p-6 border flex flex-col md:flex-row items-center justify-between gap-6 transition-all duration-300 ${theme.border} ${theme.shadow} ${theme.bgTint}`}
+                    className="relative rounded-3xl p-6 border border-accent-border/40 bg-accent-soft/20 dark:bg-accent-soft/10 flex flex-col md:flex-row items-center justify-between gap-6 transition-all duration-300 shadow-lg shadow-accent-glow/10"
                   >
                     <div className="flex-1 flex flex-col md:flex-row md:items-center gap-6 w-full">
                       <div className="min-w-[240px]">
                         {freeTrialTier.badge && (
                           <div className="mb-2">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${theme.badgeBg}`}>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-accent-soft text-accent-primary border border-accent-border shadow-accent-glow-sm">
                               <Sparkles size={10} /> {freeTrialTier.badge}
                             </span>
                           </div>
                         )}
-                        <h3 className="text-2xl font-black text-white">{freeTrialTier.title}</h3>
-                        <p className="text-xs text-white/50 font-medium mt-1">
-                          {storageText} • {freeTrialTier.description}
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-white">{freeTrialTier.title}</h3>
+                        <p className="text-xs text-slate-600 dark:text-white/50 font-medium mt-1">
+                          {storageText} • Inheriting features from {inheritedTier?.title || inheritedSlug}
                         </p>
                       </div>
 
                       {/* Price Display */}
-                      <div className="md:border-l md:border-white/10 md:pl-6 flex items-baseline gap-1 shrink-0">
-                        <span className="text-4xl font-black text-white">{symbol}{planObj.amount}</span>
-                        <span className="text-xs text-white/40 font-semibold">/{isYearly ? "yr" : "mo"}</span>
+                      <div className="md:border-l md:border-slate-200 dark:md:border-white/10 md:pl-6 flex items-baseline gap-1 shrink-0">
+                        <span className="text-4xl font-black text-slate-900 dark:text-white">{symbol}0</span>
+                        <span className="text-xs text-slate-500 dark:text-white/40 font-semibold">/30-day trial</span>
                       </div>
 
                       {/* Highlights */}
-                      <div className={`hidden lg:flex flex-wrap items-center gap-3 text-[11px] font-semibold rounded-2xl p-3 border ${theme.ruleBox}`}>
-                        <div>Max Devices: <span className="text-white font-bold">{getRuleVal(tierRules, "maxConnectedDevices", 3)} Sessions</span></div>
-                        <div className="w-px h-3 bg-white/20" />
-                        <div>Speed: <span className="text-white font-bold">{getRuleVal(tierRules, "uploadSpeedMultiplier", 1)}x</span></div>
-                        <div className="w-px h-3 bg-white/20" />
-                        <div>History: <span className="text-white font-bold">{getRuleVal(tierRules, "versionHistoryDays", 30)} Days</span></div>
+                      <div className="hidden lg:flex flex-wrap items-center gap-3 text-[11px] font-semibold rounded-2xl p-3 border border-accent-border/30 bg-accent-soft/30 text-accent-primary">
+                        <div>Max Devices: <span className="font-bold">{getRuleVal(tierRules, "maxConnectedDevices", 3)} Sessions</span></div>
+                        <div className="w-px h-3 bg-accent-border/40" />
+                        <div>Speed: <span className="font-bold">{getRuleVal(tierRules, "uploadSpeedMultiplier", 1)}x</span></div>
+                        <div className="w-px h-3 bg-accent-border/40" />
+                        <div>History: <span className="font-bold">{getRuleVal(tierRules, "versionHistoryDays", 30)} Days</span></div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-4 w-full md:w-auto shrink-0 justify-between md:justify-end">
                       <div className="hidden sm:flex items-center gap-2">
                         {tierFeatures.slice(0, 2).map((feat) => (
-                          <div key={feat._id} className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-xs text-white/80 font-medium">
-                            <Check size={12} className={`${theme.check} shrink-0`} />
+                          <div key={feat._id} className="flex items-center gap-1.5 bg-white/10 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-3 py-1.5 rounded-xl text-xs text-slate-800 dark:text-white/80 font-medium">
+                            <Check size={12} className="text-accent-primary shrink-0" />
                             <span>{feat.title}</span>
                           </div>
                         ))}
@@ -256,7 +196,7 @@ export default function PricingLivePreviewSection({
 
                       <button
                         type="button"
-                        className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs shadow-lg hover:opacity-95 transition-all duration-300 ${theme.btnGradient}`}
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs shadow-accent-glow bg-accent-primary hover:opacity-90 active:scale-95 text-accent-foreground transition-all duration-300"
                       >
                         Get Started Free
                       </button>
@@ -281,20 +221,22 @@ export default function PricingLivePreviewSection({
                   const tierRules = tierRuleConfigs[tier.slug] || {};
                   const symbol = currencySymbols[planObj.currency] || planObj.currency + " ";
                   const storageText = formatStorageText(planObj.storage);
-                  const theme = accentThemes[tier.accentColor] || accentThemes.emerald;
+                  const isPopular = tier.badge === "Most Popular" || tier.slug?.includes("pro");
 
                   return (
                     <div
                       key={tier.slug}
                       className={`relative rounded-3xl p-6 md:p-7 border flex flex-col justify-between transition-all duration-300 ${
-                        tier.badge === "Most Popular" ? "scale-[1.02]" : ""
-                      } ${theme.border} ${theme.shadow} ${theme.bgTint}`}
+                        isPopular
+                          ? "border-accent-primary shadow-2xl shadow-accent-glow/20 ring-2 ring-accent-border/50 bg-white/90 dark:bg-vault-surface/90"
+                          : "border-slate-200 dark:border-white/10 bg-white/80 dark:bg-vault-surface/60 hover:border-accent-border/80 hover:shadow-xl hover:shadow-accent-glow/10"
+                      }`}
                     >
                       {/* Badge */}
                       {tier.badge && (
                         <div className="mb-3">
                           <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider ${theme.badgeBg}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
                           >
                             <Sparkles size={10} /> {tier.badge}
                           </span>
@@ -303,37 +245,37 @@ export default function PricingLivePreviewSection({
 
                       <div className="flex-1 flex flex-col">
                         {/* Title & Subtitle */}
-                        <h3 className="text-2xl font-black text-white mb-1">
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-1">
                           {tier.title}
                         </h3>
-                        <p className="text-xs text-white/50 font-medium mb-4 min-h-[32px]">
+                        <p className="text-xs text-slate-600 dark:text-white/50 font-medium mb-4 min-h-[32px]">
                           {storageText} • {tier.description}
                         </p>
 
                         {/* Price Display */}
-                        <div className="flex items-baseline gap-1 mb-5 pb-5 border-b border-white/10">
-                          <span className="text-4xl font-black text-white">
+                        <div className="flex items-baseline gap-1 mb-5 pb-5 border-b border-slate-200 dark:border-white/10">
+                          <span className="text-4xl font-black text-slate-900 dark:text-white">
                             {symbol}
                             {planObj.amount}
                           </span>
-                          <span className="text-xs text-white/40 font-semibold">
+                          <span className="text-xs text-slate-500 dark:text-white/40 font-semibold">
                             /{isYearly ? "yr" : "mo"}
                           </span>
                         </div>
 
                         {/* Rule summary highlights */}
-                        <div className={`mb-5 text-[11px] font-semibold rounded-2xl p-3 space-y-1.5 border ${theme.ruleBox}`}>
+                        <div className="mb-5 text-[11px] font-semibold rounded-2xl p-3 space-y-1.5 border border-slate-200 dark:border-white/10 bg-slate-100/70 dark:bg-white/[0.03]">
                           <div className="flex justify-between">
-                            <span className="text-white/60">Max Devices:</span>
-                            <span className="text-white font-bold">{getRuleVal(tierRules, "maxConnectedDevices", 3)} Sessions</span>
+                            <span className="text-slate-600 dark:text-white/60">Max Devices:</span>
+                            <span className="text-slate-900 dark:text-white font-bold">{getRuleVal(tierRules, "maxConnectedDevices", 3)} Sessions</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-white/60">Upload Speed:</span>
-                            <span className="text-white font-bold">{getRuleVal(tierRules, "uploadSpeedMultiplier", 1)}x</span>
+                            <span className="text-slate-600 dark:text-white/60">Upload Speed:</span>
+                            <span className="text-slate-900 dark:text-white font-bold">{getRuleVal(tierRules, "uploadSpeedMultiplier", 1)}x</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-white/60">Version History:</span>
-                            <span className="text-white font-bold">{getRuleVal(tierRules, "versionHistoryDays", 30)} Days</span>
+                            <span className="text-slate-600 dark:text-white/60">Version History:</span>
+                            <span className="text-slate-900 dark:text-white font-bold">{getRuleVal(tierRules, "versionHistoryDays", 30)} Days</span>
                           </div>
                         </div>
 
@@ -342,9 +284,9 @@ export default function PricingLivePreviewSection({
                           {tierFeatures.slice(0, 5).map((feat) => (
                             <div
                               key={feat._id}
-                              className="flex items-center gap-2 text-xs font-medium text-white/80"
+                              className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-white/80"
                             >
-                              <Check size={14} className={`${theme.check} shrink-0`} />
+                              <Check size={14} className="text-accent-primary shrink-0" />
                               <span className="truncate">{feat.title}</span>
                             </div>
                           ))}
@@ -361,9 +303,9 @@ export default function PricingLivePreviewSection({
                                 {tierFeatures.slice(5).map((feat) => (
                                   <div
                                     key={feat._id}
-                                    className="flex items-center gap-2 text-xs font-medium text-white/80"
+                                    className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-white/80"
                                   >
-                                    <Check size={14} className={`${theme.check} shrink-0`} />
+                                    <Check size={14} className="text-accent-primary shrink-0" />
                                     <span className="truncate">{feat.title}</span>
                                   </div>
                                 ))}
@@ -380,7 +322,7 @@ export default function PricingLivePreviewSection({
                                   [tier.slug]: !prev[tier.slug],
                                 }))
                               }
-                              className="text-[11px] font-bold text-white/60 hover:text-white pt-1 flex items-center gap-1 cursor-pointer transition-colors"
+                              className="text-[11px] font-bold text-accent-primary hover:underline pt-1 flex items-center gap-1 cursor-pointer transition-colors"
                             >
                               <span>
                                 {expandedTiers[tier.slug]
@@ -400,7 +342,11 @@ export default function PricingLivePreviewSection({
 
                       <button
                         type="button"
-                        className={`w-full py-3.5 rounded-xl font-bold text-xs shadow-lg hover:opacity-95 transition-all duration-300 ${theme.btnGradient}`}
+                        className={`w-full py-3.5 rounded-xl font-bold text-xs shadow-md transition-all duration-300 active:scale-95 ${
+                          isPopular
+                            ? "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-accent-glow"
+                            : "bg-slate-200 dark:bg-white/10 hover:bg-accent-primary hover:text-accent-foreground text-slate-800 dark:text-white"
+                        }`}
                       >
                         Get Started
                       </button>

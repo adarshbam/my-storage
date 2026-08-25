@@ -4,6 +4,7 @@ import { loadPlanContext } from "../middlewares/loadPlanContext.js";
 import { requireRule } from "../middlewares/requireRule.js";
 import {
   batchDelete,
+  batchRestore,
   deleteDirectoryForever,
   deleteFileForever,
   emptyTrash,
@@ -18,6 +19,7 @@ import {
   restoreDirectorySchema,
   deleteDirectoryForeverSchema,
   batchDeleteSchema,
+  batchRestoreSchema,
 } from "../validators/trashSchema.js";
 import {
   heavyOpLimiter,
@@ -92,6 +94,16 @@ router.post(
   throttle(5000, 1, "trash-batch-delete"),
   validate(batchDeleteSchema),
   batchDelete,
+);
+router.post(
+  "/restore-batch",
+  checkAuth,
+  loadPlanContext,
+  requireRule("allowUpload"),
+  heavyOpLimiter,
+  throttle(5000, 1, "trash-batch-restore"),
+  validate(batchRestoreSchema),
+  batchRestore,
 );
 
 export default router;

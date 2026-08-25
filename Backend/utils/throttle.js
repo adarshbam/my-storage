@@ -63,6 +63,8 @@ async function redisSet(key, store, ttlMs) {
   }
 }
 
+const MAX_QUEUE_WAIT_MS = 5000; // 5 seconds maximum queue buffer before rejecting
+
 /**
  * Throttle middleware factory.
  *
@@ -75,6 +77,9 @@ export default function throttle(
   maxFastReq = 3,
   tag = "default",
 ) {
+  const effectiveDelay = delayMs;
+  const effectiveFastReq = maxFastReq;
+
   return async (req, res, next) => {
     const now = Date.now();
     const identity = resolveIdentity(req);
@@ -82,7 +87,6 @@ export default function throttle(
 
     // 1. Try Redis first
     let store = await redisGet(key);
-    let usingRedis = store !== null;
 
     // 2. Fallback to in-memory
     if (!store) {
@@ -91,20 +95,20 @@ export default function throttle(
 
     // 3. First request — initialize
     if (!store) {
-      store = { nextSlot: 0, allowReq: maxFastReq };
+      store = { nextSlot: 0, allowReq: effectiveFastReq };
     }
 
     // Queue cleared — reset fast allowance
     if (now >= store.nextSlot) {
-      store.allowReq = maxFastReq;
+      store.allowReq = effectiveFastReq;
     }
 
     if (now >= store.nextSlot || store.allowReq > 0) {
       store.allowReq--;
-      store.nextSlot = now + delayMs;
+      store.nextSlot = now + effectiveDelay;
 
       // Persist state
-      const ttlMs = delayMs * (maxFastReq + 5);
+      const ttlMs = effectiveDelay * (effectiveFastReq + 5);
       memoryStore.set(key, store);
       redisSet(key, store, ttlMs); // Fire-and-forget
 
@@ -112,10 +116,23 @@ export default function throttle(
     }
 
     const waitTime = store.nextSlot - now;
-    store.nextSlot += delayMs;
+
+    // If wait time exceeds our maximum queue ceiling, reject immediately with 429 + Retry-After
+    if (waitTime > MAX_QUEUE_WAIT_MS) {
+      const retryAfterSec = Math.ceil(waitTime / 1000);
+      res.setHeader("Retry-After", String(retryAfterSec));
+      return res.status(429).json({
+        status: 429,
+        error: "Too Many Requests",
+        message: "Requests arriving too quickly. Please slow down and try again.",
+        retryAfter: retryAfterSec,
+      });
+    }
+
+    store.nextSlot += effectiveDelay;
 
     // Persist updated state
-    const ttlMs = delayMs * (maxFastReq + 5);
+    const ttlMs = effectiveDelay * (effectiveFastReq + 5);
     memoryStore.set(key, store);
     redisSet(key, store, ttlMs); // Fire-and-forget
 

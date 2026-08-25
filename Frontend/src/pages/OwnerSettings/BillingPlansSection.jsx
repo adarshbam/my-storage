@@ -24,21 +24,34 @@ export default function BillingPlansSection({
     setTimeout(() => setSavedMessage(false), 2000);
   };
 
-  // Helper to convert bytes to readable input (GB/TB)
+  // Helper to convert bytes to readable input (MB/GB/TB)
   const formatBytesForInput = (bytes) => {
-    if (!bytes) return { value: 0, unit: "GB" };
+    if (!bytes) return { value: 0, unit: "MB" };
     const tb = 1024 * 1024 * 1024 * 1024;
     const gb = 1024 * 1024 * 1024;
-    if (bytes >= tb) {
+    const mb = 1024 * 1024;
+    if (bytes >= tb && bytes % tb === 0) {
       return { value: Math.round(bytes / tb), unit: "TB" };
     }
-    return { value: Math.round(bytes / gb), unit: "GB" };
+    if (bytes >= gb && bytes % gb === 0) {
+      return { value: Math.round(bytes / gb), unit: "GB" };
+    }
+    if (bytes >= gb) {
+      const inGb = bytes / gb;
+      if (inGb === Math.round(inGb)) return { value: inGb, unit: "GB" };
+      return { value: Math.round(bytes / mb), unit: "MB" };
+    }
+    return { value: Math.round(bytes / mb), unit: "MB" };
   };
 
   const handleStorageChange = (planId, rawVal, unit) => {
     const num = Number(rawVal) || 0;
     const multiplier =
-      unit === "TB" ? 1024 * 1024 * 1024 * 1024 : 1024 * 1024 * 1024;
+      unit === "TB"
+        ? 1024 * 1024 * 1024 * 1024
+        : unit === "GB"
+        ? 1024 * 1024 * 1024
+        : 1024 * 1024; // MB
     onUpdatePlan(planId, "storage", num * multiplier);
   };
 
@@ -68,7 +81,16 @@ export default function BillingPlansSection({
           )}
 
           <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/70">
-            {billingPlans.length} Configured Plans
+            {
+              billingPlans.filter(
+                (p) =>
+                  !(
+                    ["free-trial", "free-trail"].includes(p.slug) &&
+                    p.period === "Yearly"
+                  ),
+              ).length
+            }{" "}
+            Configured Plans
           </span>
 
           <button
@@ -82,7 +104,15 @@ export default function BillingPlansSection({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {billingPlans.map((plan) => {
+        {billingPlans
+          .filter(
+            (p) =>
+              !(
+                ["free-trial", "free-trail"].includes(p.slug) &&
+                p.period === "Yearly"
+              ),
+          )
+          .map((plan) => {
           const { value: storageVal, unit: storageUnit } = formatBytesForInput(
             plan.storage,
           );
@@ -209,6 +239,7 @@ export default function BillingPlansSection({
                       }
                       className="w-1/3 bg-white dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-2 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-amber-500 shadow-sm"
                     >
+                      <option value="MB">MB</option>
                       <option value="GB">GB</option>
                       <option value="TB">TB</option>
                     </select>

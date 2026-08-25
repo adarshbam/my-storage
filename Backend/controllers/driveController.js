@@ -183,6 +183,19 @@ export const updateDriveItem = async (req, res, next) => {
   }
 };
 
+export const saveDriveFile = async (req, res, next) => {
+  try {
+    const result = await driveService.saveDriveFileLogic({
+      fileId: req.params.fileId,
+      content: req.body.content,
+      req,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleDriveError(error, req, res, "Failed to save file on Drive");
+  }
+};
+
 export const moveDriveItems = async (req, res, next) => {
   try {
     const result = await driveService.moveDriveItemsLogic({

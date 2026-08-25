@@ -98,6 +98,14 @@ router.get(
 );
 
 // Claim access to shared files (must be logged in)
-router.post("/claim/:token", checkAuth, shareLimiter, throttle(500, 5, "share-claim"), validate(claimShareAccessSchema), claimShareAccess);
+router.post(
+  "/claim/:token",
+  checkAuth,
+  loadPlanContext,
+  shareLimiter,
+  throttle(500, 5, "share-claim"),
+  validate(claimShareAccessSchema),
+  claimShareAccess,
+);
 
 export default router;

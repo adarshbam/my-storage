@@ -6,8 +6,7 @@ import Trash from "../models/trashModel.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../databases/redis.js";
 import { updateParentDirectorySize, populateDirectoryItemCounts } from "./directory.service.js";
 import { deleteFromB2, deleteMultipleFromB2 } from "../integrations/storage/s3.client.js";
-
-const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
+import { withTransaction } from "../utils/transaction.js";
 
 const mediaExts = [
   ".jpg",
@@ -80,10 +79,17 @@ export const emptyTrashLogic = async (userId) => {
     }
   }
 
-  await Trash.deleteMany({ userId });
+  await withTransaction(async (session) => {
+    await Trash.deleteMany({ userId }).session(session);
+  });
 };
 
-export const restoreFileLogic = async ({ id, userId, userRole, rootDirId }) => {
+export const restoreFileLogic = async ({
+  id,
+  userId,
+  userRole,
+  rootDirId,
+}) => {
   const trashfile = await Trash.findOne({ _id: id }).select("-__v").lean();
   if (!trashfile) {
     const error = new Error("File not found in trash");
@@ -117,10 +123,7 @@ export const restoreFileLogic = async ({ id, userId, userRole, rootDirId }) => {
     ? trashfile.parentDir
     : rootDirId;
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
+  await withTransaction(async (session) => {
     const { deleted_at, ...validFileData } = trashfile;
     validFileData.parentDir = parentDirId;
 
@@ -137,19 +140,11 @@ export const restoreFileLogic = async ({ id, userId, userRole, rootDirId }) => {
 
     // Add the file size back to the parent directory and its ancestors
     await updateParentDirectorySize(parentDirId, trashfile.size, session);
+  });
 
-    await session.commitTransaction();
-
-    // Clear caches
-    await cacheDel("dir:meta:" + parentDirId.toString());
-    await cacheDel("dir:contents:" + parentDirId.toString());
-
-  } catch (txError) {
-    await session.abortTransaction();
-    throw txError;
-  } finally {
-    session.endSession();
-  }
+  // Clear caches
+  await cacheDel("dir:meta:" + parentDirId.toString());
+  await cacheDel("dir:contents:" + parentDirId.toString());
 };
 
 export const deleteFileForeverLogic = async ({ fileid, userId, userRole }) => {
@@ -172,12 +167,14 @@ export const deleteFileForeverLogic = async ({ fileid, userId, userRole }) => {
     throw error;
   }
 
-  console.log("Deleting forever:", trashFile);
-
-  await deleteFromB2({
-    key: `${trashFile._id.toString()}${trashFile.extension}`,
+  const ext = trashFile.extension ? (trashFile.extension.startsWith(".") ? trashFile.extension : `.${trashFile.extension}`) : "";
+  await deleteMultipleFromB2({
+    keys: [
+      `${trashFile._id.toString()}${ext}`,
+      `thumbnails/${trashFile._id.toString()}.webp`,
+      `thumbnails/${trashFile._id.toString()}.jpg`,
+    ],
   });
-  await deleteFromB2({ key: `thumbnails/${trashFile._id.toString()}.jpg` });
 
   await Trash.deleteOne({ _id: fileid });
 };
@@ -193,9 +190,15 @@ export async function deleteByParentChain(parentId) {
     await File.deleteMany({ _id: { $in: fileIds } });
   }
 
+  const b2Keys = [];
   for (const file of filesToDelete) {
-    await deleteFromB2({ key: `${file._id.toString()}${file.extension}` });
-    await deleteFromB2({ key: `thumbnails/${file._id.toString()}.jpg` });
+    const ext = file.extension ? (file.extension.startsWith(".") ? file.extension : `.${file.extension}`) : "";
+    b2Keys.push(`${file._id.toString()}${ext}`);
+    b2Keys.push(`thumbnails/${file._id.toString()}.webp`);
+    b2Keys.push(`thumbnails/${file._id.toString()}.jpg`);
+  }
+  if (b2Keys.length > 0) {
+    await deleteMultipleFromB2({ keys: b2Keys });
   }
 
   const childDirs = await Directory.find({ parentDir: parentId })
@@ -280,10 +283,7 @@ export const restoreDirectoryLogic = async ({ dirId, userId, userRole, rootDirId
 
   const parentDirId = parentDirData ? trashDir.parentDir : rootDirId;
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
+  await withTransaction(async (session) => {
     const { extension, size, hasThumbnail, deleted_at, ...validDirData } =
       trashDir;
     validDirData.parentDir = parentDirId;
@@ -304,21 +304,13 @@ export const restoreDirectoryLogic = async ({ dirId, userId, userRole, rootDirId
 
     // Add the directory size back to the parent directory and its ancestors
     await updateParentDirectorySize(parentDirId, trashDir.size, session);
+  });
 
-    await session.commitTransaction();
-
-    // Clear caches
-    await cacheDel("dir:meta:" + parentDirId.toString());
-    await cacheDel("dir:contents:" + parentDirId.toString());
-    await cacheDel("dir:meta:" + dirId);
-    await cacheDel("dir:contents:" + dirId);
-
-  } catch (txError) {
-    await session.abortTransaction();
-    throw txError;
-  } finally {
-    session.endSession();
-  }
+  // Clear caches
+  await cacheDel("dir:meta:" + parentDirId.toString());
+  await cacheDel("dir:contents:" + parentDirId.toString());
+  await cacheDel("dir:meta:" + dirId);
+  await cacheDel("dir:contents:" + dirId);
 };
 
 export const deleteDirectoryForeverLogic = async ({ dirId, userId, userRole }) => {
@@ -353,13 +345,15 @@ export const batchDeleteLogic = async ({ items, userId, userRole }) => {
     throw error;
   }
 
-  console.log(`Processing batch delete for ${items.length} items`);
-
   let allIdsToDeleteFromTrash = [];
+  const b2KeysToDelete = [];
 
   for (const item of items) {
-    const trashItem = await Trash.findOne({ _id: item.id })
-      .select("userId")
+    const itemId = item.id || item._id;
+    if (!itemId) continue;
+
+    const trashItem = await Trash.findOne({ _id: itemId })
+      .select("userId extension type")
       .lean();
     if (!trashItem) continue;
 
@@ -373,24 +367,21 @@ export const batchDeleteLogic = async ({ items, userId, userRole }) => {
       throw error;
     }
 
-    allIdsToDeleteFromTrash.push(item.id);
+    allIdsToDeleteFromTrash.push(itemId);
 
-    if (item.type === "directory") {
-      const ids = await deleteByParentChain(item.id);
+    if (item.type === "directory" || trashItem.type === "directory") {
+      const ids = await deleteByParentChain(itemId);
       allIdsToDeleteFromTrash = [...allIdsToDeleteFromTrash, ...ids];
     } else {
-      const trashFile = await Trash.findOne({ _id: item.id })
-        .select("_id extension")
-        .lean();
-      if (trashFile) {
-        await deleteFromB2({
-          key: `${trashFile._id.toString()}${trashFile.extension}`,
-        });
-        await deleteFromB2({
-          key: `thumbnails/${trashFile._id.toString()}.jpg`,
-        });
-      }
+      const ext = trashItem.extension ? (trashItem.extension.startsWith(".") ? trashItem.extension : `.${trashItem.extension}`) : "";
+      b2KeysToDelete.push(`${trashItem._id.toString()}${ext}`);
+      b2KeysToDelete.push(`thumbnails/${trashItem._id.toString()}.webp`);
+      b2KeysToDelete.push(`thumbnails/${trashItem._id.toString()}.jpg`);
     }
+  }
+
+  if (b2KeysToDelete.length > 0) {
+    await deleteMultipleFromB2({ keys: b2KeysToDelete });
   }
 
   if (allIdsToDeleteFromTrash.length > 0) {
@@ -398,4 +389,117 @@ export const batchDeleteLogic = async ({ items, userId, userRole }) => {
       _id: { $in: allIdsToDeleteFromTrash },
     });
   }
+};
+
+export const batchRestoreLogic = async ({ items, all = false, userId, userRole, rootDirId }) => {
+  let trashItems;
+  if (all) {
+    trashItems = await Trash.find({ userId }).select("-__v").lean();
+  } else {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      const error = new Error("Invalid items array for restore");
+      error.status = 400;
+      throw error;
+    }
+    const itemIds = items.map((i) => i.id || i._id).filter(Boolean);
+    trashItems = await Trash.find({ _id: { $in: itemIds } }).select("-__v").lean();
+  }
+
+  if (!trashItems || trashItems.length === 0) {
+    return { restoredCount: 0 };
+  }
+
+  for (const item of trashItems) {
+    if (
+      item.userId.toString() !== userId &&
+      userRole !== "Owner" &&
+      userRole !== "Admin"
+    ) {
+      const error = new Error("Unauthorized to restore one or more items");
+      error.status = 403;
+      throw error;
+    }
+  }
+
+  // Pre-fetch parent directories to avoid querying inside loops
+  const parentDirIds = [...new Set(trashItems.map((i) => i.parentDir?.toString()).filter(Boolean))];
+  const existingDirs = await Directory.find({ _id: { $in: parentDirIds } }).select("_id path").lean();
+  const dirMap = new Map(existingDirs.map((d) => [d._id.toString(), d]));
+
+  // Default root directory doc
+  let rootDirDoc = null;
+  if (rootDirId) {
+    rootDirDoc = await Directory.findById(rootDirId).select("_id path").lean();
+  }
+
+  const filesToInsert = [];
+  const dirsToInsert = [];
+  const restoredIds = [];
+  const sizeChanges = new Map();
+  const dirDescendantUpdates = [];
+  const affectedDirIds = new Set();
+
+  for (const item of trashItems) {
+    const itemId = item._id.toString();
+    restoredIds.push(item._id);
+
+    const rawParentId = item.parentDir?.toString();
+    const parentDoc = (rawParentId && dirMap.get(rawParentId)) || rootDirDoc;
+    const parentDirId = parentDoc ? parentDoc._id.toString() : rootDirId;
+    const parentPath = parentDoc ? parentDoc.path || [] : [];
+    const itemPath = [...parentPath, item._id];
+
+    affectedDirIds.add(parentDirId);
+
+    if (item.type === "directory") {
+      affectedDirIds.add(itemId);
+      const { extension, size, hasThumbnail, deleted_at, ...validDirData } = item;
+      validDirData.parentDir = parentDirId;
+      validDirData.path = itemPath;
+      dirsToInsert.push(validDirData);
+      dirDescendantUpdates.push({ dirId: item._id, parentDirId });
+
+      if (item.size) {
+        sizeChanges.set(parentDirId, (sizeChanges.get(parentDirId) || 0) + item.size);
+      }
+    } else {
+      const { deleted_at, ...validFileData } = item;
+      validFileData.parentDir = parentDirId;
+      validFileData.path = itemPath;
+      filesToInsert.push(validFileData);
+
+      if (item.size) {
+        sizeChanges.set(parentDirId, (sizeChanges.get(parentDirId) || 0) + item.size);
+      }
+    }
+  }
+
+  await withTransaction(async (session) => {
+    if (filesToInsert.length > 0) {
+      await File.insertMany(filesToInsert, { session });
+    }
+    if (dirsToInsert.length > 0) {
+      await Directory.insertMany(dirsToInsert, { session });
+    }
+
+    for (const update of dirDescendantUpdates) {
+      await updateDirectoryPathAndDescendants(update.dirId, update.parentDirId, session);
+    }
+
+    for (const [pId, sizeDelta] of sizeChanges.entries()) {
+      await updateParentDirectorySize(pId, sizeDelta, session);
+    }
+
+    await Trash.deleteMany({ _id: { $in: restoredIds } }).session(session);
+  });
+
+  // Clear Redis caches for all affected directories
+  for (const dirId of affectedDirIds) {
+    if (dirId) {
+      await cacheDel("dir:meta:" + dirId.toString());
+      await cacheDel("dir:contents:" + dirId.toString());
+    }
+  }
+
+  return { restoredCount: restoredIds.length };
 };

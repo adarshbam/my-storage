@@ -666,6 +666,24 @@ export const moveGithubItems = async (req, res, next) => {
   }
 };
 
+export const renameGithubItem = async (req, res, next) => {
+  try {
+    const result = await githubService.renameGithubItemLogic({
+      owner: req.params.owner,
+      repo: req.params.repo,
+      oldPath: req.body.oldPath,
+      newPath: req.body.newPath,
+      branch: req.query.ref || req.body.branch,
+      req,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    if (!res.headersSent) {
+      return res.status(error.statusCode || 500).json({ error: error.message || "Failed to rename GitHub item" });
+    }
+  }
+};
+
 export const transferFromVault = async (req, res, next) => {
   try {
     const result = await githubService.transferFromVaultLogic({

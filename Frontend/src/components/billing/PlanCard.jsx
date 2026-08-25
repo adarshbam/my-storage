@@ -8,6 +8,8 @@ import {
   AlertTriangle,
   ChevronDown,
   RotateCcw,
+  PauseCircle,
+  PlayCircle,
 } from "lucide-react";
 import { formatSize } from "../../lib/utils";
 import {
@@ -19,6 +21,7 @@ import {
 export default function PlanCard({
   plan,
   isCurrent = false,
+  isPaused = false,
   isPrevious = false,
   currentUsedStorage = 0,
   currentPlanAmount = 0,
@@ -60,6 +63,8 @@ export default function PlanCard({
 
   if (isCurrent) {
     ctaText = "Current Active Plan";
+  } else if (isPaused) {
+    ctaText = `Resume Subscription`;
   } else if (isPrevious) {
     ctaText = `Reactivate ${name}`;
   } else if (currentPlanAmount > 0) {
@@ -110,17 +115,19 @@ export default function PlanCard({
       className={`glass-card-pro relative flex flex-col h-full justify-between rounded-3xl p-6 sm:p-8 transition-all duration-300 ${
         isCurrent
           ? "border-emerald-500/60 shadow-lg ring-1 ring-emerald-500/30"
-          : isPrevious
-            ? "border-amber-500/50 dark:border-amber-500/30 shadow-lg shadow-amber-500/5 ring-1 ring-amber-500/20"
-            : isPopular
-              ? "border-accent-primary shadow-2xl shadow-accent-glow/30 ring-2 ring-accent-border/50"
-              : "hover:border-accent-border hover:shadow-xl hover:shadow-accent-glow/20"
+          : isPaused
+            ? "border-amber-500/60 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/30"
+            : isPrevious
+              ? "border-amber-500/50 dark:border-amber-500/30 shadow-lg shadow-amber-500/5 ring-1 ring-amber-500/20"
+              : isPopular
+                ? "border-accent-primary shadow-2xl shadow-accent-glow/30 ring-2 ring-accent-border/50"
+                : "hover:border-accent-border hover:shadow-xl hover:shadow-accent-glow/20"
       }`}
     >
       <div>
         {/* Top Badges */}
         <div className="flex items-center justify-between mb-4 min-h-[28px]">
-          {isPopular && !isCurrent && !isPrevious ? (
+          {isPopular && !isCurrent && !isPrevious && !isPaused ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-primary text-accent-foreground font-black text-[11px] shadow-accent-glow-sm uppercase tracking-wider">
               <Sparkles size={12} /> Most Popular
             </span>
@@ -132,7 +139,12 @@ export default function PlanCard({
               <ShieldCheck size={12} /> Active Plan
             </span>
           )}
-          {!isCurrent && isPrevious && (
+          {isPaused && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold text-[11px] uppercase tracking-wider">
+              <PauseCircle size={12} /> Subscription Paused
+            </span>
+          )}
+          {!isCurrent && !isPaused && isPrevious && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold text-[11px] uppercase tracking-wider">
               <RotateCcw size={12} /> Previously Active
             </span>
@@ -255,16 +267,19 @@ export default function PlanCard({
               ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 cursor-default opacity-80"
               : isStorageExceeded
                 ? "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/30 cursor-not-allowed"
-                : isPrevious
+                : isPaused
                   ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20 font-black hover:scale-[1.02] active:scale-[0.98]"
-                  : isPopular
-                    ? "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-lg shadow-accent-glow/25 hover:scale-[1.02] active:scale-[0.98]"
-                    : "bg-slate-900 dark:bg-white hover:opacity-90 text-white dark:text-slate-900 shadow-md hover:scale-[1.02] active:scale-[0.98]"
+                  : isPrevious
+                    ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20 font-black hover:scale-[1.02] active:scale-[0.98]"
+                    : isPopular
+                      ? "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-lg shadow-accent-glow/25 hover:scale-[1.02] active:scale-[0.98]"
+                      : "bg-slate-900 dark:bg-white hover:opacity-90 text-white dark:text-slate-900 shadow-md hover:scale-[1.02] active:scale-[0.98]"
           }`}
         >
-          {isPrevious && !loading && <RotateCcw size={14} className="shrink-0" />}
+          {isPaused && !loading && <PlayCircle size={14} className="shrink-0 fill-current" />}
+          {isPrevious && !isPaused && !loading && <RotateCcw size={14} className="shrink-0" />}
           <span>{loading ? "Processing..." : ctaText}</span>
-          {!isCurrent && !isPrevious && !isStorageExceeded && !loading && (
+          {!isCurrent && !isPrevious && !isPaused && !isStorageExceeded && !loading && (
             <ArrowRight size={15} />
           )}
         </button>

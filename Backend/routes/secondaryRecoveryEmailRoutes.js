@@ -5,7 +5,11 @@ import {
   verifySecondaryRecoveryEmailOtp,
   removeSecondaryRecoveryEmail,
 } from "../controllers/secondaryRecoveryEmailController.js";
-import { recoveryEmailLimiter } from "../middlewares/rateLimiter.js";
+import {
+  recoveryEmailSendLimiter,
+  recoveryEmailVerifyLimiter,
+  standardWriteLimiter,
+} from "../middlewares/rateLimiter.js";
 import throttle from "../utils/throttle.js";
 
 const router = express.Router();
@@ -14,8 +18,8 @@ const router = express.Router();
 router.post(
   "/send-otp",
   checkAuth,
-  recoveryEmailLimiter,
-  throttle(3000, 1, "sec-email-otp-send"),
+  recoveryEmailSendLimiter,
+  throttle(2000, 1, "sec-email-otp-send"),
   sendSecondaryRecoveryEmailOtp
 );
 
@@ -23,7 +27,7 @@ router.post(
 router.post(
   "/verify-otp",
   checkAuth,
-  recoveryEmailLimiter,
+  recoveryEmailVerifyLimiter,
   throttle(1000, 3, "sec-email-otp-verify"),
   verifySecondaryRecoveryEmailOtp
 );
@@ -32,7 +36,7 @@ router.post(
 router.delete(
   "/",
   checkAuth,
-  recoveryEmailLimiter,
+  standardWriteLimiter,
   throttle(1000, 3, "sec-email-remove"),
   removeSecondaryRecoveryEmail
 );

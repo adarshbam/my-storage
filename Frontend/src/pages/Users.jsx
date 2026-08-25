@@ -26,7 +26,8 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import Skeleton from "../components/ui/Skeleton";
-import { formatSize } from "../lib/utils";
+import UserAvatar from "../components/ui/UserAvatar";
+import { formatSize, getProfilePicUrl } from "../lib/utils";
 
 export default function Users() {
   const navigate = useNavigate();
@@ -43,9 +44,7 @@ export default function Users() {
   const [statusFilter, setStatusFilter] = useState("ALL");
 
   const { user: currentUser, loading: authLoading } = useAuth();
-  const profilePicUrl = currentUser?.profilepic
-    ? `${SERVER_URL}/user/profilepic?id=${currentUser.profilepic}`
-    : null;
+  const profilePicUrl = getProfilePicUrl(currentUser?.profilepic);
 
   useEffect(() => {
     if (!authLoading) {
@@ -151,12 +150,23 @@ export default function Users() {
         if (type === "soft") {
           setUsers(
             users.map((u) =>
-              u._id === userToDelete._id ? { ...u, status: "Deleted" } : u,
+              u._id === userToDelete._id
+                ? { ...u, status: "Deleted", isLoggedIn: false }
+                : u,
             ),
           );
         } else {
-          setUsers(users.filter((u) => u._id !== userToDelete._id));
+          setUsers(
+            users.map((u) =>
+              u._id === userToDelete._id
+                ? { ...u, status: "Terminated", isLoggedIn: false, profilepic: null }
+                : u,
+            ),
+          );
         }
+      } else {
+        const data = await res.json();
+        alert(data.error || data.message || "Failed to terminate user");
       }
     } catch (err) {
       console.error("Failed to delete user", err);
@@ -173,8 +183,11 @@ export default function Users() {
       });
       if (res.ok) {
         setUsers(
-          users.map((u) => (u._id === id ? { ...u, status: "OFFLINE" } : u)),
+          users.map((u) => (u._id === id ? { ...u, status: "Active", isLoggedIn: false } : u)),
         );
+      } else {
+        const data = await res.json();
+        alert(data.error || data.message || "Failed to reactivate user");
       }
     } catch (err) {
       console.error("Failed to reactivate user", err);
@@ -196,16 +209,18 @@ export default function Users() {
   };
 
   const getDisplayStatus = (u) => {
-    if (u.status === "TERMINATED" || u.status === "Deleted")
+    if (u.status === "Terminated" || u.status === "TERMINATED")
       return "TERMINATED";
+    if (u.status === "Deleted" || u.status === "Deactivated" || u.status === "DEACTIVATED")
+      return "DEACTIVATED";
     return u.isLoggedIn ? "ONLINE" : "OFFLINE";
   };
 
   // Metrics computation
   const totalUsers = users.length;
-  const onlineCount = users.filter((u) => u.isLoggedIn).length;
-  const privilegedCount = users.filter((u) => ["OWNER", "ADMIN"].includes(u.role?.toUpperCase())).length;
-  const totalAllocated = users.reduce((acc, u) => acc + (u.maxStorage || 524288000), 0);
+  const onlineCount = users.filter((u) => u.isLoggedIn && u.status !== "Terminated" && u.status !== "Deleted").length;
+  const privilegedCount = users.filter((u) => ["OWNER", "ADMIN"].includes(u.role?.toUpperCase()) && u.status !== "Terminated").length;
+  const totalAllocated = users.reduce((acc, u) => acc + (u.status === "Terminated" ? 0 : (u.maxStorage ?? 5368709120)), 0);
 
   // Filtered list
   const filteredUsers = users.filter((u) => {
@@ -339,28 +354,14 @@ export default function Users() {
             <div className="absolute top-0 right-0 w-80 h-80 bg-accent-soft/25 rounded-full blur-3xl pointer-events-none" />
 
             <div className="flex items-center gap-5 relative z-10 w-full sm:w-auto">
-              <div className="relative">
-                <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl overflow-hidden shrink-0 bg-accent-soft border-2 border-accent-border flex items-center justify-center shadow-accent-glow">
-                  {profilePicUrl ? (
-                    <img
-                      src={profilePicUrl}
-                      alt={currentUser.name || "Profile"}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    <span className="text-xl sm:text-2xl font-black text-accent-primary select-none">
-                      {currentUser?.name?.[0]?.toUpperCase() ||
-                        currentUser?.email?.[0]?.toUpperCase() ||
-                        "U"}
-                    </span>
-                  )}
-                </div>
-                <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-vault-black shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-              </div>
+              <UserAvatar
+                user={currentUser}
+                src={profilePicUrl}
+                size="xl"
+                glow={true}
+                status="ONLINE"
+                shape="rounded"
+              />
 
               <div className="space-y-1 min-w-0">
                 <div className="flex items-center gap-2.5 flex-wrap">
@@ -432,8 +433,8 @@ export default function Users() {
               ))}
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-black/30 p-1 rounded-2xl border border-slate-200 dark:border-white/10">
-              {["ALL", "ONLINE", "OFFLINE"].map((st) => (
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-black/30 p-1 rounded-2xl border border-slate-200 dark:border-white/10 flex-wrap">
+              {["ALL", "ONLINE", "OFFLINE", "DEACTIVATED", "TERMINATED"].map((st) => (
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st)}
@@ -495,14 +496,16 @@ export default function Users() {
               <AnimatePresence>
                 {filteredUsers.map((user) => {
                   const displayStatus = getDisplayStatus(user);
-                  const isTerminated =
-                    user.status === "TERMINATED" || user.status === "Deleted";
-                  const userAvatarUrl = user.profilepic
-                    ? `${SERVER_URL}/user/profilepic?id=${user.profilepic}`
-                    : null;
+                  const isPermanentlyTerminated =
+                    user.status === "Terminated" || user.status === "TERMINATED";
+                  const isDeactivated =
+                    user.status === "Deleted" ||
+                    user.status === "Deactivated" ||
+                    user.status === "DEACTIVATED";
                   const isSelf = currentUser?._id === user._id;
                   const canEditRole =
                     !isSelf &&
+                    !isPermanentlyTerminated &&
                     user.yourAuthority &&
                     user.yourAuthority.length > 0;
 
@@ -513,8 +516,10 @@ export default function Users() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       className={`rounded-3xl p-6 bg-white dark:bg-vault-surface/85 border transition-all duration-200 flex flex-col justify-between space-y-5 relative overflow-hidden group shadow-sm hover:shadow-xl ${
-                        isTerminated
-                          ? "border-rose-500/30 opacity-70 bg-rose-500/[0.02]"
+                        isPermanentlyTerminated
+                          ? "border-rose-500/40 bg-rose-500/[0.03] opacity-85"
+                          : isDeactivated
+                          ? "border-amber-500/30 bg-amber-500/[0.02] opacity-90"
                           : "border-slate-200 dark:border-white/10 hover:border-accent-border"
                       }`}
                     >
@@ -522,38 +527,13 @@ export default function Users() {
                       <div className="space-y-4">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-center gap-3.5 min-w-0">
-                            <div className="relative shrink-0">
-                              <div className="w-13 h-13 rounded-2xl overflow-hidden bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-sm">
-                                {userAvatarUrl ? (
-                                  <img
-                                    src={userAvatarUrl}
-                                    alt={user.name}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      e.target.onerror = null;
-                                      e.target.style.display = "none";
-                                    }}
-                                  />
-                                ) : (
-                                  <span className="text-base font-black text-slate-700 dark:text-white/80 select-none">
-                                    {user.name?.[0]?.toUpperCase() ||
-                                      user.email?.[0]?.toUpperCase() ||
-                                      "U"}
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Online Status Pill Indicator */}
-                              <span
-                                className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-vault-black ${
-                                  displayStatus === "ONLINE"
-                                    ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
-                                    : displayStatus === "TERMINATED"
-                                    ? "bg-rose-500"
-                                    : "bg-slate-400 dark:bg-white/20"
-                                }`}
-                              />
-                            </div>
+                            <UserAvatar
+                              user={user}
+                              src={user.profilepic}
+                              size="lg"
+                              status={displayStatus}
+                              shape="rounded"
+                            />
 
                             <div className="min-w-0 flex-1">
                               <h4 className="text-base font-black text-slate-900 dark:text-white tracking-tight truncate">
@@ -592,11 +572,13 @@ export default function Users() {
 
                           {/* Status Badge */}
                           <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold border uppercase tracking-wider ${
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold border uppercase tracking-wider ${
                               displayStatus === "ONLINE"
                                 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30"
                                 : displayStatus === "TERMINATED"
-                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-300 border-rose-500/30"
+                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30"
+                                : displayStatus === "DEACTIVATED"
+                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30"
                                 : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/40 border-slate-200 dark:border-white/10"
                             }`}
                           >
@@ -606,10 +588,12 @@ export default function Users() {
                                   ? "bg-emerald-500 animate-pulse"
                                   : displayStatus === "TERMINATED"
                                   ? "bg-rose-500"
+                                  : displayStatus === "DEACTIVATED"
+                                  ? "bg-amber-500"
                                   : "bg-slate-400 dark:bg-white/30"
                               }`}
                             />
-                            {displayStatus}
+                            {displayStatus === "TERMINATED" ? "✕ TERMINATED" : displayStatus}
                           </span>
 
                           {/* 2FA Indicator */}
@@ -626,9 +610,18 @@ export default function Users() {
                             <span className="flex items-center gap-1.5">
                               <HardDrive size={12} className="text-accent-primary" /> Max Quota:
                             </span>
-                            <span className="font-bold text-slate-700 dark:text-white/70">
-                              {formatSize(user.maxStorage || 524288000)}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {user.planSlug && user.status !== "Terminated" && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-accent-soft text-accent-primary border border-accent-border">
+                                  {user.planSlug}
+                                </span>
+                              )}
+                              <span className="font-bold text-slate-700 dark:text-white/70">
+                                {user.status === "Terminated"
+                                  ? "0 B"
+                                  : formatSize(user.maxStorage ?? 5368709120)}
+                              </span>
+                            </div>
                           </div>
                           {user.devicesCount !== undefined && (
                             <div className="flex items-center justify-between">
@@ -649,20 +642,31 @@ export default function Users() {
                           <div className="w-full py-2.5 rounded-2xl text-center text-xs font-mono font-bold text-accent-primary bg-accent-soft border border-accent-border">
                             Current Operator Profile
                           </div>
-                        ) : isTerminated ? (
+                        ) : isPermanentlyTerminated ? (
+                          <div className="w-full py-2.5 rounded-2xl text-center text-xs font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 flex items-center justify-center gap-2">
+                            <X size={14} className="text-rose-500" strokeWidth={3} />
+                            <span>Account Permanently Terminated</span>
+                          </div>
+                        ) : isDeactivated ? (
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleReactivate(user._id)}
-                              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 transition-colors flex items-center justify-center gap-1.5"
-                            >
-                              <UserCheck size={14} /> Reactivate
-                            </button>
+                            {currentUser?.role?.toUpperCase() === "OWNER" ? (
+                              <button
+                                onClick={() => handleReactivate(user._id)}
+                                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                              >
+                                <UserCheck size={14} /> Reactivate
+                              </button>
+                            ) : (
+                              <div className="flex-1 py-2.5 rounded-xl text-xs font-mono text-center bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-white/40">
+                                Deactivated Account
+                              </div>
+                            )}
                             <button
                               onClick={() => openDeleteModal(user)}
-                              className="p-2.5 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-500 transition-colors"
-                              title="Permanently Purge"
+                              className="py-2.5 px-3 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 transition-colors shadow-sm flex items-center gap-1"
+                              title="Permanently Terminate / Purge"
                             >
-                              <AlertTriangle size={14} />
+                              <AlertTriangle size={14} /> Purge
                             </button>
                           </div>
                         ) : (
@@ -774,10 +778,10 @@ export default function Users() {
                   className="w-full text-left p-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 transition-all group"
                 >
                   <div className="text-rose-600 dark:text-rose-400 text-sm font-bold flex items-center gap-2 mb-1">
-                    <AlertTriangle size={14} /> Hard Delete (Purge)
+                    <AlertTriangle size={14} /> Hard Delete (Permanent Termination)
                   </div>
                   <div className="text-xs text-slate-600 dark:text-rose-400/70">
-                    Permanently deletes user account, permissions, and all associated vault data.
+                    Purges all vault files and data permanently, locks the email address as permanently terminated, and permanently blocks future logins.
                   </div>
                 </button>
               </div>

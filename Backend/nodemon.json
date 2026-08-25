@@ -1,0 +1,35 @@
+{
+  "watch": [
+    "app.js",
+    "config",
+    "constants",
+    "controllers",
+    "databases",
+    "errors",
+    "integrations",
+    "jobs",
+    "middlewares",
+    "models",
+    "routes",
+    "services",
+    "utils",
+    "validators",
+    "webhooks",
+    "workers",
+    ".env"
+  ],
+  "ext": "js,mjs,json,env",
+  "ignore": [
+    "node_modules",
+    "node_modules/**",
+    "storage",
+    "storage/**",
+    "tests",
+    "tests/**",
+    "server.key",
+    "server.cert",
+    "*.tmp",
+    "*.log"
+  ],
+  "delay": 500
+}

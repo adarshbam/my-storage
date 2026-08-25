@@ -55,3 +55,22 @@ export async function checkTrialEligibility(req, res, next) {
     next(err);
   }
 }
+
+export async function verifyFirebasePhone(req, res, next) {
+  try {
+    const userId = req.user?._id || req.user?.id;
+    const { idToken } = req.body;
+    const result = await phoneService.verifyFirebasePhoneLogic({
+      userId,
+      idToken,
+      clientIp: req.ip,
+    });
+    return res.status(200).json(result);
+  } catch (err) {
+    if (err.status) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    next(err);
+  }
+}
+

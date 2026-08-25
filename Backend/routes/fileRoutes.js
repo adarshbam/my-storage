@@ -96,6 +96,14 @@ router.post(
   setStarredItem,
 );
 
+router.post(
+  "/starred",
+  checkAuth,
+  standardWriteLimiter,
+  throttle(50, 12, "file-starred"),
+  setStarredItem,
+);
+
 router.get(
   "/starred",
   checkAuth,
@@ -124,6 +132,16 @@ router.get(
   directoryReadLimiter,
   validate(getCdnUrlSchema),
   getCdnUrl,
+);
+
+router.get(
+  "/:fileId/download",
+  checkAuth,
+  loadPlanContext,
+  requireRule("allowDownload"),
+  directoryReadLimiter,
+  validate(getFileByIdSchema),
+  getFileById,
 );
 
 router.get(

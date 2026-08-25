@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldCheck,
@@ -150,7 +151,10 @@ export default function TwoFactorSetupModal({ isOpen, onClose, onSuccess }) {
     document.body.removeChild(element);
   };
 
-  return (
+  if (!isOpen) return null;
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
         {/* Backdrop */}
@@ -176,7 +180,7 @@ export default function TwoFactorSetupModal({ isOpen, onClose, onSuccess }) {
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors p-1"
+            className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors p-1 cursor-pointer"
           >
             <X size={20} />
           </button>
@@ -192,7 +196,7 @@ export default function TwoFactorSetupModal({ isOpen, onClose, onSuccess }) {
               </h3>
               <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wider mt-0.5">
                 {step === 1 && "Step 1: Scan Authenticator QR Code"}
-                {step === 2 && "Step 2: Verify Setup Code"}
+                {step === 2 && "Step 2: Verify Authenticator Code"}
                 {step === 3 && "Step 3: Save Backup Recovery Codes"}
               </p>
             </div>
@@ -210,124 +214,118 @@ export default function TwoFactorSetupModal({ isOpen, onClose, onSuccess }) {
             </motion.div>
           )}
 
-          {/* Step 1: Scan QR Code */}
+          {/* STEP 1: Scan QR Code & View Secret */}
           {step === 1 && (
-            <div className="space-y-6">
+            <div className="space-y-5">
               <p className="text-xs text-white/60 font-medium leading-relaxed">
-                Scan this QR code using Google Authenticator, Microsoft Authenticator, Authy, or 1Password.
+                Scan this QR code using Google Authenticator, Authy, 1Password, or any TOTP authenticator app.
               </p>
 
               {loading ? (
-                <div className="flex flex-col items-center justify-center p-12 space-y-3">
+                <div className="py-12 flex flex-col items-center justify-center gap-3">
                   <Loader2 className="animate-spin text-emerald-400" size={32} />
-                  <p className="text-xs text-white/50">Generating security keys…</p>
+                  <span className="text-xs text-white/50">Generating 2FA security key…</span>
                 </div>
               ) : setupData?.qrCode ? (
-                <div className="flex flex-col items-center justify-center space-y-4">
+                <div className="flex flex-col items-center gap-4">
                   {/* QR Code Container */}
-                  <div className="p-4 bg-white rounded-2xl shadow-xl border-4 border-emerald-500/30">
+                  <div className="p-3 bg-white rounded-2xl shadow-xl">
                     <img
                       src={setupData.qrCode}
                       alt="2FA QR Code"
-                      className="w-44 h-44 rounded-lg block"
+                      className="w-44 h-44 object-contain rounded-lg"
                     />
                   </div>
 
-                  {/* Manual Key Display */}
-                  <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-3.5 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider block">
-                        Manual Entry Secret Key
-                      </span>
-                      <span className="text-xs font-mono font-bold text-emerald-300 truncate block select-all">
-                        {setupData.secret}
-                      </span>
+                  {/* Secret Key Box */}
+                  <div className="w-full">
+                    <div className="text-[10px] uppercase font-bold text-white/40 tracking-wider mb-1.5 text-center">
+                      Or manually enter this secret key
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={handleCopySecret}
-                      className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 transition-colors shrink-0 flex items-center gap-1 text-xs font-bold"
-                    >
-                      {copiedKey ? (
-                        <>
-                          <Check size={14} className="text-emerald-400" /> Copied
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={14} /> Copy
-                        </>
-                      )}
-                    </button>
+                    <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10">
+                      <code className="text-xs font-mono font-bold text-emerald-400 tracking-widest break-all">
+                        {setupData.secret}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={handleCopySecret}
+                        className="p-1.5 rounded-xl hover:bg-white/10 text-white/60 hover:text-white transition-colors shrink-0 ml-2"
+                        title="Copy Secret Key"
+                      >
+                        {copiedKey ? (
+                          <Check size={16} className="text-emerald-400" />
+                        ) : (
+                          <Copy size={16} />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : null}
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="pt-2">
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
+                  disabled={loading || !setupData?.secret}
                   onClick={() => setStep(2)}
-                  disabled={loading || !setupData}
-                  className="px-6 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/20 hover:opacity-95 transition-opacity flex items-center gap-1.5"
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:opacity-95 text-white font-bold text-xs shadow-lg shadow-teal-500/25 transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  Next Step <ArrowRight size={14} />
+                  Next: Enter 6-Digit Code <ArrowRight size={14} />
                 </button>
               </div>
             </div>
           )}
 
-          {/* Step 2: Verify Setup with 6-digit TOTP Code */}
+          {/* STEP 2: Verify Code */}
           {step === 2 && (
-            <form onSubmit={handleVerifySetup} className="space-y-6">
+            <form onSubmit={handleVerifySetup} className="space-y-5">
               <p className="text-xs text-white/60 font-medium leading-relaxed">
-                Enter the 6-digit verification code currently shown in your authenticator app to activate two-factor authentication.
+                Enter the 6-digit code currently shown in your authenticator app to finalize setup.
               </p>
 
-              <div className="flex gap-2 justify-center py-2" onPaste={handleOtpPaste}>
-                {totpCode.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    id={`2fa-setup-code-${idx}`}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) =>
-                      handleOtpChange(idx, e.target.value.replace(/\D/, ""))
-                    }
-                    onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                    className="w-11 h-12 text-center text-lg font-black rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors caret-emerald-400 shadow-inner"
-                  />
-                ))}
+              <div>
+                <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-3 text-center">
+                  6-Digit Authenticator Code
+                </label>
+                <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
+                  {totpCode.map((digit, idx) => (
+                    <input
+                      key={idx}
+                      id={`2fa-setup-code-${idx}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) =>
+                        handleOtpChange(idx, e.target.value.replace(/\D/, ""))
+                      }
+                      onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                      className="w-11 h-12 text-center text-lg font-black rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors caret-emerald-400 shadow-inner"
+                    />
+                  ))}
+                </div>
               </div>
 
-              <div className="flex justify-between items-center gap-3 pt-4">
+              <div className="flex items-center justify-between gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+                  className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white/80 text-xs font-semibold transition-colors cursor-pointer"
                 >
-                  Back to QR Code
+                  Back to QR
                 </button>
                 <button
                   type="submit"
                   disabled={loading || totpCode.join("").length !== 6}
-                  className="px-6 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/25 hover:opacity-95 transition-all disabled:opacity-40 flex items-center gap-2"
+                  className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:opacity-95 text-white font-bold text-xs shadow-lg shadow-teal-500/25 transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="animate-spin" size={14} /> Verifying…
+                      <Loader2 className="animate-spin" size={16} /> Verifying…
                     </>
                   ) : (
                     <>
-                      <ShieldCheck size={16} /> Enable 2FA
+                      <ShieldCheck size={16} /> Activate 2FA
                     </>
                   )}
                 </button>
@@ -335,40 +333,42 @@ export default function TwoFactorSetupModal({ isOpen, onClose, onSuccess }) {
             </form>
           )}
 
-          {/* Step 3: Display 10 Recovery Codes */}
+          {/* STEP 3: Recovery Codes */}
           {step === 3 && (
-            <div className="space-y-6">
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-start gap-3">
-                <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+            <div className="space-y-5">
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2.5">
+                <AlertTriangle size={16} className="shrink-0 mt-0.5 text-amber-400" />
                 <span className="leading-relaxed">
-                  <strong>Save these recovery codes now!</strong> If you ever lose your authenticator device, each single-use code allows you to log in to your account. They will not be displayed again.
+                  <strong>Save these recovery codes!</strong> If you ever lose your phone or authenticator app, these single-use codes are the only way to recover account access.
                 </span>
               </div>
 
-              {/* Recovery Codes Grid */}
-              <div className="grid grid-cols-2 gap-2 bg-black/40 border border-white/10 rounded-2xl p-4 font-mono text-xs font-bold text-emerald-300">
+              {/* Grid of Recovery Codes */}
+              <div className="grid grid-cols-2 gap-2 p-3 bg-black/40 border border-white/10 rounded-2xl font-mono text-xs text-white">
                 {recoveryCodes.map((code, idx) => (
-                  <div key={idx} className="p-2 rounded-lg bg-white/5 flex items-center justify-between">
-                    <span className="text-white/40 text-[10px]">#{idx + 1}</span>
-                    <span>{code}</span>
+                  <div
+                    key={idx}
+                    className="p-2 rounded-xl bg-white/5 text-center font-bold tracking-widest select-all border border-white/5 text-emerald-400"
+                  >
+                    {code}
                   </div>
                 ))}
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-2.5 pt-2">
+              {/* Copy & Download actions */}
+              <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={handleCopyRecoveryCodes}
-                  className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-bold transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {copiedAllRecovery ? (
                     <>
-                      <Check size={14} className="text-emerald-400" /> Copied to Clipboard
+                      <Check size={14} className="text-emerald-400" /> Copied All Codes
                     </>
                   ) : (
                     <>
-                      <Copy size={14} /> Copy All Codes
+                      <Copy size={14} /> Copy All
                     </>
                   )}
                 </button>
@@ -376,7 +376,7 @@ export default function TwoFactorSetupModal({ isOpen, onClose, onSuccess }) {
                 <button
                   type="button"
                   onClick={handleDownloadRecoveryCodes}
-                  className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-bold transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Download size={14} /> Download .txt
                 </button>
@@ -386,7 +386,7 @@ export default function TwoFactorSetupModal({ isOpen, onClose, onSuccess }) {
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-xs shadow-lg shadow-teal-500/25 hover:opacity-95 transition-opacity"
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-xs shadow-lg shadow-teal-500/25 hover:opacity-95 transition-opacity cursor-pointer"
                 >
                   I Have Saved My Recovery Codes
                 </button>
@@ -395,6 +395,7 @@ export default function TwoFactorSetupModal({ isOpen, onClose, onSuccess }) {
           )}
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

@@ -143,6 +143,7 @@ export default function CommandBar({
       hoverBg: "hover:bg-accent-soft",
       hoverText: "hover:text-accent-primary",
       glowHover: "hover:shadow-accent-glow-sm",
+      tourId: "share-btn",
     },
     {
       label: "Upload Asset",
@@ -152,6 +153,7 @@ export default function CommandBar({
       hoverBg: "hover:bg-[rgba(0,207,255,0.1)]",
       hoverText: "hover:text-pulse-accent",
       glowHover: "hover:shadow-[0_0_15px_rgba(0,207,255,0.2)]",
+      tourId: "upload-btn",
     },
     {
       label: "New Directory",
@@ -161,6 +163,7 @@ export default function CommandBar({
       hoverBg: "hover:bg-[rgba(198,92,255,0.1)]",
       hoverText: "hover:text-relay-accent",
       glowHover: "hover:shadow-[0_0_15px_rgba(198,92,255,0.2)]",
+      tourId: "new-dir-btn",
     },
     {
       label: "New File",
@@ -170,6 +173,7 @@ export default function CommandBar({
       hoverBg: "hover:bg-[rgba(255,122,61,0.1)]",
       hoverText: "hover:text-linkdrive-accent",
       glowHover: "hover:shadow-[0_0_15px_rgba(255,122,61,0.2)]",
+      tourId: "new-file-btn",
     },
   ];
 
@@ -352,7 +356,10 @@ export default function CommandBar({
       </div>
 
       {/* CENTER: Neural Search */}
-      <div className="flex-1 max-w-2xl mx-4 hidden sm:flex justify-center">
+      <div
+        data-tour="command-bar-search"
+        className="flex-1 max-w-2xl mx-4 hidden sm:flex justify-center"
+      >
         <div className="relative w-full max-w-lg group">
           <div className="absolute inset-0 bg-accent-soft rounded-2xl blur-md group-hover:opacity-100 opacity-60 transition-opacity" />
           <div className="relative flex items-center bg-slate-100/90 dark:bg-vault-black/80 border border-slate-200/90 dark:border-white/10 rounded-2xl px-4 py-2 hover:border-accent-border focus-within:border-accent-primary focus-within:ring-2 focus-within:ring-accent-primary/20 transition-all shadow-sm">
@@ -457,7 +464,10 @@ export default function CommandBar({
       {/* RIGHT: Quick Actions & Status */}
       <div className="flex items-center gap-3 shrink-0">
         {/* Quick Create Actions — Color-Coded (Contextual for GitHub) */}
-        <div className="hidden lg:flex items-center gap-1 border-r border-slate-200 dark:border-white/10 pr-3 mr-1">
+        <div
+          data-tour="quick-actions"
+          className="hidden lg:flex items-center gap-1 border-r border-slate-200 dark:border-white/10 pr-3 mr-1"
+        >
           {location.pathname === "/dashboard/github" ? (
             <button
               onClick={() => document.dispatchEvent(new CustomEvent("createRepoTrigger"))}
@@ -471,6 +481,7 @@ export default function CommandBar({
             quickActions.map((action) => (
               <button
                 key={action.label}
+                data-tour={action.tourId}
                 onClick={() => {
                   action.onClick();
                 }}

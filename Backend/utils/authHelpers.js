@@ -11,6 +11,7 @@ import {
   ROOT_DIR_COOKIE_OPTIONS,
 } from "../config/config.js";
 import { getSystemConfigHelper } from "../services/systemConfig.service.js";
+import { withTransaction } from "./transaction.js";
 
 /**
  * Creates (or upserts) a session for the user, enforces the device limit,
@@ -135,19 +136,10 @@ export async function createUserWithRootDir({
     path: [rootDirId],
   };
 
-  const session = await mongoose.startSession();
-
-  try {
-    session.startTransaction();
+  await withTransaction(async (session) => {
     await User.create([newUser], { session });
     await Directory.create([rootDir], { session });
-    await session.commitTransaction();
-  } catch (err) {
-    await session.abortTransaction();
-    throw err; // Let the caller handle specific error codes
-  } finally {
-    session.endSession();
-  }
+  });
 
   return { userId, rootDirId };
 }

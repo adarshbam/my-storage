@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail,
@@ -173,7 +174,9 @@ export default function SecondaryRecoveryEmailModal({
     }
   };
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
         {/* Backdrop */}
@@ -199,7 +202,7 @@ export default function SecondaryRecoveryEmailModal({
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors p-1"
+            className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors p-1 cursor-pointer"
           >
             <X size={20} />
           </button>
@@ -220,27 +223,10 @@ export default function SecondaryRecoveryEmailModal({
           </div>
 
           <p className="text-xs text-white/60 font-medium leading-relaxed mb-6">
-            Add a verified backup email to receive security alerts and reset your password if you ever lose access to your primary email.
+            {currentEmail
+              ? "Change your secondary recovery email address used for critical account recovery and security alerts."
+              : "Add a trusted backup email address. If you lose access to your primary email or 2FA, this address can be used for verification."}
           </p>
-
-          {/* Current Email notice */}
-          {currentEmail && !otpSent && (
-            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs font-semibold flex items-center justify-between gap-3 mb-5">
-              <div className="min-w-0">
-                <span className="text-white/40 block uppercase text-[10px] tracking-wider">Current Verified Email</span>
-                <span className="text-white font-mono truncate block">{currentEmail}</span>
-              </div>
-              <button
-                type="button"
-                onClick={handleRemove}
-                disabled={removing}
-                className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[11px] font-bold transition-colors shrink-0 flex items-center gap-1"
-              >
-                {removing ? <Loader2 className="animate-spin" size={12} /> : <Trash2 size={12} />}
-                Remove
-              </button>
-            </div>
-          )}
 
           {/* Error Message */}
           {error && (
@@ -259,7 +245,7 @@ export default function SecondaryRecoveryEmailModal({
             <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-semibold flex items-center gap-2.5 mb-5"
+              className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2.5 mb-5"
             >
               <CheckCircle2 size={16} className="shrink-0" />
               <span>{successMsg}</span>
@@ -268,6 +254,7 @@ export default function SecondaryRecoveryEmailModal({
 
           {/* Form */}
           <form onSubmit={otpSent ? handleVerifyOtp : handleSendOtp} className="space-y-5">
+            {/* Step 1: Input Email */}
             <div>
               <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">
                 Secondary Email Address
@@ -287,13 +274,13 @@ export default function SecondaryRecoveryEmailModal({
                   <button
                     type="submit"
                     disabled={sendingOtp || !email}
-                    className="px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:opacity-95 text-white text-xs font-bold transition-all shadow-lg shadow-teal-500/20 disabled:opacity-40 shrink-0 flex items-center gap-1.5"
+                    className="px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:opacity-95 text-white text-xs font-bold transition-all shadow-lg shadow-teal-500/20 disabled:opacity-40 shrink-0 flex items-center gap-1.5 cursor-pointer"
                   >
                     {sendingOtp ? (
                       <Loader2 className="animate-spin" size={16} />
                     ) : (
                       <>
-                        <Send size={14} /> Send OTP
+                        <Send size={14} /> Send Code
                       </>
                     )}
                   </button>
@@ -301,7 +288,30 @@ export default function SecondaryRecoveryEmailModal({
               </div>
             </div>
 
-            {/* OTP Input */}
+            {/* If currently set email exists and no OTP active, show remove button */}
+            {!otpSent && currentEmail && (
+              <div className="pt-2 flex items-center justify-between border-t border-white/5">
+                <span className="text-xs text-white/40">
+                  Current: <strong className="text-white/80">{currentEmail}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRemove}
+                  disabled={removing}
+                  className="text-xs text-rose-400 hover:text-rose-300 font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {removing ? (
+                    <Loader2 className="animate-spin" size={14} />
+                  ) : (
+                    <>
+                      <Trash2 size={14} /> Remove Email
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Step 2: Input 6-Digit OTP */}
             <AnimatePresence>
               {otpSent && (
                 <motion.div
@@ -312,7 +322,7 @@ export default function SecondaryRecoveryEmailModal({
                 >
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-white/60 uppercase tracking-wider">
-                      6-Digit Verification Code
+                      6-Digit Security Code
                     </label>
                     <button
                       type="button"
@@ -320,7 +330,7 @@ export default function SecondaryRecoveryEmailModal({
                         setOtpSent(false);
                         setOtp(["", "", "", "", "", ""]);
                       }}
-                      className="text-xs text-teal-400 hover:underline font-semibold"
+                      className="text-xs text-teal-400 hover:underline font-semibold cursor-pointer"
                     >
                       Change Email
                     </button>
@@ -353,9 +363,9 @@ export default function SecondaryRecoveryEmailModal({
                           type="button"
                           onClick={handleSendOtp}
                           disabled={sendingOtp}
-                          className="text-teal-400 font-bold hover:underline inline-flex items-center gap-1"
+                          className="text-teal-400 font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
                         >
-                          <Send size={12} /> Resend OTP
+                          <Send size={12} /> Resend Code
                         </button>
                       )}
                     </span>
@@ -366,7 +376,7 @@ export default function SecondaryRecoveryEmailModal({
                     <button
                       type="submit"
                       disabled={verifyingOtp || otp.join("").length !== 6}
-                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:opacity-95 text-white font-bold text-xs shadow-lg shadow-teal-500/25 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:opacity-95 text-white font-bold text-xs shadow-lg shadow-teal-500/25 transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {verifyingOtp ? (
                         <>
@@ -385,6 +395,7 @@ export default function SecondaryRecoveryEmailModal({
           </form>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

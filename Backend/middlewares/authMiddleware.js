@@ -19,10 +19,16 @@ async function checkAuth(req, res, next) {
     if (cachedUser) {
       try {
         const user = JSON.parse(cachedUser);
-        if (user.status === "Deleted") {
-          return res.status(404).json({
+        if (user.status === "Terminated") {
+          return res.status(403).json({
             message:
-              "User is Deleted contact adarshsinghbam@gmail.com to recover your account",
+              "This account has been permanently terminated by system administration.",
+          });
+        }
+        if (user.status === "Deleted") {
+          return res.status(403).json({
+            message:
+              "This account is deactivated. Contact system administration to reactivate your account.",
           });
         }
         req.user = user;
@@ -53,10 +59,17 @@ async function checkAuth(req, res, next) {
       return res.status(401).json({ message: "User not found" });
     }
 
-    if (user.status === "Deleted") {
-      return res.status(404).json({
+    if (user.status === "Terminated") {
+      return res.status(403).json({
         message:
-          "User is Deleted contact adarshsinghbam@gmail.com to recover your account",
+          "This account has been permanently terminated by system administration.",
+      });
+    }
+
+    if (user.status === "Deleted") {
+      return res.status(403).json({
+        message:
+          "This account is deactivated. Contact system administration to reactivate your account.",
       });
     }
 

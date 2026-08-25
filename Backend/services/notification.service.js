@@ -444,15 +444,11 @@ export async function syncSecurityNotifications(user) {
     });
   }
 
-  // 3. Phone Verification Check
-  if (!user.phoneVerified) {
-    await securityPhoneUnverified({ userId });
-  } else {
-    await resolveByEventKeyLogic({
-      userId,
-      eventKey: NOTIFICATION_EVENT_KEYS.SECURITY_PHONE_UNVERIFIED(userId),
-    });
-  }
+  // 3. Clear any legacy phone unverified security notifications (phone verification is scoped to trial abuse prevention)
+  await resolveByEventKeyLogic({
+    userId,
+    eventKey: NOTIFICATION_EVENT_KEYS.SECURITY_PHONE_UNVERIFIED(userId),
+  });
 }
 
 // =========================================================================

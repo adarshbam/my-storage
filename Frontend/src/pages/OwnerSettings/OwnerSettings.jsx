@@ -88,6 +88,12 @@ export default function OwnerSettings() {
     setTimeout(() => setToastMessage(null), 2500);
   };
 
+  const triggerGlobalLiveSync = () => {
+    window.dispatchEvent(new Event("subscription:updated"));
+    window.dispatchEvent(new Event("plan:updated"));
+    window.dispatchEvent(new Event("auth:refresh"));
+  };
+
   // Handlers for state updates
   const handleLimitsChange = async (field, val) => {
     setLimits((prev) => ({ ...prev, [field]: val }));
@@ -107,6 +113,7 @@ export default function OwnerSettings() {
 
     if (res.ok) {
       setLimits(globalSystemLimits);
+      triggerGlobalLiveSync();
       showToast("Global system limits saved successfully!");
     }
   };
@@ -127,21 +134,23 @@ export default function OwnerSettings() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(billingPlans),
+        body: JSON.stringify({ plans: billingPlans }),
       });
       const data = await res.json();
       if (res.ok) {
-        if (Array.isArray(data)) {
+        const updatedList = Array.isArray(data) ? data : data.plans;
+        if (Array.isArray(updatedList)) {
           setBillingPlans((prev) =>
             prev.map((p) => {
-              const updated = data.find((item) => item._id === p._id);
+              const updated = updatedList.find((item) => item._id === p._id);
               return updated ? { ...p, ...updated } : p;
             }),
           );
         }
+        triggerGlobalLiveSync();
         showToast("All billing plans saved successfully!");
       } else {
-        showToast(data.error || "Failed to save billing plans.");
+        showToast(data.error || data.message || "Failed to save billing plans.");
       }
     } catch (err) {
       console.error("[handleSaveBillingPlans] Error:", err);
@@ -172,6 +181,7 @@ export default function OwnerSettings() {
             }),
           );
         }
+        triggerGlobalLiveSync();
         showToast("Plan tiers saved successfully!");
       } else {
         showToast(data.error || "Failed to save plan tiers.");
@@ -202,6 +212,7 @@ export default function OwnerSettings() {
             }),
           );
         }
+        triggerGlobalLiveSync();
         showToast("Feature catalogue saved successfully!");
       } else {
         showToast(data.error || "Failed to save feature catalogue.");
@@ -230,6 +241,7 @@ export default function OwnerSettings() {
         if (data.tierFeatureConfigs)
           setTierFeatureConfigs(data.tierFeatureConfigs);
         if (data.tierRuleConfigs) setTierRuleConfigs(data.tierRuleConfigs);
+        triggerGlobalLiveSync();
         showToast("Tier configurations saved successfully!");
       } else {
         showToast(data.error || "Failed to save tier configurations.");
@@ -280,6 +292,7 @@ export default function OwnerSettings() {
               }),
             );
           }
+          triggerGlobalLiveSync();
           showToast(
             `Plan tier "${tierSlug}" is now ${val ? "active" : "inactive"}.`,
           );
@@ -317,30 +330,20 @@ export default function OwnerSettings() {
       });
       const data = await res.json();
       if (res.ok) {
-        if (data.newTier) {
-          setPlanTiers((prev) => [...prev, data.newTier]);
+        // Refetch full state to guarantee all billing plans, tier configs, and tiers are present
+        const freshRes = await fetch(`${SERVER_URL}/owner-settings`, {
+          credentials: "include",
+        });
+        if (freshRes.ok) {
+          const freshData = await freshRes.json();
+          if (freshData.planTiers) setPlanTiers(freshData.planTiers);
+          if (freshData.billingPlans) setBillingPlans(freshData.billingPlans);
+          if (freshData.tierFeatureConfigs)
+            setTierFeatureConfigs(freshData.tierFeatureConfigs);
+          if (freshData.tierRuleConfigs)
+            setTierRuleConfigs(freshData.tierRuleConfigs);
         }
-        if (Array.isArray(data.createdBillingPlans)) {
-          setBillingPlans((prev) => [...prev, ...data.createdBillingPlans]);
-        }
-        setTierFeatureConfigs((prev) => ({
-          ...prev,
-          [slugKey]: ["secure_storage", "share_links"],
-        }));
-        setTierRuleConfigs((prev) => ({
-          ...prev,
-          [slugKey]: {
-            allowUpload: true,
-            allowDownload: true,
-            allowSharing: true,
-            maxConnectedDevices: 5,
-            maxUploadSizeVal: 5,
-            maxUploadSizeUnit: "GB",
-            uploadSpeedMultiplier: "5x",
-            deleteFilesAfterExpiry: "30 days",
-            versionHistoryDays: "30",
-          },
-        }));
+        triggerGlobalLiveSync();
         showToast(`Created new plan tier "${newTier.title}"!`);
       } else {
         showToast(data.error || "Failed to create plan tier.");
@@ -549,6 +552,7 @@ export default function OwnerSettings() {
           {(activeTab === "all" || activeTab === "limits") && (
             <GlobalSystemLimitsSection
               limits={limits}
+              planTiers={planTiers}
               onChange={handleLimitsChange}
               handleGlobalLimits={handleGlobalLimits}
             />
@@ -599,6 +603,7 @@ export default function OwnerSettings() {
               tierFeatureConfigs={tierFeatureConfigs}
               tierRuleConfigs={tierRuleConfigs}
               features={features}
+              limits={limits}
             />
           )}
         </div>

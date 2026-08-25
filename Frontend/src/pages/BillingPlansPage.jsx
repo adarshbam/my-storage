@@ -50,6 +50,8 @@ export default function BillingPlansPage() {
       fetchInitialData(true);
     };
     window.addEventListener("subscription:updated", handleSync);
+    window.addEventListener("plan:updated", handleSync);
+    window.addEventListener("auth:refresh", handleSync);
     window.addEventListener("notifications:updated", handleSync);
 
     // 2. Real-time refresh when switching back to tab/window
@@ -71,6 +73,8 @@ export default function BillingPlansPage() {
 
     return () => {
       window.removeEventListener("subscription:updated", handleSync);
+      window.removeEventListener("plan:updated", handleSync);
+      window.removeEventListener("auth:refresh", handleSync);
       window.removeEventListener("notifications:updated", handleSync);
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
@@ -239,7 +243,7 @@ export default function BillingPlansPage() {
           credentials: "include",
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to pause subscription");
+        if (!res.ok) throw new Error(data.message || data.error || "Failed to pause subscription");
         showToast("Subscription paused successfully", "info");
       } else if (modalType === "RESUME") {
         const res = await fetch(`${SERVER_URL}/subscriptions/${subId}/resume`, {
@@ -248,7 +252,7 @@ export default function BillingPlansPage() {
           credentials: "include",
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to resume subscription");
+        if (!res.ok) throw new Error(data.message || data.error || "Failed to resume subscription");
         showToast("Subscription resumed successfully", "success");
       } else if (modalType === "CANCEL") {
         const res = await fetch(`${SERVER_URL}/subscriptions/${subId}/cancel`, {
@@ -258,7 +262,7 @@ export default function BillingPlansPage() {
           body: JSON.stringify({ cancelAtCycleEnd: true }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to cancel subscription");
+        if (!res.ok) throw new Error(data.message || data.error || "Failed to cancel subscription");
         showToast("Subscription cancellation scheduled at end of billing period", "info");
       }
 
@@ -278,9 +282,11 @@ export default function BillingPlansPage() {
   const rawStatus = (subscription?.status || "NO_SUBSCRIPTION").toUpperCase();
   const isCycleValid = Boolean(subscription?.isCycleValid);
   const isCancelled = rawStatus === "CANCELLED";
-  const isPaused = rawStatus === "PAUSED";
+  const isPaused = rawStatus === "PAUSED" || Boolean(subscription?.isPaused);
   const isActive = rawStatus === "ACTIVE" || (isCancelled && isCycleValid);
-  const isNoSubscription = Boolean(subscription?.isNoSubscription);
+  const isNoSubscription =
+    !isPaused &&
+    (Boolean(subscription?.isNoSubscription) || rawStatus === "NO_SUBSCRIPTION");
 
   let status = "NO_SUBSCRIPTION";
   if (isActive && !isCancelled) {
@@ -300,7 +306,11 @@ export default function BillingPlansPage() {
   }
 
   const usedStorage = subscription?.usedStorage ?? user?.usedStorage ?? 0;
-  const maxStorage = subscription?.maxStorage ?? user?.maxStorage ?? 5368709120;
+  const maxStorage =
+    subscription?.maxStorage ??
+    subscription?.storageLimit ??
+    user?.maxStorage ??
+    5368709120;
   const usedPercent = Math.min(100, Math.max(0, ((usedStorage / maxStorage) * 100).toFixed(1)));
 
   // Status Styling Config
@@ -377,7 +387,15 @@ export default function BillingPlansPage() {
     : `/${subscription?.period?.toLowerCase() || "month"}`;
 
   const nextBillingDisplay =
-    !isNoSubscription && subscription?.nextBillingDate
+    status === "PAUSED"
+      ? subscription?.currentEnd
+        ? `Paused (Paid until ${new Date(subscription.currentEnd).toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })})`
+        : "Paused (Auto-renewal stopped)"
+      : !isNoSubscription && subscription?.nextBillingDate
       ? new Date(subscription.nextBillingDate).toLocaleDateString("en-IN", {
           day: "numeric",
           month: "short",
@@ -465,7 +483,11 @@ export default function BillingPlansPage() {
                     {isNoSubscription ? "No Active Subscription" : subscription?.planName || "Novice Vault"}
                   </h2>
                   <p className="text-slate-500 dark:text-white/50 text-xs font-medium mt-1">
-                    {isNoSubscription ? "Read-Only data rescue vault access" : "High-performance cloud vault storage"}
+                    {isNoSubscription
+                      ? "Read-Only data rescue vault access"
+                      : status === "PAUSED"
+                      ? "Subscription paused — resume anytime to reactivate auto-renewal"
+                      : "High-performance cloud vault storage"}
                   </p>
                 </div>
                 <div className="text-left sm:text-right">
@@ -523,7 +545,7 @@ export default function BillingPlansPage() {
                         .getElementById("available-vault-plans")
                         ?.scrollIntoView({ behavior: "smooth" });
                     }}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-black shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-1.5"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-black shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <Zap size={14} className="fill-current" />
                     Get a Subscription
@@ -537,7 +559,7 @@ export default function BillingPlansPage() {
                           setModalOpen(true);
                         }}
                         disabled={actionLoading}
-                        className="px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition-colors"
+                        className="px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition-colors cursor-pointer"
                       >
                         Pause Subscription
                       </button>
@@ -550,8 +572,9 @@ export default function BillingPlansPage() {
                           setModalOpen(true);
                         }}
                         disabled={actionLoading}
-                        className="px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition-colors"
+                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-black shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                       >
+                        <PlayCircle size={14} className="fill-current" />
                         Resume Subscription
                       </button>
                     )}
@@ -682,18 +705,31 @@ export default function BillingPlansPage() {
                   (plan.type || plan.slug || plan.name)?.toLowerCase();
 
               const isCurrent = isActive && isPlanMatch;
+              const isPausedPlan = isPaused && isPlanMatch;
               const isPrevious =
-                (isCancelled || isNoSubscription) && isPlanMatch && !isActive;
+                (isCancelled || (isNoSubscription && !isPaused)) &&
+                isPlanMatch &&
+                !isActive;
 
               return (
                 <PlanCard
                   key={plan._id || plan.razorpayPlanId}
                   plan={plan}
                   isCurrent={isCurrent}
+                  isPaused={isPausedPlan}
                   isPrevious={isPrevious}
-                  currentPlanAmount={isActive ? subscription?.amount || 0 : 0}
+                  currentPlanAmount={
+                    isActive || isPaused ? subscription?.amount || 0 : 0
+                  }
                   loading={actionLoading}
-                  onSelect={(p) => handleSelectPlan(p)}
+                  onSelect={(p) => {
+                    if (isPausedPlan) {
+                      setModalType("RESUME");
+                      setModalOpen(true);
+                    } else {
+                      handleSelectPlan(p);
+                    }
+                  }}
                   currentUsedStorage={usedStorage}
                 />
               );

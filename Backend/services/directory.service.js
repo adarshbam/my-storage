@@ -17,16 +17,14 @@ import {
   cacheSet,
 } from "../databases/redis.js";
 import { deleteByParentChain } from "./trash.service.js";
-import { copyInB2 } from "../integrations/storage/s3.client.js";
+import { copyInB2, deleteFromB2, deleteMultipleFromB2 } from "../integrations/storage/s3.client.js";
 import { createCloudflareCdnDownloadUrl } from "../integrations/cdn/cloudflare.service.js";
 import User from "../models/userModel.js";
 import {
   storageThresholdReached,
   storageLimitResolved,
 } from "./notification.service.js";
-
-const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
-const THUMBNAILS_DIR = path.join(STORAGE_DIR, "thumbnails");
+import { withTransaction } from "../utils/transaction.js";
 
 export const updateParentDirectorySize = async (
   parentDirIdOrPath,
@@ -475,6 +473,13 @@ export const getDirectoryContents = async ({ dirId, userId, userRole, action, re
             throw err;
           }
         }
+        if (!cachedData.ownerName && cachedData.userId) {
+          const userDoc = await User.findById(cachedData.userId).select("name email").lean();
+          if (userDoc) {
+            cachedData.ownerName = userDoc.name;
+            cachedData.ownerEmail = userDoc.email;
+          }
+        }
         return cachedData;
       } catch (jsonErr) {
         console.error("Failed to parse cached folder content:", jsonErr);
@@ -484,7 +489,7 @@ export const getDirectoryContents = async ({ dirId, userId, userRole, action, re
 
   // 2. Parallelize initial fetching of directory, files, and childDirs on cache miss
   const [directoryDataRaw, files, childDirs] = await Promise.all([
-    Directory.findOne({ _id: dirId }).select("-__v").lean(),
+    Directory.findOne({ _id: dirId }).select("-__v").populate("userId", "name email").lean(),
     File.find({ parentDir: dirId, uploadStatus: { $ne: "uploading" } }).select("-__v").lean(),
     Directory.find({ parentDir: dirId }).select("-__v").lean(),
   ]);
@@ -495,8 +500,20 @@ export const getDirectoryContents = async ({ dirId, userId, userRole, action, re
     throw err;
   }
 
+  const rawUserIdObj = directoryDataRaw.userId;
+  const ownerUserIdStr = rawUserIdObj?._id
+    ? rawUserIdObj._id.toString()
+    : rawUserIdObj
+    ? rawUserIdObj.toString()
+    : null;
+  const ownerName = rawUserIdObj?.name || null;
+  const ownerEmail = rawUserIdObj?.email || null;
+
   const directoryData = { ...directoryDataRaw };
   directoryData._id = directoryData._id.toString();
+  directoryData.userId = ownerUserIdStr;
+  directoryData.ownerName = ownerName;
+  directoryData.ownerEmail = ownerEmail;
 
   // 3. Optimized Current-Folder-Only Path Resolution
   const pathDocs = await Directory.find({
@@ -729,13 +746,20 @@ export const createDirectoryLogic = async ({ name, parentDirId, userId, userRole
   const dirId = new mongoose.Types.ObjectId();
   const dirPath = await getDirectoryPath(dirId, parentDirId);
 
-  await Directory.create({
-    _id: dirId,
-    name: name,
-    path: dirPath,
-    userId: ownerId,
-    type: "directory",
-    parentDir: parentDirId,
+  await withTransaction(async (session) => {
+    await Directory.create(
+      [
+        {
+          _id: dirId,
+          name: name,
+          path: dirPath,
+          userId: ownerId,
+          type: "directory",
+          parentDir: parentDirId,
+        },
+      ],
+      { session },
+    );
   });
 
   await cacheDel("dir:meta:" + parentDirId);
@@ -810,21 +834,21 @@ export const deleteDirectoryLogic = async ({ dirId, userId, permanent, userRole 
     throw error;
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
+  await withTransaction(async (session) => {
     const isPermanent = permanent;
 
     const directoryToBeDeleted = await Directory.findOne({ _id: dirId })
       .select("parentDir size path")
+      .session(session)
       .lean();
 
-    await updateParentDirectorySize(
-      (directoryToBeDeleted.path || []).slice(0, -1),
-      -directoryToBeDeleted.size,
-      session,
-    );
+    if (directoryToBeDeleted) {
+      await updateParentDirectorySize(
+        (directoryToBeDeleted.path || []).slice(0, -1),
+        -directoryToBeDeleted.size,
+        session,
+      );
+    }
 
     if (isPermanent) {
       // Recursively delete all files and directories completely
@@ -840,21 +864,13 @@ export const deleteDirectoryLogic = async ({ dirId, userId, permanent, userRole 
         await Trash.create([deletedDirectory], { session });
       }
     }
+  });
 
-    await session.commitTransaction();
-
-    await cacheDel("dir:meta:" + dirId);
-    await cacheDel("dir:contents:" + dirId);
-    if (dirData && dirData.parentDir) {
-      await cacheDel("dir:meta:" + dirData.parentDir.toString());
-      await cacheDel("dir:contents:" + dirData.parentDir.toString());
-    }
-
-  } catch (txError) {
-    await session.abortTransaction();
-    throw txError;
-  } finally {
-    session.endSession();
+  await cacheDel("dir:meta:" + dirId);
+  await cacheDel("dir:contents:" + dirId);
+  if (dirData && dirData.parentDir) {
+    await cacheDel("dir:meta:" + dirData.parentDir.toString());
+    await cacheDel("dir:contents:" + dirData.parentDir.toString());
   }
 };
 
@@ -918,78 +934,49 @@ export const moveItemsLogic = async ({ targetDirId, items, userId, userRole, roo
     }
   }
 
-  const session = await mongoose.startSession();
-
-  let retries = 3;
-  while (retries > 0) {
-    session.startTransaction();
-    try {
-      // 1. Move Directories
-      for (const dir of sourceDirs) {
-        const oldParentDirId = dir.parentDir;
-        if (oldParentDirId && oldParentDirId.toString() === targetDirId) {
-          continue; // Already in target directory
-        }
-
-        // Recursively update this directory and all its descendants' paths
-        await updateDirectoryPathAndDescendants(dir._id, targetDirId, session);
-
-        // Update sizes: decrement old parent path sizes and increment new parent path sizes
-        if (oldParentDirId) {
-          await updateParentDirectorySize(oldParentDirId, -dir.size, session);
-        }
-        await updateParentDirectorySize(targetDirId, dir.size, session);
+  await withTransaction(async (session) => {
+    // 1. Move Directories
+    for (const dir of sourceDirs) {
+      const oldParentDirId = dir.parentDir;
+      if (oldParentDirId && oldParentDirId.toString() === targetDirId) {
+        continue; // Already in target directory
       }
 
-      // 2. Move Files
-      for (const file of sourceFiles) {
-        const oldParentDirId = file.parentDir;
-        if (oldParentDirId && oldParentDirId.toString() === targetDirId) {
-          continue; // Already in target directory
-        }
+      // Recursively update this directory and all its descendants' paths
+      await updateDirectoryPathAndDescendants(dir._id, targetDirId, session);
 
-        file.parentDir = targetDirId;
-        file.path = [...targetDir.path, file._id];
-        await File.updateOne(
-          { _id: file._id },
-          { $set: { parentDir: targetDirId, path: file.path } },
-        ).session(session);
-
-        // Update sizes
-        if (oldParentDirId) {
-          await updateParentDirectorySize(
-            oldParentDirId,
-            -file.size,
-            session,
-          );
-        }
-        await updateParentDirectorySize(targetDirId, file.size, session);
+      // Update sizes: decrement old parent path sizes and increment new parent path sizes
+      if (oldParentDirId) {
+        await updateParentDirectorySize(oldParentDirId, -dir.size, session);
       }
-
-      await session.commitTransaction();
-      break; // Success!
-    } catch (txError) {
-      await session.abortTransaction();
-
-      const isTransient =
-        txError.errorLabels &&
-        txError.errorLabels.includes("TransientTransactionError");
-      const isWriteConflict = txError.code === 112;
-
-      if ((isTransient || isWriteConflict) && retries > 1) {
-        retries--;
-        console.warn(
-          `Transient write conflict encountered in moveItems. Retrying transaction... (${retries} retries left)`,
-        );
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.random() * 200 + 50),
-        );
-        continue;
-      }
-      throw txError;
+      await updateParentDirectorySize(targetDirId, dir.size, session);
     }
-  }
-  session.endSession();
+
+    // 2. Move Files
+    for (const file of sourceFiles) {
+      const oldParentDirId = file.parentDir;
+      if (oldParentDirId && oldParentDirId.toString() === targetDirId) {
+        continue; // Already in target directory
+      }
+
+      file.parentDir = targetDirId;
+      file.path = [...targetDir.path, file._id];
+      await File.updateOne(
+        { _id: file._id },
+        { $set: { parentDir: targetDirId, path: file.path } },
+      ).session(session);
+
+      // Update sizes
+      if (oldParentDirId) {
+        await updateParentDirectorySize(
+          oldParentDirId,
+          -file.size,
+          session,
+        );
+      }
+      await updateParentDirectorySize(targetDirId, file.size, session);
+    }
+  });
 
   // Clear caches
   const oldParentDirs = new Set();
@@ -1054,128 +1041,99 @@ export const copyItemsLogic = async ({ targetDirId, items, userId, userRole, roo
     }
   }
 
-  const session = await mongoose.startSession();
+  await withTransaction(async (session) => {
+    // 1. Copy Files
+    for (const file of sourceFiles) {
+      const newFileId = new mongoose.Types.ObjectId();
+      const resolvedName = await getAvailableName(
+        targetDirId,
+        file.name,
+        false,
+        session,
+      );
 
-  let retries = 3;
-  while (retries > 0) {
-    session.startTransaction();
-    try {
-      // 1. Copy Files
-      for (const file of sourceFiles) {
-        const newFileId = new mongoose.Types.ObjectId();
-        const resolvedName = await getAvailableName(
-          targetDirId,
-          file.name,
-          false,
-          session,
-        );
+      // Copy physical storage files in Backblaze B2
+      try {
+        await copyInB2({
+          sourceKey: `${file._id.toString()}${file.extension}`,
+          destinationKey: `${newFileId.toString()}${file.extension}`,
+        });
+      } catch (copyErr) {
+        console.error(`Failed to copy physical file ${file._id}:`, copyErr);
+        throw new Error(`Physical file copying failed for "${file.name}"`);
+      }
 
-        // Copy physical storage files in Backblaze B2
+      // Copy thumbnail if it exists
+      if (file.hasThumbnail) {
         try {
           await copyInB2({
-            sourceKey: `${file._id.toString()}${file.extension}`,
-            destinationKey: `${newFileId.toString()}${file.extension}`,
+            sourceKey: `thumbnails/${file._id.toString()}.jpg`,
+            destinationKey: `thumbnails/${newFileId.toString()}.jpg`,
           });
-        } catch (copyErr) {
-          console.error(`Failed to copy physical file ${file._id}:`, copyErr);
-          throw new Error(`Physical file copying failed for "${file.name}"`);
+        } catch (thumbErr) {
+          console.warn(
+            `Failed to copy thumbnail for ${file._id}:`,
+            thumbErr,
+          );
         }
-
-        // Copy thumbnail if it exists
-        if (file.hasThumbnail) {
-          try {
-            await copyInB2({
-              sourceKey: `thumbnails/${file._id.toString()}.jpg`,
-              destinationKey: `thumbnails/${newFileId.toString()}.jpg`,
-            });
-          } catch (thumbErr) {
-            console.warn(
-              `Failed to copy thumbnail for ${file._id}:`,
-              thumbErr,
-            );
-          }
-        }
-
-        await File.create(
-          [
-            {
-              _id: newFileId,
-              name: resolvedName,
-              extension: file.extension,
-              type: "file",
-              userId: targetOwnerId,
-              parentDir: targetDirId,
-              path: [...targetDir.path, newFileId],
-              size: file.size,
-              hasThumbnail: file.hasThumbnail,
-              externalUrl: file.externalUrl,
-            },
-          ],
-          { session },
-        );
-
-        // Update sizes
-        await updateParentDirectorySize(targetDirId, file.size, session);
       }
 
-      // 2. Copy Directories
-      for (const dir of sourceDirs) {
-        // Prevent copying directory inside itself or its children
-        if (
-          targetDirId === dir._id.toString() ||
-          targetDir.path.includes(dir._id.toString())
-        ) {
-          const error = new Error(`Cannot copy folder "${dir.name}" into itself or its own subfolders`);
-          error.status = 400;
-          throw error;
-        }
+      await File.create(
+        [
+          {
+            _id: newFileId,
+            name: resolvedName,
+            extension: file.extension,
+            type: "file",
+            userId: targetOwnerId,
+            parentDir: targetDirId,
+            path: [...targetDir.path, newFileId],
+            size: file.size,
+            hasThumbnail: file.hasThumbnail,
+            externalUrl: file.externalUrl,
+          },
+        ],
+        { session },
+      );
 
-        const newDirId = new mongoose.Types.ObjectId();
-        const resolvedName = await getAvailableName(
-          targetDirId,
-          dir.name,
-          true,
-          session,
-        );
-
-        // Recursively copy contents
-        await copyDirectoryRecursive(
-          dir._id,
-          newDirId,
-          targetDirId,
-          targetOwnerId,
-          targetDir.path,
-          session,
-        );
-
-        // Update target directory size (the directory itself + all its contents size)
-        await updateParentDirectorySize(targetDirId, dir.size, session);
-      }
-
-      await session.commitTransaction();
-      break; // Success!
-    } catch (txError) {
-      await session.abortTransaction();
-
-      const isTransient =
-        txError.errorLabels &&
-        txError.errorLabels.includes("TransientTransactionError");
-      const isWriteConflict = txError.code === 112;
-
-      if ((isTransient || isWriteConflict) && retries > 1) {
-        retries--;
-        console.warn(
-          `Transient write conflict encountered in copyItems. Retrying transaction... (${retries} retries left)`,
-        );
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.random() * 200 + 50),
-        );
-        continue;
-      }
-      throw txError;
+      // Update sizes
+      await updateParentDirectorySize(targetDirId, file.size, session);
     }
-  }
-  session.endSession();
+
+    // 2. Copy Directories
+    for (const dir of sourceDirs) {
+      // Prevent copying directory inside itself or its children
+      if (
+        targetDirId === dir._id.toString() ||
+        targetDir.path.includes(dir._id.toString())
+      ) {
+        const error = new Error(`Cannot copy folder "${dir.name}" into itself or its own subfolders`);
+        error.status = 400;
+        throw error;
+      }
+
+      const newDirId = new mongoose.Types.ObjectId();
+      const resolvedName = await getAvailableName(
+        targetDirId,
+        dir.name,
+        true,
+        session,
+      );
+
+      // Recursively copy contents
+      await copyDirectoryRecursive(
+        dir._id,
+        newDirId,
+        targetDirId,
+        targetOwnerId,
+        targetDir.path,
+        session,
+      );
+
+      // Update target directory size (the directory itself + all its contents size)
+      await updateParentDirectorySize(targetDirId, dir.size, session);
+    }
+  });
 
   // Clear caches
   await cacheDel("dir:meta:" + targetDirId);
@@ -1237,10 +1195,8 @@ export const deleteItemsBatchLogic = async ({ items, userId, userRole, permanent
   }
 
   const isPermanent = permanent;
-  const session = await mongoose.startSession();
-  session.startTransaction();
 
-  try {
+  await withTransaction(async (session) => {
     const sizeUpdates = new Map();
 
     for (const file of files) {
@@ -1269,10 +1225,14 @@ export const deleteItemsBatchLogic = async ({ items, userId, userRole, permanent
 
     if (trashingFiles.length > 0) {
       if (isPermanent) {
+        const b2Keys = [];
         for (const f of files) {
-          await deleteFromB2({ key: `${f._id.toString()}${f.extension}` });
-          await deleteFromB2({ key: `thumbnails/${f._id.toString()}.jpg` });
+          const ext = f.extension ? (f.extension.startsWith(".") ? f.extension : `.${f.extension}`) : "";
+          b2Keys.push(`${f._id.toString()}${ext}`);
+          b2Keys.push(`thumbnails/${f._id.toString()}.webp`);
+          b2Keys.push(`thumbnails/${f._id.toString()}.jpg`);
         }
+        await deleteMultipleFromB2({ keys: b2Keys });
       } else {
         await Trash.insertMany(trashingFiles, { session });
       }
@@ -1289,35 +1249,27 @@ export const deleteItemsBatchLogic = async ({ items, userId, userRole, permanent
       }
       await Directory.deleteMany({ _id: { $in: dirIds } }).session(session);
     }
+  });
 
-    await session.commitTransaction();
-
-    const keysToInvalidate = new Set();
-    for (const dirId of dirIds) {
-      keysToInvalidate.add("dir:meta:" + dirId);
-      keysToInvalidate.add("dir:contents:" + dirId);
-    }
-    for (const file of files) {
-      if (file.parentDir)
-        keysToInvalidate.add("dir:meta:" + file.parentDir.toString());
-      if (file.parentDir)
-        keysToInvalidate.add("dir:contents:" + file.parentDir.toString());
-    }
-    for (const dir of dirs) {
-      if (dir.parentDir)
-        keysToInvalidate.add("dir:meta:" + dir.parentDir.toString());
-      if (dir.parentDir)
-        keysToInvalidate.add("dir:contents:" + dir.parentDir.toString());
-    }
-
-    await Promise.all(
-      Array.from(keysToInvalidate).map((key) => cacheDel(key)),
-    );
-
-  } catch (txError) {
-    await session.abortTransaction();
-    throw txError;
-  } finally {
-    session.endSession();
+  const keysToInvalidate = new Set();
+  for (const dirId of dirIds) {
+    keysToInvalidate.add("dir:meta:" + dirId);
+    keysToInvalidate.add("dir:contents:" + dirId);
   }
+  for (const file of files) {
+    if (file.parentDir)
+      keysToInvalidate.add("dir:meta:" + file.parentDir.toString());
+    if (file.parentDir)
+      keysToInvalidate.add("dir:contents:" + file.parentDir.toString());
+  }
+  for (const dir of dirs) {
+    if (dir.parentDir)
+      keysToInvalidate.add("dir:meta:" + dir.parentDir.toString());
+    if (dir.parentDir)
+      keysToInvalidate.add("dir:contents:" + dir.parentDir.toString());
+  }
+
+  await Promise.all(
+    Array.from(keysToInvalidate).map((key) => cacheDel(key)),
+  );
 };

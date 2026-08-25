@@ -2,6 +2,7 @@ import User from "../models/userModel.js";
 import { sanitize } from "../utils/sanitize.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
+import StarredItem from "../models/starredItemModel.js";
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "../config/config.js";
 import { google } from "googleapis";
 import { Readable } from "stream";
@@ -12,14 +13,13 @@ import SharedAccess from "../models/sharedAccessModel.js";
 import { invalidateUserSessions } from "../databases/redis.js";
 import { updateParentDirectorySize } from "../controllers/fileController.js";
 import { uploadToB2, getObjectFromB2, deleteFromB2 } from "../integrations/storage/s3.client.js";
+import { withTransaction } from "../utils/transaction.js";
 
 import {
   resolveIntegrationOwnerId,
   hasWriteAccess,
   verifyItemAccess,
 } from "../utils/integrationHelper.js";
-
-const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
 
 // ─── Shared Helper: Build an authenticated Drive client ───────────────────────
 async function getDriveClient(userId) {
@@ -108,6 +108,8 @@ function mapDriveItem(file) {
     provider: "google_drive",
     parentId: file.parents?.[0] ?? null,
     modifiedTime: file.modifiedTime,
+    metaUrl: file.webViewLink || "",
+    thumbnailUrl: file.thumbnailLink || null,
   };
 }
 
@@ -138,57 +140,71 @@ export const connectGoogleDriveLogic = async ({ code, userId, rootDirId, req, re
     throw err;
   }
 
-  await User.updateOne(
-    { _id: userId },
-    {
-      $set: {
-        "integrations.googleDrive": {
-          connected: true,
-          refreshToken: refreshToken,
-          scope: tokens.scope || "https://www.googleapis.com/auth/drive",
-          connectedAt: new Date(),
+  await withTransaction(async (session) => {
+    await User.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          "integrations.googleDrive": {
+            connected: true,
+            refreshToken: refreshToken,
+            scope: tokens.scope || "https://www.googleapis.com/auth/drive",
+            connectedAt: new Date(),
+          },
         },
       },
-    },
-  );
-  await invalidateUserSessions(userId);
+      { session },
+    );
 
-  // Create a special mount-point directory if it doesn't exist yet
-  const existingDir = await Directory.findOne({
-    userId: userId,
-    provider: "google_drive",
-  });
-  if (!existingDir) {
-    const newDirId = new mongoose.Types.ObjectId();
-    await Directory.create({
-      _id: newDirId,
-      name: "Google Drive",
+    // Create a special mount-point directory if it doesn't exist yet
+    const existingDir = await Directory.findOne({
       userId: userId,
-      type: "directory",
-      parentDir: rootDirId,
-      path: [rootDirId, newDirId],
       provider: "google_drive",
-    });
-  }
+    }).session(session);
+
+    if (!existingDir) {
+      const newDirId = new mongoose.Types.ObjectId();
+      await Directory.create(
+        [
+          {
+            _id: newDirId,
+            name: "Google Drive",
+            userId: userId,
+            type: "directory",
+            parentDir: rootDirId,
+            path: [rootDirId, newDirId],
+            provider: "google_drive",
+          },
+        ],
+        { session },
+      );
+    }
+  });
+
+  await invalidateUserSessions(userId);
 
   return { success: true, message: "Drive connected" };
 };
 
 export const disconnectGoogleDriveLogic = async ({ userId, rootDirId, req, res }) => {
-  await User.updateOne(
-    { _id: userId },
-    {
-      $unset: {
-        "integrations.googleDrive": "",
+  await withTransaction(async (session) => {
+    await User.updateOne(
+      { _id: userId },
+      {
+        $unset: {
+          "integrations.googleDrive": "",
+        },
       },
-    },
-  );
-  await invalidateUserSessions(userId);
+      { session },
+    );
 
-  await Directory.deleteOne({
-    userId: userId,
-    provider: "google_drive",
+    await Directory.deleteOne({
+      userId: userId,
+      provider: "google_drive",
+    }).session(session);
   });
+
+  await invalidateUserSessions(userId);
 
   return { success: true, message: "Drive disconnected" };
 };
@@ -197,17 +213,32 @@ export const listDriveFilesLogic = async ({ req }) => {
   const client = await getAuthenticatedClient(req, false);
   const { drive } = client;
 
-  const response = await drive.files.list({
-    // Only show items directly at the root of My Drive, skip trash
-    q: "'root' in parents and trashed = false",
-    pageSize: 100,
-    fields:
-      "files(id, name, mimeType, size, modifiedTime, parents, thumbnailLink)",
-    orderBy: "folder,name",
-  });
+  const [response, starredRecords] = await Promise.all([
+    drive.files.list({
+      // Only show items directly at the root of My Drive, skip trash
+      q: "'root' in parents and trashed = false",
+      pageSize: 100,
+      fields:
+        "files(id, name, mimeType, size, modifiedTime, parents, thumbnailLink, webViewLink)",
+      orderBy: "folder,name",
+    }),
+    req.user?.id || req.user?._id
+      ? StarredItem.find({
+          userId: req.user?.id || req.user?._id,
+          provider: "google_drive",
+          starred: true,
+        }).lean()
+      : [],
+  ]);
 
+  const starredSet = new Set(starredRecords.map((s) => s.itemId));
   const gFiles = response.data.files || [];
-  const mappedItems = gFiles.map(mapDriveItem);
+  const mappedItems = gFiles.map((f) => {
+    const item = mapDriveItem(f);
+    item.isStarred = starredSet.has(item._id);
+    item.starred = item.isStarred;
+    return item;
+  });
 
   return {
     directories: mappedItems.filter((i) => i.type === "directory"),
@@ -220,23 +251,36 @@ export const listDriveFolderLogic = async ({ folderId, req }) => {
   const client = await getAuthenticatedClient(req, false);
   const { drive } = client;
 
-  // Run all three fetches in parallel for speed
-  const [folderMeta, childrenRes, rootRes] = await Promise.all([
+  // Run fetches in parallel for speed
+  const [folderMeta, childrenRes, rootRes, starredRecords] = await Promise.all([
     // Folder name + its parent ID
     drive.files.get({ fileId: folderId, fields: "id, name, parents" }),
     // Direct children of this folder
     drive.files.list({
       q: `'${folderId}' in parents and trashed = false`,
       pageSize: 100,
-      fields: "files(id, name, mimeType, size, modifiedTime, parents)",
+      fields: "files(id, name, mimeType, size, modifiedTime, parents, thumbnailLink, webViewLink)",
       orderBy: "folder,name",
     }),
     // Resolve the real ID of "My Drive" root (it is NEVER the literal string "root")
     drive.files.get({ fileId: "root", fields: "id" }),
+    req.user?.id || req.user?._id
+      ? StarredItem.find({
+          userId: req.user?.id || req.user?._id,
+          provider: "google_drive",
+          starred: true,
+        }).lean()
+      : [],
   ]);
 
+  const starredSet = new Set(starredRecords.map((s) => s.itemId));
   const gFiles = childrenRes.data.files || [];
-  const mappedItems = gFiles.map(mapDriveItem);
+  const mappedItems = gFiles.map((f) => {
+    const item = mapDriveItem(f);
+    item.isStarred = starredSet.has(item._id);
+    item.starred = item.isStarred;
+    return item;
+  });
 
   const rawParentId = folderMeta.data.parents?.[0] ?? null;
   const rootId = rootRes.data.id;
@@ -421,7 +465,7 @@ export const downloadDriveFolderLogic = async ({ folderId, req, res }) => {
   const collectFiles = async (parentId, pathPrefix = "") => {
     const response = await drive.files.list({
       q: `'${parentId}' in parents and trashed = false`,
-      fields: "files(id, name, mimeType)",
+      fields: "files(id, name, mimeType, size)",
       pageSize: 100,
     });
 
@@ -437,6 +481,7 @@ export const downloadDriveFolderLogic = async ({ folderId, req, res }) => {
           id: file.id,
           name: file.name,
           path: `${pathPrefix}${file.name}`,
+          size: parseInt(file.size || "0", 10),
         });
       }
     }
@@ -453,11 +498,15 @@ export const downloadDriveFolderLogic = async ({ folderId, req, res }) => {
     throw err;
   }
 
+  const totalSize = allFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+
   res.setHeader(
     "Content-Disposition",
     `attachment; filename="${folderName}.zip"`,
   );
   res.setHeader("Content-Type", "application/zip");
+  res.setHeader("X-Total-Size", totalSize);
+  res.setHeader("X-Total-Files", allFiles.length);
 
   const archive = archiver("zip", { zlib: { level: 5 } });
   archive.pipe(res);
@@ -471,6 +520,38 @@ export const downloadDriveFolderLogic = async ({ folderId, req, res }) => {
   }
 
   await archive.finalize();
+};
+
+export const saveDriveFileLogic = async ({ fileId, content, req }) => {
+  const client = await getAuthenticatedClient(req, true);
+  const { drive } = client;
+
+  const meta = await drive.files.get({ fileId, fields: "id, name, mimeType" });
+  const originalMime = meta.data.mimeType || "text/plain; charset=utf-8";
+  const mimeType =
+    originalMime.includes("text") ||
+    originalMime.includes("json") ||
+    originalMime.includes("javascript") ||
+    originalMime.includes("markdown")
+      ? originalMime
+      : "text/plain; charset=utf-8";
+
+  const stream = Readable.from([Buffer.from(content, "utf-8")]);
+
+  const response = await drive.files.update({
+    fileId,
+    media: {
+      mimeType,
+      body: stream,
+    },
+    fields: "id, name, mimeType, size, modifiedTime",
+  });
+
+  return {
+    msg: "File saved!",
+    id: response.data.id,
+    name: response.data.name,
+  };
 };
 
 export const searchDriveFilesLogic = async ({ query, req }) => {
@@ -645,17 +726,26 @@ export const transferToVaultLogic = async ({ items, targetFolderId, req }) => {
         body: buffer,
       });
 
-      const newFile = await File.create({
-        _id: fileId,
-        name: fileName,
-        extension: ext,
-        size: fileSize,
-        userId: ownerId, // Transferred files belong to the actual folder owner
-        parentDir: localParentId,
-        type: "file",
-      });
+      let newFile = null;
+      await withTransaction(async (session) => {
+        const [createdFile] = await File.create(
+          [
+            {
+              _id: fileId,
+              name: fileName,
+              extension: ext,
+              size: fileSize,
+              userId: ownerId, // Transferred files belong to the actual folder owner
+              parentDir: localParentId,
+              type: "file",
+            },
+          ],
+          { session },
+        );
+        newFile = createdFile;
 
-      await updateParentDirectorySize(parentPath, fileSize);
+        await updateParentDirectorySize(parentPath, fileSize, session);
+      });
 
       return newFile;
     }

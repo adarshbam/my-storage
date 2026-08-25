@@ -4,17 +4,18 @@ import { getUser } from "./utils";
 /**
  * Shared Google OAuth handler used by both Login and Register pages.
  * Sends the Google credential to the backend, fetches the user info
- * on success, and navigates to the dashboard.
+ * on success, and navigates to the dashboard (or triggers 2FA).
  *
  * @param {string} credential — Google ID token from useGoogleLogin
  * @param {Object} opts
  * @param {Function} opts.setUser — AuthContext setter
  * @param {Function} opts.navigate — react-router navigate
  * @param {Function} opts.setError — local error state setter
+ * @param {Function} [opts.onTwoFactorRequired] — callback when 2FA is needed
  */
 export async function handleGoogleAuth(
   credential,
-  { setUser, navigate, setError },
+  { setUser, navigate, setError, onTwoFactorRequired },
 ) {
   try {
     const res = await fetch(`${SERVER_URL}/user/auth/google`, {
@@ -28,6 +29,15 @@ export async function handleGoogleAuth(
 
     if (!res.ok) {
       setError(data.error || "Google sign-in failed");
+      return;
+    }
+
+    if (data.twoFactorRequired && data.tempToken) {
+      if (onTwoFactorRequired) {
+        onTwoFactorRequired(data.tempToken);
+      } else {
+        navigate(`/login?twoFactorRequired=true&tempToken=${data.tempToken}`);
+      }
       return;
     }
 

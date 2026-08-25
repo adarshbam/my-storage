@@ -42,17 +42,50 @@ export function useFileOperations({ fetchFiles, folderId, specialView, ownerId, 
 
   const handleStarred = async (item) => {
     try {
-      const resData = await toggleStar(item._id);
+      const type = item.type || (item.extension ? "file" : "directory");
+      const provider =
+        item.provider ||
+        (specialView?.includes("google-drive")
+          ? "google_drive"
+          : specialView?.includes("github")
+          ? "github"
+          : "local");
+      const metaUrl =
+        item.metaUrl ||
+        item.webViewLink ||
+        item.html_url ||
+        item.url ||
+        item.download_url ||
+        "";
+
+      const rawId = item._id || item.id || item.githubPath;
+      const resData = await toggleStar(rawId, {
+        itemId: rawId,
+        type,
+        provider,
+        name: item.name,
+        size: item.size || 0,
+        mimeType: item.mimeType || "",
+        metaUrl,
+        githubPath: item.githubPath || "",
+      });
+
       setData((prev) => {
         const isStarred = resData.starred;
         if (specialView === "starred" && !isStarred) {
           return {
-            directories: prev.directories.filter((i) => i._id !== item._id),
-            files: prev.files.filter((i) => i._id !== item._id),
+            directories: prev.directories.filter(
+              (i) => i._id !== item._id && i.githubPath !== item.githubPath
+            ),
+            files: prev.files.filter(
+              (i) => i._id !== item._id && i.githubPath !== item.githubPath
+            ),
           };
         }
         const updateItem = (i) =>
-          i._id === item._id ? { ...i, isStarred: isStarred, starred: isStarred } : i;
+          i._id === item._id || (i.githubPath && i.githubPath === item.githubPath)
+            ? { ...i, isStarred: isStarred, starred: isStarred }
+            : i;
         return {
           directories: prev.directories.map(updateItem),
           files: prev.files.map(updateItem),

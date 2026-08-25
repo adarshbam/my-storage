@@ -3,6 +3,7 @@ import { useState } from "react";
 
 export default function GlobalSystemLimitsSection({
   limits,
+  planTiers = [],
   onChange,
   handleGlobalLimits,
 }) {
@@ -15,6 +16,10 @@ export default function GlobalSystemLimitsSection({
     setTimeout(() => setSavedMessage(false), 2000);
   };
 
+  const eligibleTiers = (planTiers || []).filter(
+    (t) => t.slug !== "free-trial" && t.slug !== "free-trail"
+  );
+
   return (
     <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden transition-all duration-300 hover:border-purple-500/30">
       <div className="absolute top-0 right-0 w-72 h-72 bg-purple-500/5 blur-[90px] rounded-full pointer-events-none" />
@@ -26,11 +31,10 @@ export default function GlobalSystemLimitsSection({
           </div>
           <div>
             <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-              Global System Limits
+              Global System Limits & Trial Inheritance
             </h2>
             <p className="text-xs text-slate-500 dark:text-white/50 font-medium">
-              Configure global system thresholds, maximum device connections and
-              upload ceilings.
+              Configure global system thresholds, maximum device connections, upload ceilings, and the base tier granted to Free Trial users.
             </p>
           </div>
         </div>
@@ -44,7 +48,7 @@ export default function GlobalSystemLimitsSection({
 
       <form
         onSubmit={handleSave}
-        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6"
       >
         {/* Max Connected Devices */}
         <div className="space-y-2">
@@ -149,7 +153,36 @@ export default function GlobalSystemLimitsSection({
           </p>
         </div>
 
-        <div className="sm:col-span-2 xl:col-span-4 flex justify-end pt-4 border-t border-slate-200/60 dark:border-white/5">
+        {/* Free Trial Inherited Tier */}
+        <div className="space-y-2">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white/70 font-mono">
+            Free Trial Grants Tier
+          </label>
+          <select
+            value={limits.freeTrialInheritedTier ?? "ultimate"}
+            onChange={(e) => onChange("freeTrialInheritedTier", e.target.value)}
+            className="w-full min-w-0 bg-slate-50 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-xs shadow-sm"
+          >
+            {eligibleTiers.length > 0 ? (
+              eligibleTiers.map((t) => (
+                <option key={t.slug || t._id} value={t.slug}>
+                  {t.title || t.slug}
+                </option>
+              ))
+            ) : (
+              <>
+                <option value="ultimate">Ultimate Vault</option>
+                <option value="professional">Professional</option>
+                <option value="novice">Novice Vault</option>
+              </>
+            )}
+          </select>
+          <p className="text-[11px] text-slate-500 dark:text-white/40">
+            Free trial inherits all features of this tier.
+          </p>
+        </div>
+
+        <div className="sm:col-span-2 lg:col-span-3 xl:col-span-5 flex justify-end pt-4 border-t border-slate-200/60 dark:border-white/5">
           <button
             type="submit"
             className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm transition-all duration-300 shadow-lg shadow-purple-500/25 active:scale-95"

@@ -1,6 +1,5 @@
 import { sanitize } from "../utils/sanitize.js";
 import path from "path";
-import { unlink, mkdir, readFile, writeFile } from "fs/promises";
 import SharedAccess from "../models/sharedAccessModel.js";
 import {
   hasWriteAccess,
@@ -14,6 +13,7 @@ import mongoose from "mongoose";
 import File from "../models/fileModel.js";
 import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
+import StarredItem from "../models/starredItemModel.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../databases/redis.js";
 import {
   createUploadSignedUrl,
@@ -38,13 +38,7 @@ import {
   createCloudflareCdnDownloadUrl,
   createCdnDownloadUrl,
 } from "../integrations/cdn/cloudflare.service.js";
-
-const STORAGE_DIR = path.join(import.meta.dirname, "../storage");
-const THUMBNAILS_DIR = path.join(STORAGE_DIR, "thumbnails");
-
-// Ensure storage directories exist
-await mkdir(STORAGE_DIR, { recursive: true });
-await mkdir(THUMBNAILS_DIR, { recursive: true });
+import { withTransaction } from "../utils/transaction.js";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
@@ -981,9 +975,12 @@ export const getStarredItems = async (userId, rootDirId) => {
     ? { userId, starred: true, ...(rootDirId ? { _id: { $ne: rootDirId } } : {}) }
     : { starred: true };
 
-  const [starredFiles, starredDirectories] = await Promise.all([
+  const [starredFiles, starredDirectories, integrationStarred] = await Promise.all([
     File.find(fileFilter).lean(),
     Directory.find(dirFilter).lean(),
+    userId
+      ? StarredItem.find({ userId, starred: true, provider: { $ne: "local" } }).lean()
+      : [],
   ]);
 
   const populatedDirs = await populateDirectoryItemCounts(starredDirectories);
@@ -1008,48 +1005,177 @@ export const getStarredItems = async (userId, rootDirId) => {
       type: "file",
       hasThumbnail: hasThumb,
       thumbnailUrl,
+      isStarred: true,
+      starred: true,
     };
   });
 
-  return processedFiles.concat(populatedDirs);
+  const processedDirs = populatedDirs.map((dir) => ({
+    ...dir,
+    isStarred: true,
+    starred: true,
+  }));
+
+  const processedIntegrations = integrationStarred.map((item) => {
+    const isDir = item.type === "directory";
+    const ext =
+      !isDir && item.name && item.name.includes(".")
+        ? `.${item.name.split(".").pop().toLowerCase()}`
+        : "";
+    return {
+      ...item,
+      _id: item.itemId,
+      id: item.itemId,
+      extension: ext,
+      type: isDir ? "directory" : "file",
+      isStarred: true,
+      starred: true,
+      isIntegration: true,
+    };
+  });
+
+  return processedFiles.concat(processedDirs).concat(processedIntegrations);
 };
 
-export const setStarredItem = async ({ itemId, type }) => {
+export const setStarredItem = async ({
+  userId,
+  itemId,
+  type,
+  provider = "local",
+  name,
+  size,
+  mimeType,
+  metaUrl,
+  githubPath,
+  metadata = {},
+}) => {
   if (!itemId) {
     const error = new Error("Invalid Id");
-    error.status = 401;
+    error.status = 400;
     throw error;
   }
 
-  let starredItem;
+  // Execute in ACID MongoDB transaction
+  return await withTransaction(async (session) => {
+    // 1. External Integrations (Google Drive, GitHub, Dropbox, etc.)
+    if (provider && provider !== "local") {
+      const existing = await StarredItem.findOne({
+        userId,
+        itemId: itemId.toString(),
+        provider,
+      }).session(session);
 
-  if (type === "directory") {
-    const dir = await Directory.findOne({ _id: itemId });
-    if (!dir) {
-      const error = new Error("Directory not found");
-      error.status = 404;
-      throw error;
+      if (existing) {
+        const nextStarred = !existing.starred;
+        const updated = await StarredItem.findOneAndUpdate(
+          { _id: existing._id },
+          {
+            $set: {
+              starred: nextStarred,
+              ...(name ? { name } : {}),
+              ...(size !== undefined ? { size } : {}),
+              ...(mimeType ? { mimeType } : {}),
+              ...(metaUrl ? { metaUrl } : {}),
+              ...(githubPath ? { githubPath } : {}),
+              ...(metadata ? { metadata } : {}),
+            },
+          },
+          { session, returnDocument: "after" }
+        );
+        return {
+          ...updated.toObject(),
+          _id: itemId,
+          starred: nextStarred,
+          isStarred: nextStarred,
+        };
+      } else {
+        const [created] = await StarredItem.create(
+          [
+            {
+              userId,
+              itemId: itemId.toString(),
+              provider,
+              name: name || (type === "directory" ? "Folder" : "File"),
+              type: type === "directory" ? "directory" : "file",
+              size: size || 0,
+              mimeType: mimeType || "",
+              metaUrl: metaUrl || "",
+              githubPath: githubPath || "",
+              starred: true,
+              metadata,
+            },
+          ],
+          { session }
+        );
+        return {
+          ...created.toObject(),
+          _id: itemId,
+          starred: true,
+          isStarred: true,
+        };
+      }
     }
-    starredItem = await Directory.findOneAndUpdate(
-      { _id: itemId },
-      { $set: { starred: !dir.starred } },
-      { returnDocument: "after" },
-    );
-  } else {
-    const file = await File.findOne({ _id: itemId });
-    if (!file) {
-      const error = new Error("File not found");
-      error.status = 404;
-      throw error;
-    }
-    starredItem = await File.findOneAndUpdate(
-      { _id: itemId },
-      { $set: { starred: !file.starred } },
-      { returnDocument: "after" },
-    );
-  }
 
-  return starredItem;
+    // 2. Local Vault items
+    let starredItem;
+    if (type === "directory") {
+      const dir = await Directory.findOne({ _id: itemId }).session(session);
+      if (!dir) {
+        const error = new Error("Directory not found");
+        error.status = 404;
+        throw error;
+      }
+      const nextStarred = !dir.starred;
+      starredItem = await Directory.findOneAndUpdate(
+        { _id: itemId },
+        { $set: { starred: nextStarred } },
+        { session, returnDocument: "after" }
+      );
+      // Sync into StarredItem table in same transaction
+      await StarredItem.findOneAndUpdate(
+        { userId, itemId: itemId.toString(), provider: "local" },
+        {
+          $set: {
+            starred: nextStarred,
+            name: dir.name,
+            type: "directory",
+            provider: "local",
+          },
+        },
+        { session, upsert: true }
+      );
+    } else {
+      const file = await File.findOne({ _id: itemId }).session(session);
+      if (!file) {
+        const error = new Error("File not found");
+        error.status = 404;
+        throw error;
+      }
+      const nextStarred = !file.starred;
+      starredItem = await File.findOneAndUpdate(
+        { _id: itemId },
+        { $set: { starred: nextStarred } },
+        { session, returnDocument: "after" }
+      );
+      // Sync into StarredItem table in same transaction
+      await StarredItem.findOneAndUpdate(
+        { userId, itemId: itemId.toString(), provider: "local" },
+        {
+          $set: {
+            starred: nextStarred,
+            name: file.name,
+            type: "file",
+            size: file.size || 0,
+            mimeType: file.mimeType || "",
+            provider: "local",
+          },
+        },
+        { session, upsert: true }
+      );
+    }
+
+    return starredItem;
+  });
 };
 
 export const getRecentItems = async (userId, rootDirId) => {
@@ -1194,29 +1320,58 @@ export const uploadFileLogic = async ({ userId, userRole, parentDirId, rootDirId
 
   const finalSize = actualFileSize || fileSize;
   const exists = await File.findOne({ _id: id }).select("_id").lean();
-  await updateParentDirectorySize(parentDirId, finalSize);
-
   const dirPath = await getDirectoryPath(id, parentDirId);
 
-  if (!exists) {
-    await File.create({
-      _id: id,
-      extension: ext,
-      type: "file",
-      userId: ownerId,
-      path: dirPath,
-      size: finalSize,
-      name: fileName,
-      parentDir: parentDirId,
-      hasThumbnail,
-    });
-  }
+  await withTransaction(async (session) => {
+    await updateParentDirectorySize(parentDirId, finalSize, session);
+
+    if (!exists) {
+      await File.create(
+        [
+          {
+            _id: id,
+            extension: ext,
+            type: "file",
+            userId: ownerId,
+            path: dirPath,
+            size: finalSize,
+            name: fileName,
+            parentDir: parentDirId,
+            hasThumbnail,
+          },
+        ],
+        { session },
+      );
+    }
+  });
 
   await cacheDel("dir:contents:" + parentDirId);
   await cacheDel("dir:meta:" + parentDirId);
 };
 
-export const uploadVaultInitiateLogic = async ({ userId, parentDirId, rootDirId, name, size, contentType }) => {
+export const uploadVaultInitiateLogic = async ({
+  userId,
+  parentDirId,
+  rootDirId,
+  name,
+  size,
+  contentType,
+  planContext,
+}) => {
+  // Validate maxUploadFileSize against plan tier rules
+  const maxUploadFileSize =
+    planContext?.rules?.limits?.maxUploadFileSize ||
+    planContext?.maxUploadFileSize ||
+    5 * 1024 * 1024 * 1024;
+
+  if (size && Number(size) > maxUploadFileSize) {
+    const error = new Error(
+      `File size exceeds your plan upload limit. Maximum allowed size is ${Math.round(maxUploadFileSize / (1024 * 1024))} MB.`,
+    );
+    error.status = 413;
+    throw error;
+  }
+
   const dirId =
     !parentDirId || parentDirId === "root" || parentDirId === "undefined"
       ? rootDirId
@@ -1259,22 +1414,29 @@ export const uploadVaultInitiateLogic = async ({ userId, parentDirId, rootDirId,
     videoExtensions.includes(ext.toLowerCase());
 
   // Create the initial file entry with uploading status
-  await File.create({
-    _id: id,
-    extension: ext,
-    type: "file",
-    userId: ownerId,
-    path: dirPath,
-    size: size || 0,
-    name: name,
-    parentDir: dirId,
-    hasThumbnail: isMedia,
-    uploadStatus: "uploading",
-  });
+  await withTransaction(async (session) => {
+    await File.create(
+      [
+        {
+          _id: id,
+          extension: ext,
+          type: "file",
+          userId: ownerId,
+          path: dirPath,
+          size: size || 0,
+          name: name,
+          parentDir: dirId,
+          hasThumbnail: isMedia,
+          uploadStatus: "uploading",
+        },
+      ],
+      { session },
+    );
 
-  if (size) {
-    await updateParentDirectorySize(dirId, size);
-  }
+    if (size) {
+      await updateParentDirectorySize(dirId, size, session);
+    }
+  });
 
   await cacheDel("dir:contents:" + dirId);
   await cacheDel("dir:meta:" + dirId);
@@ -1370,7 +1532,22 @@ export const uploadVaultMultipartInitiateLogic = async ({
   name,
   size,
   contentType,
+  planContext,
 }) => {
+  // Validate maxUploadFileSize against plan tier rules
+  const maxUploadFileSize =
+    planContext?.rules?.limits?.maxUploadFileSize ||
+    planContext?.maxUploadFileSize ||
+    5 * 1024 * 1024 * 1024;
+
+  if (size && Number(size) > maxUploadFileSize) {
+    const error = new Error(
+      `File size exceeds your plan upload limit. Maximum allowed size is ${Math.round(maxUploadFileSize / (1024 * 1024))} MB.`,
+    );
+    error.status = 413;
+    throw error;
+  }
+
   const dirId =
     !parentDirId || parentDirId === "root" || parentDirId === "undefined"
       ? rootDirId
@@ -1412,24 +1589,31 @@ export const uploadVaultMultipartInitiateLogic = async ({
     imageExtensions.includes(ext.toLowerCase()) ||
     videoExtensions.includes(ext.toLowerCase());
 
-  // 2. Create the placeholder File record with uploading status
-  await File.create({
-    _id: id,
-    extension: ext,
-    type: "file",
-    userId: ownerId,
-    path: dirPath,
-    size: size || 0,
-    name: name,
-    parentDir: dirId,
-    hasThumbnail: isMedia,
-    uploadStatus: "uploading",
-    uploadId: uploadId,
-  });
+  // 2. Create the placeholder File record with uploading status inside transaction
+  await withTransaction(async (session) => {
+    await File.create(
+      [
+        {
+          _id: id,
+          extension: ext,
+          type: "file",
+          userId: ownerId,
+          path: dirPath,
+          size: size || 0,
+          name: name,
+          parentDir: dirId,
+          hasThumbnail: isMedia,
+          uploadStatus: "uploading",
+          uploadId: uploadId,
+        },
+      ],
+      { session },
+    );
 
-  if (size) {
-    await updateParentDirectorySize(dirId, size);
-  }
+    if (size) {
+      await updateParentDirectorySize(dirId, size, session);
+    }
+  });
 
   await cacheDel("dir:contents:" + dirId);
   await cacheDel("dir:meta:" + dirId);
@@ -1630,11 +1814,12 @@ export const uploadVaultMultipartAbortLogic = async ({
     }
   }
 
-  if (file.size && file.parentDir) {
-    await updateParentDirectorySize(file.parentDir, -file.size);
-  }
-
-  await File.deleteOne({ _id: fileId });
+  await withTransaction(async (session) => {
+    if (file.size && file.parentDir) {
+      await updateParentDirectorySize(file.parentDir, -file.size, session);
+    }
+    await File.deleteOne({ _id: fileId }).session(session);
+  });
 
   if (file.parentDir) {
     await cacheDel("dir:contents:" + file.parentDir.toString());
@@ -1706,10 +1891,7 @@ export const deleteFileLogic = async ({ fileId, userId, permanent, userRole }) =
     throw error;
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
+  await withTransaction(async (session) => {
     const isPermanent = permanent;
 
     await updateParentDirectorySize(
@@ -1732,18 +1914,11 @@ export const deleteFileLogic = async ({ fileId, userId, permanent, userRole }) =
         await deleteFromB2({ key: `thumbnails/${fileId}.jpg` });
       }
     }
+  });
 
-    await session.commitTransaction();
-
-    if (fileData.parentDir) {
-      await cacheDel("dir:contents:" + fileData.parentDir.toString());
-      await cacheDel("dir:meta:" + fileData.parentDir.toString());
-    }
-  } catch (txError) {
-    await session.abortTransaction();
-    throw txError;
-  } finally {
-    session.endSession();
+  if (fileData.parentDir) {
+    await cacheDel("dir:contents:" + fileData.parentDir.toString());
+    await cacheDel("dir:meta:" + fileData.parentDir.toString());
   }
 };
 
@@ -1790,11 +1965,14 @@ export const saveFileLogic = async ({ fileId, userId, userRole, content }) => {
       ? { $set: { size: newSize }, $inc: { contentVersion: 1 } }
       : { $set: { size: newSize, contentVersion: 2 } };
 
-  await File.updateOne({ _id: fileId }, updateOperation);
+  await withTransaction(async (session) => {
+    await File.updateOne({ _id: fileId }, updateOperation, { session });
 
-  if (sizeDiff !== 0) {
-    await updateParentDirectorySize(file.parentDir, sizeDiff);
-  }
+    if (sizeDiff !== 0) {
+      await updateParentDirectorySize(file.parentDir, sizeDiff, session);
+    }
+  });
+
   if (file && file.parentDir) {
     await cacheDel("dir:meta:" + file.parentDir.toString());
     await cacheDel("dir:contents:" + file.parentDir.toString());

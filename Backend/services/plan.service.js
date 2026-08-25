@@ -8,8 +8,13 @@ import User from "../models/userModel.js";
 import Subscription from "../models/subscriptionModel.js";
 import TrialClaim from "../models/trialClaimModel.js";
 import { hashPhoneNumber } from "../utils/crypto.utils.js";
-import { invalidateUserSessions } from "../databases/redis.js";
+import {
+  invalidateUserSessions,
+  invalidateGlobalPlanCache,
+  invalidateAllPlanContexts,
+} from "../databases/redis.js";
 import { subscriptionActivated } from "./notification.service.js";
+import { withTransaction } from "../utils/transaction.js";
 
 export const createPlanLogic = async ({ planData, userId, userRole }) => {
   const { slug, amount, storage, period, currency } = planData;
@@ -57,25 +62,33 @@ export const createPlanLogic = async ({ planData, userId, userRole }) => {
   console.log(newPlan);
   console.log(slug, period);
 
-  const disablingPlans = await BillingPlan.updateMany(
-    {
-      slug,
-      period,
-    },
-    {
-      active: false,
-    },
-  );
+  let plan = null;
+  await withTransaction(async (session) => {
+    await BillingPlan.updateMany(
+      {
+        slug,
+        period,
+      },
+      {
+        active: false,
+      },
+      { session },
+    );
 
-  console.log(disablingPlans);
-
-  const plan = await BillingPlan.create({
-    razorpayPlanId: newPlan.id,
-    slug,
-    amount,
-    currency: planCurrency,
-    period,
-    storage,
+    const [createdPlan] = await BillingPlan.create(
+      [
+        {
+          razorpayPlanId: newPlan.id,
+          slug,
+          amount,
+          currency: planCurrency,
+          period,
+          storage,
+        },
+      ],
+      { session },
+    );
+    plan = createdPlan;
   });
 
   console.log("[Plan] Created:", plan.razorpayPlanId);
@@ -181,15 +194,101 @@ export const getOwnerSettingsLogic = async ({ userRole }) => {
     );
   }
 
-  // TODO: fetch and return all owner settings
+  // 1. Delete any legacy/invalid Yearly Free Trial plans from database
+  await BillingPlan.deleteMany({
+    slug: { $in: ["free-trial", "free-trail"] },
+    period: "Yearly",
+  });
+
   const systemConfig = await SystemConfig.findOne({ key: "global" }).lean();
   const features = await Feature.find().lean();
-
+  const allFeatureIds = features.map((f) => f._id);
   const planTiers = await PlanTier.find().lean();
+
+  // 2. Auto-heal any tiers that might be missing billing plans or configurations
+  for (const tier of planTiers) {
+    const slug = tier.slug;
+    const isTrial = ["free-trial", "free-trail"].includes(slug);
+
+    // Ensure Monthly plan exists
+    const monthlyPlan = await BillingPlan.findOne({ slug, period: "Monthly" });
+    if (!monthlyPlan) {
+      await BillingPlan.create({
+        tier: tier._id,
+        slug,
+        period: "Monthly",
+        amount: isTrial ? 0 : 199,
+        currency: "INR",
+        storage: 5 * 1024 ** 3,
+        razorpayPlanId: isTrial ? "plan_free_monthly" : `plan_${slug}_monthly_auto`,
+        active: true,
+      });
+    }
+
+    // Ensure Yearly plan exists for non-trial plans
+    if (!isTrial) {
+      const yearlyPlan = await BillingPlan.findOne({ slug, period: "Yearly" });
+      if (!yearlyPlan) {
+        await BillingPlan.create({
+          tier: tier._id,
+          slug,
+          period: "Yearly",
+          amount: 1999,
+          currency: "INR",
+          storage: 5 * 1024 ** 3,
+          razorpayPlanId: `plan_${slug}_yearly_auto`,
+          active: true,
+        });
+      }
+    }
+
+    // Ensure PlanTierConfiguration exists
+    const config = await PlanTierConfiguration.findOne({
+      $or: [{ tier: tier._id }, { slug }],
+    });
+    if (!config) {
+      await PlanTierConfiguration.create({
+        tier: tier._id,
+        slug,
+        features: allFeatureIds,
+        rules: {
+          permissions: {
+            allowUpload: true,
+            allowDownload: true,
+            allowSharing: true,
+            allowEdit: true,
+            allowMove: true,
+            allowCopy: true,
+            allowDelete: true,
+          },
+          limits: {
+            storageLimit: 5 * 1024 * 1024 * 1024,
+            maxConnectedDevices: 5,
+            maxUploadFileSize: 5 * 1024 * 1024 * 1024,
+          },
+          settings: {
+            uploadSpeedMultiplier: 5,
+            versionHistoryDays: 30,
+            deleteFilesAfterExpiryDays: 0,
+          },
+        },
+      });
+    }
+  }
+
   const planTierConfigurations = await PlanTierConfiguration.find()
+    .populate("tier")
     .populate("features")
     .lean();
-  const billingPlans = await BillingPlan.find({ active: true }).lean();
+
+  const billingPlans = await BillingPlan.find({
+    $nor: [
+      {
+        slug: { $in: ["free-trial", "free-trail"] },
+        period: "Yearly",
+      },
+    ],
+  }).lean();
 
   const tierFeatureConfigs = {};
   const tierRuleConfigs = {};
@@ -197,10 +296,16 @@ export const getOwnerSettingsLogic = async ({ userRole }) => {
   planTierConfigurations.forEach((config) => {
     const slugKey = config.slug || config.tier?.slug;
     if (slugKey) {
-      tierFeatureConfigs[slugKey] = (config.features || []).map((f) =>
+      const featureKeys = (config.features || []).map((f) =>
         typeof f === "object" ? f.key : f,
       );
+      tierFeatureConfigs[slugKey] = featureKeys;
       tierRuleConfigs[slugKey] = config.rules || {};
+
+      if (slugKey.toLowerCase() !== slugKey) {
+        tierFeatureConfigs[slugKey.toLowerCase()] = featureKeys;
+        tierRuleConfigs[slugKey.toLowerCase()] = config.rules || {};
+      }
     }
   });
 
@@ -223,7 +328,6 @@ export const updateGlobalLimitsLogic = async ({ limits, userRole }) => {
     );
   }
 
-  // TODO: Update global system config in DB using req.body
   const {
     maxDevicesLimit,
     maxFileSizeLimit,
@@ -232,9 +336,10 @@ export const updateGlobalLimitsLogic = async ({ limits, userRole }) => {
     maxFileSizeValue,
     sessionTimeoutUnit,
     sessionTimeoutValue,
+    freeTrialInheritedTier,
   } = limits;
 
-  console.log(
+  const updateDoc = {
     maxDevicesLimit,
     maxFileSizeLimit,
     defaultStorageUnit,
@@ -242,107 +347,112 @@ export const updateGlobalLimitsLogic = async ({ limits, userRole }) => {
     maxFileSizeValue,
     sessionTimeoutUnit,
     sessionTimeoutValue,
+  };
+
+  if (freeTrialInheritedTier !== undefined) {
+    updateDoc.freeTrialInheritedTier = freeTrialInheritedTier;
+
+    // Look up the storage for the free-trial billing plan
+    const freeTrialPlanDoc =
+      (await BillingPlan.findOne({
+        slug: { $in: ["free-trial", "free-trail"] },
+        active: true,
+      }).lean()) ||
+      (await BillingPlan.findOne({
+        amount: 0,
+        active: true,
+      }).lean());
+
+    const grantedStorage = freeTrialPlanDoc?.storage || 5368709120;
+
+    // Find all active/valid free trial subscriptions and update user maxStorage in MongoDB
+    const freeTrialSubs = await Subscription.find({
+      $or: [{ isFreeTrial: true }, { amount: 0 }],
+      status: { $in: ["active", "paused", "authenticated"] },
+    })
+      .select("_id userId")
+      .lean();
+
+    if (freeTrialSubs.length > 0) {
+      const freeTrialSubIds = freeTrialSubs.map((s) => s._id);
+      const freeTrialUserIds = freeTrialSubs
+        .map((s) => s.userId)
+        .filter(Boolean);
+      await User.updateMany(
+        {
+          $or: [
+            { subscription: { $in: freeTrialSubIds } },
+            { _id: { $in: freeTrialUserIds } },
+          ],
+        },
+        { $set: { maxStorage: grantedStorage } },
+      );
+    }
+  }
+
+  const globalLimits = await SystemConfig.findOneAndUpdate(
+    { key: "global" },
+    { $set: updateDoc },
+    { new: true, upsert: true },
   );
 
-  const systemConfig = await SystemConfig.findOneAndUpdate(
-    { key: "global" },
-    {
-      maxDevicesLimit,
-      maxFileSizeLimit,
-      defaultStorageUnit,
-      maxFileSizeUnit,
-      maxFileSizeValue,
-      sessionTimeoutUnit,
-      sessionTimeoutValue,
-    },
-    {
-      upsert: true,
-      returnDocument: "after",
-    },
-  ).lean();
+  await invalidateGlobalPlanCache();
 
-  return systemConfig;
+  return globalLimits;
 };
 
 export const updatePlansLogic = async ({ plans, userRole }) => {
   if (userRole !== "Owner") {
     throw Object.assign(
-      new Error("Access denied. Only Owners can update billing plans."),
+      new Error("Access denied. Only Owners can update plans."),
       { status: 403 },
     );
   }
 
-  if (!Array.isArray(plans) || plans.length === 0) {
-    throw Object.assign(new Error("Plans array is required"), { status: 400 });
-  }
+  const sysConfig = await SystemConfig.findOne({ key: "global" }).lean();
+  const currentFreeTrialInheritedTier =
+    sysConfig?.freeTrialInheritedTier || "ultimate";
 
   const updatedPlans = await Promise.all(
     plans.map(async (p) => {
-      const planCurrency = (p.currency || "INR").toUpperCase();
-      const numAmount = Number(p.amount) || 0;
-      const numStorage = Number(p.storage) || 0;
+      const numAmount = Number(p.amount);
+      const numStorage = Number(p.storage);
+      const planCurrency = p.currency || "USD";
 
-      // 1. Fetch current document to detect changes
-      const currentDoc = p._id ? await BillingPlan.findById(p._id) : null;
+      let rzPlanId = p.razorpayPlanId;
 
-      const isAmountChanged = !currentDoc || currentDoc.amount !== numAmount;
-      const isPeriodChanged = !currentDoc || currentDoc.period !== p.period;
-      const isCurrencyChanged =
-        !currentDoc || currentDoc.currency !== planCurrency;
-      const hasRazorpayPlan =
-        currentDoc &&
-        currentDoc.razorpayPlanId &&
-        currentDoc.razorpayPlanId.trim() !== "";
-
-      let rzPlanId = currentDoc?.razorpayPlanId;
-
-      // 2. If amount, period, or currency changed, or missing razorpayPlanId
+      // 1. If Razorpay is configured and this is a paid plan without a razorpayPlanId
       if (
-        isAmountChanged ||
-        isPeriodChanged ||
-        isCurrencyChanged ||
-        !hasRazorpayPlan
+        rzInstance &&
+        numAmount > 0 &&
+        (!rzPlanId || rzPlanId.startsWith("plan_fallback_") || rzPlanId.includes("_auto"))
       ) {
-        // Check if an existing plan already has this exact configuration and Razorpay Plan ID
-        const existingMatchingPlan = await BillingPlan.findOne({
-          slug: p.slug,
-          amount: numAmount,
-          period: p.period,
-          currency: planCurrency,
-          razorpayPlanId: { $exists: true, $ne: "" },
-        });
+        try {
+          const razorpayPeriod =
+            p.period?.toLowerCase() === "yearly" ? "yearly" : "monthly";
 
-        if (existingMatchingPlan?.razorpayPlanId) {
-          rzPlanId = existingMatchingPlan.razorpayPlanId;
-        } else {
-          // Create a new Razorpay Plan
-          const zeroDecimalCurrencies = ["JPY", "KRW"];
-          const rzAmount = zeroDecimalCurrencies.includes(planCurrency)
-            ? Math.round(numAmount)
-            : Math.round(numAmount * 100);
-
-          try {
-            const newRzPlan = await rzInstance.plans.create({
-              period: p.period.toLowerCase(),
-              interval: 1,
-              item: {
-                name: `${p.slug} - ${p.period}`,
-                amount: rzAmount,
-                currency: planCurrency,
-              },
-            });
-            rzPlanId = newRzPlan.id;
-            console.log(
-              `[updatePlans] Created new Razorpay plan for ${p.slug} (${p.period}):`,
-              rzPlanId,
-            );
-          } catch (rzErr) {
-            console.error(
-              `[updatePlans] Razorpay plan creation error for ${p.slug}:`,
-              rzErr?.error?.description || rzErr.message || rzErr,
-            );
-          }
+          const newRzPlan = await rzInstance.plans.create({
+            period: razorpayPeriod,
+            interval: 1,
+            item: {
+              name: `${p.slug} - ${p.period}`,
+              amount: Math.round(numAmount * 100),
+              currency: planCurrency,
+              description: `${p.period} plan for ${p.slug}`,
+            },
+          });
+          rzPlanId = newRzPlan.id;
+        } catch (rzErr) {
+          console.warn(
+            `[updatePlansLogic] Razorpay API warning for ${p.slug} (${p.period}):`,
+            rzErr.message,
+          );
         }
+      }
+
+      // 2. If it's a free / trial plan, assign system fallback
+      if (numAmount === 0 && !rzPlanId) {
+        rzPlanId = `plan_free_${p.period?.toLowerCase() || "monthly"}`;
       }
 
       // 3. Update the BillingPlan in MongoDB
@@ -371,10 +481,69 @@ export const updatePlansLogic = async ({ plans, userRole }) => {
         { returnDocument: "after", upsert: true },
       ).lean();
 
+      // 4. Synchronize PlanTierConfiguration limit
+      if (numStorage > 0) {
+        await PlanTierConfiguration.findOneAndUpdate(
+          { slug: p.slug },
+          { $set: { "rules.limits.storageLimit": numStorage } },
+        );
+
+        // 5. Update user maxStorage for users subscribed to this plan
+        const subsForPlan = await Subscription.find({
+          billingPlan: updatedDoc._id,
+          status: { $in: ["active", "paused", "authenticated"] },
+        })
+          .select("_id userId")
+          .lean();
+
+        if (subsForPlan.length > 0) {
+          const subIds = subsForPlan.map((s) => s._id);
+          const userIds = subsForPlan.map((s) => s.userId).filter(Boolean);
+          await User.updateMany(
+            {
+              $or: [
+                { subscription: { $in: subIds } },
+                { _id: { $in: userIds } },
+              ],
+            },
+            { $set: { maxStorage: numStorage } },
+          );
+        }
+
+        // 6. If this is a free trial plan, update all Free Trial users directly
+        const isFreeTrialPlan =
+          ["free-trial", "free-trail"].includes(p.slug) || updatedDoc.amount === 0;
+        if (isFreeTrialPlan) {
+          const freeTrialSubs = await Subscription.find({
+            $or: [{ isFreeTrial: true }, { amount: 0 }],
+            status: { $in: ["active", "paused", "authenticated"] },
+          })
+            .select("_id userId")
+            .lean();
+
+          if (freeTrialSubs.length > 0) {
+            const freeTrialSubIds = freeTrialSubs.map((s) => s._id);
+            const freeTrialUserIds = freeTrialSubs
+              .map((s) => s.userId)
+              .filter(Boolean);
+            await User.updateMany(
+              {
+                $or: [
+                  { subscription: { $in: freeTrialSubIds } },
+                  { _id: { $in: freeTrialUserIds } },
+                ],
+              },
+              { $set: { maxStorage: numStorage } },
+            );
+          }
+        }
+      }
+
       return updatedDoc;
     }),
   );
 
+  await invalidateGlobalPlanCache();
   return updatedPlans;
 };
 
@@ -405,6 +574,7 @@ export const updatePlanTiersLogic = async ({ tiers, userRole }) => {
     await PlanTier.bulkWrite(bulkOps);
   }
 
+  await invalidateGlobalPlanCache();
   return tiers;
 };
 
@@ -456,6 +626,8 @@ export const updatePlanTierActiveLogic = async ({
     slug: updatedTier.slug,
   }).lean();
 
+  await invalidateGlobalPlanCache();
+
   return {
     updatedTier,
     updatedBillingPlans,
@@ -489,6 +661,7 @@ export const updateFeaturesLogic = async ({ features, userRole }) => {
     await Feature.bulkWrite(bulkOps);
   }
 
+  await invalidateGlobalPlanCache();
   return features;
 };
 
@@ -509,13 +682,31 @@ export const updateTierConfigurationsLogic = async ({ configs, userRole }) => {
   const allFeatures = await Feature.find().lean();
   const featureKeyToId = {};
   allFeatures.forEach((f) => {
-    featureKeyToId[f.key] = f._id;
+    if (f.key) {
+      featureKeyToId[f.key] = f._id;
+      featureKeyToId[f.key.toLowerCase()] = f._id;
+    }
+    if (f.slug) {
+      featureKeyToId[f.slug] = f._id;
+      featureKeyToId[f.slug.toLowerCase()] = f._id;
+    }
+    if (f.title) {
+      featureKeyToId[f.title] = f._id;
+      featureKeyToId[f.title.toLowerCase()] = f._id;
+    }
   });
 
   const allTiers = await PlanTier.find().lean();
   const tierSlugToDoc = {};
   allTiers.forEach((t) => {
-    tierSlugToDoc[t.slug] = t;
+    if (t.slug) {
+      tierSlugToDoc[t.slug] = t;
+      tierSlugToDoc[t.slug.toLowerCase()] = t;
+    }
+    if (t.title) {
+      tierSlugToDoc[t.title] = t;
+      tierSlugToDoc[t.title.toLowerCase()] = t;
+    }
   });
 
   const allSlugs = Array.from(
@@ -526,22 +717,159 @@ export const updateTierConfigurationsLogic = async ({ configs, userRole }) => {
   );
 
   const bulkOps = allSlugs
-    .filter((slug) => tierSlugToDoc[slug])
     .map((slug) => {
-      const tierDoc = tierSlugToDoc[slug];
-      const featureKeys = tierFeatureConfigs[slug] || [];
+      const tierDoc = tierSlugToDoc[slug] || tierSlugToDoc[slug.toLowerCase()];
+      const featureKeys = tierFeatureConfigs[slug] || tierFeatureConfigs[slug.toLowerCase()] || [];
       const featureIds = featureKeys
-        .map((key) => featureKeyToId[key])
+        .map((key) => featureKeyToId[key] || featureKeyToId[key?.toLowerCase()])
         .filter(Boolean);
-      const rules = tierRuleConfigs[slug] || {};
+      const rawRules = tierRuleConfigs[slug] || tierRuleConfigs[slug.toLowerCase()] || {};
+
+      // 1. Normalize Permissions
+      const permissions = {
+        allowUpload:
+          rawRules.allowUpload !== undefined
+            ? Boolean(rawRules.allowUpload)
+            : (rawRules.permissions?.allowUpload ?? true),
+        allowDownload:
+          rawRules.allowDownload !== undefined
+            ? Boolean(rawRules.allowDownload)
+            : (rawRules.permissions?.allowDownload ?? true),
+        allowSharing:
+          rawRules.allowSharing !== undefined
+            ? Boolean(rawRules.allowSharing)
+            : (rawRules.permissions?.allowSharing ?? true),
+        allowEdit:
+          rawRules.allowEdit !== undefined
+            ? Boolean(rawRules.allowEdit)
+            : (rawRules.permissions?.allowEdit ?? true),
+        allowMove:
+          rawRules.allowMove !== undefined
+            ? Boolean(rawRules.allowMove)
+            : (rawRules.permissions?.allowMove ?? true),
+        allowCopy:
+          rawRules.allowCopy !== undefined
+            ? Boolean(rawRules.allowCopy)
+            : (rawRules.permissions?.allowCopy ?? true),
+        allowDelete:
+          rawRules.allowDelete !== undefined
+            ? Boolean(rawRules.allowDelete)
+            : (rawRules.permissions?.allowDelete ?? true),
+      };
+
+      // 2. Normalize Limits
+      let maxUploadFileSize =
+        rawRules.limits?.maxUploadFileSize ||
+        rawRules.maxUploadFileSize ||
+        0;
+
+      if (rawRules.maxUploadSizeVal !== undefined) {
+        const val = Number(rawRules.maxUploadSizeVal) || 0;
+        const unit = rawRules.maxUploadSizeUnit || "GB";
+        const multiplier =
+          unit === "TB"
+            ? 1024 * 1024 * 1024 * 1024
+            : unit === "GB"
+            ? 1024 * 1024 * 1024
+            : 1024 * 1024;
+        maxUploadFileSize = val * multiplier;
+      }
+
+      if (!maxUploadFileSize && rawRules.maxUploadSize) {
+        maxUploadFileSize = Number(rawRules.maxUploadSize) || 5 * 1024 * 1024 * 1024;
+      }
+
+      const maxConnectedDevices = Number(
+        rawRules.maxConnectedDevices ??
+          rawRules.limits?.maxConnectedDevices ??
+          5,
+      );
+
+      const storageLimit = Number(
+        rawRules.storageLimit ??
+          rawRules.limits?.storageLimit ??
+          5 * 1024 * 1024 * 1024,
+      );
+
+      const limits = {
+        storageLimit,
+        maxConnectedDevices,
+        maxUploadFileSize: maxUploadFileSize || 5 * 1024 * 1024 * 1024,
+      };
+
+      // 3. Normalize Settings
+      const uploadSpeedMultiplier =
+        Number(
+          String(
+            rawRules.uploadSpeedMultiplier ??
+              rawRules.settings?.uploadSpeedMultiplier ??
+              "1",
+          ).replace(/[^0-9.]/g, ""),
+        ) || 1;
+
+      const deleteFilesAfterExpiryDays =
+        Number(
+          String(
+            rawRules.deleteFilesAfterExpiry ??
+              rawRules.deleteFilesAfterExpiryDays ??
+              rawRules.settings?.deleteFilesAfterExpiryDays ??
+              "0",
+          ).replace(/[^0-9]/g, ""),
+        ) || 0;
+
+      const versionHistoryDays =
+        Number(
+          String(
+            rawRules.versionHistoryDays ??
+              rawRules.settings?.versionHistoryDays ??
+              "30",
+          ).replace(/[^0-9]/g, ""),
+        ) || 30;
+
+      const settings = {
+        uploadSpeedMultiplier,
+        deleteFilesAfterExpiryDays,
+        versionHistoryDays,
+      };
+
+      const rules = {
+        permissions,
+        limits,
+        settings,
+        allowUpload: permissions.allowUpload,
+        allowDownload: permissions.allowDownload,
+        allowSharing: permissions.allowSharing,
+        maxConnectedDevices,
+        maxUploadSizeVal: rawRules.maxUploadSizeVal,
+        maxUploadSizeUnit: rawRules.maxUploadSizeUnit,
+        uploadSpeedMultiplier,
+        deleteFilesAfterExpiry: rawRules.deleteFilesAfterExpiry,
+        versionHistoryDays,
+      };
+
+      const tierId = tierDoc?._id;
+      const targetSlug = tierDoc?.slug || slug;
 
       return {
         updateOne: {
-          filter: { tier: tierDoc._id },
+          filter: tierId
+            ? {
+                $or: [
+                  { tier: tierId },
+                  { slug: targetSlug },
+                  { slug: { $regex: new RegExp(`^${targetSlug}$`, "i") } },
+                ],
+              }
+            : {
+                $or: [
+                  { slug: targetSlug },
+                  { slug: { $regex: new RegExp(`^${targetSlug}$`, "i") } },
+                ],
+              },
           update: {
             $set: {
-              tier: tierDoc._id,
-              slug,
+              ...(tierId ? { tier: tierId } : {}),
+              slug: targetSlug,
               features: featureIds,
               rules,
             },
@@ -555,7 +883,35 @@ export const updateTierConfigurationsLogic = async ({ configs, userRole }) => {
     await PlanTierConfiguration.bulkWrite(bulkOps);
   }
 
+  // Also sync storageLimit from rules into BillingPlans and User accounts if set
+  for (const slug of allSlugs) {
+    const rules = tierRuleConfigs[slug] || tierRuleConfigs[slug.toLowerCase()];
+    const storageLimit = Number(rules?.limits?.storageLimit);
+    if (storageLimit && storageLimit > 0) {
+      await BillingPlan.updateMany(
+        { slug: { $regex: new RegExp(`^${slug}$`, "i") } },
+        { $set: { storage: storageLimit } }
+      );
+      const subs = await Subscription.find({
+        status: { $in: ["active", "paused", "authenticated"] },
+      }).populate("billingPlan").lean();
+
+      const matchedUserIds = subs
+        .filter((s) => s.billingPlan?.slug?.toLowerCase() === slug.toLowerCase())
+        .map((s) => s.userId)
+        .filter(Boolean);
+
+      if (matchedUserIds.length > 0) {
+        await User.updateMany(
+          { _id: { $in: matchedUserIds } },
+          { $set: { maxStorage: storageLimit } },
+        );
+      }
+    }
+  }
+
   const updatedConfigs = await PlanTierConfiguration.find()
+    .populate("tier")
     .populate("features")
     .lean();
 
@@ -565,12 +921,19 @@ export const updateTierConfigurationsLogic = async ({ configs, userRole }) => {
   updatedConfigs.forEach((config) => {
     const slugKey = config.slug || config.tier?.slug;
     if (slugKey) {
-      updatedTierFeatureConfigs[slugKey] = (config.features || []).map((f) =>
+      const featureKeys = (config.features || []).map((f) =>
         typeof f === "object" ? f.key : f,
       );
+      updatedTierFeatureConfigs[slugKey] = featureKeys;
       updatedTierRuleConfigs[slugKey] = config.rules || {};
+      if (slugKey.toLowerCase() !== slugKey) {
+        updatedTierFeatureConfigs[slugKey.toLowerCase()] = featureKeys;
+        updatedTierRuleConfigs[slugKey.toLowerCase()] = config.rules || {};
+      }
     }
   });
+
+  await invalidateGlobalPlanCache();
 
   return {
     tierFeatureConfigs: updatedTierFeatureConfigs,
@@ -587,44 +950,66 @@ export const createPlanTierLogic = async ({ tierData, userRole }) => {
   }
 
   const { slug, title, description, badge, accentColor } = tierData;
-  const newTier = await PlanTier.create({
-    slug,
-    title,
-    description,
-    badge,
-    accentColor,
-  });
+  const slugKey = (
+    slug ||
+    tierData.type?.toLowerCase().replace(/\s+/g, "-") ||
+    title?.toLowerCase().replace(/\s+/g, "-") ||
+    "custom-tier"
+  ).trim();
 
-  await BillingPlan.updateMany({ slug }, { active: false });
+  const newTier = await PlanTier.findOneAndUpdate(
+    { slug: slugKey },
+    {
+      $set: {
+        slug: slugKey,
+        title: title || slugKey,
+        description: description || "",
+        badge: badge || "",
+        accentColor: accentColor || "rose",
+        active: tierData.active !== undefined ? tierData.active : true,
+      },
+    },
+    { upsert: true, returnDocument: "after" },
+  );
 
   const defaultStorage = Number(tierData.storage) || 5 * 1024 ** 3;
-  const defaultAmount = Number(tierData.amount) || 0;
+  const defaultAmount = Number(tierData.amount) || 199;
 
-  const plans = [
-    {
-      period: "Monthly",
-      amount: defaultAmount,
-      currency: "INR",
-      storage: defaultStorage,
-    },
-    {
-      period: "Yearly",
-      amount: defaultAmount > 0 ? Math.round(defaultAmount * 10) : 0,
-      currency: "INR",
-      storage: defaultStorage,
-    },
-  ];
+  const isFreeTrial = ["free-trial", "free-trail"].includes(slugKey);
+  const plans = isFreeTrial
+    ? [
+        {
+          period: "Monthly",
+          amount: 0,
+          currency: "INR",
+          storage: defaultStorage,
+        },
+      ]
+    : [
+        {
+          period: "Monthly",
+          amount: defaultAmount,
+          currency: "INR",
+          storage: defaultStorage,
+        },
+        {
+          period: "Yearly",
+          amount: defaultAmount > 0 ? Math.round(defaultAmount * 10) : 0,
+          currency: "INR",
+          storage: defaultStorage,
+        },
+      ];
 
   const createdBillingPlans = await Promise.all(
     plans.map(async (plan) => {
       let rzPlanId = null;
-      if (plan.amount > 0) {
+      if (plan.amount > 0 && rzInstance) {
         try {
           const newRzPlan = await rzInstance.plans.create({
             period: plan.period.toLowerCase(),
             interval: 1,
             item: {
-              name: `${title || slug} - ${plan.period}`,
+              name: `${title || slugKey} - ${plan.period}`,
               amount: Math.round(plan.amount * 100),
               currency: plan.currency,
             },
@@ -632,36 +1017,42 @@ export const createPlanTierLogic = async ({ tierData, userRole }) => {
           rzPlanId = newRzPlan.id;
         } catch (rzErr) {
           console.warn(
-            `[createPlanTier] Razorpay fallback used for ${slug}:`,
+            `[createPlanTier] Razorpay fallback used for ${slugKey}:`,
             rzErr.message,
           );
-          rzPlanId = `plan_${slug}_${plan.period.toLowerCase()}_auto`;
+          rzPlanId = `plan_${slugKey}_${plan.period.toLowerCase()}_auto`;
         }
       } else {
-        rzPlanId = `plan_${slug}_${plan.period.toLowerCase()}_free`;
+        rzPlanId = `plan_${slugKey}_${plan.period.toLowerCase()}_free`;
       }
 
-      return await BillingPlan.create({
-        tier: newTier._id,
-        slug,
-        amount: plan.amount,
-        currency: plan.currency,
-        period: plan.period,
-        storage: plan.storage,
-        razorpayPlanId: rzPlanId,
-        active: true,
-      });
+      return await BillingPlan.findOneAndUpdate(
+        { slug: slugKey, period: plan.period },
+        {
+          $set: {
+            tier: newTier._id,
+            slug: slugKey,
+            amount: plan.amount,
+            currency: plan.currency,
+            period: plan.period,
+            storage: plan.storage,
+            razorpayPlanId: rzPlanId,
+            active: true,
+          },
+        },
+        { upsert: true, returnDocument: "after" },
+      );
     }),
   );
 
   // Auto-seed default PlanTierConfiguration
   const allFeatures = await Feature.find().select("_id");
-  await PlanTierConfiguration.findOneAndUpdate(
-    { tier: newTier._id, slug },
+  const newConfig = await PlanTierConfiguration.findOneAndUpdate(
+    { $or: [{ tier: newTier._id }, { slug: slugKey }] },
     {
       $set: {
         tier: newTier._id,
-        slug,
+        slug: slugKey,
         features: allFeatures.map((f) => f._id),
         rules: {
           permissions: {
@@ -689,9 +1080,12 @@ export const createPlanTierLogic = async ({ tierData, userRole }) => {
     { upsert: true, returnDocument: "after" },
   );
 
+  await invalidateGlobalPlanCache();
+
   return {
     newTier,
     createdBillingPlans,
+    newConfig,
   };
 };
 
@@ -701,17 +1095,7 @@ export const activateFreeTrialLogic = async ({ userId, req }) => {
     throw Object.assign(new Error("User not found"), { status: 404 });
   }
 
-  // 1. Mandatory phone verification
-  if (!user.phone || !user.phoneVerified) {
-    const err = new Error(
-      "Phone number verification is required to claim the 30-day Free Trial.",
-    );
-    err.status = 403;
-    err.code = "PHONE_VERIFICATION_REQUIRED";
-    throw err;
-  }
-
-  // 2. Check if current user has already used trial
+  // 1. Check if current user has already used trial
   if (user.hasUsedFreeTrial) {
     throw Object.assign(
       new Error(
@@ -721,26 +1105,16 @@ export const activateFreeTrialLogic = async ({ userId, req }) => {
     );
   }
 
-  // 3. Atomically claim entitlement for this canonical phone identity
-  const phoneHash = hashPhoneNumber(user.phone);
-  try {
-    await TrialClaim.create({
-      phoneHash,
-      firstClaimedByUserId: user._id,
-      claimedAt: new Date(),
-      claimedIp: req?.ip || req?.headers?.["x-forwarded-for"] || null,
-    });
-  } catch (claimErr) {
-    if (claimErr.code === 11000) {
-      throw Object.assign(
-        new Error(
-          "This phone number has already been used to claim a 30-day Free Trial. Please select a paid plan.",
-        ),
-        { status: 403, code: "TRIAL_ALREADY_CLAIMED" },
-      );
-    }
-    throw claimErr;
+  // 2. Enforce verified phone number requirement for trial abuse prevention
+  if (!user.phone || !user.phoneVerified) {
+    throw Object.assign(
+      new Error("Phone number verification is required to claim the 30-day Free Trial."),
+      { status: 403, code: "PHONE_VERIFICATION_REQUIRED" },
+    );
   }
+
+  // 3. Track entitlement for phone identity to block multi-account abuse
+  const phoneHash = hashPhoneNumber(user.phone);
 
   // 4. Find the active free trial billing plan
   const freeTrialPlan =
@@ -760,24 +1134,84 @@ export const activateFreeTrialLogic = async ({ userId, req }) => {
     );
   }
 
-  // 5. Create or update subscription record for the Free Trial
-  const subscription = await Subscription.create({
-    userId: user._id,
-    billingPlan: freeTrialPlan._id,
-    razorpaySubscriptionId: `trial_${user._id}_${Date.now()}`,
-    amount: 0,
-    status: "created",
-    isFreeTrial: true,
-  });
+  // 5. Look up inherited tier from system config to set storage dynamically
+  const sysConfig = await SystemConfig.findOne({ key: "global" }).lean();
+  const inheritedSlug = sysConfig?.freeTrialInheritedTier || "ultimate";
+  const inheritedBillingPlan =
+    (await BillingPlan.findOne({
+      slug: inheritedSlug,
+      active: true,
+    }).lean()) ||
+    (await BillingPlan.findOne({ slug: inheritedSlug }).lean());
+  const inheritedConfig = await PlanTierConfiguration.findOne({
+    slug: inheritedSlug,
+  }).lean();
 
-  user.subscription = subscription._id;
-  user.hasUsedFreeTrial = true;
-  user.noSubscriptionSince = null;
-  user.noPlanSince = null;
-  if (freeTrialPlan.storage) {
-    user.maxStorage = freeTrialPlan.storage;
+  const grantedStorage =
+    inheritedBillingPlan?.storage ||
+    inheritedConfig?.rules?.limits?.storageLimit ||
+    freeTrialPlan.storage ||
+    5368709120;
+
+  // 6. Create active subscription record for the 30-Day Free Trial
+  const now = new Date();
+  const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  let subscription = null;
+  try {
+    await withTransaction(async (session) => {
+      await TrialClaim.create(
+        [
+          {
+            phoneHash,
+            firstClaimedByUserId: user._id,
+            claimedAt: now,
+            claimedIp: req?.ip || req?.headers?.["x-forwarded-for"] || null,
+          },
+        ],
+        { session },
+      );
+
+      const [createdSub] = await Subscription.create(
+        [
+          {
+            userId: user._id,
+            billingPlan: freeTrialPlan._id,
+            razorpaySubscriptionId: `trial_${user._id}_${Date.now()}`,
+            amount: 0,
+            status: "active",
+            isFreeTrial: true,
+            activatedAt: now,
+            currentStart: now,
+            currentEnd: trialEnd,
+            currentPeriodStart: now,
+            currentPeriodEnd: trialEnd,
+            chargeAt: trialEnd,
+          },
+        ],
+        { session },
+      );
+      subscription = createdSub;
+
+      user.subscription = subscription._id;
+      user.hasUsedFreeTrial = true;
+      user.noSubscriptionSince = null;
+      user.noPlanSince = null;
+      user.maxStorage = grantedStorage;
+      await user.save({ session });
+    });
+  } catch (claimErr) {
+    if (claimErr.code === 11000) {
+      throw Object.assign(
+        new Error(
+          "This phone number has already been used to claim a 30-day Free Trial. Please select a paid plan.",
+        ),
+        { status: 403, code: "TRIAL_ALREADY_CLAIMED" },
+      );
+    }
+    throw claimErr;
   }
-  await user.save();
+
   await invalidateUserSessions(user._id.toString());
 
   // Trigger subscription activated notification & resolve past warnings

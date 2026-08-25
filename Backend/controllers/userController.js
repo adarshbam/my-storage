@@ -44,7 +44,7 @@ export async function loginUser(req, res, next) {
 export async function authGoogle(req, res, next) {
   try {
     const result = await authService.authGoogleLogic({ credential: req.body.credential, req, res });
-    return res.status(result.status).json({ message: result.message });
+    return res.status(result.status || 200).json(result);
   } catch (error) {
     if (error.status) {
       if (error.status === 403 && error.redirect) {
@@ -126,14 +126,11 @@ export async function uploadProfilePic(req, res, next) {
 
 export async function getProfilePic(req, res, next) {
   try {
-    const userId = req.user._id || req.user.id;
-    await userService.getProfilePicLogic({ userId, targetUserId: req.query.id, userRole: req.user.role, res });
+    const userId = req.user?._id || req.user?.id || null;
+    const targetUserId = req.query.id || req.query.userId || req.query.targetUserId || userId;
+    await userService.getProfilePicLogic({ userId, targetUserId, userRole: req.user?.role, res });
   } catch (error) {
     if (error.status) {
-      if (error.status === 403 && error.redirect) {
-          // preserve anything specific we had here, actually wait, userController doesn't have redirect error except github which redirects instead of json.
-          // Let's just use the generic mapping
-      }
       return res.status(error.status).json(error.details ? { error: error.details } : { error: error.message });
     }
     next(error);

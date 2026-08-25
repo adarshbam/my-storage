@@ -2,12 +2,14 @@ import User from "../models/userModel.js";
 import { sanitize } from "../utils/sanitize.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
+import StarredItem from "../models/starredItemModel.js";
 import archiver from "archiver";
 import path from "path";
 import SharedAccess from "../models/sharedAccessModel.js";
 import { invalidateUserSessions } from "../databases/redis.js";
 import { getObjectFromB2 } from "../integrations/storage/s3.client.js";
 import { resolveIntegrationOwnerId } from "../utils/integrationHelper.js";
+import { withTransaction } from "../utils/transaction.js";
 
 async function getAuthenticatedAccessToken(req, requireWrite = false) {
   try {
@@ -63,20 +65,24 @@ async function getAuthenticatedAccessToken(req, requireWrite = false) {
 }
 
 export const disconnectGithubLogic = async ({ userId, rootDirId, req, res }) => {
-  await User.updateOne(
-    { _id: userId },
-    {
-      $unset: {
-        "integrations.github": "",
+  await withTransaction(async (session) => {
+    await User.updateOne(
+      { _id: userId },
+      {
+        $unset: {
+          "integrations.github": "",
+        },
       },
-    },
-  );
-  await invalidateUserSessions(userId);
+      { session },
+    );
 
-  await Directory.deleteOne({
-    userId: userId,
-    provider: "github",
+    await Directory.deleteOne({
+      userId: userId,
+      provider: "github",
+    }).session(session);
   });
+
+  await invalidateUserSessions(userId);
 
   return { success: true, message: "Github disconnected" };
 };
@@ -161,21 +167,33 @@ export const listRepositoriesLogic = async ({ req }) => {
     throw err;
   }
 
-  const githubRepositories = repos.map((repo) => ({
-    _id: repo.id,
-    name: repo.name,
-    type: "directory",
-    provider: "github",
-    githubPath: repo.full_name,
-    updatedAt: repo.updated_at,
-    private: repo.private,
-    default_branch: repo.default_branch,
-    description: repo.description,
-    stargazers_count: repo.stargazers_count,
-    forks_count: repo.forks_count,
-    open_issues_count: repo.open_issues_count,
-    html_url: repo.html_url,
-  }));
+  const userId = req.user?.id || req.user?._id;
+  const starredRecords = userId
+    ? await StarredItem.find({ userId, provider: "github", starred: true }).lean()
+    : [];
+  const starredSet = new Set(starredRecords.map((s) => s.itemId));
+
+  const githubRepositories = repos.map((repo) => {
+    const isStarred = starredSet.has(repo.full_name) || starredSet.has(repo.name) || starredSet.has(String(repo.id));
+    return {
+      _id: repo.id,
+      name: repo.name,
+      type: "directory",
+      provider: "github",
+      githubPath: repo.full_name,
+      updatedAt: repo.updated_at,
+      private: repo.private,
+      default_branch: repo.default_branch,
+      description: repo.description,
+      stargazers_count: repo.stargazers_count,
+      forks_count: repo.forks_count,
+      open_issues_count: repo.open_issues_count,
+      html_url: repo.html_url,
+      metaUrl: repo.html_url,
+      isStarred,
+      starred: isStarred,
+    };
+  });
 
   return {
     directories: githubRepositories,
@@ -211,34 +229,56 @@ export const getRepositoryContentsLogic = async ({ owner, repo, path: reqPath, r
     return { directories: [], files: [], name: repo };
   }
 
+  const userId = req.user?.id || req.user?._id;
+  const starredRecords = userId
+    ? await StarredItem.find({ userId, provider: "github", starred: true }).lean()
+    : [];
+  const starredSet = new Set(starredRecords.map((s) => s.itemId));
+
   const directories = data
     .filter((cnt) => cnt.type === "dir")
-    .map((dir) => ({
-      _id: dir.sha,
-      id: dir.sha,
-      name: dir.name,
-      type: "directory",
-      provider: "github",
-      githubPath: `${owner}/${repo}/${dir.path}`,
-      size: 0,
-      sha: dir.sha,
-    }));
+    .map((dir) => {
+      const githubPath = `${owner}/${repo}/${dir.path}`;
+      const isStarred = starredSet.has(githubPath) || starredSet.has(dir.sha);
+      return {
+        _id: dir.sha,
+        id: dir.sha,
+        name: dir.name,
+        type: "directory",
+        provider: "github",
+        githubPath,
+        size: 0,
+        sha: dir.sha,
+        html_url: dir.html_url,
+        metaUrl: dir.html_url,
+        isStarred,
+        starred: isStarred,
+      };
+    });
 
   const files = data
     .filter((cnt) => cnt.type === "file" || cnt.type === "symlink")
-    .map((file) => ({
-      _id: file.sha,
-      id: file.sha,
-      name: file.name,
-      type: "file",
-      provider: "github",
-      githubPath: `${owner}/${repo}/${file.path}`,
-      size: file.size,
-      sha: file.sha,
-      extension: file.name.includes(".")
-        ? "." + file.name.split(".").pop()
-        : "",
-    }));
+    .map((file) => {
+      const githubPath = `${owner}/${repo}/${file.path}`;
+      const isStarred = starredSet.has(githubPath) || starredSet.has(file.sha);
+      return {
+        _id: file.sha,
+        id: file.sha,
+        name: file.name,
+        type: "file",
+        provider: "github",
+        githubPath,
+        size: file.size,
+        sha: file.sha,
+        html_url: file.html_url,
+        metaUrl: file.html_url || file.download_url,
+        extension: file.name.includes(".")
+          ? "." + file.name.split(".").pop()
+          : "",
+        isStarred,
+        starred: isStarred,
+      };
+    });
 
   return {
     directories,
@@ -658,6 +698,8 @@ export const downloadFolderLogic = async ({ owner, repo, path: reqPath, branch, 
     throw err;
   }
 
+  const totalSize = files.reduce((acc, f) => acc + (f.size || 0), 0);
+
   const archive = archiver("zip", { zlib: { level: 5 } });
 
   res.setHeader(
@@ -665,6 +707,8 @@ export const downloadFolderLogic = async ({ owner, repo, path: reqPath, branch, 
     `attachment; filename="${pathPrefix.split("/").pop() || repo}.zip"`,
   );
   res.setHeader("Content-Type", "application/zip");
+  res.setHeader("X-Total-Size", totalSize);
+  res.setHeader("X-Total-Files", files.length);
   archive.pipe(res);
 
   const CHUNK_SIZE = 10;
@@ -1924,8 +1968,177 @@ export const getRepositoryDetailsLogic = async ({ owner, repo, req }) => {
   };
 };
 
+export const renameGithubItemLogic = async ({ owner, repo, oldPath, newPath, branch, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  let targetBranch = branch;
+  if (!targetBranch) {
+    const repoInfoRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}`,
+      { headers: { Authorization: `Bearer ${githubAccessToken}` } },
+    );
+    if (repoInfoRes.ok) {
+      const repoInfo = await repoInfoRes.json();
+      targetBranch = repoInfo.default_branch || "main";
+    } else {
+      targetBranch = "main";
+    }
+  }
+
+  // Check if oldPath is a file or folder by fetching its contents
+  const checkRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${oldPath}?ref=${encodeURIComponent(targetBranch)}`,
+    { headers: { Authorization: `Bearer ${githubAccessToken}`, Accept: "application/vnd.github+json" } },
+  );
+
+  if (checkRes.ok) {
+    const itemData = await checkRes.json();
+    if (!Array.isArray(itemData) && itemData.type === "file") {
+      // Single file rename
+      const content = itemData.content;
+      // 1. Create file at newPath
+      const putRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${newPath}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${githubAccessToken}`,
+            Accept: "application/vnd.github+json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: `Rename ${oldPath} to ${newPath}`,
+            content,
+            branch: targetBranch,
+          }),
+        },
+      );
+      if (!putRes.ok) {
+        const errData = await putRes.json().catch(() => ({}));
+        throw new Error(errData.message || "Failed to create file at new location");
+      }
+
+      // 2. Delete file at oldPath
+      await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${oldPath}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${githubAccessToken}`,
+            Accept: "application/vnd.github+json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: `Delete ${oldPath} after rename`,
+            sha: itemData.sha,
+            branch: targetBranch,
+          }),
+        },
+      );
+
+      return { msg: "File renamed successfully" };
+    }
+  }
+
+  // Folder rename: Use Git Tree to find all sub-files
+  const treeResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(targetBranch)}?recursive=1`,
+    { headers: { Authorization: `Bearer ${githubAccessToken}` } },
+  );
+
+  if (!treeResponse.ok) {
+    throw new Error("Failed to fetch repository tree for folder rename");
+  }
+
+  const treeData = await treeResponse.json();
+  const filesToMove = (treeData.tree || []).filter(
+    (item) => item.type === "blob" && (item.path === oldPath || item.path.startsWith(oldPath + "/")),
+  );
+
+  if (filesToMove.length === 0) {
+    throw new Error("No files found to rename");
+  }
+
+  for (const file of filesToMove) {
+    const fileRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}?ref=${encodeURIComponent(targetBranch)}`,
+      { headers: { Authorization: `Bearer ${githubAccessToken}` } },
+    );
+    if (fileRes.ok) {
+      const fileData = await fileRes.json();
+      const relative = file.path === oldPath ? "" : file.path.slice(oldPath.length + 1);
+      const destPath = relative ? `${newPath}/${relative}` : newPath;
+
+      await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${destPath}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${githubAccessToken}`,
+            Accept: "application/vnd.github+json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: `Rename ${file.path} to ${destPath}`,
+            content: fileData.content,
+            branch: targetBranch,
+          }),
+        },
+      );
+
+      await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${githubAccessToken}`,
+            Accept: "application/vnd.github+json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: `Delete ${file.path} after rename`,
+            sha: fileData.sha,
+            branch: targetBranch,
+          }),
+        },
+      );
+    }
+  }
+
+  return { msg: "Folder renamed successfully" };
+};
+
 export const moveGithubItemsLogic = async ({ items, targetPath, req }) => {
-  return { msg: "Items moved successfully", results: [] };
+  const targetParts = (targetPath || "").split("/").filter(Boolean);
+  const owner = targetParts[0];
+  const repo = targetParts[1];
+  const targetDir = targetParts.slice(2).join("/");
+
+  const results = [];
+  for (const item of items) {
+    const itemGithubPath = item.githubPath || item.path;
+    if (!itemGithubPath) continue;
+    const itemParts = itemGithubPath.split("/").filter(Boolean);
+    const itemOwner = itemParts[0];
+    const itemRepo = itemParts[1];
+    const itemRelPath = itemParts.slice(2).join("/");
+    const itemName = item.name || itemParts[itemParts.length - 1];
+
+    const newRelPath = targetDir ? `${targetDir}/${itemName}` : itemName;
+    if (itemRelPath === newRelPath) continue;
+
+    await renameGithubItemLogic({
+      owner: itemOwner || owner,
+      repo: itemRepo || repo,
+      oldPath: itemRelPath,
+      newPath: newRelPath,
+      req,
+    });
+    results.push({ name: itemName, oldPath: itemRelPath, newPath: newRelPath });
+  }
+
+  return { msg: "Items moved successfully", results };
 };
 
 export const transferFromVaultLogic = async ({ items, targetPath, req }) => {

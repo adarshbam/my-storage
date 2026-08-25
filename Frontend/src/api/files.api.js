@@ -62,7 +62,8 @@ export const deleteFile = (fileId, params = {}) => {
   return apiClient.delete(`/file/${fileId}${query ? `?${query}` : ''}`);
 };
 export const saveFile = (fileId, body) => apiClient.put(`/file/${fileId}/save`, body);
-export const toggleStar = (fileId) => apiClient.post(`/file/${fileId}/starred`);
+export const toggleStar = (fileId, body = {}) =>
+  apiClient.post(`/file/${encodeURIComponent(fileId)}/starred`, body);
 export const getStarredItems = (params = {}) => {
   const query = new URLSearchParams(params).toString();
   return apiClient.get(`/file/starred${query ? `?${query}` : ''}`);

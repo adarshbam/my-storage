@@ -1,16 +1,22 @@
 import { useState, useRef, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { SERVER_URL } from "../lib/api";
+import { getProfilePicUrl } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
+import { usePlan } from "../context/PlanContext";
 import VaultBackground from "../components/dashboard/VaultBackground";
 import CommandBar from "../components/dashboard/CommandBar";
 import NavigationRail from "../components/dashboard/NavigationRail";
 import TransferManager from "../components/drive/TransferManager";
 import FileUploadModal from "../components/drive/FileUploadModal";
 import ShareVaultModal from "../components/dashboard/ShareVaultModal";
+import WallGuideOverlay from "../components/guide/WallGuideOverlay";
+import WallLauncher from "../components/guide/WallLauncher";
 
 export default function DashboardLayout() {
   const { user, setUser } = useAuth();
+  const { maxStorage: planMaxStorage } = usePlan();
+  const effectiveMaxStorage = planMaxStorage ?? user?.maxStorage ?? 5368709120;
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -170,7 +176,7 @@ export default function DashboardLayout() {
   };
 
   const handleUpload = (files, targetId) => {
-    if (user && user.usedStorage >= user.maxStorage) {
+    if (user && user.usedStorage >= effectiveMaxStorage) {
       alert("Not enough storage");
       return;
     }
@@ -213,13 +219,11 @@ export default function DashboardLayout() {
     }
   };
 
-  const profilePicUrl = user?.profilepic
-    ? `${SERVER_URL}/user/profilepic?id=${user.profilepic}`
-    : null;
+  const profilePicUrl = getProfilePicUrl(user?.profilepic);
 
   const contextValue = {
     openUploadModal: () => {
-      if (user && user.usedStorage >= user.maxStorage) {
+      if (user && user.usedStorage >= effectiveMaxStorage) {
         alert("Not enough storage");
         return;
       }
@@ -259,7 +263,7 @@ export default function DashboardLayout() {
         setGlobalSearchQuery={setGlobalSearchQuery}
         handleSearchSubmit={(term, filters) => handleSearch(term, filters)}
         openUploadModal={() => {
-          if (user && user.usedStorage >= user.maxStorage) {
+          if (user && user.usedStorage >= effectiveMaxStorage) {
             alert("Not enough storage");
             return;
           }
@@ -317,6 +321,10 @@ export default function DashboardLayout() {
       />
 
       <TransferManager ref={transferRef} onUploadComplete={() => setRefreshTrigger(prev => prev + 1)} />
+
+      {/* Wall Interactive Onboarding Guide & Launcher */}
+      <WallGuideOverlay />
+      <WallLauncher />
     </div>
   );
 }

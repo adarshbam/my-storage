@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const envPath = path.resolve(__dirname, "../.env");
 
-if (fs.existsSync(envPath)) {
+if (!process.env.DB_URL && fs.existsSync(envPath)) {
   if (typeof process.loadEnvFile === "function") {
     try {
       process.loadEnvFile(envPath);
@@ -41,7 +41,7 @@ export const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
 export const SESSION_SECRET =
   process.env.SESSION_SECRET || "vault-storageApp-123$";
 export const BACKEND_URL =
-  process.env.BACKEND_URL || `https://localhost:${PORT}`;
+  process.env.BACKEND_URL || `http://localhost:${PORT}`;
 
 export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;

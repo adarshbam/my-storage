@@ -129,7 +129,13 @@ app.use((req, res, next) => {
 
 app.use(
   cors({
-    exposedHeaders: ["X-Total-Size", "X-Total-Files"],
+    exposedHeaders: [
+      "X-Total-Size",
+      "X-Total-Files",
+      "Content-Disposition",
+      "Content-Length",
+      "Accept-Ranges",
+    ],
     origin: [CLIENT_URL],
     credentials: true,
   }),

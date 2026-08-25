@@ -5,10 +5,17 @@ export const requireFeature = (featureKey) => {
     try {
       const planContext = req.planContext || {};
       const features = planContext.features || [];
+      const normalize = (s) => (s || "").toLowerCase().replace(/[-_\s]+/g, "");
+      const target = normalize(featureKey);
 
       // 1. Check if the feature is globally disabled in database
       const globalFeature = await Feature.findOne({
-        $or: [{ key: featureKey }, { slug: featureKey }],
+        $or: [
+          { key: featureKey },
+          { slug: featureKey },
+          { key: { $regex: new RegExp(`^${featureKey}$`, "i") } },
+          { title: { $regex: new RegExp(`^${featureKey}$`, "i") } },
+        ],
       }).lean();
 
       if (globalFeature && globalFeature.enabled === false) {
@@ -22,13 +29,30 @@ export const requireFeature = (featureKey) => {
       }
 
       // 2. Check if user's tier has this feature active
-      const hasFeature = features.some(
-        (feature) =>
-          (feature.key === featureKey ||
-            feature.slug === featureKey ||
-            feature.name === featureKey) &&
-          feature.enabled !== false,
-      );
+      const hasFeature = features.some((feature) => {
+        if (!feature) return false;
+        if (typeof feature === "string") {
+          const normF = normalize(feature);
+          return normF === target || (target.includes("gdrive") && normF.includes("gdrive")) || (target.includes("googledrive") && (normF.includes("gdrive") || normF.includes("googledrive")));
+        }
+        const k = normalize(feature.key);
+        const s = normalize(feature.slug);
+        const n = normalize(feature.name);
+        const t = normalize(feature.title);
+
+        if (feature.enabled === false) return false;
+
+        if (k === target || s === target || n === target || t === target) return true;
+        if ((target === "gdrivesync" || target === "googledrive" || target === "googledriveintegration") &&
+            (k === "gdrivesync" || k === "googledrive" || k === "googledriveintegration" || t.includes("googledrive") || t.includes("gdrive"))) {
+          return true;
+        }
+        if ((target === "githubbackup" || target === "github" || target === "githubintegration") &&
+            (k === "githubbackup" || k === "github" || t.includes("github"))) {
+          return true;
+        }
+        return false;
+      });
 
       if (!hasFeature) {
         return res.status(403).json({

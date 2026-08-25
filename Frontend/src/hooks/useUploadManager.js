@@ -9,19 +9,11 @@ import {
   completeVaultMultipartUpload,
   abortVaultMultipartUpload,
 } from '../api/files.api';
-
-/**
- * Pacing delay calculation for token-bucket rate limiting
- */
-async function applySpeedPacing(chunkLength, maxBytesPerSec, startTime) {
-  if (!maxBytesPerSec || maxBytesPerSec <= 0) return;
-  const expectedDurationMs = (chunkLength / maxBytesPerSec) * 1000;
-  const elapsedMs = performance.now() - startTime;
-  const delayMs = expectedDurationMs - elapsedMs;
-  if (delayMs > 0) {
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
-}
+import {
+  getCurrentSpeedLimit,
+  applyDynamicSpeedPacing,
+  SPEED_CHANGE_EVENT,
+} from './useSpeedGovernor';
 
 /**
  * Upload a single part with XMLHttpRequest for fine-grained progress events
@@ -82,7 +74,6 @@ export function useUploadManager({
   ownerId,
   abortControllers,
   onUploadComplete,
-  speedLimit = 0,
 }) {
   const MAX_CONCURRENT_UPLOADS = 3;
   const MULTIPART_THRESHOLD = 5 * 1024 * 1024; // 5MB (S3 official minimum chunk size)
@@ -302,134 +293,179 @@ export function useUploadManager({
           return;
         }
 
-        // Parallel chunk worker queue (concurrency 4 if unlimited, 1 if speed-limited)
-        const CONCURRENCY = speedLimit > 0 ? 1 : 4;
-        let currentIndex = 0;
+        // ── Dynamic Parallel Worker Queue ─────────────────────────────────────
+        const TARGET_MAX_CONCURRENCY = 4;
+        let activeWorkers = 0;
+        let nextPartIndex = 0;
+        let isAborted = false;
+
+        const onAbort = () => {
+          isAborted = true;
+        };
+        abortController.signal.addEventListener("abort", onAbort, { once: true });
 
         const uploadWorker = async () => {
-          while (currentIndex < partsToUpload.length) {
-            if (abortController.signal.aborted) break;
+          activeWorkers++;
+          try {
+            while (nextPartIndex < partsToUpload.length && !isAborted && !abortController.signal.aborted) {
+              const currentLimit = getCurrentSpeedLimit();
+              // If speed is regulated (>0), only allow 1 worker active at a time
+              if (currentLimit > 0 && activeWorkers > 1) {
+                break;
+              }
 
-            const part = partsToUpload[currentIndex++];
-            if (!part) break;
+              const partIndex = nextPartIndex++;
+              const part = partsToUpload[partIndex];
+              if (!part) break;
 
-            let attempt = 0;
-            let success = false;
-            const maxAttempts = 3;
+              let attempt = 0;
+              let success = false;
+              const maxAttempts = 3;
 
-            while (attempt < maxAttempts && !success && !abortController.signal.aborted) {
-              attempt++;
-              try {
-                const chunkStartTime = performance.now();
+              while (attempt < maxAttempts && !success && !isAborted && !abortController.signal.aborted) {
+                attempt++;
+                try {
+                  const chunkStartTime = performance.now();
 
-                // Get presigned URL for this part
-                const partUrlData = await getVaultMultipartPartUrl({
-                  fileId,
-                  uploadId,
-                  partNumber: part.partNumber,
-                  key,
-                });
-
-                const chunkBlob = file.slice(part.start, part.end);
-
-                const cleanETag = await uploadPartWithXhr({
-                  signedUrl: partUrlData.signedUrl,
-                  blob: chunkBlob,
-                  partNumber: part.partNumber,
-                  signal: abortController.signal,
-                  onProgress: (loadedBytes) => {
-                    partLoadedMap.set(part.partNumber, loadedBytes);
-                    const now = Date.now();
-                    const totalLoaded = computeTotalLoaded();
-                    const percent = Math.min((totalLoaded / file.size) * 100, 99);
-                    const deltaTime = (now - lastTime) / 1000;
-
-                    if (deltaTime >= 0.25) {
-                      const deltaBytes = totalLoaded - lastLoaded;
-                      currentSpeed = deltaBytes / deltaTime;
-                      lastLoaded = totalLoaded;
-                      lastTime = now;
-                    }
-
-                    let timeRemaining = 0;
-                    if (currentSpeed > 0 && file.size > 0) {
-                      timeRemaining = (file.size - totalLoaded) / currentSpeed;
-                    }
-
-                    if (now - lastUpdate > 100) {
-                      updateTransfer(_id, {
-                        progress: percent,
-                        loaded: totalLoaded,
-                        total: file.size,
-                        speed: currentSpeed,
-                        timeRemaining,
-                      });
-                      lastUpdate = now;
-                    }
-                  },
-                });
-
-                partLoadedMap.set(part.partNumber, part.size);
-                completedParts.push({
-                  PartNumber: part.partNumber,
-                  ETag: cleanETag,
-                });
-
-                updateTransfer(_id, { completedParts: [...completedParts] });
-                success = true;
-
-                // Apply speed regulation pacing if configured
-                if (speedLimit > 0) {
-                  await applySpeedPacing(part.size, speedLimit, chunkStartTime);
-                }
-
-                const now = Date.now();
-                const totalLoaded = computeTotalLoaded();
-                const percent = Math.min((totalLoaded / file.size) * 100, 99);
-                const deltaTime = (now - lastTime) / 1000;
-
-                if (deltaTime >= 0.25) {
-                  const deltaBytes = totalLoaded - lastLoaded;
-                  currentSpeed = deltaBytes / deltaTime;
-                  lastLoaded = totalLoaded;
-                  lastTime = now;
-                }
-
-                let timeRemaining = 0;
-                if (currentSpeed > 0 && file.size > 0) {
-                  timeRemaining = (file.size - totalLoaded) / currentSpeed;
-                }
-
-                if (now - lastUpdate > 100) {
-                  updateTransfer(_id, {
-                    progress: percent,
-                    loaded: totalLoaded,
-                    total: file.size,
-                    speed: currentSpeed,
-                    timeRemaining,
+                  // Get presigned URL for this part
+                  const partUrlData = await getVaultMultipartPartUrl({
+                    fileId,
+                    uploadId,
+                    partNumber: part.partNumber,
+                    key,
                   });
-                  lastUpdate = now;
+
+                  const chunkBlob = file.slice(part.start, part.end);
+
+                  const cleanETag = await uploadPartWithXhr({
+                    signedUrl: partUrlData.signedUrl,
+                    blob: chunkBlob,
+                    partNumber: part.partNumber,
+                    signal: abortController.signal,
+                    onProgress: (loadedBytes) => {
+                      partLoadedMap.set(part.partNumber, loadedBytes);
+                      const now = Date.now();
+                      const totalLoaded = computeTotalLoaded();
+                      const percent = Math.min((totalLoaded / file.size) * 100, 99);
+                      const deltaTime = (now - lastTime) / 1000;
+
+                      if (deltaTime >= 0.25) {
+                        const deltaBytes = totalLoaded - lastLoaded;
+                        currentSpeed = deltaBytes / deltaTime;
+                        lastLoaded = totalLoaded;
+                        lastTime = now;
+                      }
+
+                      let timeRemaining = 0;
+                      if (currentSpeed > 0 && file.size > 0) {
+                        timeRemaining = (file.size - totalLoaded) / currentSpeed;
+                      }
+
+                      if (now - lastUpdate > 100) {
+                        updateTransfer(_id, {
+                          progress: percent,
+                          loaded: totalLoaded,
+                          total: file.size,
+                          speed: currentSpeed,
+                          timeRemaining,
+                        });
+                        lastUpdate = now;
+                      }
+                    },
+                  });
+
+                  partLoadedMap.set(part.partNumber, part.size);
+                  completedParts.push({
+                    PartNumber: part.partNumber,
+                    ETag: cleanETag,
+                  });
+
+                  updateTransfer(_id, { completedParts: [...completedParts] });
+                  success = true;
+
+                  // Apply dynamic, interruptible speed regulation pacing
+                  await applyDynamicSpeedPacing(part.size, chunkStartTime, abortController.signal);
+
+                  const now = Date.now();
+                  const totalLoaded = computeTotalLoaded();
+                  const percent = Math.min((totalLoaded / file.size) * 100, 99);
+                  const deltaTime = (now - lastTime) / 1000;
+
+                  if (deltaTime >= 0.25) {
+                    const deltaBytes = totalLoaded - lastLoaded;
+                    currentSpeed = deltaBytes / deltaTime;
+                    lastLoaded = totalLoaded;
+                    lastTime = now;
+                  }
+
+                  let timeRemaining = 0;
+                  if (currentSpeed > 0 && file.size > 0) {
+                    timeRemaining = (file.size - totalLoaded) / currentSpeed;
+                  }
+
+                  if (now - lastUpdate > 100) {
+                    updateTransfer(_id, {
+                      progress: percent,
+                      loaded: totalLoaded,
+                      total: file.size,
+                      speed: currentSpeed,
+                      timeRemaining,
+                    });
+                    lastUpdate = now;
+                  }
+
+                  // Check if additional parallel workers can be launched
+                  dispatchWorkers();
+                } catch (partErr) {
+                  if (abortController.signal.aborted || isAborted) return;
+                  console.warn(`Retry attempt ${attempt} for part ${part.partNumber}:`, partErr.message);
+                  if (attempt >= maxAttempts) {
+                    throw partErr;
+                  }
+                  await new Promise((r) => setTimeout(r, 1000 * attempt));
                 }
-              } catch (partErr) {
-                if (abortController.signal.aborted) return;
-                console.warn(`Retry attempt ${attempt} for part ${part.partNumber}:`, partErr.message);
-                if (attempt >= maxAttempts) {
-                  throw partErr;
-                }
-                await new Promise((r) => setTimeout(r, 1000 * attempt));
               }
             }
+          } finally {
+            activeWorkers--;
           }
         };
 
-        // Run worker pool
-        const workers = Array.from({ length: Math.min(CONCURRENCY, partsToUpload.length) }, () => uploadWorker());
-        await Promise.all(workers);
+        const workerPromises = [];
+        const dispatchWorkers = () => {
+          if (isAborted || abortController.signal.aborted) return;
+          const currentLimit = getCurrentSpeedLimit();
+          const desiredWorkers = currentLimit === 0 ? TARGET_MAX_CONCURRENCY : 1;
+          while (activeWorkers < desiredWorkers && nextPartIndex < partsToUpload.length) {
+            workerPromises.push(uploadWorker());
+          }
+        };
 
-        if (abortController.signal.aborted) {
-          // Upload was paused or cancelled mid-flight.
-          // If paused, keep completed parts so resume can pick up.
-          // Cancellation is explicitly executed in cancelTransfer.
+        // Live speed change listener to scale workers and release pacing immediately
+        const handleSpeedChanged = () => {
+          dispatchWorkers();
+        };
+        window.addEventListener(SPEED_CHANGE_EVENT, handleSpeedChanged);
+
+        // Start initial workers
+        dispatchWorkers();
+
+        // Wait until all workers finish or nextPartIndex reaches completion
+        while (
+          activeWorkers > 0 ||
+          (nextPartIndex < partsToUpload.length && !isAborted && !abortController.signal.aborted)
+        ) {
+          if (workerPromises.length > 0) {
+            const nextP = workerPromises.shift();
+            await nextP;
+          } else {
+            await new Promise((r) => setTimeout(r, 40));
+          }
+        }
+
+        window.removeEventListener(SPEED_CHANGE_EVENT, handleSpeedChanged);
+
+        if (abortController.signal.aborted || isAborted) {
           return;
         }
 
@@ -533,9 +569,7 @@ export function useUploadManager({
       };
 
       xhr2.upload.onload = async () => {
-        if (speedLimit > 0) {
-          await applySpeedPacing(file.size, speedLimit, uploadStartTime);
-        }
+        await applyDynamicSpeedPacing(file.size, uploadStartTime, abortControllers.current[_id]?.signal);
         updateTransfer(_id, { progress: 100 });
       };
 

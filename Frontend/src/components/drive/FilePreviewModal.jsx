@@ -225,6 +225,7 @@ export default function FilePreviewModal({
 
     try {
       const isGithub = file.provider === "github";
+      const isDrive = file.provider === "google_drive" || file.provider === "drive";
       if (isGithub) {
         alert(
           "GitHub inline renaming is limited. Use the dashboard menu for full control.",
@@ -234,14 +235,22 @@ export default function FilePreviewModal({
         return;
       }
 
-      let url = `${SERVER_URL}/file/${file._id}`;
+      let url = isDrive
+        ? `${SERVER_URL}/drive/file/${file._id}`
+        : `${SERVER_URL}/file/${file._id}`;
+
       if (ownerId) {
-        url += `?ownerId=${ownerId}`;
+        url += (url.includes("?") ? "&" : "?") + `ownerId=${ownerId}`;
       }
+
+      const body = isDrive
+        ? JSON.stringify({ name: tempName.trim() })
+        : JSON.stringify({ newFileName: tempName.trim() });
+
       const res = await fetch(url, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newFileName: tempName.trim() }),
+        body: body,
         credentials: "include",
       });
 
@@ -299,9 +308,20 @@ export default function FilePreviewModal({
     const isVaultStorage =
       file.provider !== "github" && file.provider !== "google_drive";
 
+    const getFileExt = (f) => {
+      if (!f) return "";
+      if (f.extension) {
+        return f.extension.startsWith(".") ? f.extension.toLowerCase() : `.${f.extension.toLowerCase()}`;
+      }
+      if (f.name && f.name.includes(".")) {
+        return `.${f.name.split(".").pop().toLowerCase()}`;
+      }
+      return "";
+    };
+
     const fetchContent = async () => {
-      const ext = file.extension?.toLowerCase();
-      const isText = isTextOrCode(ext);
+      const ext = getFileExt(file);
+      const isText = isTextOrCode(ext, file.name);
 
       if (isVaultStorage) {
         // 1. Check RAM cache for text/code first for 0ms instant display
@@ -352,7 +372,17 @@ export default function FilePreviewModal({
         } catch (err) {
           if (err.name === "AbortError" || abortController.signal.aborted) return;
           console.error("CDN Preview fetch error:", err);
-          setError(err.message || "Failed to load file content");
+          const isNotFound =
+            err.status === 404 ||
+            err.response?.status === 404 ||
+            err.message?.toLowerCase().includes("not found") ||
+            err.message?.toLowerCase().includes("deleted") ||
+            err.message?.toLowerCase().includes("cannot get");
+          setError(
+            isNotFound
+              ? "This file was deleted or cannot be found on the server."
+              : err.message || "Failed to load file content"
+          );
         } finally {
           if (!abortController.signal.aborted) {
             setLoading(false);
@@ -410,6 +440,15 @@ export default function FilePreviewModal({
           }
         } else {
           setContent(null);
+          if (file.provider === "google_drive") {
+            setCdnUrl(`${SERVER_URL}/drive/file/${file._id}${ownerId ? `?ownerId=${ownerId}` : ""}`);
+          } else if (file.provider === "github" && file.githubPath) {
+            setCdnUrl(
+              `${SERVER_URL}/github/file/${file.githubPath.split("/").map(encodeURIComponent).join("/")}?action=download${
+                selectedBranch ? `&ref=${encodeURIComponent(selectedBranch)}` : ""
+              }${ownerId ? `&ownerId=${ownerId}` : ""}`
+            );
+          }
           setLoading(false);
         }
       }
@@ -451,7 +490,10 @@ export default function FilePreviewModal({
     setSaving(true);
     try {
       const isGithub = file.provider === "github";
-      let url = isGithub
+      const isDrive = file.provider === "google_drive" || file.provider === "drive";
+      let url = isDrive
+        ? `${SERVER_URL}/drive/file/${file._id}/save`
+        : isGithub
         ? `${SERVER_URL}/github/file/${file.githubPath?.split("/").map(encodeURIComponent).join("/")}${
             selectedBranch ? `?ref=${encodeURIComponent(selectedBranch)}` : ""
           }`
@@ -542,14 +584,25 @@ export default function FilePreviewModal({
     document.body.removeChild(link);
   };
 
+  const getFileExt = (f) => {
+    if (!f) return "";
+    if (f.extension) {
+      return f.extension.startsWith(".") ? f.extension.toLowerCase() : `.${f.extension.toLowerCase()}`;
+    }
+    if (f.name && f.name.includes(".")) {
+      return `.${f.name.split(".").pop().toLowerCase()}`;
+    }
+    return "";
+  };
+
   const isImage = (ext) =>
-    [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp"].includes(
+    [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico", ".tiff", ".avif"].includes(
       ext?.toLowerCase(),
     );
   const isVideo = (ext) =>
-    [".mp4", ".webm", ".ogg", ".mov"].includes(ext?.toLowerCase());
+    [".mp4", ".webm", ".ogg", ".mov", ".avi", ".mkv", ".m4v"].includes(ext?.toLowerCase());
   const isAudio = (ext) =>
-    [".mp3", ".wav", ".ogg", ".m4a"].includes(ext?.toLowerCase());
+    [".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac", ".wma"].includes(ext?.toLowerCase());
   const isPdf = (ext) => [".pdf"].includes(ext?.toLowerCase());
 
   const getLanguage = (ext) => {
@@ -560,6 +613,7 @@ export default function FilePreviewModal({
       ".tsx": "tsx",
       ".json": "json",
       ".css": "css",
+      ".scss": "css",
       ".html": "markup",
       ".xml": "markup",
       ".py": "python",
@@ -569,18 +623,46 @@ export default function FilePreviewModal({
       ".h": "c",
       ".sql": "sql",
       ".sh": "bash",
+      ".bash": "bash",
       ".md": "markdown",
+      ".markdown": "markdown",
     };
     return map[ext?.toLowerCase()] || "text";
   };
 
   const renderContent = () => {
-    const ext = file.extension?.toLowerCase();
+    const ext = getFileExt(file);
+
+    // Top-Level Error Handling: If file is deleted, missing, or failed to fetch
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full p-6 sm:p-10 text-center animate-in fade-in duration-200">
+          <div className="w-16 h-16 rounded-3xl bg-red-500/10 text-red-400 border border-red-500/20 flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(239,68,68,0.15)]">
+            <AlertCircle size={32} />
+          </div>
+          <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
+            File Not Found or Deleted
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-white/60 max-w-md mb-6 leading-relaxed">
+            {error || "This file could not be found on the server. It may have been permanently deleted, moved, or your access was revoked."}
+          </p>
+          <Button
+            onClick={onClose}
+            className="px-6 py-2.5 rounded-xl text-xs font-bold shadow-accent-glow"
+          >
+            Close Preview
+          </Button>
+        </div>
+      );
+    }
 
     if (isImage(ext)) {
+      if (loading) {
+        return <FilePreviewSkeleton type="image" />;
+      }
       return (
         <div className="relative flex items-center justify-center h-full bg-slate-950/50 rounded-2xl overflow-hidden border border-white/5">
-          {(!imgLoaded || (isVaultStorage && !cdnUrl)) && (
+          {!imgLoaded && (
             <div className="absolute inset-0 z-0">
               <FilePreviewSkeleton type="image" />
             </div>
@@ -594,7 +676,7 @@ export default function FilePreviewModal({
               }`}
               crossOrigin={isVaultStorage ? undefined : "use-credentials"}
               onLoad={() => setImgLoaded(true)}
-              onError={() => setError("Failed to load image")}
+              onError={() => setError("This image file could not be found or failed to load.")}
             />
           )}
         </div>
@@ -602,6 +684,9 @@ export default function FilePreviewModal({
     }
 
     if (isVideo(ext)) {
+      if (loading) {
+        return <FilePreviewSkeleton type="video" />;
+      }
       return (
         <div className="flex items-center justify-center h-full bg-slate-950/50 rounded-2xl overflow-hidden border border-white/5">
           {previewSrc ? (
@@ -610,15 +695,22 @@ export default function FilePreviewModal({
               controls
               className="max-w-full max-h-full rounded-lg"
               crossOrigin={isVaultStorage ? undefined : "use-credentials"}
+              onError={() => setError("This video file could not be found or failed to stream.")}
             />
           ) : (
-            <FilePreviewSkeleton type="video" />
+            <div className="flex flex-col items-center justify-center p-6 text-center text-slate-400">
+              <FileVideo size={36} className="mb-2 opacity-50" />
+              <p className="text-sm font-medium">Video preview unavailable</p>
+            </div>
           )}
         </div>
       );
     }
 
     if (isPdf(ext)) {
+      if (loading) {
+        return <FilePreviewSkeleton type="pdf" />;
+      }
       return (
         <div className="w-full h-full">
           {previewSrc ? (
@@ -626,15 +718,26 @@ export default function FilePreviewModal({
               src={previewSrc}
               className="w-full h-full rounded-2xl bg-white border-0"
               title={file.name}
+              onError={() => setError("This document could not be loaded or was deleted.")}
             />
           ) : (
-            <FilePreviewSkeleton type="pdf" />
+            <div className="flex flex-col items-center justify-center h-full text-slate-400">
+              <FileText size={36} className="mb-2 opacity-50" />
+              <p className="text-sm font-medium">PDF preview unavailable</p>
+            </div>
           )}
         </div>
       );
     }
 
     if (isAudio(ext)) {
+      if (loading) {
+        return (
+          <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+            Loading audio preview...
+          </div>
+        );
+      }
       return (
         <div className="flex items-center justify-center h-full bg-slate-950/50 rounded-2xl overflow-hidden border border-white/5">
           {previewSrc ? (
@@ -643,15 +746,16 @@ export default function FilePreviewModal({
               controls
               className="w-full max-w-md"
               crossOrigin={isVaultStorage ? undefined : "use-credentials"}
+              onError={() => setError("This audio file could not be found or failed to stream.")}
             />
           ) : (
-            <div className="text-slate-400 text-sm">Loading audio preview...</div>
+            <div className="text-slate-400 text-sm">No audio preview available.</div>
           )}
         </div>
       );
     }
 
-    if (isTextOrCode(ext)) {
+    if (isTextOrCode(ext, file.name)) {
       if (loading) {
         return <FilePreviewSkeleton type="code" fileName={file.name} />;
       }
@@ -761,7 +865,7 @@ export default function FilePreviewModal({
 
   return (
     <div
-      className={`fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-200 ${
+      className={`fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-200 ${
         isFullscreen ? "p-0" : "p-3 sm:p-6"
       }`}
     >
@@ -778,17 +882,14 @@ export default function FilePreviewModal({
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.03]">
           <div className="flex items-center gap-3.5 overflow-hidden">
             <div className="p-2.5 bg-accent-soft border border-accent-border rounded-2xl text-accent-primary shrink-0 shadow-sm shadow-accent-glow/10">
-              {isTextOrCode(file.extension) ? (
-                <FileCode size={20} />
-              ) : isAudio(file.extension) ? (
-                <FileAudio size={20} />
-              ) : isVideo(file.extension) ? (
-                <FileVideo size={20} />
-              ) : isImage(file.extension) ? (
-                <ImageIcon size={20} />
-              ) : (
-                <FileText size={20} />
-              )}
+              {(() => {
+                const ext = getFileExt(file);
+                if (isTextOrCode(ext, file.name)) return <FileCode size={20} />;
+                if (isAudio(ext)) return <FileAudio size={20} />;
+                if (isVideo(ext)) return <FileVideo size={20} />;
+                if (isImage(ext)) return <ImageIcon size={20} />;
+                return <FileText size={20} />;
+              })()}
             </div>
             <div className="flex flex-col min-w-0">
               {isRenaming ? (

@@ -62,33 +62,67 @@ export function clearCache() {
  * @param {string} ext
  * @returns {boolean}
  */
-export function isTextOrCode(ext) {
+export function isTextOrCode(ext, fileName = "") {
+  let cleanExt = ext;
+  if (!cleanExt && fileName && fileName.includes(".")) {
+    cleanExt = `.${fileName.split(".").pop()}`;
+  }
+  if (!cleanExt) return false;
+  const formattedExt = cleanExt.startsWith(".") ? cleanExt.toLowerCase() : `.${cleanExt.toLowerCase()}`;
   const textExtensions = [
     ".txt",
     ".md",
+    ".markdown",
     ".js",
     ".jsx",
     ".ts",
     ".tsx",
     ".json",
     ".css",
+    ".scss",
+    ".sass",
+    ".less",
     ".html",
+    ".htm",
     ".xml",
     ".yml",
     ".yaml",
+    ".toml",
     ".py",
     ".java",
     ".c",
     ".cpp",
+    ".cc",
     ".h",
+    ".hpp",
+    ".rs",
+    ".go",
+    ".php",
+    ".rb",
     ".sql",
     ".sh",
+    ".bash",
+    ".zsh",
     ".bat",
+    ".cmd",
+    ".ps1",
     ".log",
     ".env",
     ".gitignore",
+    ".gitattributes",
+    ".ini",
+    ".conf",
+    ".config",
+    ".svg",
+    ".csv",
+    ".tsv",
+    ".vue",
+    ".svelte",
+    ".graphql",
+    ".gql",
+    ".prisma",
   ];
-  return textExtensions.includes(ext?.toLowerCase());
+  return textExtensions.includes(formattedExt);
 }
 
 /**

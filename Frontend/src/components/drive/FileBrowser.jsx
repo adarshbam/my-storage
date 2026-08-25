@@ -115,6 +115,7 @@ export default function FileBrowser({ specialView }) {
   const [loading, setLoading] = useState(true);
   const [dirName, setDirName] = useState("Home");
   const [dirPath, setDirPath] = useState("Vault");
+  const [ownerName, setOwnerName] = useState(null);
   const [selectedItems, setSelectedItems] = useState([]);
   const [previewFile, setPreviewFile] = useState(null);
   const [lastSelectedId, setLastSelectedId] = useState(null);
@@ -330,7 +331,14 @@ export default function FileBrowser({ specialView }) {
         }
       }
     } else if (Array.isArray(dirPath) && dirPath.length > 0) {
-      dirPath.forEach(({ _id, name }) => {
+      const currentOwner = ownerName || data?.ownerName;
+      const isOtherVault =
+        specialView === "owner" ||
+        specialView === "admin" ||
+        (data?.userId && user?._id && data.userId.toString() !== user._id.toString()) ||
+        Boolean(ownerId);
+
+      dirPath.forEach(({ _id, name }, index) => {
         if (_id === user?.rootDirId) return;
 
         let pathUrl = `/dashboard/folder/${_id}${ownerParam}`;
@@ -338,10 +346,22 @@ export default function FileBrowser({ specialView }) {
           pathUrl = `/dashboard/shared/folder/${_id}${ownerParam}`;
         } else if (specialView === "admin") {
           pathUrl = `/dashboard/admin/folder/${_id}${ownerParam}`;
+        } else if (specialView === "owner") {
+          pathUrl = `/dashboard/owner/folder/${_id}${ownerParam}`;
+        }
+
+        let label = name;
+        if (
+          index === 0 &&
+          (name === "Vault" || name?.endsWith("'s Vault") || name?.endsWith("' Vault")) &&
+          isOtherVault &&
+          currentOwner
+        ) {
+          label = `${currentOwner}'s Vault`;
         }
 
         list.push({
-          label: name,
+          label,
           path: pathUrl,
         });
       });
@@ -351,10 +371,28 @@ export default function FileBrowser({ specialView }) {
         pathUrl = `/dashboard/shared/folder/${folderId}${ownerParam}`;
       } else if (specialView === "admin") {
         pathUrl = `/dashboard/admin/folder/${folderId}${ownerParam}`;
+      } else if (specialView === "owner") {
+        pathUrl = `/dashboard/owner/folder/${folderId}${ownerParam}`;
+      }
+
+      let label = dirName;
+      const currentOwner = ownerName || data?.ownerName;
+      const isOtherVault =
+        specialView === "owner" ||
+        specialView === "admin" ||
+        (data?.userId && user?._id && data.userId.toString() !== user._id.toString()) ||
+        Boolean(ownerId);
+
+      if (
+        (dirName === "Vault" || dirName?.endsWith("'s Vault") || dirName?.endsWith("' Vault")) &&
+        isOtherVault &&
+        currentOwner
+      ) {
+        label = `${currentOwner}'s Vault`;
       }
 
       list.push({
-        label: dirName,
+        label,
         path: pathUrl,
       });
     }
@@ -396,6 +434,7 @@ export default function FileBrowser({ specialView }) {
       setData(cachedEntry.data);
       if (cachedEntry.dirName) setDirName(cachedEntry.dirName);
       if (cachedEntry.dirPath) setDirPath(cachedEntry.dirPath);
+      if (cachedEntry.ownerName) setOwnerName(cachedEntry.ownerName);
       setLoading(false);
     } else {
       setLoading(true);
@@ -560,8 +599,12 @@ export default function FileBrowser({ specialView }) {
           files,
           parentDir: result.parentDir,
           parentId: result.parentId ?? null,
+          ownerName: result.ownerName || null,
+          ownerEmail: result.ownerEmail || null,
+          userId: result.userId || null,
         };
         setData(resolvedData);
+        setOwnerName(result.ownerName || null);
 
         // Cache folder names to resolve paths on the client
         try {
@@ -586,30 +629,46 @@ export default function FileBrowser({ specialView }) {
           console.error("Path cache error:", e);
         }
         setDirPath(result.path);
-        const resolvedName =
-          result.name ||
-          (isSearch
-            ? `Search: ${searchQuery}`
-            : specialView === "shared"
-              ? "Secure Relay"
-              : specialView === "admin"
-                ? "Admin View"
-                : specialView === "recent"
-                  ? "Activity Pulse"
-                  : specialView === "starred"
-                    ? "Priority Beacon"
-                    : specialView === "google-drive"
-                      ? "Google Drive"
-                      : specialView === "github"
-                        ? "GitHub"
-                        : specialView === "github-repo"
-                          ? "Repository"
-                          : "Home");
+
+        const isOtherVault =
+          specialView === "owner" ||
+          specialView === "admin" ||
+          (result.userId && user?._id && result.userId.toString() !== user._id.toString()) ||
+          Boolean(ownerId);
+
+        let resolvedName = result.name;
+        if (
+          result.name === "Vault" &&
+          isOtherVault &&
+          result.ownerName
+        ) {
+          resolvedName = `${result.ownerName}'s Vault`;
+        } else if (!resolvedName) {
+          resolvedName =
+            (isSearch
+              ? `Search: ${searchQuery}`
+              : specialView === "shared"
+                ? "Secure Relay"
+                : specialView === "admin"
+                  ? "Admin View"
+                  : specialView === "recent"
+                    ? "Activity Pulse"
+                    : specialView === "starred"
+                      ? "Priority Beacon"
+                      : specialView === "google-drive"
+                        ? "Google Drive"
+                        : specialView === "github"
+                          ? "GitHub"
+                          : specialView === "github-repo"
+                            ? "Repository"
+                            : "Home");
+        }
         setDirName(resolvedName);
         folderCache.current?.set(cacheKey, {
           data: resolvedData,
           dirName: resolvedName,
           dirPath: result.path,
+          ownerName: result.ownerName || null,
         });
       } else {
         const errData = await response.json().catch(() => ({}));
@@ -722,14 +781,39 @@ export default function FileBrowser({ specialView }) {
 
   const handleStarred = async (item) => {
     const type = item.type || (item.extension ? "file" : "directory");
-    const url = `${SERVER_URL}/file/${item._id}/starred?fildId=${item._id}`;
+    const provider =
+      item.provider ||
+      (specialView?.includes("google-drive")
+        ? "google_drive"
+        : specialView?.includes("github")
+        ? "github"
+        : "local");
+    const metaUrl =
+      item.metaUrl ||
+      item.webViewLink ||
+      item.html_url ||
+      item.url ||
+      item.download_url ||
+      "";
+
+    const rawId = item._id || item.id || item.githubPath;
+    const url = `${SERVER_URL}/file/${encodeURIComponent(rawId)}/starred`;
     const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       credentials: "include",
-      body: JSON.stringify({ type }),
+      body: JSON.stringify({
+        itemId: rawId,
+        type,
+        provider,
+        name: item.name,
+        size: item.size || 0,
+        mimeType: item.mimeType || "",
+        metaUrl,
+        githubPath: item.githubPath || "",
+      }),
     });
 
     const resData = await response.json();
@@ -741,12 +825,18 @@ export default function FileBrowser({ specialView }) {
         const isStarred = resData.starred;
         if (specialView === "starred" && !isStarred) {
           return {
-            directories: prev.directories.filter((i) => i._id !== item._id),
-            files: prev.files.filter((i) => i._id !== item._id),
+            directories: prev.directories.filter(
+              (i) => i._id !== item._id && i.githubPath !== item.githubPath
+            ),
+            files: prev.files.filter(
+              (i) => i._id !== item._id && i.githubPath !== item.githubPath
+            ),
           };
         }
         const updateItem = (i) =>
-          i._id === item._id ? { ...i, isStarred: isStarred, starred: isStarred } : i;
+          i._id === item._id || (i.githubPath && i.githubPath === item.githubPath)
+            ? { ...i, isStarred: isStarred, starred: isStarred }
+            : i;
         return {
           directories: prev.directories.map(updateItem),
           files: prev.files.map(updateItem),
@@ -1011,16 +1101,42 @@ export default function FileBrowser({ specialView }) {
           setModalType(null);
           return;
         }
-        const typeEndpoint =
-          modalItem.type === "directory" ||
-          data.directories.find((d) => d._id === modalItem._id)
-            ? "directory"
-            : "file";
-        const bodyKey =
-          typeEndpoint === "directory" ? "newDirName" : "newFileName";
-        url = `${SERVER_URL}/${typeEndpoint}/${modalItem._id}`;
-        method = "PATCH";
-        body = JSON.stringify({ [bodyKey]: modalInput });
+
+        if (modalItem.provider === "google_drive") {
+          url = `${SERVER_URL}/drive/file/${modalItem._id}`;
+          method = "PATCH";
+          body = JSON.stringify({ name: modalInput });
+        } else if (modalItem.provider === "github") {
+          const pathParts = (modalItem.githubPath || "").split("/").filter(Boolean);
+          const owner = pathParts[0];
+          const repo = pathParts[1];
+          const oldRelPath = pathParts.slice(2).join("/");
+          const dirPrefix = oldRelPath.includes("/")
+            ? oldRelPath.substring(0, oldRelPath.lastIndexOf("/") + 1)
+            : "";
+          const newRelPath = `${dirPrefix}${modalInput}`;
+
+          url = `${SERVER_URL}/github/repositories/${owner}/${repo}/rename${
+            selectedBranch ? `?ref=${encodeURIComponent(selectedBranch)}` : ""
+          }`;
+          method = "PATCH";
+          body = JSON.stringify({
+            oldPath: oldRelPath,
+            newPath: newRelPath,
+            ...(selectedBranch && { branch: selectedBranch }),
+          });
+        } else {
+          const typeEndpoint =
+            modalItem.type === "directory" ||
+            data.directories.find((d) => d._id === modalItem._id)
+              ? "directory"
+              : "file";
+          const bodyKey =
+            typeEndpoint === "directory" ? "newDirName" : "newFileName";
+          url = `${SERVER_URL}/${typeEndpoint}/${modalItem._id}`;
+          method = "PATCH";
+          body = JSON.stringify({ [bodyKey]: modalInput });
+        }
       }
 
       if (ownerId) {
@@ -1059,16 +1175,11 @@ export default function FileBrowser({ specialView }) {
     const ownerParam = targetOwnerId ? `?ownerId=${targetOwnerId}` : "";
 
     if (dir.provider === "google_drive") {
-      if (
-        (specialView === "google-drive" ||
-          specialView === "google-drive-folder") &&
-        !isObjectId(dir._id)
-      ) {
-        // Already inside Drive — dir._id is a real Drive folder ID, navigate into it
+      if (!isObjectId(dir._id) && dir.name !== "Google Drive") {
+        // Direct Google Drive subfolder navigation
         navigate(`/dashboard/google-drive/${dir._id}${ownerParam}`);
       } else {
-        // Coming from the Vault root or a non-drive view — the dir._id might be a MongoDB ObjectId (mount-point).
-        // Always open Drive root listing unless we are sure it's a drive ID.
+        // Root Google Drive entry point
         navigate(`/dashboard/google-drive${ownerParam}`);
       }
     } else if (dir.provider === "github") {
@@ -1135,9 +1246,10 @@ export default function FileBrowser({ specialView }) {
       return;
     }
 
+    const isIntegration = item.provider === "google_drive" || (item.provider && item.provider !== "local");
     setModalItem(item);
     setModalType("delete");
-    setIsPermanentDelete(false);
+    setIsPermanentDelete(isIntegration);
   };
 
   const handleDeleteConfirm = async () => {
@@ -1296,13 +1408,13 @@ export default function FileBrowser({ specialView }) {
   const [dragOverTargetId, setDragOverTargetId] = useState(null);
 
   const handleDragStart = (e, item) => {
-    if (isSpecialFolder(item)) {
+    if (isSpecialFolder(item, specialView)) {
       e.preventDefault();
       return;
     }
     let itemsToDrag = [item];
     if (selectedItems.some((i) => i._id === item._id)) {
-      itemsToDrag = selectedItems.filter((i) => !isSpecialFolder(i));
+      itemsToDrag = selectedItems.filter((i) => !isSpecialFolder(i, specialView));
     }
     if (itemsToDrag.length === 0) {
       e.preventDefault();
@@ -1373,7 +1485,7 @@ export default function FileBrowser({ specialView }) {
     }
 
     // Filter out special folders - they are permanently fixed and not movable
-    itemsToMove = itemsToMove.filter((i) => !isSpecialFolder(i));
+    itemsToMove = itemsToMove.filter((i) => !isSpecialFolder(i, specialView));
 
     if (itemsToMove.length > 0) {
       // Normalize targetItem: if it's a file, treat it as dropped into its parent directory
@@ -1704,6 +1816,7 @@ export default function FileBrowser({ specialView }) {
           {(data.parentDir ||
             (specialView === "shared" && folderId) ||
             specialView === "admin" ||
+            specialView === "owner" ||
             specialView === "google-drive" ||
             specialView === "google-drive-folder" ||
             specialView === "github-repo" ||
@@ -1722,9 +1835,9 @@ export default function FileBrowser({ specialView }) {
                   } else {
                     navigate("/dashboard/shared");
                   }
-                } else if (specialView === "admin") {
+                } else if (specialView === "admin" || specialView === "owner") {
                   if (data.parentDir) {
-                    navigate(`/dashboard/admin/folder/${data.parentDir}`);
+                    navigate(`/dashboard/${specialView}/folder/${data.parentDir}`);
                   } else {
                     navigate("/users");
                   }
@@ -1823,7 +1936,7 @@ export default function FileBrowser({ specialView }) {
                 </div>
               );
             })}
-            {folderId && !isSearch && !isReadOnly && (
+            {folderId && data.parentDir && !isSearch && !isReadOnly && (
               <button
                 onClick={() => {
                   setModalItem({
@@ -2057,6 +2170,7 @@ export default function FileBrowser({ specialView }) {
         <FileBrowserSkeleton viewMode={viewMode} count={12} />
       ) : (
         <div
+          data-tour="file-grid"
           className={`pb-20 relative select-none flex-1 content-start ${
             viewMode === "list"
               ? "flex flex-col gap-1"
@@ -2266,7 +2380,7 @@ export default function FileBrowser({ specialView }) {
           <span className="font-medium text-sm">
             {selectedItems.length} selected
           </span>
-          {selectedItems.some((i) => !isSpecialFolder(i)) && (
+          {selectedItems.some((i) => !isSpecialFolder(i, specialView)) && (
             <>
               <div className="h-4 w-px bg-slate-700"></div>
               <button
@@ -2296,17 +2410,21 @@ export default function FileBrowser({ specialView }) {
           >
             <Share2 size={16} className="text-purple-400" /> Share
           </button>
-          {selectedItems.some((i) => !isSpecialFolder(i)) && (
+          {selectedItems.some((i) => !isSpecialFolder(i, specialView)) && (
             <>
               <div className="h-4 w-px bg-slate-700"></div>
               <button
                 onClick={() => {
-                  const deletable = selectedItems.filter((i) => !isSpecialFolder(i));
+                  const deletable = selectedItems.filter((i) => !isSpecialFolder(i, specialView));
                   if (deletable.length === 1) {
                     handleDelete(deletable[0]);
                   } else if (deletable.length > 1) {
+                    const isIntegrationBatch =
+                      specialView?.includes("google-drive") ||
+                      specialView?.includes("github") ||
+                      deletable.every((i) => i.provider && i.provider !== "local");
                     setModalItem(null);
-                    setIsPermanentDelete(false);
+                    setIsPermanentDelete(isIntegrationBatch);
                     setModalType("delete");
                   }
                 }}
@@ -2341,6 +2459,7 @@ export default function FileBrowser({ specialView }) {
         isPrivate={isPrivate}
         setIsPrivate={setIsPrivate}
         selectedCount={selectedItems.length}
+        specialView={specialView}
       />
 
       {/* New Vault OS Details Modal */}

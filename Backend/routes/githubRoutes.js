@@ -36,6 +36,7 @@ import {
   createPRComment,
   searchRepository,
   moveGithubItems,
+  renameGithubItem,
   getRepositoryDetails,
   disconnectGithub,
   transferFromVault,
@@ -77,6 +78,7 @@ import {
   createPRCommentSchema,
   searchRepositorySchema,
   moveGithubItemsSchema,
+  renameGithubItemSchema,
   transferGithubFromVaultSchema,
 } from "../validators/githubSchema.js";
 import {
@@ -109,8 +111,8 @@ router.get(
 // create repo
 router.post(
   "/repositories",
-  mediumWriteLimiter,
-  throttle(300, 8, "gh-repo-create"),
+  heavyOpLimiter,
+  throttle(1000, 3, "gh-repo-create"),
   validate(createRepositorySchema),
   createRepository,
 );
@@ -139,6 +141,15 @@ router.post(
   throttle(300, 8, "gh-move"),
   validate(moveGithubItemsSchema),
   moveGithubItems,
+);
+
+// rename file or folder
+router.patch(
+  "/repositories/:owner/:repo/rename",
+  mediumWriteLimiter,
+  throttle(300, 8, "gh-rename"),
+  validate(renameGithubItemSchema),
+  renameGithubItem,
 );
 
 // ==========================================

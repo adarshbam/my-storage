@@ -185,8 +185,33 @@ export default function AssetCard({
 
   const provider = item.provider || "local";
   const isDirectory = item.type === "directory" || provider === "shared_drive";
-  const isSpecial = isSpecialFolder(item);
+  const isSpecial = isSpecialFolder(item, specialView);
   const typeInfo = getItemTypeInfo(item, isDirectory, provider, specialView);
+
+  const pathParts = (item.githubPath || "").split("/").filter(Boolean);
+  const isGithubRepoRoot =
+    provider === "github" &&
+    (specialView === "github" || (isDirectory && pathParts.length <= 2));
+
+  // Determine capabilities
+  const canRename =
+    !isTrash &&
+    !effectiveReadOnly &&
+    !isSpecial &&
+    !isGithubRepoRoot &&
+    !!onRename;
+
+  const canCopyCut =
+    !isTrash &&
+    !effectiveReadOnly &&
+    !isSpecial &&
+    !isGithubRepoRoot;
+
+  const canDelete =
+    !isTrash &&
+    !effectiveReadOnly &&
+    !isSpecial &&
+    !!onDelete;
 
   const handleImageError = () => {
     if (!triedFallback && item?._id && provider === "local") {
@@ -375,35 +400,38 @@ export default function AssetCard({
               <Info size={16} />
             </button>
           )}
-          {!isTrash && !effectiveReadOnly && !isSpecial && onRename && (
+          {canRename && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onRename(item);
               }}
               className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-black/40 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg transition-all"
+              title="Rename"
             >
               <Edit2 size={16} />
             </button>
           )}
-          {!isTrash && onDownload && (
+          {!isTrash && !isSpecial && onDownload && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onDownload(item);
               }}
               className="p-1.5 text-slate-400 hover:text-accent-primary bg-slate-100 dark:bg-black/40 hover:bg-accent-soft rounded-lg transition-all"
+              title="Download"
             >
               <Download size={16} />
             </button>
           )}
-          {!isTrash && !effectiveReadOnly && !isSpecial && onDelete && (
+          {canDelete && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(item);
               }}
               className="p-1.5 text-slate-400 hover:text-rose-500 bg-slate-100 dark:bg-black/40 hover:bg-rose-500/10 rounded-lg transition-all"
+              title={isGithubRepoRoot ? "Delete Repository" : "Delete"}
             >
               <Trash2 size={16} />
             </button>
@@ -436,7 +464,7 @@ export default function AssetCard({
         if (!isDirectory && item) prefetchFileContent(item);
       }}
       onMouseLeave={() => setIsHovered(false)}
-      draggable={!effectiveReadOnly && !isTrash && !isSpecial}
+      draggable={!effectiveReadOnly && !isTrash && !isSpecial && !isGithubRepoRoot}
       onDragStart={(e) => onDragStart && onDragStart(e, item)}
       onDragEnd={(e) => onDragEnd && onDragEnd(e, item)}
       onDragOver={(e) => onDragOver && onDragOver(e)}
@@ -674,7 +702,7 @@ export default function AssetCard({
               </button>
             )}
 
-            {!isTrash && !effectiveReadOnly && onStarred && (
+            {!isTrash && !effectiveReadOnly && !isSpecial && onStarred && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -691,7 +719,7 @@ export default function AssetCard({
               </button>
             )}
 
-            {!isTrash && !effectiveReadOnly && !isSpecial && onRename && (
+            {canRename && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -703,7 +731,7 @@ export default function AssetCard({
                 Rename
               </button>
             )}
-            {!isTrash && !effectiveReadOnly && onShare && (
+            {!isTrash && !effectiveReadOnly && !isSpecial && onShare && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -715,7 +743,7 @@ export default function AssetCard({
                 Share
               </button>
             )}
-            {!isTrash && !effectiveReadOnly && !isSpecial && onCopy && (
+            {canCopyCut && onCopy && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -727,7 +755,7 @@ export default function AssetCard({
                 Copy
               </button>
             )}
-            {!isTrash && !effectiveReadOnly && !isSpecial && onCut && (
+            {canCopyCut && onCut && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -739,7 +767,7 @@ export default function AssetCard({
                 Cut
               </button>
             )}
-            {!isTrash && onDownload && (
+            {!isTrash && !isSpecial && onDownload && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -764,11 +792,11 @@ export default function AssetCard({
               </button>
             )}
             {/* Separator */}
-            {((!isTrash && !effectiveReadOnly && !isSpecial && onDelete) ||
+            {((canDelete) ||
               (isTrash && onDeleteForever)) && (
               <div className="my-1 mx-2 border-t border-slate-100 dark:border-white/[0.08]" />
             )}
-            {!isTrash && !effectiveReadOnly && !isSpecial && onDelete && (
+            {canDelete && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -777,7 +805,7 @@ export default function AssetCard({
                 className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors rounded-xl"
               >
                 <Trash2 size={14} className="shrink-0" />
-                Delete
+                {isGithubRepoRoot ? "Delete Repository" : "Delete"}
               </button>
             )}
             {isTrash && onDeleteForever && (

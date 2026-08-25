@@ -229,6 +229,27 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
           Generate an encrypted relay link with custom permissions, password protection, and expiration timers.
         </p>
 
+        {(!hasFeature("share_links") || isNoPlan) && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Sparkles className="text-amber-500 shrink-0" size={20} />
+              <div className="text-xs">
+                <p className="font-bold">Storage Subscription Required</p>
+                <p className="text-amber-700 dark:text-amber-300/80">
+                  Sharing your vault files via relay links requires an active storage subscription.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/dashboard/billing"
+              onClick={onClose}
+              className="px-3.5 py-1.5 rounded-xl bg-amber-500 text-black text-xs font-bold hover:bg-amber-400 transition-colors shrink-0"
+            >
+              View Plans
+            </Link>
+          </div>
+        )}
+
         {/* Selected Items Chip Box */}
         {selectedItems.length > 0 ? (
           <div className="mb-6 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-2xl p-3">

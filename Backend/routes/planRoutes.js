@@ -15,6 +15,7 @@ import {
 } from "../controllers/planController.js";
 import {
   lightReadLimiter,
+  trialActivationLimiter,
   subscriptionLimiter,
   adminLimiter,
 } from "../middlewares/rateLimiter.js";
@@ -48,8 +49,15 @@ router.get(
 router.post(
   "/activate-free-trial",
   checkAuth,
-  subscriptionLimiter,
-  throttle(2000, 2, "plan-trial"),
+  trialActivationLimiter,
+  throttle(2000, 1, "plan-trial"),
+  activateFreeTrial,
+);
+router.post(
+  "/activate-trial",
+  checkAuth,
+  trialActivationLimiter,
+  throttle(2000, 1, "plan-trial"),
   activateFreeTrial,
 );
 

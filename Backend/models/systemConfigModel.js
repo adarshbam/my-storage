@@ -21,6 +21,10 @@ const systemConfigSchema = new Schema(
       enum: ["MB", "GB", "TB"],
       default: "GB",
     },
+    freeTrialInheritedTier: {
+      type: String,
+      default: "ultimate",
+    },
   },
   { timestamps: true },
 );

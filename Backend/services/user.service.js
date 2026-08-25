@@ -3,6 +3,9 @@ import path from "node:path";
 import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
+import BillingPlan from "../models/billingPlanModel.js";
+import SystemConfig from "../models/systemConfigModel.js";
+import PlanTierConfiguration from "../models/planTierConfigurationModel.js";
 import ShareLink from "../models/shareLinkModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
 import { invalidateUserSessions } from "../databases/redis.js";
@@ -13,32 +16,82 @@ import {
   getObjectFromB2,
 } from "../integrations/storage/s3.client.js";
 import { processThumbnailInWorker } from "./workerPool.service.js";
+import { withTransaction } from "../utils/transaction.js";
 
 export const getUserProfile = async ({ userId, user }) => {
   try {
-    const rootDir = await Directory.findOne({ _id: user.rootDirId })
+    // 1. Fetch fresh user and active subscription from database
+    const freshUser = await User.findById(userId || user?._id || user?.id)
+      .populate({
+        path: "subscription",
+        populate: { path: "billingPlan" },
+      })
+      .lean();
+
+    const currentUser = freshUser || user;
+
+    const rootDir = await Directory.findOne({ _id: currentUser.rootDirId })
       .select("-_id size")
       .lean();
     const usedStorage = rootDir ? rootDir.size : 0;
 
+    let maxStorage = currentUser.maxStorage || 5368709120;
+    const sub = currentUser.subscription;
+    if (
+      sub &&
+      ["active", "paused", "authenticated"].includes(
+        sub.status?.toLowerCase(),
+      )
+    ) {
+      const slug = sub.billingPlan?.slug?.replace("trail", "trial");
+      const isTrial = Boolean(sub.isFreeTrial || slug === "free-trial");
+      if (isTrial) {
+        let freeTrialPlanDoc = null;
+        if (sub.billingPlan?._id) {
+          freeTrialPlanDoc = await BillingPlan.findById(sub.billingPlan._id).lean();
+        }
+        if (!freeTrialPlanDoc) {
+          freeTrialPlanDoc =
+            (await BillingPlan.findOne({
+              slug: { $in: ["free-trial", "free-trail"] },
+              active: true,
+            }).lean()) ||
+            (await BillingPlan.findOne({
+              slug: { $in: ["free-trial", "free-trail"] },
+            }).lean()) ||
+            sub.billingPlan;
+        }
+        maxStorage =
+          freeTrialPlanDoc?.storage ||
+          sub.billingPlan?.storage ||
+          5368709120;
+      } else if (sub.billingPlan) {
+        let freshBillingPlan = null;
+        if (sub.billingPlan?._id) {
+          freshBillingPlan = await BillingPlan.findById(sub.billingPlan._id).lean();
+        }
+        maxStorage = freshBillingPlan?.storage || sub.billingPlan.storage || 5368709120;
+      }
+    }
+
     return {
-      name: user.name,
-      email: user.email,
-      phone: user.phone || null,
-      phoneVerified: !!user.phoneVerified,
-      secondaryRecoveryEmail: user.secondaryRecoveryEmail || null,
-      secondaryRecoveryEmailVerified: !!user.secondaryRecoveryEmailVerified,
-      twoFactorEnabled: !!user.twoFactorEnabled,
-      role: user.role || "User",
-      profilepic: user.profilepic,
-      maxStorage: user.maxStorage,
-      rootDirId: user.rootDirId,
-      rootDirectoryId: user.rootDirId,
+      name: currentUser.name,
+      email: currentUser.email,
+      phone: currentUser.phone || null,
+      phoneVerified: !!currentUser.phoneVerified,
+      secondaryRecoveryEmail: currentUser.secondaryRecoveryEmail || null,
+      secondaryRecoveryEmailVerified: !!currentUser.secondaryRecoveryEmailVerified,
+      twoFactorEnabled: !!currentUser.twoFactorEnabled,
+      role: currentUser.role || "User",
+      profilepic: currentUser.profilepic,
+      maxStorage,
+      rootDirId: currentUser.rootDirId,
+      rootDirectoryId: currentUser.rootDirId,
       usedStorage,
-      theme: user.theme || "dark",
+      theme: currentUser.theme || "dark",
       integrations: {
-        googleDrive: { connected: !!user.integrations?.googleDrive?.connected },
-        github: { connected: !!user.integrations?.github?.connected },
+        googleDrive: { connected: !!currentUser.integrations?.googleDrive?.connected },
+        github: { connected: !!currentUser.integrations?.github?.connected },
       },
     };
   } catch (err) {
@@ -62,7 +115,6 @@ export const uploadProfilePicLogic = async ({ userId, req }) => {
 
   const fileName = sanitize(req.headers.filename);
   const ext = path.extname(fileName);
-
   const profilePicId = new mongoose.Types.ObjectId();
 
   const newProfilePic = {
@@ -73,22 +125,6 @@ export const uploadProfilePicLogic = async ({ userId, req }) => {
     name: fileName,
     parentDir: null,
   };
-
-  await File.create(newProfilePic);
-
-  if (user.profilepic) {
-    const oldProfilePic = await File.findOne({ _id: user.profilepic })
-      .select("extension externalUrl")
-      .lean();
-    if (oldProfilePic) {
-      await File.deleteOne({ _id: oldProfilePic._id });
-      if (!oldProfilePic.externalUrl) {
-        await deleteFromB2({
-          key: `${oldProfilePic._id.toString()}${oldProfilePic.extension}`,
-        });
-      }
-    }
-  }
 
   try {
     const chunks = [];
@@ -119,15 +155,43 @@ export const uploadProfilePicLogic = async ({ userId, req }) => {
       contentType: finalContentType,
     });
 
-    await User.updateOne(
-      { _id: user._id },
-      { $set: { profilepic: profilePicId } },
-    );
+    let oldProfilePic = null;
+    if (user.profilepic) {
+      oldProfilePic = await File.findOne({ _id: user.profilepic })
+        .select("extension externalUrl")
+        .lean();
+    }
+
+    await withTransaction(async (session) => {
+      await File.create([newProfilePic], { session });
+
+      if (oldProfilePic) {
+        await File.deleteOne({ _id: oldProfilePic._id }).session(session);
+      }
+
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { profilepic: profilePicId } },
+        { session },
+      );
+    });
+
+    if (oldProfilePic && !oldProfilePic.externalUrl) {
+      try {
+        await deleteFromB2({
+          key: `${oldProfilePic._id.toString()}${oldProfilePic.extension}`,
+        });
+      } catch (delErr) {
+        console.warn("Failed to delete old avatar from B2:", delErr.message);
+      }
+    }
+
     await invalidateUserSessions(userId);
 
     return { message: "Profile pic updated" };
   } catch (err) {
     console.error("Profile pic upload error:", err);
+    if (err.status) throw err;
     const e = new Error("Internal Server Error");
     e.status = 500;
     throw e;
@@ -169,29 +233,6 @@ export const getProfilePicLogic = async ({
     const e = new Error("Profile pic not found");
     e.status = 404;
     throw e;
-  }
-
-  // Check ownership / permissions
-  const isOwner = profilePic.userId?.toString() === userId?.toString();
-  if (!isOwner) {
-    const hierarchy = ["User", "Manager", "Admin", "Owner"];
-    const userRoleIndex = hierarchy.indexOf(userRole || "User");
-
-    const hasAccess =
-      (await SharedAccess.findOne({
-        userId: profilePic.userId,
-        targetUserId: userId,
-      })) ||
-      (await ShareLink.findOne({
-        userId: profilePic.userId,
-        targetUserId: userId,
-      }));
-
-    if (!hasAccess && userRoleIndex <= 0) {
-      const e = new Error("Unauthorized");
-      e.status = 403;
-      throw e;
-    }
   }
 
   // If legacy externalUrl exists, auto-migrate to B2 on-the-fly

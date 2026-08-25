@@ -11,19 +11,27 @@ export const createPlanSchema = {
   }),
 };
 
+const singlePlanSchema = z
+  .object({
+    _id: z.string().optional(),
+    slug: z.string().optional(),
+    amount: z.coerce.number().min(0).optional(),
+    currency: z.string().optional(),
+    storage: z.coerce.number().min(0).optional(),
+    period: z.string().optional(),
+    active: z.boolean().optional(),
+    razorpayPlanId: z.string().optional(),
+  })
+  .passthrough();
+
 // PATCH /plans/update-plans (Batch Update All Plans)
 export const updatePlansSchema = {
-  body: z.object({
-    plans: z.array(
-      z.object({
-        _id: z.string({ required_error: "Plan ID is required" }),
-        slug: z.string().optional(),
-        amount: z.number().min(0).optional(),
-        currency: z.string().optional(),
-        storage: z.number().min(0).optional(),
-        period: z.enum(["Daily", "Weekly", "Monthly", "Yearly"]).optional(),
-        active: z.boolean().optional(),
+  body: z.union([
+    z
+      .object({
+        plans: z.array(singlePlanSchema),
       })
-    ),
-  }),
+      .passthrough(),
+    z.array(singlePlanSchema),
+  ]),
 };

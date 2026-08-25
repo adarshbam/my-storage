@@ -493,3 +493,19 @@ export const transferGithubFromVaultSchema = {
     targetPath: z.string().min(1, "Target GitHub path required"),
   }),
 };
+
+export const renameGithubItemSchema = {
+  params: z.object({
+    owner: z.string().min(1, "Owner required"),
+    repo: z.string().min(1, "Repo required"),
+  }),
+  body: z.object({
+    oldPath: z.string().min(1, "Old path required"),
+    newPath: z.string().min(1, "New path required"),
+    branch: z.string().optional(),
+  }),
+  query: z.object({
+    ref: z.string().optional(),
+    ownerId: z.string().optional(),
+  }).optional(),
+};

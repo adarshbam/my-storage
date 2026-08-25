@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { SERVER_URL } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { usePlan } from "../context/PlanContext";
 import {
   Loader2,
   ShieldAlert,
@@ -26,7 +27,7 @@ import {
 } from "lucide-react";
 import Button from "../components/ui/Button";
 import Skeleton from "../components/ui/Skeleton";
-import { formatSize } from "../lib/utils";
+import { formatSize, getProfilePicUrl, getInitials } from "../lib/utils";
 
 function getItemIcon(item) {
   if (item.type === "directory") return FolderOpen;
@@ -39,6 +40,18 @@ function getItemIcon(item) {
   return FileText;
 }
 
+function formatAvatarUrl(url) {
+  if (!url) return null;
+  let clean = url;
+  if (clean.startsWith("https://localhost:") || clean.startsWith("https://127.0.0.1:")) {
+    clean = clean.replace("https://", "http://");
+  }
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
+    return clean;
+  }
+  return `${SERVER_URL}${clean.startsWith("/") ? "" : "/"}${clean}`;
+}
+
 export default function SharedAccessClaim() {
   const { token } = useParams();
   const navigate = useNavigate();
@@ -49,12 +62,29 @@ export default function SharedAccessClaim() {
   const [error, setError] = useState(null);
   const [linkData, setLinkData] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [ownerImgError, setOwnerImgError] = useState(false);
 
   // Password unlock state
   const [enteredPassword, setEnteredPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [passwordError, setPasswordError] = useState(null);
+
+  // Plan state
+  const { isNoPlan, hasFeature } = usePlan();
+
+  const isFullAdmin = (linkData?.permission || []).includes("owner") || Boolean(linkData?.requiresFullAdminPlan);
+  const hasGithub = (linkData?.items || []).some((i) => i.provider === "github") || Boolean(linkData?.hasGithubItems);
+  const hasGdrive = (linkData?.items || []).some((i) => i.provider === "google_drive" || i.provider === "drive") || Boolean(linkData?.hasGdriveItems);
+  const hasDropbox = (linkData?.items || []).some((i) => i.provider === "dropbox") || Boolean(linkData?.hasDropboxItems);
+
+  const isFullAdminBlocked = isFullAdmin && isNoPlan;
+  const isExternalBlocked =
+    (hasGithub && (isNoPlan || !hasFeature("github_backup"))) ||
+    (hasGdrive && (isNoPlan || !hasFeature("gdrive_sync"))) ||
+    (hasDropbox && (isNoPlan || !hasFeature("dropbox_sync")));
+
+  const isClaimBlocked = isFullAdminBlocked || isExternalBlocked;
 
   useEffect(() => {
     fetchLinkDetails();
@@ -275,15 +305,18 @@ export default function SharedAccessClaim() {
 
             {/* Owner Details Card */}
             <div className="bg-black/30 border border-white/5 rounded-2xl p-3 mb-5 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-accent-soft text-accent-primary border border-accent-border flex items-center justify-center overflow-hidden">
-                {linkData?.owner?.profilepic ? (
+              <div className="w-9 h-9 rounded-xl bg-accent-soft text-accent-primary border border-accent-border flex items-center justify-center overflow-hidden shrink-0">
+                {linkData?.owner?.profilepic && !ownerImgError ? (
                   <img
-                    src={linkData.owner.profilepic}
+                    src={getProfilePicUrl(linkData.owner.profilepic)}
                     alt={linkData.owner.name}
                     className="w-full h-full object-cover"
+                    onError={() => setOwnerImgError(true)}
                   />
                 ) : (
-                  <User size={18} />
+                  <span className="font-black text-sm uppercase text-accent-primary select-none">
+                    {getInitials(linkData?.owner?.name, linkData?.owner?.email)}
+                  </span>
                 )}
               </div>
               <div className="overflow-hidden flex-1">
@@ -342,22 +375,58 @@ export default function SharedAccessClaim() {
 
             {/* Expiry Warning if set */}
             {linkData?.expiresAt && (
-              <div className="flex items-center gap-2 text-amber-400 text-xs font-mono mb-5">
+              <div className="flex items-center gap-2 text-amber-400 text-xs font-mono mb-4">
                 <Calendar size={13} />
                 <span>Expires on {new Date(linkData.expiresAt).toLocaleDateString()}</span>
+              </div>
+            )}
+
+            {/* Plan Gating Warning Banners */}
+            {isFullAdminBlocked && (
+              <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-xs text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <Lock className="text-amber-400 shrink-0" size={16} />
+                  <span><strong>Subscription Required:</strong> Full Admin access requires an active storage subscription.</span>
+                </div>
+                <Link
+                  to="/dashboard/billing"
+                  className="px-2.5 py-1 rounded-xl bg-amber-500 text-black text-[11px] font-bold shrink-0 hover:bg-amber-400"
+                >
+                  View Plans
+                </Link>
+              </div>
+            )}
+
+            {isExternalBlocked && (
+              <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-xs text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <Lock className="text-amber-400 shrink-0" size={16} />
+                  <span><strong>Plan Upgrade Required:</strong> Shared GitHub/Google Drive assets require a Professional or Ultimate plan.</span>
+                </div>
+                <Link
+                  to="/dashboard/billing"
+                  className="px-2.5 py-1 rounded-xl bg-amber-500 text-black text-[11px] font-bold shrink-0 hover:bg-amber-400"
+                >
+                  Upgrade Plan
+                </Link>
               </div>
             )}
 
             {/* Claim to Vault Button */}
             <Button
               onClick={handleClaim}
-              disabled={claiming}
-              className="w-full py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-accent-glow"
+              disabled={claiming || isClaimBlocked}
+              className="w-full py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-accent-glow disabled:opacity-50"
             >
               {claiming ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
                   Connecting Vault...
+                </>
+              ) : isClaimBlocked ? (
+                <>
+                  <Lock size={16} />
+                  Subscription Plan Required
                 </>
               ) : user ? (
                 <>

@@ -1,28 +1,12 @@
 import { useCallback } from 'react';
 import { SERVER_URL } from '../lib/api';
-
-/**
- * Pacing delay calculation for token-bucket rate limiting
- * @param {number} chunkLength - Size of chunk in bytes
- * @param {number} maxBytesPerSec - Maximum bytes per second (0 = unlimited)
- * @param {number} startTime - Timestamp when chunk processing began
- */
-async function applySpeedPacing(chunkLength, maxBytesPerSec, startTime) {
-  if (!maxBytesPerSec || maxBytesPerSec <= 0) return;
-  const expectedDurationMs = (chunkLength / maxBytesPerSec) * 1000;
-  const elapsedMs = Date.now() - startTime;
-  if (elapsedMs < expectedDurationMs) {
-    const delayMs = expectedDurationMs - elapsedMs;
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
-}
+import { applyDynamicSpeedPacing } from './useSpeedGovernor';
 
 export function useDownloadManager({
   updateTransfer,
   abortControllers,
   downloadReaders,
   downloadWritables,
-  speedLimit = 0,
 }) {
   const startDownload = useCallback(async (transfer) => {
     const { _id, url, name } = transfer;
@@ -43,7 +27,12 @@ export function useDownloadManager({
         throw new Error(`Download failed with status ${response.status}`);
       }
 
-      const totalSize = parseInt(response.headers.get("content-length") || "0", 10);
+      const totalSize = parseInt(
+        response.headers.get("x-total-size") ||
+        response.headers.get("content-length") ||
+        "0",
+        10
+      );
       const stream = response.body;
 
       if (!stream) {
@@ -66,17 +55,15 @@ export function useDownloadManager({
           let lastUpdate = 0;
 
           while (true) {
-            const chunkStartTime = Date.now();
+            const chunkStartTime = performance.now();
             const { done, value } = await reader.read();
             if (done) break;
 
             await writable.write(value);
             loaded += value.length;
 
-            // Apply speed regulation pacing if configured
-            if (speedLimit > 0) {
-              await applySpeedPacing(value.length, speedLimit, chunkStartTime);
-            }
+            // Apply dynamic, interruptible speed regulation pacing
+            await applyDynamicSpeedPacing(value.length, chunkStartTime, controller.signal);
 
             const now = Date.now();
             const percent = totalSize > 0 ? Math.min((loaded / totalSize) * 100, 100) : 0;
@@ -89,8 +76,8 @@ export function useDownloadManager({
               lastTime = now;
             }
 
-            let timeRemaining = 0;
-            if (currentSpeed > 0 && totalSize > 0) {
+            let timeRemaining = null;
+            if (currentSpeed > 0 && totalSize > 0 && loaded < totalSize) {
               timeRemaining = (totalSize - loaded) / currentSpeed;
             }
 
@@ -125,17 +112,15 @@ export function useDownloadManager({
         let lastUpdate = 0;
 
         while (true) {
-          const chunkStartTime = Date.now();
+          const chunkStartTime = performance.now();
           const { done, value } = await reader.read();
           if (done) break;
 
           chunks.push(value);
           loaded += value.length;
 
-          // Apply speed regulation pacing if configured
-          if (speedLimit > 0) {
-            await applySpeedPacing(value.length, speedLimit, chunkStartTime);
-          }
+          // Apply dynamic, interruptible speed regulation pacing
+          await applyDynamicSpeedPacing(value.length, chunkStartTime, controller.signal);
 
           const now = Date.now();
           const percent = totalSize > 0 ? Math.min((loaded / totalSize) * 100, 100) : 0;
@@ -148,8 +133,8 @@ export function useDownloadManager({
             lastTime = now;
           }
 
-          let timeRemaining = 0;
-          if (currentSpeed > 0 && totalSize > 0) {
+          let timeRemaining = null;
+          if (currentSpeed > 0 && totalSize > 0 && loaded < totalSize) {
             timeRemaining = (totalSize - loaded) / currentSpeed;
           }
 
@@ -191,7 +176,7 @@ export function useDownloadManager({
       delete downloadReaders.current[_id];
       delete downloadWritables.current[_id];
     }
-  }, [updateTransfer, abortControllers, downloadReaders, downloadWritables, speedLimit]);
+  }, [updateTransfer, abortControllers, downloadReaders, downloadWritables]);
 
   return { startDownload };
 }

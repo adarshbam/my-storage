@@ -8,8 +8,8 @@ import {
 } from "./notification.service.js";
 
 const OTP_TTL_SECONDS = 600; // 10 minutes
-const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
-const MAX_VERIFY_ATTEMPTS = 5;
+const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds resend cooldown
+const MAX_VERIFY_ATTEMPTS = 5; // Max 5 incorrect attempts before OTP invalidation
 
 /**
  * Sends a 6-digit OTP to the requested secondary recovery email.
@@ -120,7 +120,7 @@ export async function sendSecondaryRecoveryEmailOtpLogic({ userId, email }) {
     success: true,
     message: `Verification code sent to ${cleanEmail}`,
     email: cleanEmail,
-    resendCooldownSeconds: 60,
+    resendCooldownSeconds: Math.ceil(RESEND_COOLDOWN_MS / 1000),
   };
 }
 

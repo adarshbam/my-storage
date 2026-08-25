@@ -3,18 +3,56 @@ import User from "../models/userModel.js";
 import sendEmail from "../integrations/email/email.service.js";
 import { OTPSchema } from "../validators/authSchema.js";
 import { z } from "zod";
+import { withTransaction } from "../utils/transaction.js";
+import { generateOtp, hashOtp } from "../utils/crypto.utils.js";
+
+const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds cooldown
+const MAX_VERIFY_ATTEMPTS = 5; // 5 attempts per OTP
 
 export const sendOtpLogic = async ({ email }) => {
-  const generatedOTP = Math.floor(Math.random() * 900000 + 100000);
-  console.log(generatedOTP);
-  
-  await OTP.deleteMany({ email });
-  await OTP.create({ email, otp: generatedOTP });
+  if (!email) {
+    const err = new Error("Email is required");
+    err.status = 400;
+    throw err;
+  }
+
+  const cleanEmail = email.toLowerCase().trim();
+
+  // 1. Enforce resend cooldown
+  const existingOtp = await OTP.findOne({ email: cleanEmail });
+  if (existingOtp && existingOtp.resendAfter && Date.now() < existingOtp.resendAfter.getTime()) {
+    const remainingSeconds = Math.ceil((existingOtp.resendAfter.getTime() - Date.now()) / 1000);
+    const err = new Error(`Please wait ${remainingSeconds}s before requesting a new code.`);
+    err.status = 429;
+    err.retryAfter = remainingSeconds;
+    throw err;
+  }
+
+  // 2. Generate secure 6-digit OTP
+  const generatedOTP = generateOtp(6);
+  const otpHash = hashOtp(generatedOTP);
+  const resendAfter = new Date(Date.now() + RESEND_COOLDOWN_MS);
+
+  await withTransaction(async (session) => {
+    await OTP.deleteMany({ email: cleanEmail }).session(session);
+    await OTP.create(
+      [
+        {
+          email: cleanEmail,
+          otp: generatedOTP,
+          otpHash,
+          attempts: 0,
+          resendAfter,
+        },
+      ],
+      { session }
+    );
+  });
 
   try {
     await sendEmail({
       from: `"Storiffy" <no-reply@storiffy.com>`,
-      to: email,
+      to: cleanEmail,
       subject: "Your Storiffy OTP Code",
       text: `Your OTP is ${generatedOTP}. It will expire in 10 minutes.`,
       html: `
@@ -49,10 +87,13 @@ export const sendOtpLogic = async ({ email }) => {
         </div>
     `,
     });
-    return { message: "OTP sent successfully" };
+    return {
+      message: "OTP sent successfully",
+      resendCooldownSeconds: Math.ceil(RESEND_COOLDOWN_MS / 1000),
+    };
   } catch (err) {
     console.error("Error while sending mail:", err);
-    const e = new Error("Internal Server Error");
+    const e = new Error("Failed to send verification email. Please check the address and try again.");
     e.status = 500;
     throw e;
   }
@@ -68,27 +109,56 @@ export const verifyOtpLogic = async ({ email, otp }) => {
   }
 
   const { email: vEmail, otp: vOtp } = data;
+  const cleanEmail = vEmail.toLowerCase().trim();
 
-  const otpData = await OTP.findOne({ email: vEmail });
+  const otpData = await OTP.findOne({ email: cleanEmail });
 
   if (!otpData) {
-    const e = new Error("OTP expired!");
-    e.status = 403;
-    throw e;
-  }
-  if (otpData.otp != vOtp) {
-    const e = new Error("Wrong OTP!");
-    e.status = 403;
+    const e = new Error("Verification code has expired or was not requested. Please request a new code.");
+    e.status = 400;
     throw e;
   }
 
-  const user = await User.findOneAndUpdate(
-    { email: vEmail },
-    { isVerified: true },
-    { returnDocument: "after" }
-  );
+  // Check attempt limit
+  if (otpData.attempts >= MAX_VERIFY_ATTEMPTS) {
+    await OTP.deleteOne({ _id: otpData._id });
+    const e = new Error("Too many incorrect attempts. Please request a new verification code.");
+    e.status = 429;
+    throw e;
+  }
 
-  await OTP.updateOne({ _id: otpData._id }, { $set: { isVerified: true } });
+  // Check matching code (hash or plaintext backward-compatibility)
+  const isMatch = otpData.otpHash
+    ? hashOtp(vOtp) === otpData.otpHash
+    : String(otpData.otp) === String(vOtp);
+
+  if (!isMatch) {
+    const newAttempts = (otpData.attempts || 0) + 1;
+    const remaining = MAX_VERIFY_ATTEMPTS - newAttempts;
+
+    if (remaining <= 0) {
+      await OTP.deleteOne({ _id: otpData._id });
+      const e = new Error("Too many incorrect attempts. Please request a new verification code.");
+      e.status = 429;
+      throw e;
+    }
+
+    await OTP.updateOne({ _id: otpData._id }, { $set: { attempts: newAttempts } });
+
+    const e = new Error(`Incorrect verification code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`);
+    e.status = 400;
+    throw e;
+  }
+
+  await withTransaction(async (session) => {
+    await User.findOneAndUpdate(
+      { email: cleanEmail },
+      { isVerified: true },
+      { returnDocument: "after", session }
+    );
+
+    await OTP.deleteOne({ _id: otpData._id }).session(session);
+  });
 
   return { message: "OTP verified successfully" };
 };

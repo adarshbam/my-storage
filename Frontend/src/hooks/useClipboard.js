@@ -33,7 +33,7 @@ export function useClipboard({
   };
 
   const handleCopyItem = (item) => {
-    if (isReadOnly || isSpecialFolder(item)) return;
+    if (isReadOnly || isSpecialFolder(item, specialView)) return;
     const prepared = {
       action: "copy",
       items: [
@@ -53,7 +53,7 @@ export function useClipboard({
   };
 
   const handleCutItem = (item) => {
-    if (isReadOnly || isSpecialFolder(item)) return;
+    if (isReadOnly || isSpecialFolder(item, specialView)) return;
     const prepared = {
       action: "cut",
       items: [
@@ -74,7 +74,7 @@ export function useClipboard({
 
   const handleCopySelected = () => {
     if (isReadOnly || selectedItems.length === 0) return;
-    const eligibleItems = selectedItems.filter((i) => !isSpecialFolder(i));
+    const eligibleItems = selectedItems.filter((i) => !isSpecialFolder(i, specialView));
     if (eligibleItems.length === 0) return;
 
     const prepared = {
@@ -96,7 +96,7 @@ export function useClipboard({
 
   const handleCutSelected = () => {
     if (isReadOnly || selectedItems.length === 0) return;
-    const eligibleItems = selectedItems.filter((i) => !isSpecialFolder(i));
+    const eligibleItems = selectedItems.filter((i) => !isSpecialFolder(i, specialView));
     if (eligibleItems.length === 0) return;
 
     const prepared = {

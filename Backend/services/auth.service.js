@@ -13,6 +13,7 @@ import { uploadToB2 } from "../integrations/storage/s3.client.js";
 import { GOOGLE_CLIENT_ID, CLIENT_URL } from "../config/config.js";
 import { sanitize } from "../utils/sanitize.js";
 import { createSessionAndSetCookies, createUserWithRootDir } from "../utils/authHelpers.js";
+import { withTransaction } from "../utils/transaction.js";
 import sendEmail from "../integrations/email/email.service.js";
 import { z } from "zod";
 import { loginSchema, registerSchema } from "../validators/authSchema.js";
@@ -113,6 +114,23 @@ export const registerUserLogic = async ({ name, email, password, req, res }) => 
   let { email: vEmail, name: vName, password: vPassword } = data;
   vName = sanitize(vName);
 
+  const existingUser = await User.findOne({ email: vEmail });
+  if (existingUser) {
+    if (existingUser.status === "Terminated") {
+      const e = new Error("This account has been permanently terminated by system administration.");
+      e.status = 403;
+      throw e;
+    }
+    if (existingUser.status === "Deleted") {
+      const e = new Error("This account is deactivated. Contact system administration to reactivate your account.");
+      e.status = 403;
+      throw e;
+    }
+    const e = new Error("Email already exists");
+    e.status = 409;
+    throw e;
+  }
+
   try {
     const { userId, rootDirId } = await createUserWithRootDir({
       name: vName || "User",
@@ -164,9 +182,15 @@ export const loginUserLogic = async ({ email, password, otp, req, res }) => {
       throw e;
     }
 
+    if (user.status === "Terminated") {
+      const e = new Error("This account has been permanently terminated by system administration.");
+      e.status = 403;
+      throw e;
+    }
+
     if (user.status === "Deleted") {
-      const e = new Error("User is Deleted contact adarshsinghbam@gmail.com to recover your account");
-      e.status = 404;
+      const e = new Error("This account is deactivated. Contact system administration to reactivate your account.");
+      e.status = 403;
       throw e;
     }
 
@@ -251,13 +275,18 @@ export const authGoogleLogic = async ({ credential, req, res }) => {
     const { name, email, picture } = loginTicket.getPayload();
 
     const existingUser = await User.findOne({ email })
-      .select("rootDirId name status profilepic")
+      .select("rootDirId name status profilepic twoFactorEnabled")
       .lean();
 
     if (existingUser) {
+      if (existingUser.status === "Terminated") {
+        const e = new Error("This account has been permanently terminated by system administration.");
+        e.status = 403;
+        throw e;
+      }
       if (existingUser.status === "Deleted") {
-        const e = new Error("User is Deleted contact adarshsinghbam@gmail.com to recover your account");
-        e.status = 404;
+        const e = new Error("This account is deactivated. Contact system administration to reactivate your account.");
+        e.status = 403;
         throw e;
       }
       const rootDir = await Directory.findOne({ _id: existingUser.rootDirId })
@@ -271,6 +300,27 @@ export const authGoogleLogic = async ({ credential, req, res }) => {
 
       if (picture) {
         await syncUserOAuthAvatar(existingUser, picture, "google-profile-pic");
+      }
+
+      // ── 2FA Interception ──
+      if (existingUser.twoFactorEnabled) {
+        const tempToken = crypto.randomBytes(32).toString("hex");
+        const redisKey = `2fa_login:${tempToken}`;
+        await cacheSet(
+          redisKey,
+          JSON.stringify({
+            userId: existingUser._id.toString(),
+            rootDirId: rootDir._id.toString(),
+          }),
+          300 // 5-minute TTL
+        );
+
+        return {
+          status: 200,
+          twoFactorRequired: true,
+          tempToken,
+          message: "Two-Factor Authentication required",
+        };
       }
 
       await createSessionAndSetCookies(existingUser._id, rootDir._id, req, res);
@@ -374,65 +424,78 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
       console.log("connecting...");
       console.log(access_token);
 
-      const user = await User.findOneAndUpdate(
-        { email },
-        {
-          $set: {
-            "integrations.github": {
-              connected: true,
-              accessToken: access_token,
-              connectedAt: new Date(),
+      let user = null;
+      await withTransaction(async (session) => {
+        user = await User.findOneAndUpdate(
+          { email },
+          {
+            $set: {
+              "integrations.github": {
+                connected: true,
+                accessToken: access_token,
+                connectedAt: new Date(),
+              },
             },
           },
-        },
-        { new: true }
-      );
+          { new: true, session },
+        );
 
-      const existingDir = await Directory.findOne({
-        userId: user._id,
-        provider: "github",
-      });
-      if (!existingDir) {
-        const newDirId = new mongoose.Types.ObjectId();
-        await Directory.create({
-          _id: newDirId,
-          name: "Github",
-          userId: user._id,
-          type: "directory",
-          parentDir: user.rootDirId,
-          path: [user.rootDirId, newDirId],
-          provider: "github",
-        });
-      }
+        if (user) {
+          const existingDir = await Directory.findOne({
+            userId: user._id,
+            provider: "github",
+          }).session(session);
 
-      if (userData.avatar_url && !user.profilepic) {
-        const newPicId = await saveAvatarUrlToB2(user._id, userData.avatar_url, "github-profile-pic");
-        if (newPicId) {
-          user.profilepic = newPicId;
+          if (!existingDir) {
+            const newDirId = new mongoose.Types.ObjectId();
+            await Directory.create(
+              [
+                {
+                  _id: newDirId,
+                  name: "Github",
+                  userId: user._id,
+                  type: "directory",
+                  parentDir: user.rootDirId,
+                  path: [user.rootDirId, newDirId],
+                  provider: "github",
+                },
+              ],
+              { session },
+            );
+          }
         }
+      });
+
+      if (user) {
+        if (userData.avatar_url && !user.profilepic) {
+          const newPicId = await saveAvatarUrlToB2(user._id, userData.avatar_url, "github-profile-pic");
+          if (newPicId) {
+            await User.updateOne({ _id: user._id }, { $set: { profilepic: newPicId } });
+          }
+        }
+
+        await invalidateUserSessions(user._id.toString());
       }
 
-      await user.save();
-      await invalidateUserSessions(user._id.toString());
-
-      console.log(user);
       return res.redirect(`${CLIENT_URL}/dashboard`);
     }
 
     const existingUser = await User.findOne({ email })
-      .select("rootDirId name status profilepic")
+      .select("rootDirId name status profilepic twoFactorEnabled")
       .lean();
 
     if (existingUser) {
+      if (existingUser.status === "Terminated") {
+        return res.redirect(`${CLIENT_URL}/login?error=AccountTerminated`);
+      }
+
+      if (existingUser.status === "Deleted") {
+        return res.redirect(`${CLIENT_URL}/login?error=AccountDeactivated`);
+      }
+
       const rootDir = await Directory.findOne({ _id: existingUser.rootDirId })
         .select("_id")
         .lean();
-
-      if (existingUser.status === "Deleted") {
-        const e = new Error("User is Deleted contact adarshsinghbam@gmail.com to recover your account");
-        e.status = 404;
-        throw e;
-      }
 
       if (!rootDir) {
         const e = new Error("Internal Server Error");
@@ -442,6 +505,24 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
 
       if (userData.avatar_url) {
         await syncUserOAuthAvatar(existingUser, userData.avatar_url, "github-profile-pic");
+      }
+
+      // ── 2FA Interception ──
+      if (existingUser.twoFactorEnabled) {
+        const tempToken = crypto.randomBytes(32).toString("hex");
+        const redisKey = `2fa_login:${tempToken}`;
+        await cacheSet(
+          redisKey,
+          JSON.stringify({
+            userId: existingUser._id.toString(),
+            rootDirId: rootDir._id.toString(),
+          }),
+          300 // 5-minute TTL
+        );
+
+        return res.redirect(
+          `${CLIENT_URL}/login?twoFactorRequired=true&tempToken=${tempToken}`
+        );
       }
 
       await createSessionAndSetCookies(existingUser._id, rootDir._id, req, res);
@@ -530,6 +611,12 @@ export const forgotPasswordLogic = async ({ email }) => {
   });
 
   if (user) {
+    if (user.status === "Terminated" || user.status === "Deleted") {
+      return {
+        message: "If an account exists with this email, a reset link has been sent.",
+      };
+    }
+
     const resetToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto
       .createHash("sha256")
@@ -594,6 +681,18 @@ export const resetPasswordLogic = async ({ token, newPassword }) => {
   if (!user) {
     const e = new Error("Reset Token Invalid or Expired");
     e.status = 401;
+    throw e;
+  }
+
+  if (user.status === "Terminated") {
+    const e = new Error("This account has been permanently terminated by system administration.");
+    e.status = 403;
+    throw e;
+  }
+
+  if (user.status === "Deleted") {
+    const e = new Error("This account is deactivated. Contact system administration to reactivate your account.");
+    e.status = 403;
     throw e;
   }
 

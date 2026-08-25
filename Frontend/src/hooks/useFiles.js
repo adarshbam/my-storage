@@ -137,6 +137,9 @@ export function useFiles({ folderId, specialView, isSearch, searchQuery, searchE
         files,
         parentDir: responseData.parentDir,
         parentId: responseData.parentId ?? null,
+        ownerName: responseData.ownerName || null,
+        ownerEmail: responseData.ownerEmail || null,
+        userId: responseData.userId || null,
       });
 
       try {
@@ -153,8 +156,21 @@ export function useFiles({ folderId, specialView, isSearch, searchQuery, searchE
       }
       
       setDirPath(responseData.path);
-      setDirName(
-        responseData.name ||
+      const isOtherVault =
+        specialView === "owner" ||
+        specialView === "admin" ||
+        (responseData.userId && user?._id && responseData.userId.toString() !== user._id.toString()) ||
+        Boolean(ownerId);
+
+      let resolvedName = responseData.name;
+      if (
+        responseData.name === "Vault" &&
+        isOtherVault &&
+        responseData.ownerName
+      ) {
+        resolvedName = `${responseData.ownerName}'s Vault`;
+      } else if (!resolvedName) {
+        resolvedName =
           (isSearch
             ? `Search: ${searchQuery}`
             : specialView === "shared"
@@ -165,8 +181,9 @@ export function useFiles({ folderId, specialView, isSearch, searchQuery, searchE
                   ? "Activity Pulse"
                   : specialView === "starred"
                     ? "Priority Beacon"
-                    : "Home")
-      );
+                    : "Home");
+      }
+      setDirName(resolvedName);
     } catch (err) {
       console.error(err);
       setError(err.message || "An unexpected error occurred.");

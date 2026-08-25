@@ -254,12 +254,20 @@ export default function GitCommitHistoryView({
                       src={commit.author.avatar_url}
                       alt="avatar"
                       className="w-9 h-9 rounded-full border border-white/10 shrink-0 mt-0.5"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                        if (e.currentTarget.nextSibling) {
+                          e.currentTarget.nextSibling.style.display = "flex";
+                        }
+                      }}
                     />
-                  ) : (
-                    <div className="w-9 h-9 rounded-full bg-accent-soft text-accent-primary flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 border border-accent-border">
-                      {commit.author?.name?.[0]?.toUpperCase() || "U"}
-                    </div>
-                  )}
+                  ) : null}
+                  <div
+                    className="w-9 h-9 rounded-full bg-accent-soft text-accent-primary flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 border border-accent-border"
+                    style={{ display: commit.author?.avatar_url ? "none" : "flex" }}
+                  >
+                    {commit.author?.name?.[0]?.toUpperCase() || "U"}
+                  </div>
 
                   <div className="space-y-1 min-w-0 flex-1">
                     <div className="font-bold text-sm text-slate-900 dark:text-white truncate group-hover:text-accent-primary transition-colors">

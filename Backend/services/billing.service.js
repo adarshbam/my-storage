@@ -17,7 +17,12 @@ export const getInvoicesLogic = async ({ userId }) => {
   const allInvoices = [];
 
   for (const sub of subscriptions) {
-    if (!sub.razorpaySubscriptionId || sub.razorpaySubscriptionId.startsWith("legacy_")) {
+    if (
+      !sub.razorpaySubscriptionId ||
+      sub.razorpaySubscriptionId.startsWith("legacy_") ||
+      sub.razorpaySubscriptionId.startsWith("trial_") ||
+      sub.isFreeTrial
+    ) {
       continue;
     }
 

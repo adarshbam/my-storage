@@ -34,12 +34,22 @@ class ApiClient {
     const response = await this.request(path, options);
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: response.statusText }));
-      const err = new Error(error.message || 'Request failed');
+      const err = new Error(error.error || error.message || 'Request failed');
       err.status = response.status;
       err.data = error;
+      err.response = { data: error, status: response.status };
       throw err;
     }
-    return response.json();
+    const data = await response.json();
+    if (data && typeof data === 'object' && !Array.isArray(data) && !('data' in data)) {
+      Object.defineProperty(data, 'data', {
+        value: data,
+        writable: true,
+        enumerable: false,
+        configurable: true,
+      });
+    }
+    return data;
   }
 
   get(path, options = {}) {

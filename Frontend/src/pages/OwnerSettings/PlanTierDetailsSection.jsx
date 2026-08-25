@@ -1,11 +1,4 @@
-import { Sliders, Sparkles, Palette } from "lucide-react";
-
-const accentOptions = [
-  { value: "emerald", label: "Emerald Green", class: "bg-emerald-500" },
-  { value: "purple", label: "Fuchsia Purple", class: "bg-purple-500" },
-  { value: "rose", label: "Rose Orange", class: "bg-rose-500" },
-  { value: "sky", label: "Sky Blue", class: "bg-sky-500" },
-];
+import { Sliders, Sparkles } from "lucide-react";
 
 export default function PlanTierDetailsSection({
   planTiers,
@@ -23,32 +16,31 @@ export default function PlanTierDetailsSection({
               Pricing Landing Page Marketing Tier Details
             </h2>
             <p className="text-xs text-slate-500 dark:text-white/50 font-medium">
-              Customize tier titles, marketing badges, card accent highlights,
-              and public landing page descriptions.
+              Customize tier titles, marketing badges, and public landing page descriptions.
             </p>
           </div>
         </div>
 
         <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400">
-          4 Marketing Tiers
+          Marketing Tiers
         </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {planTiers.map((tier) => (
           <div
-            key={tier.type}
+            key={tier.type || tier.slug}
             className="rounded-2xl p-5 border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02] hover:border-rose-500/40 transition-all duration-300 space-y-4 shadow-sm"
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/5">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-rose-500" />
                 <h3 className="text-base font-black text-slate-900 dark:text-white">
-                  {tier.type} Tier
+                  {tier.title || tier.type} Tier
                 </h3>
               </div>
               <span className="text-[10px] font-mono text-slate-400 dark:text-white/40 uppercase">
-                {tier.type}
+                {tier.slug || tier.type}
               </span>
             </div>
 
@@ -61,7 +53,7 @@ export default function PlanTierDetailsSection({
                 type="text"
                 value={tier.title}
                 onChange={(e) =>
-                  onUpdateTierDetail(tier.type, "title", e.target.value)
+                  onUpdateTierDetail(tier.slug || tier.type, "title", e.target.value)
                 }
                 className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
               />
@@ -74,33 +66,13 @@ export default function PlanTierDetailsSection({
               </label>
               <input
                 type="text"
-                value={tier.badge}
+                value={tier.badge || ""}
                 onChange={(e) =>
-                  onUpdateTierDetail(tier.type, "badge", e.target.value)
+                  onUpdateTierDetail(tier.slug || tier.type, "badge", e.target.value)
                 }
                 className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
                 placeholder="e.g. Most Popular"
               />
-            </div>
-
-            {/* Highlight Accent Color */}
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50 mb-1 font-mono">
-                Highlight Accent Color
-              </label>
-              <select
-                value={tier.accentColor}
-                onChange={(e) =>
-                  onUpdateTierDetail(tier.type, "accentColor", e.target.value)
-                }
-                className="w-full bg-white dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
-              >
-                {accentOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
             </div>
 
             {/* Description */}
@@ -110,9 +82,9 @@ export default function PlanTierDetailsSection({
               </label>
               <textarea
                 rows="3"
-                value={tier.description}
+                value={tier.description || ""}
                 onChange={(e) =>
-                  onUpdateTierDetail(tier.type, "description", e.target.value)
+                  onUpdateTierDetail(tier.slug || tier.type, "description", e.target.value)
                 }
                 className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-900 dark:text-white font-medium text-xs resize-none focus:outline-none focus:border-rose-500 shadow-sm"
               />

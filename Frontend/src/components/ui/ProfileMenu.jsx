@@ -21,10 +21,11 @@ import {
   Minimize,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatSize } from "../../lib/utils";
+import { formatSize, getProfilePicUrl, getInitials } from "../../lib/utils";
 import { SERVER_URL } from "../../lib/api";
 import { supportedCountries } from "../../lib/currency";
 import { useTheme } from "./ThemeProvider";
+import { usePlan } from "../../context/PlanContext";
 
 export default function ProfileMenu({
   user,
@@ -39,15 +40,24 @@ export default function ProfileMenu({
   const [imgError, setImgError] = useState(false);
   const menuRef = useRef(null);
   const fileInputRef = useRef(null);
-  const maxStorage = user?.maxStorage || 1024 * 1024 * 500;
+  const { maxStorage: planMaxStorage, subscription } = usePlan();
+  const maxStorage =
+    planMaxStorage ||
+    subscription?.maxStorage ||
+    subscription?.storageLimit ||
+    user?.maxStorage ||
+    5368709120;
   const usedStorage = user?.usedStorage || 0;
   const navigate = useNavigate();
 
   const { theme, setTheme, accent, setAccent, palettes } = useTheme();
 
+  const resolvedAvatarUrl = getProfilePicUrl(profilePicUrl || user?.profilepic);
+  const userInitial = getInitials(user?.name, user?.email);
+
   useEffect(() => {
     setImgError(false);
-  }, [profilePicUrl]);
+  }, [resolvedAvatarUrl]);
 
   // Owner configuration settings state
   const [ownerSettingsOpen, setOwnerSettingsOpen] = useState(false);
@@ -311,9 +321,9 @@ export default function ProfileMenu({
           }`}
         >
           <div className="w-full h-full rounded-full bg-slate-100 dark:bg-vault-surface overflow-hidden flex items-center justify-center relative border border-slate-200 dark:border-white/10 shadow-sm">
-            {profilePicUrl && !imgError ? (
+            {resolvedAvatarUrl && !imgError ? (
               <img
-                src={profilePicUrl}
+                src={resolvedAvatarUrl}
                 alt="Profile"
                 referrerPolicy="no-referrer"
                 onError={() => setImgError(true)}
@@ -321,9 +331,7 @@ export default function ProfileMenu({
               />
             ) : (
               <span className="text-xs font-black text-accent-primary select-none">
-                {user?.name?.[0]?.toUpperCase() ||
-                  user?.email?.[0]?.toUpperCase() ||
-                  "V"}
+                {userInitial}
               </span>
             )}
           </div>
@@ -350,9 +358,9 @@ export default function ProfileMenu({
                     onClick={handleAvatarClick}
                   >
                     <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 flex items-center justify-center relative shadow-sm">
-                      {profilePicUrl && !imgError ? (
+                      {resolvedAvatarUrl && !imgError ? (
                         <img
-                          src={profilePicUrl}
+                          src={resolvedAvatarUrl}
                           alt="Profile"
                           referrerPolicy="no-referrer"
                           onError={() => setImgError(true)}
@@ -360,7 +368,7 @@ export default function ProfileMenu({
                         />
                       ) : (
                         <span className="text-base font-black text-accent-primary select-none">
-                          {user?.name?.[0]?.toUpperCase() || "V"}
+                          {userInitial}
                         </span>
                       )}
                       <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">

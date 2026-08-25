@@ -78,12 +78,31 @@ export const deleteDirectoryForever = async (req, res, next) => {
 
 export const batchDelete = async (req, res, next) => {
   try {
+    const items = Array.isArray(req.body) ? req.body : req.body.items;
     await trashService.batchDeleteLogic({
-      items: req.body.items,
+      items,
       userId: req.user.id,
-      userRole: req.user.role
+      userRole: req.user.role,
     });
     return res.status(200).send("Batch delete completed successfully");
+  } catch (error) {
+    if (error.status) return res.status(error.status).send(error.message);
+    next(error);
+  }
+};
+
+export const batchRestore = async (req, res, next) => {
+  try {
+    const items = Array.isArray(req.body) ? req.body : req.body.items;
+    const all = req.body?.all === true;
+    await trashService.batchRestoreLogic({
+      items,
+      all,
+      userId: req.user.id,
+      userRole: req.user.role,
+      rootDirId: req.user.rootDirId,
+    });
+    return res.status(200).send("Batch restore completed successfully");
   } catch (error) {
     if (error.status) return res.status(error.status).send(error.message);
     next(error);

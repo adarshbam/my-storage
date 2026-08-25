@@ -3,12 +3,13 @@ import TrialClaim from "../models/trialClaimModel.js";
 import { normalizePhoneNumber } from "../utils/phone.utils.js";
 import { generateOtp, hashOtp, hashPhoneNumber } from "../utils/crypto.utils.js";
 import { sendSms } from "../integrations/sms/sms.service.js";
+import { verifyFirebaseIdToken } from "../integrations/firebase/firebase.admin.js";
 import { cacheGet, cacheSet, cacheDel, invalidateUserSessions } from "../databases/redis.js";
 import { securityPhoneVerified } from "./notification.service.js";
 
 const OTP_TTL_SECONDS = 600; // 10 minutes
-const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
-const MAX_VERIFY_ATTEMPTS = 5;
+const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds resend cooldown
+const MAX_VERIFY_ATTEMPTS = 5; // Max 5 incorrect attempts before OTP invalidation
 
 /**
  * Sends a phone verification OTP via SMS.
@@ -22,6 +23,21 @@ export async function sendPhoneOtpLogic({ userId, rawPhone, defaultCountry = "IN
   }
 
   const { canonicalPhone, formatted } = normalized;
+
+  // Check if another account already has this phone number verified
+  if (userId) {
+    const existingUser = await User.findOne({
+      phone: canonicalPhone,
+      _id: { $ne: userId },
+      phoneVerified: true,
+    });
+    if (existingUser) {
+      const err = new Error("This phone number is already associated with another account.");
+      err.status = 409;
+      throw err;
+    }
+  }
+
   const phoneHash = hashPhoneNumber(canonicalPhone);
   const redisKey = `phone_otp:${phoneHash}`;
 
@@ -73,7 +89,7 @@ export async function sendPhoneOtpLogic({ userId, rawPhone, defaultCountry = "IN
     success: true,
     message: `Verification code sent to ${formatted}`,
     canonicalPhone,
-    resendCooldownSeconds: 60,
+    resendCooldownSeconds: Math.ceil(RESEND_COOLDOWN_MS / 1000),
   };
 }
 
@@ -139,6 +155,20 @@ export async function verifyPhoneOtpLogic({ userId, rawPhone, otp, defaultCountr
     throw err;
   }
 
+  // Check if another account already has this phone verified before binding
+  const existingUser = await User.findOne({
+    phone: canonicalPhone,
+    _id: { $ne: userId },
+    phoneVerified: true,
+  });
+
+  if (existingUser) {
+    await cacheDel(redisKey);
+    const err = new Error("This phone number is already associated with another account.");
+    err.status = 409;
+    throw err;
+  }
+
   // Successfully verified! Invalidate Redis OTP record
   await cacheDel(redisKey);
 
@@ -189,3 +219,76 @@ export async function checkPhoneTrialEligibility({ rawPhone, defaultCountry = "I
     claimedAt: existingClaim ? existingClaim.claimedAt : null,
   };
 }
+
+/**
+ * Validates a client-verified Firebase ID token and updates user.phone & phoneVerified.
+ */
+export async function verifyFirebasePhoneLogic({ userId, idToken, clientIp = null }) {
+  if (!idToken) {
+    const err = new Error("Firebase ID verification token is required.");
+    err.status = 400;
+    throw err;
+  }
+
+  // 1. Cryptographically verify the token with Google Firebase Admin
+  const decoded = await verifyFirebaseIdToken(idToken);
+  const rawPhone = decoded.phone_number;
+
+  if (!rawPhone) {
+    const err = new Error("The submitted token does not contain a verified phone number.");
+    err.status = 400;
+    throw err;
+  }
+
+  const normalized = normalizePhoneNumber(rawPhone, "IN");
+  if (!normalized.isValid) {
+    const err = new Error(normalized.error || "Invalid phone number in token.");
+    err.status = 400;
+    throw err;
+  }
+
+  const { canonicalPhone } = normalized;
+  const phoneHash = hashPhoneNumber(canonicalPhone);
+
+  // 2. Check if another user already has this phone number verified
+  const existingUser = await User.findOne({
+    phone: canonicalPhone,
+    _id: { $ne: userId },
+    phoneVerified: true,
+  });
+
+  if (existingUser) {
+    const err = new Error("This phone number is already associated with another account.");
+    err.status = 409;
+    throw err;
+  }
+
+  // 3. Link verified phone to current User
+  const user = await User.findById(userId);
+  if (!user) {
+    const err = new Error("User not found");
+    err.status = 404;
+    throw err;
+  }
+
+  user.phone = canonicalPhone;
+  user.phoneVerified = true;
+  user.phoneVerifiedAt = new Date();
+  await user.save();
+
+  // Invalidate Redis session cache
+  await invalidateUserSessions(userId.toString());
+
+  // Security notification state update
+  await securityPhoneVerified({ userId, phone: canonicalPhone }).catch((nErr) => {
+    console.warn("[PhoneVerification] Notification trigger error:", nErr.message);
+  });
+
+  return {
+    success: true,
+    message: "Phone number verified successfully via Firebase!",
+    phone: canonicalPhone,
+    phoneVerified: true,
+  };
+}
+

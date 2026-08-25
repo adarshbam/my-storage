@@ -21,6 +21,7 @@ export const regenerateRecoveryCodes = (data) => apiClient.post('/user/2fa/recov
 // ── PHONE VERIFICATION ──
 export const sendPhoneOtp = (data) => apiClient.post('/user/phone/send-otp', data);
 export const verifyPhoneOtp = (data) => apiClient.post('/user/phone/verify-otp', data);
+export const verifyFirebasePhone = (data) => apiClient.post('/user/phone/verify-firebase', data);
 export const checkPhoneTrialEligibility = (params) => apiClient.get('/user/phone/trial-eligibility', { params });
 
 // ── SECONDARY RECOVERY EMAIL ──

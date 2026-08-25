@@ -108,3 +108,15 @@ export const searchDriveFilesSchema = {
     ownerId: z.string().optional(),
   }),
 };
+
+export const saveDriveFileSchema = {
+  params: z.object({
+    fileId: z.string().min(1, "File ID required"),
+  }),
+  body: z.object({
+    content: z.string(),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};

@@ -53,22 +53,12 @@ export default function PlanTierConfigurationSection({
   };
 
   const getBadgeStyle = (tierSlug) => {
-    const tierObj = planTiers.find((t) => t.slug === tierSlug);
-    if (tierObj?.accentColor && accentBadgeColors[tierObj.accentColor]) {
-      return accentBadgeColors[tierObj.accentColor];
-    }
-    if (tierBadgeColors[tierSlug]) {
-      return tierBadgeColors[tierSlug];
-    }
-    const colorKeys = Object.keys(accentBadgeColors);
-    const sum = tierSlug
-      .split("")
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return accentBadgeColors[colorKeys[sum % colorKeys.length]];
+    return "bg-accent-soft text-accent-primary border border-accent-border font-bold shadow-accent-glow-sm";
   };
 
-  const tierList = planTiers.map((t) => t.slug);
-  // console.log(tierList, planTiers);
+  const tierList = planTiers
+    .map((t) => t.slug)
+    .filter((slug) => slug !== "free-trial" && slug !== "free-trail");
 
   const rulesList = [
     {
@@ -123,10 +113,42 @@ export default function PlanTierConfigurationSection({
     },
   ];
 
-  console.log(tierRuleConfigs, tierFeatureConfigs);
-
   const getRuleValue = (tierConfig, ruleKey) => {
     if (!tierConfig) return undefined;
+    if (ruleKey === "allowUpload") {
+      return tierConfig.allowUpload ?? tierConfig.permissions?.allowUpload ?? true;
+    }
+    if (ruleKey === "allowDownload") {
+      return tierConfig.allowDownload ?? tierConfig.permissions?.allowDownload ?? true;
+    }
+    if (ruleKey === "allowSharing") {
+      return tierConfig.allowSharing ?? tierConfig.permissions?.allowSharing ?? true;
+    }
+    if (ruleKey === "maxConnectedDevices") {
+      return tierConfig.maxConnectedDevices ?? tierConfig.limits?.maxConnectedDevices ?? 5;
+    }
+    if (ruleKey === "uploadSpeedMultiplier") {
+      return (
+        tierConfig.uploadSpeedMultiplier ??
+        tierConfig.settings?.uploadSpeedMultiplier ??
+        "1"
+      );
+    }
+    if (ruleKey === "deleteFilesAfterExpiry") {
+      return (
+        tierConfig.deleteFilesAfterExpiry ??
+        tierConfig.deleteFilesAfterExpiryDays ??
+        tierConfig.settings?.deleteFilesAfterExpiryDays ??
+        "0"
+      );
+    }
+    if (ruleKey === "versionHistoryDays") {
+      return (
+        tierConfig.versionHistoryDays ??
+        tierConfig.settings?.versionHistoryDays ??
+        "30"
+      );
+    }
     if (tierConfig[ruleKey] !== undefined) return tierConfig[ruleKey];
     if (tierConfig.permissions && tierConfig.permissions[ruleKey] !== undefined)
       return tierConfig.permissions[ruleKey];
@@ -135,6 +157,35 @@ export default function PlanTierConfigurationSection({
     if (tierConfig.settings && tierConfig.settings[ruleKey] !== undefined)
       return tierConfig.settings[ruleKey];
     return undefined;
+  };
+
+  const getUploadSizeForTier = (tierConfig) => {
+    if (
+      tierConfig?.maxUploadSizeVal !== undefined &&
+      tierConfig?.maxUploadSizeUnit !== undefined
+    ) {
+      return {
+        val: tierConfig.maxUploadSizeVal,
+        unit: tierConfig.maxUploadSizeUnit,
+      };
+    }
+    const bytes =
+      tierConfig?.limits?.maxUploadFileSize ||
+      tierConfig?.maxUploadFileSize ||
+      5368709120;
+    const tb = 1024 * 1024 * 1024 * 1024;
+    const gb = 1024 * 1024 * 1024;
+    const mb = 1024 * 1024;
+    if (bytes >= tb && bytes % tb === 0)
+      return { val: Math.round(bytes / tb), unit: "TB" };
+    if (bytes >= gb && bytes % gb === 0)
+      return { val: Math.round(bytes / gb), unit: "GB" };
+    if (bytes >= gb) {
+      const inGb = bytes / gb;
+      if (inGb === Math.round(inGb)) return { val: inGb, unit: "GB" };
+      return { val: Math.round(bytes / mb), unit: "MB" };
+    }
+    return { val: Math.round(bytes / mb), unit: "MB" };
   };
 
   return (
@@ -368,44 +419,43 @@ export default function PlanTierConfigurationSection({
                         )}
 
                         {/* Control type: Size (input + unit) */}
-                        {rule.type === "size" && (
-                          <div className="flex items-center justify-center gap-1">
-                            <input
-                              type="number"
-                              min="1"
-                              value={
-                                (tierRuleConfigs[tier] || {})
-                                  .maxUploadSizeVal ?? 5
-                              }
-                              onChange={(e) =>
-                                onUpdateTierRule(
-                                  tier,
-                                  "maxUploadSizeVal",
-                                  Number(e.target.value),
-                                )
-                              }
-                              className="w-14 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-center text-slate-900 dark:text-white font-bold focus:outline-none focus:border-emerald-500/50"
-                            />
-                            <select
-                              value={
-                                (tierRuleConfigs[tier] || {})
-                                  .maxUploadSizeUnit ?? "GB"
-                              }
-                              onChange={(e) =>
-                                onUpdateTierRule(
-                                  tier,
-                                  "maxUploadSizeUnit",
-                                  e.target.value,
-                                )
-                              }
-                              className="bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-1.5 py-1.5 text-slate-900 dark:text-white font-bold text-[11px] focus:outline-none focus:border-emerald-500/50"
-                            >
-                              <option value="MB">MB</option>
-                              <option value="GB">GB</option>
-                              <option value="TB">TB</option>
-                            </select>
-                          </div>
-                        )}
+                        {rule.type === "size" && (() => {
+                          const sizeObj = getUploadSizeForTier(
+                            tierRuleConfigs[tier],
+                          );
+                          return (
+                            <div className="flex items-center justify-center gap-1">
+                              <input
+                                type="number"
+                                min="1"
+                                value={sizeObj.val}
+                                onChange={(e) =>
+                                  onUpdateTierRule(
+                                    tier,
+                                    "maxUploadSizeVal",
+                                    Number(e.target.value),
+                                  )
+                                }
+                                className="w-14 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-center text-slate-900 dark:text-white font-bold focus:outline-none focus:border-emerald-500/50"
+                              />
+                              <select
+                                value={sizeObj.unit}
+                                onChange={(e) =>
+                                  onUpdateTierRule(
+                                    tier,
+                                    "maxUploadSizeUnit",
+                                    e.target.value,
+                                  )
+                                }
+                                className="bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-1.5 py-1.5 text-slate-900 dark:text-white font-bold text-[11px] focus:outline-none focus:border-emerald-500/50"
+                              >
+                                <option value="MB">MB</option>
+                                <option value="GB">GB</option>
+                                <option value="TB">TB</option>
+                              </select>
+                            </div>
+                          );
+                        })()}
 
                         {/* Control type: Text */}
                         {rule.type === "text" && (

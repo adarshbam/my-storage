@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldAlert,
@@ -131,7 +132,10 @@ export default function TwoFactorManageModal({
     document.body.removeChild(element);
   };
 
-  return (
+  if (!isOpen) return null;
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
         <motion.div
@@ -152,7 +156,7 @@ export default function TwoFactorManageModal({
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors p-1"
+            className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors p-1 cursor-pointer"
           >
             <X size={20} />
           </button>
@@ -180,31 +184,28 @@ export default function TwoFactorManageModal({
                 onClick={() => {
                   setActiveTab("regenerate");
                   setError("");
-                  setSuccessMsg("");
                 }}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
                   activeTab === "regenerate"
-                    ? "bg-white/10 text-white shadow"
-                    : "text-white/50 hover:text-white/80"
+                    ? "bg-emerald-500 text-black shadow-md"
+                    : "text-white/60 hover:text-white"
                 }`}
               >
-                <RefreshCw size={14} /> Regenerate Codes
+                Regenerate Backup Codes
               </button>
-
               <button
                 type="button"
                 onClick={() => {
                   setActiveTab("disable");
                   setError("");
-                  setSuccessMsg("");
                 }}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
                   activeTab === "disable"
-                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/30 shadow"
-                    : "text-white/50 hover:text-white/80"
+                    ? "bg-rose-500 text-white shadow-md"
+                    : "text-white/60 hover:text-white"
                 }`}
               >
-                <Trash2 size={14} /> Disable 2FA
+                Disable 2FA
               </button>
             </div>
           )}
@@ -233,27 +234,32 @@ export default function TwoFactorManageModal({
             </motion.div>
           )}
 
-          {/* Regenerated Codes View */}
+          {/* If new recovery codes generated, show them */}
           {newRecoveryCodes.length > 0 ? (
             <div className="space-y-5">
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
-                Your previous recovery codes have been invalidated. Save these 10 new codes immediately:
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2.5">
+                <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
+                  Your new recovery codes are below. Your previous codes have been permanently deactivated.
+                </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 bg-black/40 border border-white/10 rounded-2xl p-4 font-mono text-xs font-bold text-emerald-300">
+              <div className="grid grid-cols-2 gap-2 p-3 bg-black/40 border border-white/10 rounded-2xl font-mono text-xs text-white">
                 {newRecoveryCodes.map((code, idx) => (
-                  <div key={idx} className="p-2 rounded-lg bg-white/5 flex items-center justify-between">
-                    <span className="text-white/40 text-[10px]">#{idx + 1}</span>
-                    <span>{code}</span>
+                  <div
+                    key={idx}
+                    className="p-2 rounded-xl bg-white/5 text-center font-bold tracking-widest select-all border border-white/5 text-emerald-400"
+                  >
+                    {code}
                   </div>
                 ))}
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={handleCopyNewCodes}
-                  className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-bold transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {copiedCodes ? (
                     <>
@@ -269,59 +275,68 @@ export default function TwoFactorManageModal({
                 <button
                   type="button"
                   onClick={handleDownloadNewCodes}
-                  className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-bold transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Download size={14} /> Download .txt
                 </button>
               </div>
 
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-xs shadow-lg shadow-teal-500/25 hover:opacity-95"
-              >
-                Done
-              </button>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-xs shadow-lg shadow-teal-500/25 hover:opacity-95 transition-opacity cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
             </div>
           ) : (
-            /* Form for Regenerate or Disable */
-            <form onSubmit={activeTab === "regenerate" ? handleRegenerateCodes : handleDisable2FA} className="space-y-5">
+            /* Forms for Regenerate or Disable */
+            <form
+              onSubmit={
+                activeTab === "regenerate"
+                  ? handleRegenerateCodes
+                  : handleDisable2FA
+              }
+              className="space-y-4"
+            >
               <p className="text-xs text-white/60 font-medium leading-relaxed">
                 {activeTab === "regenerate"
-                  ? "Regenerate 10 brand-new recovery codes. All previously generated recovery codes will become inactive."
-                  : "Disabling Two-Factor Authentication makes your account less secure. Confirm with your password or authenticator code."}
+                  ? "Enter your current account password or 6-digit authenticator code to regenerate your emergency backup codes."
+                  : "Disabling Two-Factor Authentication significantly reduces your account security. Confirm your password or 6-digit code to continue."}
               </p>
 
               <div>
                 <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">
-                  Account Password (or current 6-digit Authenticator Code)
+                  Account Password
                 </label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter account password"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500 transition-colors"
+                  placeholder="Enter current password"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                 />
               </div>
 
-              <div className="relative flex items-center justify-center">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-white/10" />
-                </div>
-                <span className="relative bg-vault-surface px-3 text-[10px] uppercase font-bold text-white/30 tracking-widest">
-                  OR USE CODE
-                </span>
+              <div className="flex items-center gap-3 my-1">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-[10px] font-bold text-white/30 uppercase tracking-wider">OR</span>
+                <div className="flex-1 h-px bg-white/10" />
               </div>
 
               <div>
+                <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">
+                  6-Digit Authenticator Code
+                </label>
                 <input
                   type="text"
                   maxLength={6}
                   value={totpCode}
                   onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
-                  placeholder="6-digit authenticator code"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white text-center font-mono tracking-widest placeholder:text-white/30 focus:outline-none focus:border-emerald-500 transition-colors"
+                  placeholder="123456"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm font-mono tracking-widest text-center text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                 />
               </div>
 
@@ -330,13 +345,15 @@ export default function TwoFactorManageModal({
                   <button
                     type="submit"
                     disabled={loading || (!password && !totpCode)}
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-xs shadow-lg shadow-teal-500/25 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:opacity-95 text-white font-bold text-xs shadow-lg shadow-teal-500/25 transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {loading ? (
-                      <Loader2 className="animate-spin" size={16} />
+                      <>
+                        <Loader2 className="animate-spin" size={16} /> Generating New Codes…
+                      </>
                     ) : (
                       <>
-                        <RefreshCw size={14} /> Regenerate 10 Recovery Codes
+                        <RefreshCw size={14} /> Generate 10 New Recovery Codes
                       </>
                     )}
                   </button>
@@ -344,7 +361,7 @@ export default function TwoFactorManageModal({
                   <button
                     type="submit"
                     disabled={loading || (!password && !totpCode)}
-                    className="w-full py-3.5 rounded-2xl bg-rose-500/90 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-500/25 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                    className="w-full py-3.5 rounded-2xl bg-rose-500/90 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-500/25 transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {loading ? (
                       <Loader2 className="animate-spin" size={16} />
@@ -360,6 +377,7 @@ export default function TwoFactorManageModal({
           )}
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

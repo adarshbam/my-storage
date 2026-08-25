@@ -4,6 +4,7 @@ import PlanTierConfiguration from "../models/planTierConfigurationModel.js";
 import PlanTier from "../models/planTierModel.js";
 import SystemConfig from "../models/systemConfigModel.js";
 import { rzInstance } from "../integrations/razorpay/razorpay.client.js";
+import { invalidateGlobalPlanCache } from "../databases/redis.js";
 
 export const initialPlanTiers = [
   {
@@ -56,16 +57,6 @@ export const initialBillingPlans = [
     active: true,
     version: 1,
     description: "30-day free trial tier with 5 GB storage and full Ultimate features.",
-  },
-  {
-    period: "Yearly",
-    slug: "free-trial",
-    amount: 0,
-    currency: "INR",
-    storage: 5368709120, // 5 GB
-    active: true,
-    version: 1,
-    description: "Annual free trial tier with 5 GB storage and full Ultimate features.",
   },
   {
     period: "Monthly",
@@ -473,7 +464,13 @@ const resetToDefaultSettings = async (req, res, next) => {
       }),
     );
 
-    // 4. Billing Plans reset with dynamic Razorpay Plan generation
+    // Remove any legacy/invalid Yearly Free Trial plans from database
+    await BillingPlan.deleteMany({
+      slug: { $in: ["free-trial", "free-trail"] },
+      period: "Yearly",
+    });
+
+    // 5. Seed default billing plans with robust Razorpay Plan ID resolution
     await Promise.all(
       initialBillingPlans.map(async (billingPlan) => {
         const { slug, amount, period, description, version, storage, active, currency } = billingPlan;
@@ -502,6 +499,7 @@ const resetToDefaultSettings = async (req, res, next) => {
     );
 
     console.log("[syncDefaultPlans] Successfully reset all settings to defaults.");
+    await invalidateGlobalPlanCache();
 
     if (res && typeof res.status === "function") {
       return res.status(200).json({

@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Info, CheckCircle2, PauseCircle, PlayCircle, X } from "lucide-react";
 
@@ -71,7 +72,9 @@ export default function ConfirmationModal({
   const config = modalConfigs[type] || modalConfigs.CANCEL;
   const Icon = config.icon;
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
         {/* Backdrop */}
@@ -145,6 +148,7 @@ export default function ConfirmationModal({
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

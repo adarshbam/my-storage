@@ -1,18 +1,6 @@
 import { Sliders, Sparkles, Plus, Check, X, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 
-const accentOptions = [
-  { value: "purple", label: "Fuchsia Purple", class: "bg-purple-500" },
-  { value: "rose", label: "Rose Pink / Sunset Orange", class: "bg-rose-500" },
-  { value: "sky", label: "Sky Blue / Ocean", class: "bg-sky-500" },
-  { value: "emerald", label: "Emerald Green", class: "bg-emerald-500" },
-  { value: "amber", label: "Amber Gold", class: "bg-amber-500" },
-  { value: "indigo", label: "Deep Indigo", class: "bg-indigo-500" },
-  { value: "cyan", label: "Electric Cyan", class: "bg-cyan-500" },
-  { value: "pink", label: "Neon Pink", class: "bg-pink-500" },
-  { value: "violet", label: "Radiant Violet", class: "bg-violet-500" },
-];
-
 export default function PlanTiersSection({
   planTiers,
   onUpdateTierDetail,
@@ -22,20 +10,20 @@ export default function PlanTiersSection({
   const [showAddForm, setShowAddForm] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
 
-  const handleSave = async () => {
-    if (onSaveTiers) await onSaveTiers();
-    setSavedMessage(true);
-    setTimeout(() => setSavedMessage(false), 2000);
-  };
   const [newTierData, setNewTierData] = useState({
     slug: "",
     type: "",
     title: "",
     description: "",
     badge: "",
-    accentColor: "emerald",
     active: true,
   });
+
+  const handleSave = async () => {
+    if (onSaveTiers) await onSaveTiers();
+    setSavedMessage(true);
+    setTimeout(() => setSavedMessage(false), 2000);
+  };
 
   const handleCreateSubmit = (e) => {
     e.preventDefault();
@@ -52,7 +40,6 @@ export default function PlanTiersSection({
       title: "",
       description: "",
       badge: "",
-      accentColor: "emerald",
       active: true,
     });
     setShowAddForm(false);
@@ -123,7 +110,7 @@ export default function PlanTiersSection({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1 font-mono">
                 Tier Type / Identifier
@@ -154,28 +141,6 @@ export default function PlanTiersSection({
                 }
                 className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
               />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1 font-mono">
-                Highlight Accent Color
-              </label>
-              <select
-                value={newTierData.accentColor}
-                onChange={(e) =>
-                  setNewTierData({
-                    ...newTierData,
-                    accentColor: e.target.value,
-                  })
-                }
-                className="w-full bg-white dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
-              >
-                {accentOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
 
@@ -255,23 +220,25 @@ export default function PlanTiersSection({
                 </h3>
               </div>
 
-              {/* Active Switch */}
-              <button
-                type="button"
-                onClick={() =>
-                  onUpdateTierDetail(tier.slug, "active", !(tier.active !== false))
-                }
-                className={`w-11 h-6 shrink-0 rounded-full p-1 transition-colors duration-200 flex items-center ${
-                  tier.active !== false ? "bg-rose-500" : "bg-slate-300 dark:bg-slate-700"
-                }`}
-                title={tier.active !== false ? "Disable Tier" : "Enable Tier"}
-              >
-                <div
-                  className={`w-4 h-4 rounded-full bg-white transition-transform duration-200 ${
-                    tier.active !== false ? "translate-x-5" : "translate-x-0"
+              <div className="flex items-center gap-2">
+                {/* Active Switch */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onUpdateTierDetail(tier.slug, "active", !(tier.active !== false))
+                  }
+                  className={`w-11 h-6 shrink-0 rounded-full p-1 transition-colors duration-200 flex items-center ${
+                    tier.active !== false ? "bg-rose-500" : "bg-slate-300 dark:bg-slate-700"
                   }`}
-                />
-              </button>
+                  title={tier.active !== false ? "Disable Tier" : "Enable Tier"}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-white transition-transform duration-200 ${
+                      tier.active !== false ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
 
             {/* Slug */}
@@ -318,26 +285,6 @@ export default function PlanTiersSection({
                 className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
                 placeholder="e.g. Most Popular"
               />
-            </div>
-
-            {/* Highlight Accent Color */}
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50 mb-1 font-mono">
-                Highlight Accent Color
-              </label>
-              <select
-                value={tier.accentColor}
-                onChange={(e) =>
-                  onUpdateTierDetail(tier.slug, "accentColor", e.target.value)
-                }
-                className="w-full bg-white dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
-              >
-                {accentOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
             </div>
 
             {/* Description */}

@@ -24,16 +24,19 @@ import {
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { usePlan } from "../context/PlanContext";
 import { SERVER_URL } from "../lib/api";
-import { formatSize, getUser } from "../lib/utils";
-import PhoneVerificationModal from "../components/auth/PhoneVerificationModal";
+import { formatSize, getUser, getProfilePicUrl } from "../lib/utils";
+import UserAvatar from "../components/ui/UserAvatar";
 import SecondaryRecoveryEmailModal from "../components/auth/SecondaryRecoveryEmailModal";
 import TwoFactorSetupModal from "../components/auth/TwoFactorSetupModal";
 import TwoFactorManageModal from "../components/auth/TwoFactorManageModal";
 import AppearanceSection from "../components/profile/AppearanceSection";
+import NetworkSpeedSection from "../components/profile/NetworkSpeedSection";
 
 export default function Profile() {
   const { user, setUser } = useAuth();
+  const { maxStorage: planMaxStorage, subscription } = usePlan();
   const navigate = useNavigate();
 
   const [editNameOpen, setEditNameOpen] = useState(false);
@@ -41,17 +44,19 @@ export default function Profile() {
   const [twoFactorSetupOpen, setTwoFactorSetupOpen] = useState(false);
   const [twoFactorManageOpen, setTwoFactorManageOpen] = useState(false);
   const [recoveryEmailOpen, setRecoveryEmailOpen] = useState(false);
-  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
   const [nameMessage, setNameMessage] = useState(null);
   const [passwordMessage, setPasswordMessage] = useState(null);
 
   const refreshUser = () => getUser(setUser);
 
-  const profilePicUrl = user?.profilepic
-    ? `${SERVER_URL}/user/profilepic?id=${user.profilepic}`
-    : null;
+  const profilePicUrl = getProfilePicUrl(user?.profilepic);
 
-  const maxStorage = user?.maxStorage || 1024 * 1024 * 500;
+  const maxStorage =
+    planMaxStorage ||
+    subscription?.maxStorage ||
+    subscription?.storageLimit ||
+    user?.maxStorage ||
+    5368709120;
   const usedStorage = user?.usedStorage || 0;
   const usedPercent = Math.min(100, Math.max(0, ((usedStorage / maxStorage) * 100).toFixed(1)));
 
@@ -223,29 +228,14 @@ export default function Profile() {
               <div className="absolute top-0 right-0 w-64 h-64 bg-accent-soft/20 rounded-full blur-3xl pointer-events-none" />
 
               <div className="flex items-center gap-6 z-10 w-full sm:w-auto">
-                <div className="relative">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden shrink-0 bg-accent-soft border-2 border-accent-border flex items-center justify-center shadow-accent-glow">
-                    {profilePicUrl ? (
-                      <img
-                        src={profilePicUrl}
-                        alt={user?.name || "Profile"}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <span className="text-2xl sm:text-3xl font-black text-accent-primary select-none">
-                        {user?.name?.[0]?.toUpperCase() ||
-                          user?.email?.[0]?.toUpperCase() ||
-                          "U"}
-                      </span>
-                    )}
-                  </div>
-                  <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white dark:border-vault-black shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
-                </div>
+                <UserAvatar
+                  user={user}
+                  src={profilePicUrl}
+                  size="2xl"
+                  glow={true}
+                  status="ONLINE"
+                  shape="rounded"
+                />
 
                 <div className="space-y-1.5 min-w-0 flex-1">
                   <div className="flex items-center gap-3 flex-wrap">
@@ -282,7 +272,10 @@ export default function Profile() {
             {/* 2. Appearance & Color Theme Customizer */}
             <AppearanceSection />
 
-            {/* 3. Storage Quota Visual Card */}
+            {/* 3. Transfer Speed Governor */}
+            <NetworkSpeedSection />
+
+            {/* 4. Storage Quota Visual Card */}
             <div className="rounded-3xl p-6 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-5">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <span className="text-xs font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-white/40 flex items-center gap-2">
@@ -335,7 +328,7 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 
                 {/* 2FA Card */}
                 <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3.5 flex flex-col justify-between">
@@ -416,50 +409,6 @@ export default function Profile() {
                     className="w-full py-2.5 rounded-xl text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-2 shadow-sm"
                   >
                     <Mail size={13} /> {user?.secondaryRecoveryEmailVerified ? "Update Recovery Email" : "Set Recovery Email"}
-                  </button>
-                </div>
-
-                {/* Phone Verification */}
-                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3.5 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
-                          <Smartphone size={16} />
-                        </div>
-                        <span className="text-xs font-bold text-slate-900 dark:text-white">Phone Verification</span>
-                      </div>
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
-                          user?.phoneVerified
-                            ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
-                            : "bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30"
-                        }`}
-                      >
-                        {user?.phoneVerified ? "Verified" : "Unverified"}
-                      </span>
-                    </div>
-                    {user?.phoneVerified ? (
-                      <div className="flex items-center justify-between text-xs text-slate-800 dark:text-white/90 font-mono bg-white dark:bg-black/30 p-2 rounded-xl border border-slate-200 dark:border-white/5">
-                        <span className="truncate">{user.phone}</span>
-                        <CheckCircle2 size={14} className="text-emerald-500 shrink-0 ml-2" />
-                      </div>
-                    ) : (
-                      <p className="text-[11px] text-slate-600 dark:text-white/50 leading-relaxed">
-                        Verify your mobile number via secure SMS OTP to unlock free trial eligibility and emergency lockout resets.
-                      </p>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => setPhoneModalOpen(true)}
-                    className={`w-full py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 ${
-                      user?.phoneVerified
-                        ? "bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 shadow-sm"
-                        : "bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-white shadow-lg shadow-emerald-500/20"
-                    }`}
-                  >
-                    <Smartphone size={13} /> {user?.phoneVerified ? "Change Phone Number" : "Verify Phone Number"}
                   </button>
                 </div>
 
@@ -747,16 +696,6 @@ export default function Profile() {
           </div>
         )}
       </AnimatePresence>
-
-      {/* ── PHONE VERIFICATION MODAL ── */}
-      <PhoneVerificationModal
-        isOpen={phoneModalOpen}
-        onClose={() => setPhoneModalOpen(false)}
-        onSuccess={refreshUser}
-        title="Verify Phone Number"
-        subtitle="Verify your phone number to secure your account and unlock your 30-day Free Trial eligibility."
-        purpose="security"
-      />
 
       {/* ── SECONDARY RECOVERY EMAIL MODAL ── */}
       <SecondaryRecoveryEmailModal

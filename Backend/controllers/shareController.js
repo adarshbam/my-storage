@@ -121,6 +121,7 @@ export const claimShareAccess = async (req, res, next) => {
       token: req.params.token,
       userId: req.user.id,
       userRole: req.user.role,
+      planContext: req.planContext,
     });
     return res.status(200).json(result);
   } catch (error) {

@@ -23,6 +23,13 @@ export const generateShareLinkLogic = async ({
   maxDownloads,
   planContext,
 }) => {
+  if (planContext?.rules?.permissions?.allowSharing === false) {
+    const err = new Error("Link sharing is disabled for your current plan tier.");
+    err.statusCode = 403;
+    err.code = "FEATURE_NOT_PERMITTED";
+    throw err;
+  }
+
   const activeFeatures = planContext?.features || [];
   const checkFeature = (key) =>
     activeFeatures.some(
@@ -297,7 +304,7 @@ export const revokeShareLinkLogic = async ({ linkId, userId }) => {
 
 export const getShareLinkByTokenLogic = async ({ token, password }) => {
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-  const shareLink = await ShareLink.findOne({ token: hashedToken });
+  const shareLink = await ShareLink.findOne({ token: hashedToken }).lean();
 
   if (!shareLink) {
     const err = new Error("Share link not found or has been revoked");
@@ -324,15 +331,15 @@ export const getShareLinkByTokenLogic = async ({ token, password }) => {
     throw err;
   }
 
-  const owner = await User.findById(shareLink.userId).lean();
-
+  const owner = await User.findById(shareLink.userId).select("name email profilepic").lean();
+  const profilepicId = owner?.profilepic?._id || owner?.profilepic;
   const ownerInfo = {
     name: owner?.name || "Vault Owner",
     email: owner?.email || "",
-    profilepic: owner?.profilepic
-      ? owner.profilepic.externalUrl
+    profilepic: profilepicId
+      ? (typeof owner.profilepic === "object" && owner.profilepic?.externalUrl)
         ? owner.profilepic.externalUrl
-        : `${BACKEND_URL}/user/profilepic?id=${owner.profilepic._id || owner.profilepic}`
+        : `${BACKEND_URL}/user/profilepic?id=${profilepicId}`
       : null,
   };
 
@@ -416,6 +423,10 @@ export const getShareLinkByTokenLogic = async ({ token, password }) => {
     downloads: shareLink.downloads || 0,
     maxDownloads: shareLink.maxDownloads,
     createdAt: shareLink.createdAt,
+    requiresFullAdminPlan: (shareLink.permission || []).includes("owner"),
+    hasGithubItems: (shareLink.items || []).some((i) => i.provider === "github"),
+    hasGdriveItems: (shareLink.items || []).some((i) => i.provider === "google_drive" || i.provider === "drive"),
+    hasDropboxItems: (shareLink.items || []).some((i) => i.provider === "dropbox"),
   };
 };
 
@@ -551,6 +562,57 @@ export const claimShareAccessLogic = async ({ token, userId, userRole }) => {
     throw err;
   }
 
+  const activeFeatures = planContext?.features || [];
+  const checkFeature = (key) =>
+    activeFeatures.some(
+      (f) => (f.key === key || f.slug === key || f.name === key) && f.enabled !== false,
+    );
+
+  // 1. Full Admin Gating: Full Admin / Owner clearance requires an active subscription
+  const isFullAdmin = (shareLink.permission || []).includes("owner");
+  if (isFullAdmin && (planContext?.isNoPlan || planContext?.isReadOnly)) {
+    const err = new Error("A storage subscription is required to access and claim Full Admin shared vaults. Please upgrade your plan.");
+    err.statusCode = 403;
+    err.code = "SUBSCRIPTION_REQUIRED";
+    throw err;
+  }
+
+  // 2. External Integration Gating: GitHub & Google Drive items require Professional/Ultimate plans
+  const hasGithubItems = (shareLink.items || []).some((item) => item.provider === "github");
+  const hasGdriveItems = (shareLink.items || []).some((item) => item.provider === "google_drive" || item.provider === "drive");
+  const hasDropboxItems = (shareLink.items || []).some((item) => item.provider === "dropbox");
+
+  if (hasGithubItems && (planContext?.isNoPlan || !checkFeature("github_backup"))) {
+    const err = new Error("Accessing shared GitHub repositories requires a Professional or Ultimate storage plan.");
+    err.statusCode = 403;
+    err.code = "PLAN_TIER_INSUFFICIENT";
+    throw err;
+  }
+
+  if (hasGdriveItems && (planContext?.isNoPlan || !checkFeature("gdrive_sync"))) {
+    const err = new Error("Accessing shared Google Drive assets requires a Professional or Ultimate storage plan.");
+    err.statusCode = 403;
+    err.code = "PLAN_TIER_INSUFFICIENT";
+    throw err;
+  }
+
+  if (hasDropboxItems && (planContext?.isNoPlan || !checkFeature("dropbox_sync"))) {
+    const err = new Error("Accessing shared Dropbox assets requires a Professional or Ultimate storage plan.");
+    err.statusCode = 403;
+    err.code = "PLAN_TIER_INSUFFICIENT";
+    throw err;
+  }
+
+  const sanitizedItems = (shareLink.items || []).map((item) => ({
+    id: item.id?.toString() || item._id?.toString(),
+    type: item.type,
+    provider: item.provider || "local",
+    name: item.name || "Item",
+    size: item.size || 0,
+    extension: item.extension || "",
+    mimeType: item.mimeType || "",
+  }));
+
   const sharedAccess = await SharedAccess.updateOne(
     {
       userId: shareLink.userId,
@@ -561,7 +623,7 @@ export const claimShareAccessLogic = async ({ token, userId, userRole }) => {
       $set: {
         permission: shareLink.permission,
         expiresAt: shareLink.expiresAt,
-        items: shareLink.items || [],
+        items: sanitizedItems,
       },
     },
     {

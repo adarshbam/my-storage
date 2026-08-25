@@ -33,6 +33,7 @@ import {
   registerLimiter,
   loginLimiter,
   passwordResetLimiter,
+  passwordResetSubmitLimiter,
   passwordUpdateLimiter,
   lightReadLimiter,
   profilePicLimiter,
@@ -62,7 +63,7 @@ router.post(
 );
 router.post(
   "/auth/reset-password",
-  passwordResetLimiter,
+  passwordResetSubmitLimiter,
   throttle(2000, 2, "reset-pwd"),
   validate(resetPasswordSchema),
   resetPassword,
@@ -73,7 +74,6 @@ router.post("/logout-all", checkAuth, throttle(500, 3, "logout-all"), logoutAllD
 router.post("/profilepic", checkAuth, profilePicLimiter, throttle(1000, 3, "profilepic-upload"), uploadProfilePic);
 router.get(
   "/profilepic",
-  checkAuth,
   lightReadLimiter,
   validate(getProfilePicSchema),
   getProfilePic,

@@ -97,6 +97,14 @@ const subscriptionSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    currentPeriodStart: {
+      type: Date,
+      default: null,
+    },
+    currentPeriodEnd: {
+      type: Date,
+      default: null,
+    },
     chargeAt: {
       type: Date,
       default: null,

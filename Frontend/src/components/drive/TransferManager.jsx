@@ -19,71 +19,19 @@ import {
 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
 import { getFileCdnUrl, abortVaultMultipartUpload, abortVaultUpload } from "../../api/files.api";
-import { formatSpeed, formatTime, cn } from "../../lib/utils";
+import { formatSpeed, formatTime, formatSize, cn } from "../../lib/utils";
 import getFileImage from "../../lib/FileImages";
 import Card from "../ui/Card";
 import { useUploadManager } from "../../hooks/useUploadManager";
 import { useDownloadManager } from "../../hooks/useDownloadManager";
 import { usePlan } from "../../context/PlanContext";
+import { SPEED_LEVELS, useSpeedGovernor } from "../../hooks/useSpeedGovernor";
 
 const generateObjectId = () => {
   return [...Array(24)]
     .map(() => Math.floor(Math.random() * 16).toString(16))
     .join("");
 };
-
-export const SPEED_LEVELS = [
-  {
-    level: 1,
-    id: "level-1",
-    label: "Level 1: 500 KB/s",
-    shortLabel: "500 KB/s",
-    bytesPerSec: 500 * 1024,
-    minTier: "Novice",
-    tierBadge: "Novice",
-    description: "Standard Speed (Lowest)",
-  },
-  {
-    level: 2,
-    id: "level-2",
-    label: "Level 2: 2 MB/s",
-    shortLabel: "2 MB/s",
-    bytesPerSec: 2 * 1024 * 1024,
-    minTier: "Professional",
-    tierBadge: "Pro",
-    description: "Fast Speed",
-  },
-  {
-    level: 3,
-    id: "level-3",
-    label: "Level 3: 5 MB/s",
-    shortLabel: "5 MB/s",
-    bytesPerSec: 5 * 1024 * 1024,
-    minTier: "Professional",
-    tierBadge: "Pro",
-    description: "Turbo Speed",
-  },
-  {
-    level: 4,
-    id: "level-4",
-    label: "Level 4: 10 MB/s",
-    shortLabel: "10 MB/s",
-    bytesPerSec: 10 * 1024 * 1024,
-    minTier: "Ultimate",
-    tierBadge: "Ultimate",
-    description: "Ultra Fast Speed",
-  },
-  {
-    level: 5,
-    id: "level-5",
-    label: "Level 5: Unlimited (No Limit)",
-    shortLabel: "Unlimited",
-    bytesPerSec: 0,
-    minTier: "Ultimate",
-    tierBadge: "Ultimate",
-    description: "Maximum Speed (Infinite)",
-  },
-];
 
 const TransferManager = forwardRef((props, ref) => {
   const [transfers, setTransfers] = useState([]);
@@ -94,35 +42,26 @@ const TransferManager = forwardRef((props, ref) => {
   const abortControllers = useRef({});
   const downloadWritables = useRef({});
 
-  const { planTier, isNoSubscription, isFreeTrial } = usePlan();
-  const planSlug = (planTier?.slug || planTier?.type || "").toLowerCase();
-  const isTrial = isFreeTrial || planSlug.includes("trial");
-  const isUltimate = isTrial || planSlug.includes("ultimate") || planSlug.includes("enterprise");
-  const isProfessional = planSlug.includes("pro");
-  const isNovice = !isUltimate && !isProfessional;
+  const {
+    maxUploadFileSize,
+    allowUpload,
+  } = usePlan();
 
-  // Max unlocked speed level based on plan:
-  // Novice / Free: Level 1 only (500 KB/s)
-  // Professional: Levels 1, 2, 3 (up to 5 MB/s)
-  // Ultimate / Trial: All 5 Levels (up to Unlimited)
-  const maxAllowedLevel = isUltimate ? 5 : isProfessional ? 3 : 1;
+  const {
+    selectedLevel,
+    speedLimit,
+    speedObj: currentLevelObj,
+    maxAllowedLevel,
+    setSpeedLevel,
+    isUltimate,
+    isProfessional,
+    isNovice,
+  } = useSpeedGovernor();
 
-  const [selectedLevel, setSelectedLevel] = useState(() => {
-    const saved = localStorage.getItem("vault_speed_level");
-    const parsed = saved ? parseInt(saved, 10) : (isUltimate ? 5 : isProfessional ? 3 : 1);
-    return Math.min(Math.max(parsed || 1, 1), maxAllowedLevel);
-  });
-
-  useEffect(() => {
-    setSelectedLevel((prev) => {
-      const clamped = Math.min(prev, maxAllowedLevel);
-      localStorage.setItem("vault_speed_level", clamped.toString());
-      return clamped;
-    });
-  }, [maxAllowedLevel]);
-
-  const currentLevelObj = SPEED_LEVELS.find((l) => l.level === selectedLevel) || SPEED_LEVELS[0];
-  const speedLimit = currentLevelObj.bytesPerSec;
+  const effectiveMaxFileSize = Math.min(
+    maxFileSize || 5368709120,
+    maxUploadFileSize || 5368709120,
+  );
 
   useEffect(() => {
     async function loadConfig() {
@@ -192,7 +131,6 @@ const TransferManager = forwardRef((props, ref) => {
     ownerId,
     abortControllers,
     onUploadComplete: props.onUploadComplete,
-    speedLimit,
   });
 
   const uploadFile = useCallback(
@@ -200,7 +138,7 @@ const TransferManager = forwardRef((props, ref) => {
       const id = existingId || generateObjectId();
 
       if (!existingId) {
-        if (file.size > maxFileSize) {
+        if (allowUpload === false) {
           setTransfers((prev) => [
             ...prev,
             {
@@ -211,7 +149,29 @@ const TransferManager = forwardRef((props, ref) => {
               loaded: 0,
               total: file.size,
               status: "error",
-              errorMessage: "File too large",
+              errorMessage: "Uploads disabled for your plan",
+              speed: 0,
+              timeRemaining: 0,
+              file: file,
+              dirId: dirId,
+            },
+          ]);
+          setMinimized(false);
+          return;
+        }
+
+        if (file.size > effectiveMaxFileSize) {
+          setTransfers((prev) => [
+            ...prev,
+            {
+              _id: id,
+              type: "upload",
+              name: file.name,
+              progress: 0,
+              loaded: 0,
+              total: file.size,
+              status: "error",
+              errorMessage: "File exceeds upload limit",
               speed: 0,
               timeRemaining: 0,
               file: file,
@@ -272,7 +232,6 @@ const TransferManager = forwardRef((props, ref) => {
     abortControllers,
     downloadReaders,
     downloadWritables,
-    speedLimit,
   });
 
   const downloadFile = async (url, filename, id = generateObjectId(), startByte = 0) => {
@@ -539,8 +498,7 @@ const TransferManager = forwardRef((props, ref) => {
                         disabled={!isUnlocked}
                         onClick={() => {
                           if (isUnlocked) {
-                            setSelectedLevel(level.level);
-                            localStorage.setItem("vault_speed_level", level.level.toString());
+                            setSpeedLevel(level.level);
                             setShowSpeedMenu(false);
                           }
                         }}
@@ -617,17 +575,53 @@ const TransferManager = forwardRef((props, ref) => {
                       </div>
                     </div>
                     <div className="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-1.5">
-                      <div className={cn("h-full transition-all duration-300", transfer.status === "completed" ? "bg-green-500" : transfer.status === "error" ? "bg-red-500" : transfer.status === "paused" ? "bg-yellow-500" : "bg-blue-500")} style={{ width: `${transfer.status === "completed" ? 100 : transfer.progress}%` }} />
+                      <div
+                        className={cn(
+                          "h-full transition-all duration-300",
+                          transfer.status === "completed"
+                            ? "bg-green-500"
+                            : transfer.status === "error"
+                            ? "bg-red-500"
+                            : transfer.status === "paused"
+                            ? "bg-yellow-500"
+                            : "bg-blue-500",
+                          transfer.status === "active" && (!transfer.total || transfer.total === 0) && "animate-pulse opacity-70"
+                        )}
+                        style={{
+                          width:
+                            transfer.status === "completed"
+                              ? "100%"
+                              : transfer.total > 0
+                              ? `${transfer.progress}%`
+                              : transfer.status === "active"
+                              ? "100%"
+                              : "0%",
+                        }}
+                      />
                     </div>
                     <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                       <span>
-                        {transfer.status === "active" && <>{formatSpeed(transfer.speed)} • {formatTime(transfer.timeRemaining)}</>}
+                        {transfer.status === "active" && (
+                          <>
+                            {formatSpeed(transfer.speed)}
+                            {transfer.total > 0 && transfer.timeRemaining > 0 && ` • ${formatTime(transfer.timeRemaining)}`}
+                            {(!transfer.total || transfer.total === 0) && transfer.loaded > 0 && ` • ${formatSize(transfer.loaded)}`}
+                          </>
+                        )}
                         {transfer.status === "queued" && "Queued"}
                         {transfer.status === "paused" && "Paused"}
                         {transfer.status === "completed" && "Completed"}
                         {transfer.status === "error" && (transfer.errorMessage || "Error")}
                       </span>
-                      <span>{transfer.status === "completed" ? 100 : Math.round(transfer.progress)}%</span>
+                      <span>
+                        {transfer.status === "completed"
+                          ? "100%"
+                          : transfer.total > 0
+                          ? `${Math.round(transfer.progress)}%`
+                          : transfer.loaded > 0
+                          ? formatSize(transfer.loaded)
+                          : "0%"}
+                      </span>
                     </div>
                   </div>
                 </div>
