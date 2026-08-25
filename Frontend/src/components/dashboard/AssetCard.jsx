@@ -14,6 +14,8 @@ import {
   Star,
   FolderPlus,
   History,
+  CloudUpload,
+  FolderGit2,
 } from "lucide-react";
 import getFileImage, { renderFileIcon } from "../../lib/FileImages";
 import { formatSize, isSpecialFolder } from "../../lib/utils";
@@ -116,7 +118,17 @@ const getItemTypeInfo = (item, isDirectory, provider, specialView) => {
     };
   }
 
-  // 4. Local Vault Directories
+  // 4. Git Workspace Directories
+  if (provider === "git_workspace" || item.gitWorkspace?.repoName) {
+    const branchStr = item.gitWorkspace?.branch || "main";
+    return {
+      typeLabel: `GIT: ${branchStr.toUpperCase()}`,
+      listLabel: `Git Workspace (${branchStr})`,
+      badgeLabel: "GIT WORKSPACE",
+    };
+  }
+
+  // 5. Local Vault Directories
   const count =
     item.itemCount !== undefined
       ? item.itemCount
@@ -129,7 +141,7 @@ const getItemTypeInfo = (item, isDirectory, provider, specialView) => {
   return {
     typeLabel: `${count} ITEMS`,
     listLabel: `${count} Assets`,
-    badgeLabel: "VAULT NODE",
+    badgeLabel: item.gitSync?.enabled ? "AUTO-BACKUP" : "VAULT NODE",
   };
 };
 
@@ -161,6 +173,8 @@ export default function AssetCard({
   onDragEnd = null,
   onShare = null,
   onViewHistory = null,
+  onConfigureBackup = null,
+  onCloneToVault = null,
   specialView = null,
 }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -554,6 +568,21 @@ export default function AssetCard({
             <EncryptionBadgeIcon size={12} className="text-vault-emerald" />
             <span className="text-[10px] font-mono text-white/70">AES-256</span>
           </div>
+          {item.gitStatus && (item.gitStatus.status || item.gitStatus.staged) && (
+            <div
+              className={`flex items-center gap-1 px-1.5 py-1 rounded-md backdrop-blur-md border font-mono font-bold text-[9px] uppercase ${
+                item.gitStatus.staged
+                  ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
+                  : item.gitStatus.status === "added"
+                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                    : item.gitStatus.status === "modified"
+                      ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                      : "bg-slate-500/20 text-slate-400 border-slate-500/30"
+              }`}
+            >
+              <span>{item.gitStatus.staged ? "STAGED" : item.gitStatus.status === "added" ? "+ UNT" : item.gitStatus.status === "modified" ? "MOD" : item.gitStatus.status}</span>
+            </div>
+          )}
           {(item.isStarred || item.starred) && (
             <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-[#FF7A3D]/10 backdrop-blur-md border border-[#FF7A3D]/30 text-[#FF7A3D] shadow-[0_0_10px_rgba(255,122,61,0.15)]">
               <Star size={10} fill="currentColor" />
@@ -767,6 +796,32 @@ export default function AssetCard({
                 Cut
               </button>
             )}
+            {isGithubRepoRoot && onCloneToVault && (
+              <button
+                onClick={() => {
+                  closeMenu();
+                  onCloneToVault(item);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors rounded-xl font-bold"
+              >
+                <FolderGit2 size={14} className="shrink-0 text-emerald-500" />
+                Clone to Vault
+              </button>
+            )}
+
+            {isDirectory && !isTrash && !isSpecial && provider === "local" && onConfigureBackup && (
+              <button
+                onClick={() => {
+                  closeMenu();
+                  onConfigureBackup(item);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/10 transition-colors rounded-xl"
+              >
+                <CloudUpload size={14} className="shrink-0 text-cyan-500" />
+                GitHub Auto-Backup
+              </button>
+            )}
+
             {!isTrash && !isSpecial && onDownload && (
               <button
                 onClick={() => {

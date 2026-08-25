@@ -40,6 +40,16 @@ import {
   getRepositoryDetails,
   disconnectGithub,
   transferFromVault,
+  listReleases,
+  createRelease,
+  deleteRelease,
+  uploadReleaseAssetFromVault,
+  downloadReleaseAssetToVault,
+  listWorkflows,
+  listWorkflowRuns,
+  dispatchWorkflow,
+  listWorkflowArtifacts,
+  importWorkflowArtifactToVault,
 } from "../controllers/githubController.js";
 import { validate } from "../middlewares/validationMiddleware.js";
 import {
@@ -80,6 +90,16 @@ import {
   moveGithubItemsSchema,
   renameGithubItemSchema,
   transferGithubFromVaultSchema,
+  listReleasesSchema,
+  createReleaseSchema,
+  deleteReleaseSchema,
+  uploadReleaseAssetSchema,
+  downloadReleaseAssetSchema,
+  listWorkflowsSchema,
+  listWorkflowRunsSchema,
+  dispatchWorkflowSchema,
+  listWorkflowArtifactsSchema,
+  importWorkflowArtifactSchema,
 } from "../validators/githubSchema.js";
 import {
   heavyOpLimiter,
@@ -466,4 +486,91 @@ router.delete(
   deleteFile,
 );
 
+// ==========================================
+// RELEASES & ASSETS (FEATURE 9)
+// ==========================================
+
+router.get(
+  "/repositories/:owner/:repo/releases",
+  directoryReadLimiter,
+  throttle(100, 30, "gh-releases-list"),
+  validate(listReleasesSchema),
+  listReleases
+);
+
+router.post(
+  "/repositories/:owner/:repo/releases",
+  heavyOpLimiter,
+  throttle(2000, 3, "gh-release-create"),
+  validate(createReleaseSchema),
+  createRelease
+);
+
+router.delete(
+  "/repositories/:owner/:repo/releases/:releaseId",
+  mediumWriteLimiter,
+  validate(deleteReleaseSchema),
+  deleteRelease
+);
+
+router.post(
+  "/repositories/:owner/:repo/releases/:releaseId/assets",
+  heavyOpLimiter,
+  throttle(2000, 3, "gh-release-asset-upload"),
+  validate(uploadReleaseAssetSchema),
+  uploadReleaseAssetFromVault
+);
+
+router.post(
+  "/repositories/:owner/:repo/releases/assets/:assetId/download-to-vault",
+  heavyOpLimiter,
+  throttle(3000, 2, "gh-release-asset-download"),
+  validate(downloadReleaseAssetSchema),
+  downloadReleaseAssetToVault
+);
+
+// ==========================================
+// GITHUB ACTIONS & CI/CD (FEATURE 10)
+// ==========================================
+
+router.get(
+  "/repositories/:owner/:repo/actions/workflows",
+  directoryReadLimiter,
+  throttle(100, 30, "gh-actions-workflows"),
+  validate(listWorkflowsSchema),
+  listWorkflows
+);
+
+router.get(
+  "/repositories/:owner/:repo/actions/runs",
+  directoryReadLimiter,
+  throttle(100, 30, "gh-actions-runs"),
+  validate(listWorkflowRunsSchema),
+  listWorkflowRuns
+);
+
+router.post(
+  "/repositories/:owner/:repo/actions/workflows/:workflowId/dispatches",
+  mediumWriteLimiter,
+  throttle(1000, 5, "gh-actions-dispatch"),
+  validate(dispatchWorkflowSchema),
+  dispatchWorkflow
+);
+
+router.get(
+  "/repositories/:owner/:repo/actions/runs/:runId/artifacts",
+  directoryReadLimiter,
+  validate(listWorkflowArtifactsSchema),
+  listWorkflowArtifacts
+);
+
+router.post(
+  "/repositories/:owner/:repo/actions/artifacts/:artifactId/import-to-vault",
+  heavyOpLimiter,
+  throttle(3000, 2, "gh-artifact-import"),
+  validate(importWorkflowArtifactSchema),
+  importWorkflowArtifactToVault
+);
+
 export default router;
+

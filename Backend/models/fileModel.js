@@ -36,6 +36,25 @@ const fileSchema = new Schema(
       type: String,
       default: null,
     },
+    gitStatus: {
+      status: {
+        type: String,
+        enum: ["unmodified", "added", "modified", "deleted", null],
+        default: null,
+      },
+      staged: {
+        type: Boolean,
+        default: false,
+      },
+      originalSha: {
+        type: String,
+        default: null,
+      },
+      remoteSha: {
+        type: String,
+        default: null,
+      },
+    },
   },
   { strict: "throw", timestamps: true },
 );

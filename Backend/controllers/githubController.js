@@ -698,3 +698,165 @@ export const transferFromVault = async (req, res, next) => {
     }
   }
 };
+
+/* ============================================================================
+   RELEASES & ASSETS (FEATURE 9)
+   ============================================================================ */
+
+export const listReleases = async (req, res, next) => {
+  try {
+    const result = await githubService.listReleasesLogic({
+      owner: req.params.owner,
+      repo: req.params.repo,
+      req,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createRelease = async (req, res, next) => {
+  try {
+    const result = await githubService.createReleaseLogic({
+      owner: req.params.owner,
+      repo: req.params.repo,
+      tagName: req.body.tagName,
+      name: req.body.name,
+      body: req.body.body,
+      draft: req.body.draft,
+      prerelease: req.body.prerelease,
+      targetCommitish: req.body.targetCommitish,
+      req,
+    });
+    return res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteRelease = async (req, res, next) => {
+  try {
+    const result = await githubService.deleteReleaseLogic({
+      owner: req.params.owner,
+      repo: req.params.repo,
+      releaseId: req.params.releaseId,
+      req,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadReleaseAssetFromVault = async (req, res, next) => {
+  try {
+    const result = await githubService.uploadReleaseAssetFromVaultLogic({
+      owner: req.params.owner,
+      repo: req.params.repo,
+      releaseId: req.params.releaseId,
+      fileId: req.body.fileId,
+      customName: req.body.customName,
+      req,
+    });
+    return res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const downloadReleaseAssetToVault = async (req, res, next) => {
+  try {
+    const result = await githubService.downloadReleaseAssetToVaultLogic({
+      owner: req.params.owner,
+      repo: req.params.repo,
+      assetId: req.params.assetId,
+      assetName: req.body.assetName,
+      destinationFolderId: req.body.destinationFolderId,
+      req,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/* ============================================================================
+   ACTIONS CI/CD (FEATURE 10)
+   ============================================================================ */
+
+export const listWorkflows = async (req, res, next) => {
+  try {
+    const result = await githubService.listWorkflowsLogic({
+      owner: req.params.owner,
+      repo: req.params.repo,
+      req,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const listWorkflowRuns = async (req, res, next) => {
+  try {
+    const result = await githubService.listWorkflowRunsLogic({
+      owner: req.params.owner,
+      repo: req.params.repo,
+      workflowId: req.query.workflowId,
+      per_page: req.query.per_page ? parseInt(req.query.per_page, 10) : 20,
+      page: req.query.page ? parseInt(req.query.page, 10) : 1,
+      req,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const dispatchWorkflow = async (req, res, next) => {
+  try {
+    const result = await githubService.dispatchWorkflowLogic({
+      owner: req.params.owner,
+      repo: req.params.repo,
+      workflowId: req.params.workflowId,
+      ref: req.body.ref || "main",
+      inputs: req.body.inputs || {},
+      req,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const listWorkflowArtifacts = async (req, res, next) => {
+  try {
+    const result = await githubService.listWorkflowArtifactsLogic({
+      owner: req.params.owner,
+      repo: req.params.repo,
+      runId: req.params.runId,
+      req,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const importWorkflowArtifactToVault = async (req, res, next) => {
+  try {
+    const result = await githubService.importWorkflowArtifactToVaultLogic({
+      owner: req.params.owner,
+      repo: req.params.repo,
+      artifactId: req.params.artifactId,
+      artifactName: req.body.artifactName,
+      destinationFolderId: req.body.destinationFolderId,
+      req,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -62,6 +62,10 @@ import {
   Scissors,
   Copy,
   Clipboard,
+  Tag,
+  Workflow,
+  FolderGit2,
+  CloudUpload,
 } from "lucide-react";
 
 import { batchDelete } from "../../api/files.api";
@@ -83,6 +87,13 @@ import GitBranchManager from "../git/GitBranchManager";
 import GitPullRequestsView from "../git/GitPullRequestsView";
 import GitOperationsPanel from "../git/GitOperationsPanel";
 import GitFileHistoryModal from "../git/GitFileHistoryModal";
+import GitWorkspaceBar from "../git/GitWorkspaceBar";
+import GitStagingWorkbenchModal from "../git/GitStagingWorkbenchModal";
+import GitStashDrawer from "../git/GitStashDrawer";
+import GitFolderBackupModal from "../git/GitFolderBackupModal";
+import GitCloneRepoModal from "../git/GitCloneRepoModal";
+import GitReleasesView from "../git/GitReleasesView";
+import GitActionsWorkflowView from "../git/GitActionsWorkflowView";
 
 // Preload the preview modal module immediately in the background for zero-delay instant opening
 const filePreviewPromise = import("./FilePreviewModal");
@@ -134,6 +145,14 @@ export default function FileBrowser({ specialView }) {
   const activeGitTab = searchParams.get("tab") || "files";
   const [fileForHistory, setFileForHistory] = useState(null);
 
+  // New Git Workspace & Feature Modal states
+  const [showStagingModal, setShowStagingModal] = useState(false);
+  const [showStashDrawer, setShowStashDrawer] = useState(false);
+  const [showBackupModal, setShowBackupModal] = useState(false);
+  const [backupTargetDirectory, setBackupTargetDirectory] = useState(null);
+  const [showCloneModal, setShowCloneModal] = useState(false);
+  const [clonePreselectedRepo, setClonePreselectedRepo] = useState(null);
+
   const searchQuery = searchParams.get("q") || searchParams.get("search");
   const searchExt = searchParams.get("ext");
   const searchSize = searchParams.get("size");
@@ -154,6 +173,12 @@ export default function FileBrowser({ specialView }) {
   const githubOwner = githubParts[0] || "";
   const githubRepo = githubParts[1] || "";
   const githubSubpath = githubParts.slice(2).join("/");
+
+  const isGitWorkspace =
+    !specialView &&
+    (!!data.gitWorkspace?.repoName ||
+      data.provider === "git_workspace" ||
+      (Array.isArray(dirPath) && dirPath.some((d) => d?.provider === "git_workspace")));
 
   const handleBranchChange = (newBranch) => {
     setSelectedBranch(newBranch);
@@ -2037,17 +2062,44 @@ export default function FileBrowser({ specialView }) {
 
         <div className="flex items-center gap-3 shrink-0">
           {specialView === "github" && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setClonePreselectedRepo(null);
+                  setShowCloneModal(true);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+                title="Clone any GitHub repository into your Vault storage"
+              >
+                <FolderGit2 size={15} />
+                <span>Clone to Vault</span>
+              </button>
+              <button
+                onClick={() => {
+                  setModalInput("");
+                  setIsPrivate(false);
+                  setModalType("create-repo");
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-primary text-accent-foreground font-bold shadow-accent-glow hover:opacity-90 text-xs active:scale-95 transition-all cursor-pointer"
+                title="Create New GitHub Repository"
+              >
+                <Plus size={15} />
+                <span>New Repository</span>
+              </button>
+            </div>
+          )}
+
+          {specialView === "github-repo" && (
             <button
               onClick={() => {
-                setModalInput("");
-                setIsPrivate(false);
-                setModalType("create-repo");
+                setClonePreselectedRepo({ owner: githubOwner, name: githubRepo, default_branch: selectedBranch });
+                setShowCloneModal(true);
               }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-primary text-accent-foreground font-bold shadow-accent-glow hover:opacity-90 text-xs active:scale-95 transition-all cursor-pointer"
-              title="Create New GitHub Repository"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+              title="Clone this repository into your Vault storage"
             >
-              <Plus size={15} />
-              <span>New Repository</span>
+              <FolderGit2 size={15} />
+              <span>Clone to Vault</span>
             </button>
           )}
 
@@ -2086,6 +2138,8 @@ export default function FileBrowser({ specialView }) {
             { id: "commits", label: "Commits", icon: GitCommit },
             { id: "branches", label: "Branches", icon: GitBranch, count: branches.length },
             { id: "pulls", label: "Pull Requests", icon: GitPullRequest },
+            { id: "releases", label: "Releases", icon: Tag },
+            { id: "actions", label: "Actions CI/CD", icon: Workflow },
             { id: "operations", label: "Git Ops", icon: SlidersHorizontal },
           ].map((t) => {
             const Icon = t.icon;
@@ -2214,6 +2268,22 @@ export default function FileBrowser({ specialView }) {
               onRefreshRepo={() => fetchFiles(true)}
             />
           )}
+          {activeGitTab === "releases" && (
+            <GitReleasesView
+              owner={githubOwner}
+              repo={githubRepo}
+              selectedBranch={selectedBranch}
+              onRefreshRepo={() => fetchFiles(true)}
+            />
+          )}
+          {activeGitTab === "actions" && (
+            <GitActionsWorkflowView
+              owner={githubOwner}
+              repo={githubRepo}
+              selectedBranch={selectedBranch}
+              onRefreshRepo={() => fetchFiles(true)}
+            />
+          )}
           {activeGitTab === "operations" && (
             <GitOperationsPanel
               owner={githubOwner}
@@ -2227,88 +2297,109 @@ export default function FileBrowser({ specialView }) {
       ) : loading ? (
         <FileBrowserSkeleton viewMode={viewMode} count={12} />
       ) : (
-        <div
-          data-tour="file-grid"
-          className={`pb-20 relative select-none flex-1 content-start ${
-            viewMode === "list"
-              ? "flex flex-col gap-1"
-              : "grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 sm:gap-6 p-3 sm:p-6 rounded-2xl sm:rounded-[2.5rem] vault-glass-panel"
-          }`}
-          onMouseDown={handleMouseDown}
-        >
-          {viewMode === "list" && (
-            <div className="grid grid-cols-[1fr,40px] sm:grid-cols-[1fr,100px,40px] md:grid-cols-[1fr,100px,150px,40px] gap-2 sm:gap-4 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-500 border-b border-slate-200/50 dark:border-slate-800/50 mb-2 items-center sticky top-0 bg-transparent z-10">
-              <div>Name</div>
-              <div className="text-right hidden sm:block">Size</div>
-              <div className="text-right pr-4 hidden md:block">Modified</div>
-              <div></div>
-            </div>
-          )}
-
-          {/* Selection Box Overlay */}
-          {isDragging && selectionBox && (
-            <div
-              className="absolute bg-blue-500/20 border border-blue-500/50 z-50 pointer-events-none rounded-sm"
-              style={{
-                left: selectionBox.x,
-                top: selectionBox.y,
-                width: selectionBox.width,
-                height: selectionBox.height,
-              }}
+        <div className="flex-1 flex flex-col">
+          {/* ── GIT WORKSPACE LIVE WORKING TREE BAR ── */}
+          {isGitWorkspace && (
+            <GitWorkspaceBar
+              folderId={folderId}
+              workspaceId={data.gitWorkspace?.workspaceId}
+              gitWorkspaceMeta={data.gitWorkspace}
+              onOpenStaging={() => setShowStagingModal(true)}
+              onOpenStash={() => setShowStashDrawer(true)}
+              onRefresh={() => fetchFiles(true)}
             />
           )}
 
-          {data.directories.map((dir) => (
-            <AssetCard
-              id={`file-card-${dir._id}`}
-              key={dir._id}
-              item={dir}
-              specialView={specialView}
-              selected={selectedItems.some((i) => i._id === dir._id)}
-              onSelect={(item, e) => handleSelect(item, e)}
-              onNavigate={handleNavigate}
-              onStarred={handleStarred}
-              onRename={handleRenameClick}
-              onDelete={handleDelete}
-              onDownload={handleDownload}
-              onPreview={handlePreview}
-              onDetails={(item) => setDetailsItem(item)}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onDragOver={(e) => handleDragOver(e, dir)}
-              onDragLeave={(e) => handleDragLeave(e, dir)}
-              onDrop={handleDrop}
-              viewMode={viewMode}
-              readOnly={isReadOnly}
-              onCopy={handleCopyItem}
-              onCut={handleCutItem}
-              isCut={
-                clipboard &&
-                clipboard.action === "cut" &&
-                clipboard.items.some((i) => i._id === dir._id)
-              }
-              isBeingDragged={activeDraggedIds.includes(dir._id)}
-              isDragOver={dragOverTargetId === dir._id}
-              isIntegrationRoot={
-                (!specialView &&
-                  (dir.provider === "google_drive" ||
-                    dir.provider === "github")) ||
-                (specialView === "github" && dir.provider === "github")
-              }
-              onShare={openShareModal}
-              onViewHistory={(item) => setFileForHistory(item)}
-            />
-          ))}
-          {data.files.map((file) => (
-            <AssetCard
-              id={`file-card-${file._id}`}
-              key={file._id}
-              item={file}
-              specialView={specialView}
-              selected={selectedItems.some((i) => i._id === file._id)}
-              onSelect={(item, e) => handleSelect(item, e)}
-              onNavigate={() => {}} // Files don't navigate
-              onStarred={handleStarred}
+          <div
+            data-tour="file-grid"
+            className={`pb-20 relative select-none flex-1 content-start ${
+              viewMode === "list"
+                ? "flex flex-col gap-1"
+                : "grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 sm:gap-6 p-3 sm:p-6 rounded-2xl sm:rounded-[2.5rem] vault-glass-panel"
+            }`}
+            onMouseDown={handleMouseDown}
+          >
+            {viewMode === "list" && (
+              <div className="grid grid-cols-[1fr,40px] sm:grid-cols-[1fr,100px,40px] md:grid-cols-[1fr,100px,150px,40px] gap-2 sm:gap-4 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-500 border-b border-slate-200/50 dark:border-slate-800/50 mb-2 items-center sticky top-0 bg-transparent z-10">
+                <div>Name</div>
+                <div className="text-right hidden sm:block">Size</div>
+                <div className="text-right pr-4 hidden md:block">Modified</div>
+                <div></div>
+              </div>
+            )}
+
+            {/* Selection Box Overlay */}
+            {isDragging && selectionBox && (
+              <div
+                className="absolute bg-blue-500/20 border border-blue-500/50 z-50 pointer-events-none rounded-sm"
+                style={{
+                  left: selectionBox.x,
+                  top: selectionBox.y,
+                  width: selectionBox.width,
+                  height: selectionBox.height,
+                }}
+              />
+            )}
+
+            {data.directories.map((dir) => (
+              <AssetCard
+                id={`file-card-${dir._id}`}
+                key={dir._id}
+                item={dir}
+                specialView={specialView}
+                selected={selectedItems.some((i) => i._id === dir._id)}
+                onSelect={(item, e) => handleSelect(item, e)}
+                onNavigate={handleNavigate}
+                onStarred={handleStarred}
+                onRename={handleRenameClick}
+                onDelete={handleDelete}
+                onDownload={handleDownload}
+                onPreview={handlePreview}
+                onDetails={(item) => setDetailsItem(item)}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragOver={(e) => handleDragOver(e, dir)}
+                onDragLeave={(e) => handleDragLeave(e, dir)}
+                onDrop={handleDrop}
+                viewMode={viewMode}
+                readOnly={isReadOnly}
+                onCopy={handleCopyItem}
+                onCut={handleCutItem}
+                isCut={
+                  clipboard &&
+                  clipboard.action === "cut" &&
+                  clipboard.items.some((i) => i._id === dir._id)
+                }
+                isBeingDragged={activeDraggedIds.includes(dir._id)}
+                isDragOver={dragOverTargetId === dir._id}
+                isIntegrationRoot={
+                  (!specialView &&
+                    (dir.provider === "google_drive" ||
+                      dir.provider === "github")) ||
+                  (specialView === "github" && dir.provider === "github")
+                }
+                onShare={openShareModal}
+                onViewHistory={(item) => setFileForHistory(item)}
+                onConfigureBackup={(item) => {
+                  setBackupTargetDirectory(item);
+                  setShowBackupModal(true);
+                }}
+                onCloneToVault={(item) => {
+                  setClonePreselectedRepo(item);
+                  setShowCloneModal(true);
+                }}
+              />
+            ))}
+            {data.files.map((file) => (
+              <AssetCard
+                id={`file-card-${file._id}`}
+                key={file._id}
+                item={file}
+                specialView={specialView}
+                selected={selectedItems.some((i) => i._id === file._id)}
+                onSelect={(item, e) => handleSelect(item, e)}
+                onNavigate={() => {}} // Files don't navigate
+                onStarred={handleStarred}
               onRename={handleRenameClick}
               onDelete={handleDelete}
               onDownload={handleDownload}
@@ -2429,6 +2520,7 @@ export default function FileBrowser({ specialView }) {
               )}
             </div>
           )}
+          </div>
         </div>
       )}
 
@@ -2560,6 +2652,46 @@ export default function FileBrowser({ specialView }) {
           onFileRestored={() => fetchFiles(true)}
         />
       )}
+
+      {/* ── GIT STAGING & MULTI-FILE ATOMIC COMMIT WORKBENCH ── */}
+      <GitStagingWorkbenchModal
+        isOpen={showStagingModal}
+        onClose={() => setShowStagingModal(false)}
+        folderId={folderId}
+        workspaceId={data.gitWorkspace?.workspaceId}
+        onCommitted={() => fetchFiles(true)}
+      />
+
+      {/* ── GIT STASH SNAPSHOTS DRAWER ── */}
+      <GitStashDrawer
+        isOpen={showStashDrawer}
+        onClose={() => setShowStashDrawer(false)}
+        workspaceId={data.gitWorkspace?.workspaceId}
+        onStashUpdated={() => fetchFiles(true)}
+      />
+
+      {/* ── AUTOMATED FOLDER BACKUP CONFIGURATION MODAL ── */}
+      <GitFolderBackupModal
+        isOpen={showBackupModal}
+        onClose={() => {
+          setShowBackupModal(false);
+          setBackupTargetDirectory(null);
+        }}
+        directory={backupTargetDirectory}
+        onSyncCompleted={() => fetchFiles(true)}
+      />
+
+      {/* ── 1-CLICK CLONE REPO TO VAULT MODAL ── */}
+      <GitCloneRepoModal
+        isOpen={showCloneModal}
+        onClose={() => {
+          setShowCloneModal(false);
+          setClonePreselectedRepo(null);
+        }}
+        preselectedRepo={clonePreselectedRepo}
+        destinationFolderId={folderId}
+        onCloned={() => fetchFiles(true)}
+      />
 
       {/* Floating Clipboard Bar */}
       {clipboard && (

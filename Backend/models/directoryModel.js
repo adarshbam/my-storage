@@ -38,7 +38,22 @@ const directorySchema = new Schema(
     },
     provider: {
       type: String,
-      default: "local", // can be "local" or "google_drive"
+      default: "local", // can be "local", "google_drive", or "git_workspace"
+    },
+    gitWorkspace: {
+      workspaceId: { type: Schema.Types.ObjectId, ref: "GitWorkspace", default: null },
+      repoOwner: { type: String, default: null },
+      repoName: { type: String, default: null },
+      branch: { type: String, default: null },
+      baseSha: { type: String, default: null },
+      headSha: { type: String, default: null },
+    },
+    gitSync: {
+      jobId: { type: Schema.Types.ObjectId, ref: "GitSyncJob", default: null },
+      enabled: { type: Boolean, default: false },
+      repoOwner: { type: String, default: null },
+      repoName: { type: String, default: null },
+      targetBranch: { type: String, default: null },
     },
   },
   {

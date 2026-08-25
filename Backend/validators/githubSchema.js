@@ -509,3 +509,141 @@ export const renameGithubItemSchema = {
     ownerId: z.string().optional(),
   }).optional(),
 };
+
+/* --- Releases & Release Assets (Feature 9) --- */
+
+export const listReleasesSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const createReleaseSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  body: z.object({
+    tagName: z.string().min(1, "Tag name required"),
+    name: z.string().optional(),
+    body: z.string().optional(),
+    draft: z.boolean().optional(),
+    prerelease: z.boolean().optional(),
+    targetCommitish: z.string().optional(),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const deleteReleaseSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    releaseId: z.string().min(1),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const uploadReleaseAssetSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    releaseId: z.string().min(1),
+  }),
+  body: z.object({
+    fileId: objectIdSchema,
+    customName: z.string().optional(),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const downloadReleaseAssetSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    assetId: z.string().min(1),
+  }),
+  body: z.object({
+    assetName: z.string().optional(),
+    destinationFolderId: z.string().nullable().optional(),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+/* --- Actions CI/CD (Feature 10) --- */
+
+export const listWorkflowsSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const listWorkflowRunsSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+  }),
+  query: z.object({
+    workflowId: z.string().optional(),
+    per_page: z.string().optional(),
+    page: z.string().optional(),
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const dispatchWorkflowSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    workflowId: z.string().min(1),
+  }),
+  body: z.object({
+    ref: z.string().optional(),
+    inputs: z.record(z.any()).optional(),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const listWorkflowArtifactsSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    runId: z.string().min(1),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+
+export const importWorkflowArtifactSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    artifactId: z.string().min(1),
+  }),
+  body: z.object({
+    artifactName: z.string().optional(),
+    destinationFolderId: z.string().nullable().optional(),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+  }).optional(),
+};
+

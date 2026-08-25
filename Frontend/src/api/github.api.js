@@ -162,3 +162,62 @@ export const createPRComment = (owner, repo, pullNumber, data, params = {}) => {
   const query = new URLSearchParams(params).toString();
   return apiClient.post(`/github/repositories/${owner}/${repo}/pulls/${pullNumber}/comments${query ? `?${query}` : ''}`, data);
 };
+
+// ==========================================
+// RELEASES & ASSETS (FEATURE 9)
+// ==========================================
+
+export const getReleases = (owner, repo, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.get(`/github/repositories/${owner}/${repo}/releases${query ? `?${query}` : ''}`);
+};
+
+export const createRelease = (owner, repo, data, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.post(`/github/repositories/${owner}/${repo}/releases${query ? `?${query}` : ''}`, data);
+};
+
+export const deleteRelease = (owner, repo, releaseId, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.delete(`/github/repositories/${owner}/${repo}/releases/${releaseId}${query ? `?${query}` : ''}`);
+};
+
+export const uploadReleaseAsset = (owner, repo, releaseId, data, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.post(`/github/repositories/${owner}/${repo}/releases/${releaseId}/assets${query ? `?${query}` : ''}`, data);
+};
+
+export const downloadReleaseAssetToVault = (owner, repo, assetId, data, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.post(`/github/repositories/${owner}/${repo}/releases/assets/${assetId}/download-to-vault${query ? `?${query}` : ''}`, data);
+};
+
+// ==========================================
+// GITHUB ACTIONS & CI/CD (FEATURE 10)
+// ==========================================
+
+export const getWorkflows = (owner, repo, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.get(`/github/repositories/${owner}/${repo}/actions/workflows${query ? `?${query}` : ''}`);
+};
+
+export const getWorkflowRuns = (owner, repo, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.get(`/github/repositories/${owner}/${repo}/actions/runs${query ? `?${query}` : ''}`);
+};
+
+export const dispatchWorkflow = (owner, repo, workflowId, data, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.post(`/github/repositories/${owner}/${repo}/actions/workflows/${workflowId}/dispatches${query ? `?${query}` : ''}`, data);
+};
+
+export const getWorkflowArtifacts = (owner, repo, runId, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.get(`/github/repositories/${owner}/${repo}/actions/runs/${runId}/artifacts${query ? `?${query}` : ''}`);
+};
+
+export const importWorkflowArtifactToVault = (owner, repo, artifactId, data, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.post(`/github/repositories/${owner}/${repo}/actions/artifacts/${artifactId}/import-to-vault${query ? `?${query}` : ''}`, data);
+};
+

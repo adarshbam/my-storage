@@ -2230,3 +2230,412 @@ export const transferFromVaultLogic = async ({ items, targetPath, req }) => {
 
   return { msg: "Transfer to GitHub successful", results };
 };
+
+/* ============================================================================
+   RELEASES & ASSETS (FEATURE 9)
+   ============================================================================ */
+
+export const listReleasesLogic = async ({ owner, repo, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/releases?per_page=30`,
+    {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+    }
+  );
+
+  const releases = await response.json();
+  if (!response.ok || !Array.isArray(releases)) {
+    const err = new Error(releases?.message || "Failed to fetch releases");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return {
+    releases: releases.map((r) => ({
+      id: r.id,
+      tag_name: r.tag_name,
+      name: r.name || r.tag_name,
+      body: r.body,
+      draft: r.draft,
+      prerelease: r.prerelease,
+      created_at: r.created_at,
+      published_at: r.published_at,
+      html_url: r.html_url,
+      author: {
+        login: r.author?.login,
+        avatar_url: r.author?.avatar_url,
+      },
+      assets: (r.assets || []).map((a) => ({
+        id: a.id,
+        name: a.name,
+        size: a.size,
+        download_count: a.download_count,
+        browser_download_url: a.browser_download_url,
+        content_type: a.content_type,
+        created_at: a.created_at,
+      })),
+    })),
+  };
+};
+
+export const createReleaseLogic = async ({ owner, repo, tagName, name, body, draft = false, prerelease = false, targetCommitish, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/releases`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tag_name: tagName.trim(),
+        name: name ? name.trim() : tagName.trim(),
+        body: body || "",
+        draft: Boolean(draft),
+        prerelease: Boolean(prerelease),
+        ...(targetCommitish && { target_commitish: targetCommitish }),
+      }),
+    }
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || "Failed to create release");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return {
+    message: `Release '${data.name || data.tag_name}' created successfully!`,
+    release: data,
+  };
+};
+
+export const deleteReleaseLogic = async ({ owner, repo, releaseId, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/releases/${releaseId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    const err = new Error(data.message || "Failed to delete release");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return { message: "Release deleted successfully" };
+};
+
+export const uploadReleaseAssetFromVaultLogic = async ({ owner, repo, releaseId, fileId, customName, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const fileDoc = await File.findById(fileId).lean();
+  if (!fileDoc) throw new Error("Vault file not found");
+
+  const s3Key = `${fileDoc._id}${fileDoc.extension || ""}`;
+  const objectData = await getObjectFromB2({ key: s3Key });
+  const byteArray = await objectData.Body.transformToByteArray();
+  const buffer = Buffer.from(byteArray);
+
+  const assetName = customName || fileDoc.name;
+
+  const uploadUrl = `https://uploads.github.com/repos/${owner}/${repo}/releases/${releaseId}/assets?name=${encodeURIComponent(assetName)}`;
+
+  const response = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${githubAccessToken}`,
+      "Content-Type": "application/octet-stream",
+      "Content-Length": buffer.length.toString(),
+    },
+    body: buffer,
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || "Failed to upload asset to release");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return {
+    message: `Vault asset '${assetName}' uploaded to release successfully!`,
+    asset: data,
+  };
+};
+
+export const downloadReleaseAssetToVaultLogic = async ({ owner, repo, assetId, assetName, destinationFolderId, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken, ownerId } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/releases/assets/${assetId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/octet-stream",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const err = new Error("Failed to download release asset from GitHub");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const fileName = assetName || `asset_${assetId}.bin`;
+  const ext = path.extname(fileName) || "";
+
+  const parentId = destinationFolderId && destinationFolderId !== "root" ? destinationFolderId : null;
+  const currentPath = parentId ? await getDirectoryPath(parentId) : [];
+
+  const fileDoc = new File({
+    name: fileName,
+    userId: ownerId,
+    parentDir: parentId,
+    type: "file",
+    extension: ext,
+    size: buffer.length,
+    path: currentPath,
+    uploadStatus: "completed",
+  });
+  await fileDoc.save();
+
+  await uploadToB2({
+    key: `${fileDoc._id}${ext}`,
+    body: buffer,
+    contentType: "application/octet-stream",
+  });
+
+  return {
+    message: `Release asset '${fileName}' downloaded to Vault successfully!`,
+    file: fileDoc,
+  };
+};
+
+/* ============================================================================
+   GITHUB ACTIONS & CI/CD WORKFLOWS (FEATURE 10)
+   ============================================================================ */
+
+export const listWorkflowsLogic = async ({ owner, repo, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/actions/workflows`,
+    {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+    }
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || "Failed to fetch GitHub Actions workflows");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return {
+    workflows: (data.workflows || []).map((w) => ({
+      id: w.id,
+      name: w.name,
+      path: w.path,
+      state: w.state,
+      html_url: w.html_url,
+      badge_url: w.badge_url,
+    })),
+  };
+};
+
+export const listWorkflowRunsLogic = async ({ owner, repo, workflowId, per_page = 20, page = 1, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  let url = `https://api.github.com/repos/${owner}/${repo}/actions/runs?per_page=${per_page}&page=${page}`;
+  if (workflowId) {
+    url = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowId}/runs?per_page=${per_page}&page=${page}`;
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${githubAccessToken}`,
+      Accept: "application/vnd.github+json",
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || "Failed to fetch workflow runs");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return {
+    total_count: data.total_count,
+    workflow_runs: (data.workflow_runs || []).map((r) => ({
+      id: r.id,
+      name: r.name,
+      head_branch: r.head_branch,
+      head_sha: r.head_sha,
+      status: r.status, // completed, in_progress, queued
+      conclusion: r.conclusion, // success, failure, cancelled, null
+      html_url: r.html_url,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+      run_number: r.run_number,
+      event: r.event,
+      actor: {
+        login: r.actor?.login,
+        avatar_url: r.actor?.avatar_url,
+      },
+    })),
+  };
+};
+
+export const dispatchWorkflowLogic = async ({ owner, repo, workflowId, ref = "main", inputs = {}, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowId}/dispatches`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ref,
+        inputs,
+      }),
+    }
+  );
+
+  if (response.status === 204) {
+    return {
+      message: `Workflow #${workflowId} triggered successfully on branch '${ref}'!`,
+    };
+  }
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const err = new Error(data.message || "Failed to dispatch workflow run");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return { message: "Workflow dispatched successfully" };
+};
+
+export const listWorkflowArtifactsLogic = async ({ owner, repo, runId, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/actions/runs/${runId}/artifacts`,
+    {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+    }
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || "Failed to fetch workflow artifacts");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  return {
+    artifacts: (data.artifacts || []).map((a) => ({
+      id: a.id,
+      name: a.name,
+      size_in_bytes: a.size_in_bytes,
+      created_at: a.created_at,
+      expires_at: a.expires_at,
+      expired: a.expired,
+    })),
+  };
+};
+
+export const importWorkflowArtifactToVaultLogic = async ({ owner, repo, artifactId, artifactName, destinationFolderId, req }) => {
+  const auth = await getAuthenticatedAccessToken(req, true);
+  const { githubAccessToken, ownerId } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/actions/artifacts/${artifactId}/zip`,
+    {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const err = new Error("Failed to download workflow artifact from GitHub");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const fileName = (artifactName || `artifact_${artifactId}`).endsWith(".zip")
+    ? artifactName
+    : `${artifactName || `artifact_${artifactId}`}.zip`;
+
+  const parentId = destinationFolderId && destinationFolderId !== "root" ? destinationFolderId : null;
+  const currentPath = parentId ? await getDirectoryPath(parentId) : [];
+
+  const fileDoc = new File({
+    name: fileName,
+    userId: ownerId,
+    parentDir: parentId,
+    type: "file",
+    extension: ".zip",
+    size: buffer.length,
+    path: currentPath,
+    uploadStatus: "completed",
+  });
+  await fileDoc.save();
+
+  await uploadToB2({
+    key: `${fileDoc._id}.zip`,
+    body: buffer,
+    contentType: "application/zip",
+  });
+
+  return {
+    message: `Artifact '${fileName}' imported into Vault successfully!`,
+    file: fileDoc,
+  };
+};
