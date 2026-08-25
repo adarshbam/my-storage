@@ -14,6 +14,7 @@ import {
 } from "../ui/VaultIcons";
 import { useGoogleLogin } from "@react-oauth/google";
 import { usePlan } from "../../context/PlanContext";
+import { Sparkles } from "lucide-react";
 
 export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
   const location = useLocation();
@@ -418,6 +419,53 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
               }`}
             >
               System Core
+            </span>
+          </Link>
+
+          {/* Wally's Academy & Shortcuts */}
+          <Link
+            to="/dashboard/tutorials"
+            data-tour="wally-academy"
+            onClick={() => setIsMobileOpen(false)}
+            onMouseEnter={() => setHoveredPath("/dashboard/tutorials")}
+            onMouseLeave={() => setHoveredPath(null)}
+            className={`relative flex items-center h-12 rounded-xl overflow-hidden transition-all duration-300 mt-1 ${
+              isActive("/dashboard/tutorials") || hoveredPath === "/dashboard/tutorials"
+                ? "bg-accent-soft shadow-[inset_0_0_20px_rgba(0,207,255,0.2)]"
+                : ""
+            }`}
+          >
+            {isActive("/dashboard/tutorials") && (
+              <div
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full"
+                style={{
+                  backgroundColor: "var(--accent-primary)",
+                  boxShadow: "0 0 12px var(--accent-glow)",
+                }}
+              />
+            )}
+            <div
+              className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
+                isActive("/dashboard/tutorials") || hoveredPath === "/dashboard/tutorials"
+                  ? "text-accent-primary"
+                  : "text-white/30 group-hover:text-white/60"
+              }`}
+              style={
+                isActive("/dashboard/tutorials") || hoveredPath === "/dashboard/tutorials"
+                  ? { filter: "drop-shadow(0 0 8px currentColor)" }
+                  : {}
+              }
+            >
+              <Sparkles size={20} />
+            </div>
+            <span
+              className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
+                isActive("/dashboard/tutorials")
+                  ? "text-white font-bold"
+                  : "text-white/40 group-hover:text-white/80"
+              }`}
+            >
+              Wally's Academy
             </span>
           </Link>
         </div>

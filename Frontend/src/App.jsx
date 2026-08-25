@@ -4,6 +4,7 @@ import { ThemeProvider } from "./components/ui/ThemeProvider";
 import { AuthProvider } from "./context/AuthContext";
 import { PlanProvider } from "./context/PlanContext";
 import { GuideProvider } from "./context/GuideContext";
+import { ShortcutProvider } from "./context/ShortcutContext";
 import ProtectedRoute from "./components/drive/ProtectedRoute";
 import PublicRoute from "./components/drive/PublicRoute";
 import Login from "./pages/Login";
@@ -13,6 +14,7 @@ import Users from "./pages/Users";
 import Profile from "./pages/Profile";
 import OwnerSettings from "./pages/OwnerSettings/OwnerSettings";
 import SharedAccessClaim from "./pages/SharedAccessClaim";
+import WallyAcademyPage from "./pages/WallyAcademyPage";
 
 // Landing Page Components
 import Navbar from "./components/sections/Navbar";
@@ -84,8 +86,9 @@ function App() {
         <PlanProvider>
           <BrowserRouter>
             <GuideProvider>
-              <ScrollToHashElement />
-              <Suspense fallback={<PageLoader />}>
+              <ShortcutProvider>
+                <ScrollToHashElement />
+                <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
                   <Route
@@ -173,6 +176,7 @@ function App() {
                       />
                       <Route path="trash" element={<TrashView />} />
                       <Route path="billing" element={<BillingPlansPage />} />
+                      <Route path="tutorials" element={<WallyAcademyPage />} />
                     </Route>
                   </Route>
 
@@ -183,6 +187,7 @@ function App() {
                   />
                 </Routes>
               </Suspense>
+              </ShortcutProvider>
             </GuideProvider>
           </BrowserRouter>
         </PlanProvider>

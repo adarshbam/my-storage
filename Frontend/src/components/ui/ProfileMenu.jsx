@@ -19,6 +19,7 @@ import {
   Check,
   Maximize,
   Minimize,
+  Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatSize, getProfilePicUrl, getInitials } from "../../lib/utils";
@@ -256,6 +257,15 @@ export default function ProfileMenu({
       onClick: () => {
         setIsOpen(false);
         navigate("/profile");
+      },
+    },
+    {
+      icon: Sparkles,
+      label: "Wally's Academy & Shortcut Config",
+      desc: "Shortcuts & interactive guides",
+      onClick: () => {
+        setIsOpen(false);
+        navigate("/dashboard/tutorials");
       },
     },
     ...(user && user.role?.toLowerCase() === "owner"

@@ -73,6 +73,7 @@ import { useContextMenu } from "../../hooks/useContextMenu";
 
 import SelectionBox from "./SelectionBox";
 import EmptyState from "./EmptyState";
+import { useFileKeyboardNavigation } from "../../hooks/useFileKeyboardNavigation";
 import FileOperationModals from "./FileOperationModals";
 import FilePreviewSkeleton from "./FilePreviewSkeleton";
 import { prefetchFileContent } from "../../lib/fileCache";
@@ -1199,6 +1200,35 @@ export default function FileBrowser({ specialView }) {
     }
   };
 
+  const handleGoParent = () => {
+    if (folderId || driveFolderId || githubPath) {
+      if (specialView === "google-drive-folder") {
+        if (!data.parentId || data.parentId === "root") {
+          navigate("/dashboard/google-drive");
+        } else {
+          navigate(`/dashboard/google-drive/${data.parentId}`);
+        }
+      } else if (specialView === "shared" || specialView === "admin") {
+        if (data.parentDir) {
+          navigate(`/dashboard/${specialView}/folder/${data.parentDir}`);
+        } else {
+          navigate("/users");
+        }
+      } else if (specialView === "github-repo") {
+        const parts = (githubPath || "").split("/").filter(Boolean);
+        if (parts.length <= 2) {
+          navigate("/dashboard/github");
+        } else {
+          navigate(`/dashboard/github/${parts.slice(0, -1).join("/")}`);
+        }
+      } else if (data.parentDir === user?.rootDirId || !data.parentDir) {
+        navigate("/dashboard");
+      } else {
+        navigate(`/dashboard/folder/${data.parentDir}`);
+      }
+    }
+  };
+
   const handleDownload = (item) => {
     if (!item._id) return;
 
@@ -1365,6 +1395,34 @@ export default function FileBrowser({ specialView }) {
       alert(err.message || "Failed to delete item(s)");
     }
   };
+
+  const allCurrentItems = [...(data?.directories || []), ...(data?.files || [])];
+
+  useFileKeyboardNavigation({
+    items: allCurrentItems,
+    selectedItems,
+    setSelectedItems,
+    onNavigate: handleNavigate,
+    onPreview: handlePreview,
+    onDelete: () => {
+      if (selectedItems.length > 0) {
+        setModalItem(null);
+        setModalType("delete");
+        setIsPermanentDelete(false);
+      }
+    },
+    onRename: (item) => {
+      setModalItem(item);
+      setModalInput(item.name);
+      setModalType("rename");
+    },
+    onStar: handleStarred,
+    onDownload: handleDownload,
+    onParentNavigate: handleGoParent,
+    viewMode,
+    isReadOnly,
+    containerRef,
+  });
 
   const confirmDeleteGithub = async () => {
     if (!modalItem) return;

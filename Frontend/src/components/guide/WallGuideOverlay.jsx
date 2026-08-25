@@ -354,7 +354,7 @@ export default function WallGuideOverlay() {
                   </div>
                   <div>
                     <span className="text-[11px] font-black tracking-widest text-accent-primary uppercase flex items-center gap-1.5">
-                      Wall Guide
+                      Wally Guide
                       <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     </span>
                   </div>

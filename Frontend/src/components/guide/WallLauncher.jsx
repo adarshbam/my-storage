@@ -16,6 +16,11 @@ import {
   Volume2,
   VolumeX,
   Lightbulb,
+  Crown,
+  Shield,
+  Sliders,
+  CreditCard,
+  Keyboard,
 } from "lucide-react";
 
 export default function WallLauncher() {
@@ -42,6 +47,16 @@ export default function WallLauncher() {
         return FolderPlus;
       case "Share2":
         return Share2;
+      case "Crown":
+        return Crown;
+      case "Shield":
+        return Shield;
+      case "Sliders":
+        return Sliders;
+      case "CreditCard":
+        return CreditCard;
+      case "Keyboard":
+        return Keyboard;
       default:
         return Sparkles;
     }
@@ -85,7 +100,7 @@ export default function WallLauncher() {
 
           <div className="relative flex flex-col text-left">
             <span className="text-xs font-black tracking-wider text-white uppercase flex items-center gap-1.5">
-              Wall Guide
+              Wally Guide
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10B981]" />
             </span>
             <span className="text-[10px] text-white/50 font-semibold tracking-tight">
@@ -129,7 +144,7 @@ export default function WallLauncher() {
                   </div>
                   <div>
                     <h2 className="text-base font-black text-white tracking-tight flex items-center gap-1.5">
-                      Wall's Guidebook
+                      Wally's Guidebook
                     </h2>
                     <p className="text-xs text-white/50 font-medium">
                       Step-by-step interactive tutorials
@@ -172,10 +187,23 @@ export default function WallLauncher() {
                           <Icon size={18} />
                         </div>
                         <div className="overflow-hidden">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="text-xs font-bold text-white truncate">
                               {tour.title}
                             </h4>
+                            {tour.badge && (
+                              <span
+                                className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
+                                  tour.role === "owner"
+                                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                    : tour.role === "manager"
+                                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                                    : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+                                }`}
+                              >
+                                {tour.badge}
+                              </span>
+                            )}
                             {isCompleted && (
                               <CheckCircle2
                                 size={13}

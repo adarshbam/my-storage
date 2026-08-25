@@ -71,6 +71,73 @@ export default function DashboardLayout() {
   }, []);
 
   useEffect(() => {
+    const handleGlobalShortcut = (e) => {
+      const { actionId } = e.detail || {};
+      if (!actionId) return;
+
+      switch (actionId) {
+        case "new_folder":
+          document.dispatchEvent(new CustomEvent("createFolderTrigger"));
+          break;
+        case "new_file":
+          document.dispatchEvent(new CustomEvent("createFileTrigger"));
+          break;
+        case "upload_file":
+          if (user && user.usedStorage >= effectiveMaxStorage) {
+            alert("Not enough storage");
+          } else {
+            setShowUploadModal(true);
+          }
+          break;
+        case "share_vault":
+          setIsShareModalOpen(true);
+          break;
+        case "go_chamber":
+          navigate("/dashboard");
+          break;
+        case "go_shared":
+          navigate("/dashboard/shared");
+          break;
+        case "go_recent":
+          navigate("/dashboard/recent");
+          break;
+        case "go_starred":
+          navigate("/dashboard/starred");
+          break;
+        case "go_trash":
+          navigate("/dashboard/trash");
+          break;
+        case "go_drive":
+          navigate("/dashboard/google-drive");
+          break;
+        case "go_github":
+          navigate("/dashboard/github");
+          break;
+        case "go_profile":
+          navigate("/profile");
+          break;
+        case "go_billing":
+          navigate("/dashboard/billing");
+          break;
+        case "go_tutorials":
+          navigate("/dashboard/tutorials");
+          break;
+        case "go_owner_settings":
+          navigate("/owner/settings");
+          break;
+        case "go_user_management":
+          navigate("/users");
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("vault:shortcut", handleGlobalShortcut);
+    return () => window.removeEventListener("vault:shortcut", handleGlobalShortcut);
+  }, [user, effectiveMaxStorage, navigate]);
+
+  useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const q = searchParams.get("q") || searchParams.get("search") || "";
     setGlobalSearchQuery(q);

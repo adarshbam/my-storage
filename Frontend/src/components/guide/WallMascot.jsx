@@ -196,23 +196,27 @@ export default function WallMascot({
 
           {/* Floating Anti-Gravity Thruster Base */}
           <ellipse cx="80" cy="132" rx="14" ry="4.5" fill="#1E293B" stroke="#475569" strokeWidth="1.5" />
-          <motion.ellipse
+          <motion.g
             animate={{
-              ry: [3, 6, 3],
-              opacity: [0.7, 1, 0.7],
+              scaleY: [0.75, 1.4, 0.75],
+              opacity: [0.65, 1, 0.65],
             }}
             transition={{
               duration: 1.2,
               repeat: Infinity,
               ease: "easeInOut",
             }}
-            cx="80"
-            cy="136"
-            rx="9"
-            ry="4"
-            fill="url(#wall-cyan-accent)"
-            filter="url(#laser-glow)"
-          />
+            style={{ transformOrigin: "80px 136px" }}
+          >
+            <ellipse
+              cx="80"
+              cy="136"
+              rx="9"
+              ry="4"
+              fill="url(#wall-cyan-accent)"
+              filter="url(#laser-glow)"
+            />
+          </motion.g>
 
           {/* ─────────────────────────────────────────────────────────────
               DYNAMIC POINTER STICK / WAND (Right Arm)
