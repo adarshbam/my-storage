@@ -107,3 +107,26 @@ export const runFolderBackupSyncSchema = {
     targetBranch: z.string().optional(),
   }),
 };
+
+export const getGitignoreSchema = {
+  query: z.object({
+    workspaceId: z.string().optional(),
+    folderId: z.string().optional(),
+  }),
+};
+
+export const updateGitignoreSchema = {
+  body: z.object({
+    workspaceId: z.string().optional(),
+    folderId: z.string().optional(),
+    content: z.string(),
+  }),
+};
+
+export const addIgnoreRuleSchema = {
+  body: z.object({
+    workspaceId: z.string().optional(),
+    folderId: z.string().optional(),
+    pattern: z.string().min(1, "Pattern is required"),
+  }),
+};

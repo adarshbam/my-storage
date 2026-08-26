@@ -1925,7 +1925,7 @@ export const deleteFileLogic = async ({ fileId, userId, permanent, userRole }) =
 export const saveFileLogic = async ({ fileId, userId, userRole, content }) => {
   const req = { user: { id: userId, role: userRole } };
   const file = await File.findOne({ _id: fileId })
-    .select("userId extension parentDir size path contentVersion")
+    .select("userId extension parentDir size path contentVersion gitStatus")
     .lean();
 
   if (!file) {
@@ -1958,12 +1958,26 @@ export const saveFileLogic = async ({ fileId, userId, userRole, content }) => {
   const newSize = fileBuffer.length;
   const sizeDiff = newSize - (file.size || 0);
 
-  // Atomically increment contentVersion only after successful B2 overwrite.
-  // If the document is a legacy document lacking contentVersion, set to 2 (1 -> 2).
+  // Atomically increment contentVersion and mark gitStatus as modified
+  const statusToSet = file.gitStatus?.originalSha ? "modified" : "added";
   const updateOperation =
     typeof file.contentVersion === "number"
-      ? { $set: { size: newSize }, $inc: { contentVersion: 1 } }
-      : { $set: { size: newSize, contentVersion: 2 } };
+      ? {
+          $set: {
+            size: newSize,
+            "gitStatus.status": statusToSet,
+            "gitStatus.staged": false,
+          },
+          $inc: { contentVersion: 1 },
+        }
+      : {
+          $set: {
+            size: newSize,
+            "gitStatus.status": statusToSet,
+            "gitStatus.staged": false,
+            contentVersion: 2,
+          },
+        };
 
   await withTransaction(async (session) => {
     await File.updateOne({ _id: fileId }, updateOperation, { session });

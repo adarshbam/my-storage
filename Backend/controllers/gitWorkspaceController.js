@@ -12,6 +12,9 @@ import {
   dropStashLogic,
   configureFolderBackupLogic,
   runFolderBackupSyncLogic,
+  getGitignoreLogic,
+  updateGitignoreLogic,
+  addIgnoreRuleLogic,
 } from "../services/gitWorkspace.service.js";
 
 export const cloneRepoToVault = async (req, res, next) => {
@@ -205,6 +208,50 @@ export const runFolderBackupSync = async (req, res, next) => {
       repoName,
       targetBranch,
       req,
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getGitignore = async (req, res, next) => {
+  try {
+    const { workspaceId, folderId } = req.query;
+    const result = await getGitignoreLogic({
+      req,
+      workspaceId,
+      folderId,
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateGitignore = async (req, res, next) => {
+  try {
+    const { workspaceId, folderId, content } = req.body;
+    const result = await updateGitignoreLogic({
+      req,
+      workspaceId,
+      folderId,
+      content,
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addIgnoreRule = async (req, res, next) => {
+  try {
+    const { workspaceId, folderId, pattern } = req.body;
+    const result = await addIgnoreRuleLogic({
+      req,
+      workspaceId,
+      folderId,
+      pattern,
     });
     res.status(200).json(result);
   } catch (error) {

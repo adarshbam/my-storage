@@ -73,3 +73,19 @@ export const runFolderBackupSync = (data, params = {}) => {
   const query = new URLSearchParams(params).toString();
   return apiClient.post(`/git-workspace/backup/sync${query ? `?${query}` : ''}`, data);
 };
+
+// 10. Gitignore management
+export const getGitignore = (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.get(`/git-workspace/gitignore${query ? `?${query}` : ''}`);
+};
+
+export const updateGitignore = (data, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.post(`/git-workspace/gitignore${query ? `?${query}` : ''}`, data);
+};
+
+export const addIgnoreRule = (data, params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiClient.post(`/git-workspace/ignore-rule${query ? `?${query}` : ''}`, data);
+};

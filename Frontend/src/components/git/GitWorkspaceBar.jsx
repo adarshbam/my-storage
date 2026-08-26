@@ -21,6 +21,7 @@ import {
   switchWorkspaceBranch,
 } from "../../api/gitWorkspace.api";
 import { getRepoBranches, createBranch } from "../../api/github.api";
+import GitBranchDropdown from "./GitBranchDropdown";
 import Button from "../ui/Button";
 
 export default function GitWorkspaceBar({
@@ -30,19 +31,21 @@ export default function GitWorkspaceBar({
   onOpenStaging,
   onOpenStash,
   onRefresh,
+  onStatusLoaded,
 }) {
+  const safeMeta = gitWorkspaceMeta || {};
   const [statusData, setStatusData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [pulling, setPulling] = useState(false);
   const [branches, setBranches] = useState([]);
-  const [selectedBranch, setSelectedBranch] = useState(gitWorkspaceMeta.branch || "main");
+  const [selectedBranch, setSelectedBranch] = useState(safeMeta.branch || "main");
   const [switchingBranch, setSwitchingBranch] = useState(false);
   const [showNewBranchModal, setShowNewBranchModal] = useState(false);
   const [newBranchName, setNewBranchName] = useState("");
 
-  const repoOwner = gitWorkspaceMeta.repoOwner || statusData?.workspace?.repoOwner;
-  const repoName = gitWorkspaceMeta.repoName || statusData?.workspace?.repoName;
-  const resolvedWorkspaceId = workspaceId || gitWorkspaceMeta.workspaceId || statusData?.workspace?._id;
+  const repoOwner = safeMeta.repoOwner || statusData?.workspace?.repoOwner;
+  const repoName = safeMeta.repoName || statusData?.workspace?.repoName;
+  const resolvedWorkspaceId = workspaceId || safeMeta.workspaceId || statusData?.workspace?._id;
 
   const fetchStatus = async () => {
     try {
@@ -52,6 +55,9 @@ export default function GitWorkspaceBar({
         ...(folderId && { folderId }),
       });
       setStatusData(res);
+      if (onStatusLoaded) {
+        onStatusLoaded(res);
+      }
       if (res.workspace?.branch) {
         setSelectedBranch(res.workspace.branch);
       }
@@ -164,16 +170,16 @@ export default function GitWorkspaceBar({
   const stagedCount = statusData?.staged?.length || 0;
 
   return (
-    <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-cyan-500/10 dark:from-emerald-950/40 dark:via-[#111827]/60 dark:to-cyan-950/30 border border-emerald-500/20 dark:border-emerald-500/30 rounded-3xl p-4 mb-5 shadow-lg backdrop-blur-md">
+    <div className="bg-gradient-to-r from-accent-soft/40 via-vault-surface/60 to-accent-soft/20 border border-accent-border rounded-3xl p-4 mb-5 shadow-lg backdrop-blur-md">
       <div className="flex flex-wrap items-center justify-between gap-4">
         {/* Left: Workspace Title & Repo Link */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30 shadow-inner">
+          <div className="w-10 h-10 rounded-2xl bg-accent-soft text-accent-primary flex items-center justify-center border border-accent-border shadow-inner">
             <FolderGit2 size={20} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <span className="text-xs uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-accent-soft text-accent-primary border border-accent-border">
                 Git Workspace
               </span>
               {repoOwner && repoName && (
@@ -181,7 +187,7 @@ export default function GitWorkspaceBar({
                   href={`https://github.com/${repoOwner}/${repoName}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 hover:text-emerald-400 flex items-center gap-1 transition-colors"
+                  className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 hover:text-accent-primary flex items-center gap-1 transition-colors"
                 >
                   <span>{repoOwner}/{repoName}</span>
                   <ExternalLink size={12} className="opacity-60" />
@@ -194,34 +200,19 @@ export default function GitWorkspaceBar({
           </div>
         </div>
 
-        {/* Center: Branch Selector & Sync Pulse */}
-        <div className="flex items-center gap-2 bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 px-3 py-1.5 rounded-2xl">
-          <GitBranch size={15} className="text-emerald-400 shrink-0" />
-          <select
-            value={selectedBranch}
-            onChange={(e) => {
-              if (e.target.value === "__create_new__") {
-                setShowNewBranchModal(true);
-              } else {
-                handleBranchChange(e.target.value);
-              }
-            }}
+        {/* Center: Polished Custom Branch Dropdown & Sync Pulse */}
+        <div className="flex items-center gap-3 bg-white/60 dark:bg-black/40 border border-slate-200 dark:border-white/10 px-3 py-1.5 rounded-2xl">
+          <GitBranchDropdown
+            branches={branches}
+            selectedBranch={selectedBranch}
+            onSelectBranch={handleBranchChange}
+            onOpenNewBranchModal={() => setShowNewBranchModal(true)}
             disabled={switchingBranch}
-            className="bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-white outline-none cursor-pointer"
-          >
-            {branches.map((b) => (
-              <option key={b} value={b} className="dark:bg-[#18181b] text-slate-900 dark:text-white">
-                {b}
-              </option>
-            ))}
-            <option value="__create_new__" className="text-emerald-400 font-bold dark:bg-[#18181b]">
-              + New Branch...
-            </option>
-          </select>
+          />
 
           {/* Ahead / Behind Pills */}
           {statusData && (
-            <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-slate-200 dark:border-white/10 text-[11px] font-mono">
+            <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-slate-200 dark:border-white/10 text-[11px] font-mono">
               {statusData.behindBy > 0 && (
                 <span className="flex items-center gap-0.5 text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-md" title={`${statusData.behindBy} commits behind remote`}>
                   <ArrowDownCircle size={12} />
@@ -235,7 +226,7 @@ export default function GitWorkspaceBar({
                 </span>
               )}
               {statusData.behindBy === 0 && statusData.aheadBy === 0 && (
-                <span className="flex items-center gap-0.5 text-emerald-400" title="Synchronized with remote HEAD">
+                <span className="flex items-center gap-0.5 text-accent-primary" title="Synchronized with remote HEAD">
                   <CheckCircle2 size={13} />
                 </span>
               )}
@@ -249,17 +240,17 @@ export default function GitWorkspaceBar({
           <button
             onClick={handlePull}
             disabled={pulling}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-white/70 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 text-slate-700 dark:text-white border border-slate-200 dark:border-white/10 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 text-slate-700 dark:text-white border border-slate-200 dark:border-white/10 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
             title="Fetch and pull remote changes into Vault workspace"
           >
-            <RefreshCw size={13} className={pulling ? "animate-spin text-emerald-400" : ""} />
+            <RefreshCw size={13} className={pulling ? "animate-spin text-accent-primary" : ""} />
             <span>{pulling ? "Pulling..." : "Pull"}</span>
           </button>
 
           {/* Stash Drawer Trigger */}
           <button
             onClick={onOpenStash}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-white/70 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 text-slate-700 dark:text-white border border-slate-200 dark:border-white/10 transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 text-slate-700 dark:text-white border border-slate-200 dark:border-white/10 transition-all active:scale-95 cursor-pointer"
             title="Open Stash snapshots drawer"
           >
             <Archive size={13} className="text-amber-400" />
@@ -269,13 +260,13 @@ export default function GitWorkspaceBar({
           {/* Staging & Multi-File Commit Workbench */}
           <button
             onClick={onOpenStaging}
-            className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold rounded-xl bg-accent-primary text-accent-foreground shadow-lg shadow-accent-glow hover:opacity-90 active:scale-95 transition-all cursor-pointer"
             title="Open Staging Workbench and multi-file commit tool"
           >
             <GitCommit size={14} />
             <span>Commit & Push</span>
             {(dirtyCount > 0 || stagedCount > 0) && (
-              <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-white text-[10px] font-mono">
+              <span className="px-1.5 py-0.2 rounded-full bg-black/20 dark:bg-white/20 text-accent-foreground text-[10px] font-mono">
                 {stagedCount > 0 ? `${stagedCount} staged` : `${dirtyCount} changed`}
               </span>
             )}
@@ -285,10 +276,10 @@ export default function GitWorkspaceBar({
 
       {/* New Branch Modal */}
       {showNewBranchModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-3xl p-6 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+          <div className="bg-white dark:bg-[#141416] border border-slate-200 dark:border-white/10 rounded-3xl p-6 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-              <GitBranch className="text-emerald-400" size={20} />
+              <GitBranch className="text-accent-primary" size={20} />
               <span>Create New Branch</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
@@ -305,7 +296,7 @@ export default function GitWorkspaceBar({
                   value={newBranchName}
                   onChange={(e) => setNewBranchName(e.target.value)}
                   placeholder="feature/vault-integration"
-                  className="w-full px-4 py-2 text-sm bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl outline-none font-mono text-slate-900 dark:text-white focus:border-emerald-500"
+                  className="w-full px-4 py-2 text-sm bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl outline-none font-mono text-slate-900 dark:text-white focus:border-accent-primary"
                   autoFocus
                 />
               </div>
@@ -314,14 +305,14 @@ export default function GitWorkspaceBar({
                 <button
                   type="button"
                   onClick={() => setShowNewBranchModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 >
                   Cancel
                 </button>
                 <Button
                   type="submit"
                   disabled={!newBranchName.trim() || switchingBranch}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 text-xs font-bold shadow-lg shadow-emerald-500/20"
+                  className="bg-accent-primary text-accent-foreground px-5 py-2 text-xs font-bold shadow-md shadow-accent-glow"
                 >
                   {switchingBranch ? "Creating..." : "Create & Checkout"}
                 </Button>

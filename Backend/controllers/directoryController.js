@@ -20,7 +20,7 @@ export const getDirectoryById = async (req, res, next) => {
     }
   } catch (error) {
     if (error.status && !res.headersSent) {
-        return res.status(error.status).send(error.message);
+      return res.status(error.status).json({ error: error.message, message: error.message });
     }
     next(error);
   }

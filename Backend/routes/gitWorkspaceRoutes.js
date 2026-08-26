@@ -24,6 +24,9 @@ import {
   dropStash,
   configureFolderBackup,
   runFolderBackupSync,
+  getGitignore,
+  updateGitignore,
+  addIgnoreRule,
 } from "../controllers/gitWorkspaceController.js";
 
 import {
@@ -40,6 +43,9 @@ import {
   dropStashSchema,
   configureFolderBackupSchema,
   runFolderBackupSyncSchema,
+  getGitignoreSchema,
+  updateGitignoreSchema,
+  addIgnoreRuleSchema,
 } from "../validators/gitWorkspaceSchema.js";
 
 const router = express.Router();
@@ -151,6 +157,28 @@ router.post(
   throttle(3000, 2, "gw-backup-sync"),
   validate(runFolderBackupSyncSchema),
   runFolderBackupSync
+);
+
+// 10. Gitignore management
+router.get(
+  "/gitignore",
+  directoryReadLimiter,
+  validate(getGitignoreSchema),
+  getGitignore
+);
+
+router.post(
+  "/gitignore",
+  mediumWriteLimiter,
+  validate(updateGitignoreSchema),
+  updateGitignore
+);
+
+router.post(
+  "/ignore-rule",
+  mediumWriteLimiter,
+  validate(addIgnoreRuleSchema),
+  addIgnoreRule
 );
 
 export default router;

@@ -88,6 +88,7 @@ import GitPullRequestsView from "../git/GitPullRequestsView";
 import GitOperationsPanel from "../git/GitOperationsPanel";
 import GitFileHistoryModal from "../git/GitFileHistoryModal";
 import GitWorkspaceBar from "../git/GitWorkspaceBar";
+import GitBranchDropdown from "../git/GitBranchDropdown";
 import GitStagingWorkbenchModal from "../git/GitStagingWorkbenchModal";
 import GitStashDrawer from "../git/GitStashDrawer";
 import GitFolderBackupModal from "../git/GitFolderBackupModal";
@@ -176,9 +177,15 @@ export default function FileBrowser({ specialView }) {
 
   const isGitWorkspace =
     !specialView &&
-    (!!data.gitWorkspace?.repoName ||
-      data.provider === "git_workspace" ||
-      (Array.isArray(dirPath) && dirPath.some((d) => d?.provider === "git_workspace")));
+    Boolean(
+      folderId &&
+        (data.gitWorkspace?.repoName ||
+          data.gitWorkspace?.workspaceId ||
+          data.provider === "git_workspace" ||
+          (Array.isArray(dirPath) && dirPath.some((d) => d?.provider === "git_workspace")) ||
+          (Array.isArray(data.directories) && data.directories.some((d) => d?.provider === "git_workspace")) ||
+          (Array.isArray(data.files) && data.files.some((f) => f?.gitStatus)))
+    );
 
   const handleBranchChange = (newBranch) => {
     setSelectedBranch(newBranch);
@@ -199,6 +206,48 @@ export default function FileBrowser({ specialView }) {
       nextParams.delete("tab");
     }
     setSearchParams(nextParams, { replace: true });
+  };
+
+  const handleWorkspaceStatusLoaded = (statusRes) => {
+    if (!statusRes) return;
+    setData((prev) => {
+      if (!prev?.files) return prev;
+      const modifiedPaths = new Set((statusRes.modified || []).map((m) => m.name || m.path?.split("/").pop()));
+      const stagedPaths = new Set((statusRes.staged || []).map((s) => s.name || s.path?.split("/").pop()));
+      const untrackedPaths = new Set((statusRes.untracked || []).map((u) => u.name || u.path?.split("/").pop()));
+
+      const updatedFiles = prev.files.map((file) => {
+        const isStaged = stagedPaths.has(file.name);
+        const isModified = modifiedPaths.has(file.name);
+        const isUntracked = untrackedPaths.has(file.name);
+
+        if (isStaged || isModified || isUntracked) {
+          return {
+            ...file,
+            gitStatus: {
+              ...file.gitStatus,
+              status: isModified ? "modified" : isUntracked ? "added" : file.gitStatus?.status || "modified",
+              staged: isStaged,
+            },
+          };
+        } else if (file.gitStatus && file.gitStatus.status !== "unmodified") {
+          return {
+            ...file,
+            gitStatus: {
+              ...file.gitStatus,
+              status: "unmodified",
+              staged: false,
+            },
+          };
+        }
+        return file;
+      });
+
+      return {
+        ...prev,
+        files: updatedFiles,
+      };
+    });
   };
 
   const {
@@ -621,6 +670,7 @@ export default function FileBrowser({ specialView }) {
         }
 
         const resolvedData = {
+          ...result,
           directories,
           files,
           parentDir: result.parentDir,
@@ -628,6 +678,9 @@ export default function FileBrowser({ specialView }) {
           ownerName: result.ownerName || null,
           ownerEmail: result.ownerEmail || null,
           userId: result.userId || null,
+          provider: result.provider || null,
+          gitWorkspace: result.gitWorkspace || null,
+          gitSync: result.gitSync || null,
         };
         setData(resolvedData);
         setOwnerName(result.ownerName || null);
@@ -2039,24 +2092,11 @@ export default function FileBrowser({ specialView }) {
           </div>
 
           {specialView === "github-repo" && branches.length > 0 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/60 dark:bg-white/[0.05] backdrop-blur-sm border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
-              <GitBranch size={14} className="text-accent-primary shrink-0" />
-              <select
-                value={selectedBranch}
-                onChange={(e) => handleBranchChange(e.target.value)}
-                className="bg-transparent text-xs font-bold text-slate-800 dark:text-white outline-none cursor-pointer"
-              >
-                {branches.map((branch) => (
-                  <option
-                    key={branch}
-                    value={branch}
-                    className="dark:bg-[#1a1a1c] text-slate-900 dark:text-white font-mono"
-                  >
-                    {branch}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <GitBranchDropdown
+              branches={branches}
+              selectedBranch={selectedBranch}
+              onSelectBranch={handleBranchChange}
+            />
           )}
         </div>
 
@@ -2068,7 +2108,7 @@ export default function FileBrowser({ specialView }) {
                   setClonePreselectedRepo(null);
                   setShowCloneModal(true);
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-soft text-accent-primary border border-accent-border hover:bg-accent-soft/80 font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
                 title="Clone any GitHub repository into your Vault storage"
               >
                 <FolderGit2 size={15} />
@@ -2080,7 +2120,7 @@ export default function FileBrowser({ specialView }) {
                   setIsPrivate(false);
                   setModalType("create-repo");
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-primary text-accent-foreground font-bold shadow-accent-glow hover:opacity-90 text-xs active:scale-95 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-primary text-accent-foreground font-bold shadow-md shadow-accent-glow hover:opacity-90 text-xs active:scale-95 transition-all cursor-pointer"
                 title="Create New GitHub Repository"
               >
                 <Plus size={15} />
@@ -2090,17 +2130,52 @@ export default function FileBrowser({ specialView }) {
           )}
 
           {specialView === "github-repo" && (
-            <button
-              onClick={() => {
-                setClonePreselectedRepo({ owner: githubOwner, name: githubRepo, default_branch: selectedBranch });
-                setShowCloneModal(true);
-              }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
-              title="Clone this repository into your Vault storage"
-            >
-              <FolderGit2 size={15} />
-              <span>Clone to Vault</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {data?.vaultWorkspace?.rootDirectoryId ? (
+                <>
+                  <button
+                    onClick={() => navigate(`/dashboard/folder/${data.vaultWorkspace.rootDirectoryId}`)}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-primary text-accent-foreground font-bold text-xs shadow-md shadow-accent-glow hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+                    title="Open cloned Vault workspace to edit, commit, and push"
+                  >
+                    <FolderGit2 size={15} />
+                    <span>Open in Vault Workspace</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setClonePreselectedRepo({
+                        owner: githubOwner,
+                        name: githubRepo,
+                        default_branch: selectedBranch,
+                        vaultWorkspace: data.vaultWorkspace,
+                      });
+                      setShowCloneModal(true);
+                    }}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-700 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-white/10 active:scale-95 transition-all cursor-pointer"
+                    title="Re-clone repository or mount into a different folder"
+                  >
+                    <span>Re-Clone</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    setClonePreselectedRepo({
+                      owner: githubOwner,
+                      name: githubRepo,
+                      default_branch: selectedBranch,
+                      vaultWorkspace: data.vaultWorkspace,
+                    });
+                    setShowCloneModal(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-primary text-accent-foreground font-bold text-xs shadow-md shadow-accent-glow hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+                  title="Clone this repository into your Vault storage"
+                >
+                  <FolderGit2 size={15} />
+                  <span>Clone to Vault</span>
+                </button>
+              )}
+            </div>
           )}
 
           <div className="flex items-center bg-black/40 backdrop-blur-sm rounded-xl p-1 border border-white/5">
@@ -2303,10 +2378,11 @@ export default function FileBrowser({ specialView }) {
             <GitWorkspaceBar
               folderId={folderId}
               workspaceId={data.gitWorkspace?.workspaceId}
-              gitWorkspaceMeta={data.gitWorkspace}
+              gitWorkspaceMeta={data.gitWorkspace || {}}
               onOpenStaging={() => setShowStagingModal(true)}
               onOpenStash={() => setShowStashDrawer(true)}
               onRefresh={() => fetchFiles(true)}
+              onStatusLoaded={handleWorkspaceStatusLoaded}
             />
           )}
 
@@ -2691,7 +2767,10 @@ export default function FileBrowser({ specialView }) {
         }}
         preselectedRepo={clonePreselectedRepo}
         destinationFolderId={folderId}
-        onCloned={() => fetchFiles(true)}
+        onCloned={() => {
+          if (folderCache.current) folderCache.current.clear();
+          fetchFiles(true);
+        }}
       />
 
       {/* Floating Clipboard Bar */}

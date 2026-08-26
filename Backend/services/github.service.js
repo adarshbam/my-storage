@@ -2,6 +2,7 @@ import User from "../models/userModel.js";
 import { sanitize } from "../utils/sanitize.js";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
+import GitWorkspace from "../models/gitWorkspaceModel.js";
 import StarredItem from "../models/starredItemModel.js";
 import archiver from "archiver";
 import path from "path";
@@ -168,13 +169,39 @@ export const listRepositoriesLogic = async ({ req }) => {
   }
 
   const userId = req.user?.id || req.user?._id;
-  const starredRecords = userId
-    ? await StarredItem.find({ userId, provider: "github", starred: true }).lean()
-    : [];
+  const [starredRecords, userWorkspaces] = await Promise.all([
+    userId ? StarredItem.find({ userId, provider: "github", starred: true }).lean() : [],
+    userId ? GitWorkspace.find({ userId }).sort({ updatedAt: -1 }).lean() : [],
+  ]);
+
+  const existingDirIds = new Set(
+    (
+      await Directory.find({
+        _id: { $in: userWorkspaces.map((w) => w.rootDirectoryId).filter(Boolean) },
+      })
+        .select("_id")
+        .lean()
+    ).map((d) => d._id.toString())
+  );
+
   const starredSet = new Set(starredRecords.map((s) => s.itemId));
+  const workspaceMap = new Map();
+  for (const ws of userWorkspaces) {
+    if (!ws.rootDirectoryId || !existingDirIds.has(ws.rootDirectoryId.toString())) {
+      GitWorkspace.deleteOne({ _id: ws._id }).catch(() => {});
+      continue;
+    }
+    const key = `${(ws.repoOwner || "").toLowerCase()}/${(ws.repoName || "").toLowerCase()}`;
+    if (!workspaceMap.has(key)) {
+      workspaceMap.set(key, ws);
+    }
+  }
 
   const githubRepositories = repos.map((repo) => {
     const isStarred = starredSet.has(repo.full_name) || starredSet.has(repo.name) || starredSet.has(String(repo.id));
+    const repoFullName = repo.full_name || `${repo.owner?.login || ""}/${repo.name}`;
+    const existingWs = workspaceMap.get(repoFullName.toLowerCase());
+
     return {
       _id: repo.id,
       name: repo.name,
@@ -192,6 +219,14 @@ export const listRepositoriesLogic = async ({ req }) => {
       metaUrl: repo.html_url,
       isStarred,
       starred: isStarred,
+      vaultWorkspace: existingWs
+        ? {
+            workspaceId: existingWs._id,
+            rootDirectoryId: existingWs.rootDirectoryId,
+            branch: existingWs.branch,
+            lastSyncedAt: existingWs.lastSyncedAt,
+          }
+        : null,
     };
   });
 
@@ -280,10 +315,41 @@ export const getRepositoryContentsLogic = async ({ owner, repo, path: reqPath, r
       };
     });
 
+  let existingWorkspace = null;
+  if (userId) {
+    const candidateWorkspaces = await GitWorkspace.find({
+      userId,
+      repoOwner: new RegExp(`^${owner}$`, "i"),
+      repoName: new RegExp(`^${repo}$`, "i"),
+    })
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    for (const ws of candidateWorkspaces) {
+      if (ws.rootDirectoryId) {
+        const dirExists = await Directory.exists({ _id: ws.rootDirectoryId });
+        if (dirExists) {
+          existingWorkspace = ws;
+          break;
+        } else {
+          GitWorkspace.deleteOne({ _id: ws._id }).catch(() => {});
+        }
+      }
+    }
+  }
+
   return {
     directories,
     files,
     name: repo,
+    vaultWorkspace: existingWorkspace
+      ? {
+          workspaceId: existingWorkspace._id,
+          rootDirectoryId: existingWorkspace.rootDirectoryId,
+          branch: existingWorkspace.branch,
+          lastSyncedAt: existingWorkspace.lastSyncedAt,
+        }
+      : null,
   };
 };
 

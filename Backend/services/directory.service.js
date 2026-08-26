@@ -3,6 +3,7 @@ import path from "path";
 import mongoose from "mongoose";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
+import GitWorkspace from "../models/gitWorkspaceModel.js";
 import Trash from "../models/trashModel.js";
 import SharedAccess from "../models/sharedAccessModel.js";
 import {
@@ -126,7 +127,11 @@ export const updateParentDirectorySize = async (
 };
 
 export const getDirectoryPath = async (itemId, parentDirId) => {
-  if (!parentDirId) return [itemId];
+  if (!parentDirId) {
+    if (!itemId) return [];
+    const dir = await Directory.findById(itemId).select("path").lean();
+    return dir && dir.path ? [...dir.path, itemId] : [itemId];
+  }
   const parentDir = await Directory.findById(parentDirId).select("path").lean();
   const path =
     parentDir && parentDir.path ? [...parentDir.path, itemId] : [itemId];
@@ -488,11 +493,49 @@ export const getDirectoryContents = async ({ dirId, userId, userRole, action, re
   }
 
   // 2. Parallelize initial fetching of directory, files, and childDirs on cache miss
-  const [directoryDataRaw, files, childDirs] = await Promise.all([
-    Directory.findOne({ _id: dirId }).select("-__v").populate("userId", "name email").lean(),
-    File.find({ parentDir: dirId, uploadStatus: { $ne: "uploading" } }).select("-__v").lean(),
-    Directory.find({ parentDir: dirId }).select("-__v").lean(),
+  let effectiveDirId = dirId;
+  let [directoryDataRaw, files, childDirs] = await Promise.all([
+    Directory.findOne({ _id: effectiveDirId }).select("-__v").populate("userId", "name email").lean(),
+    File.find({ parentDir: effectiveDirId, uploadStatus: { $ne: "uploading" } }).select("-__v").lean(),
+    Directory.find({ parentDir: effectiveDirId }).select("-__v").lean(),
   ]);
+
+  if (!directoryDataRaw) {
+    // Check if dirId matches a GitWorkspace _id or stale rootDirectoryId
+    const ws = await GitWorkspace.findOne({
+      $or: [{ _id: dirId }, { rootDirectoryId: dirId }],
+    }).lean();
+
+    if (ws) {
+      const activeWs = await GitWorkspace.findOne({
+        userId: ws.userId,
+        repoOwner: ws.repoOwner,
+        repoName: ws.repoName,
+      })
+        .sort({ updatedAt: -1 })
+        .lean();
+
+      if (activeWs && activeWs.rootDirectoryId) {
+        const foundDir = await Directory.findOne({ _id: activeWs.rootDirectoryId })
+          .select("-__v")
+          .populate("userId", "name email")
+          .lean();
+
+        if (foundDir) {
+          effectiveDirId = activeWs.rootDirectoryId.toString();
+          directoryDataRaw = foundDir;
+          const [activeFiles, activeChildDirs] = await Promise.all([
+            File.find({ parentDir: effectiveDirId, uploadStatus: { $ne: "uploading" } }).select("-__v").lean(),
+            Directory.find({ parentDir: effectiveDirId }).select("-__v").lean(),
+          ]);
+          files.length = 0;
+          files.push(...activeFiles);
+          childDirs.length = 0;
+          childDirs.push(...activeChildDirs);
+        }
+      }
+    }
+  }
 
   if (!directoryDataRaw) {
     const err = new Error("Directory not found");
@@ -509,6 +552,38 @@ export const getDirectoryContents = async ({ dirId, userId, userRole, action, re
   const ownerName = rawUserIdObj?.name || null;
   const ownerEmail = rawUserIdObj?.email || null;
 
+  // Self-heal: If loading the root directory, attach any unparented git workspaces
+  if (!directoryDataRaw.parentDir) {
+    const unparentedWorkspaces = await Directory.find({
+      userId: ownerUserIdStr || userId,
+      provider: "git_workspace",
+      $or: [{ parentDir: null }, { parentDir: { $exists: false } }],
+    }).lean();
+
+    if (unparentedWorkspaces.length > 0) {
+      await Directory.updateMany(
+        {
+          _id: { $in: unparentedWorkspaces.map((d) => d._id) },
+        },
+        {
+          $set: {
+            parentDir: dirId,
+            path: [dirId],
+          },
+        }
+      );
+      for (const uw of unparentedWorkspaces) {
+        if (!childDirs.some((c) => c._id.toString() === uw._id.toString())) {
+          childDirs.push({
+            ...uw,
+            parentDir: dirId,
+            path: [dirId],
+          });
+        }
+      }
+    }
+  }
+
   const directoryData = { ...directoryDataRaw };
   directoryData._id = directoryData._id.toString();
   directoryData.userId = ownerUserIdStr;
@@ -519,17 +594,17 @@ export const getDirectoryContents = async ({ dirId, userId, userRole, action, re
   const pathDocs = await Directory.find({
     _id: { $in: directoryData.path || [] },
   })
-    .select("name")
+    .select("name provider")
     .lean();
 
-  const dirMap = new Map(pathDocs.map((d) => [d._id.toString(), d.name]));
+  const dirMap = new Map(pathDocs.map((d) => [d._id.toString(), d]));
 
   const mappedCurrentPath = (directoryData.path || [])
     .map((id) => {
       if (!id) return null;
       const idStr = id.toString();
-      const name = dirMap.get(idStr);
-      return name ? { _id: idStr, name } : null;
+      const doc = dirMap.get(idStr);
+      return doc ? { _id: idStr, name: doc.name, provider: doc.provider } : null;
     })
     .filter(Boolean);
 
@@ -573,11 +648,23 @@ export const getDirectoryContents = async ({ dirId, userId, userRole, action, re
       });
     }
 
+    let gitStatus = file.gitStatus;
+    const lastCommittedVer = gitStatus?.lastCommittedVersion || 1;
+    if (
+      gitStatus &&
+      (file.contentVersion || 1) > lastCommittedVer &&
+      gitStatus.originalSha &&
+      gitStatus.status !== "modified"
+    ) {
+      gitStatus = { ...gitStatus, status: "modified" };
+    }
+
     return {
       ...file,
       _id: fileIdStr,
       hasThumbnail: hasThumb,
       thumbnailUrl,
+      gitStatus,
       path: [...baseSharedPathNames, { name: file.name }],
     };
   });

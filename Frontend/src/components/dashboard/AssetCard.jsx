@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   MoreVertical,
   Download,
@@ -98,7 +99,7 @@ const getItemTypeInfo = (item, isDirectory, provider, specialView) => {
     return {
       typeLabel: item.private ? "PRIVATE REPO" : "REPOSITORY",
       listLabel: item.private ? "Private Repository" : "Repository",
-      badgeLabel: "GITHUB",
+      badgeLabel: item.vaultWorkspace?.rootDirectoryId ? "CLONED IN VAULT" : "GITHUB",
     };
   }
 
@@ -177,6 +178,7 @@ export default function AssetCard({
   onCloneToVault = null,
   specialView = null,
 }) {
+  const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -568,19 +570,26 @@ export default function AssetCard({
             <EncryptionBadgeIcon size={12} className="text-vault-emerald" />
             <span className="text-[10px] font-mono text-white/70">AES-256</span>
           </div>
-          {item.gitStatus && (item.gitStatus.status || item.gitStatus.staged) && (
+          {item.vaultWorkspace?.rootDirectoryId && (
+            <div
+              className="flex items-center gap-1 px-1.5 py-1 rounded-md backdrop-blur-md border border-accent-border bg-accent-soft text-accent-primary font-mono font-bold text-[9px] uppercase tracking-wider shadow-sm"
+              title={`Cloned Vault Workspace (branch: ${item.vaultWorkspace.branch || "main"})`}
+            >
+              <FolderGit2 size={10} />
+              <span>CLONED</span>
+            </div>
+          )}
+          {item.gitStatus && (item.gitStatus.staged || item.gitStatus.status === "modified" || item.gitStatus.status === "added") && (
             <div
               className={`flex items-center gap-1 px-1.5 py-1 rounded-md backdrop-blur-md border font-mono font-bold text-[9px] uppercase ${
                 item.gitStatus.staged
                   ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
                   : item.gitStatus.status === "added"
-                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                    : item.gitStatus.status === "modified"
-                      ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
-                      : "bg-slate-500/20 text-slate-400 border-slate-500/30"
+                    ? "bg-accent-soft text-accent-primary border-accent-border"
+                    : "bg-amber-500/20 text-amber-400 border-amber-500/30"
               }`}
             >
-              <span>{item.gitStatus.staged ? "STAGED" : item.gitStatus.status === "added" ? "+ UNT" : item.gitStatus.status === "modified" ? "MOD" : item.gitStatus.status}</span>
+              <span>{item.gitStatus.staged ? "STAGED" : item.gitStatus.status === "added" ? "+ UNT" : "MOD"}</span>
             </div>
           )}
           {(item.isStarred || item.starred) && (
@@ -596,8 +605,20 @@ export default function AssetCard({
           className={`absolute inset-x-0 bottom-0 flex items-end justify-between p-1.5 gap-1.5 transition-all duration-200 ${isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Preview / Open / Restore — left */}
-          {!isTrash && !isDirectory && onPreview ? (
+          {/* Preview / Open / Workspace / Restore — left */}
+          {item.vaultWorkspace?.rootDirectoryId ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/dashboard/folder/${item.vaultWorkspace.rootDirectoryId}`);
+              }}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-accent-primary text-accent-foreground text-[10px] font-bold shadow-md shadow-accent-glow hover:opacity-90 transition-all hover:scale-[1.03]"
+              title="Open Cloned Workspace in Vault"
+            >
+              <FolderGit2 size={12} className="shrink-0" />
+              Workspace
+            </button>
+          ) : !isTrash && !isDirectory && onPreview ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -796,16 +817,32 @@ export default function AssetCard({
                 Cut
               </button>
             )}
+            {isGithubRepoRoot && item.vaultWorkspace?.rootDirectoryId && (
+              <button
+                onClick={() => {
+                  closeMenu();
+                  navigate(`/dashboard/folder/${item.vaultWorkspace.rootDirectoryId}`);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors rounded-xl font-bold"
+              >
+                <FolderGit2 size={14} className="shrink-0 text-emerald-500" />
+                Open Vault Workspace
+              </button>
+            )}
             {isGithubRepoRoot && onCloneToVault && (
               <button
                 onClick={() => {
                   closeMenu();
                   onCloneToVault(item);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors rounded-xl font-bold"
+                className={`w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium transition-colors rounded-xl ${
+                  item.vaultWorkspace?.rootDirectoryId
+                    ? "text-slate-700 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/[0.08]"
+                    : "text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-bold"
+                }`}
               >
                 <FolderGit2 size={14} className="shrink-0 text-emerald-500" />
-                Clone to Vault
+                {item.vaultWorkspace?.rootDirectoryId ? "Re-Clone to Vault" : "Clone to Vault"}
               </button>
             )}
 

@@ -7,14 +7,16 @@ import { sanitize } from "../utils/sanitize.js";
 import { resolveIntegrationOwnerId } from "../utils/integrationHelper.js";
 import { uploadToB2, getObjectFromB2, deleteFromB2 } from "../integrations/storage/s3.client.js";
 import { updateParentDirectorySize, getDirectoryPath } from "./directory.service.js";
+import { cacheDel } from "../databases/redis.js";
 import { withTransaction } from "../utils/transaction.js";
+import { parseGitignore, isPathIgnored } from "../utils/gitignore.js";
 import crypto from "crypto";
 import path from "path";
 
 // Helper: Get authenticated GitHub token
 async function getGithubToken(req) {
   const ownerId = await resolveIntegrationOwnerId(req);
-  const user = await User.findById(ownerId).select("integrations").lean();
+  const user = await User.findById(ownerId).select("integrations rootDirId").lean();
   if (!user?.integrations?.github?.accessToken) {
     const err = new Error("GitHub not connected");
     err.statusCode = 403;
@@ -124,7 +126,10 @@ export const cloneRepoToVaultLogic = async ({ owner, repo, branch, destinationFo
   const treeItems = treeData.tree || [];
 
   // 4. Create root workspace Directory in Vault
-  const parentDirId = destinationFolderId && destinationFolderId !== "root" ? destinationFolderId : null;
+  const rootDirIdStr = user?.rootDirId ? user.rootDirId.toString() : (req.user?.rootDirId ? req.user.rootDirId.toString() : null);
+  const parentDirId = destinationFolderId && destinationFolderId !== "root" && destinationFolderId !== "undefined"
+    ? destinationFolderId
+    : rootDirIdStr;
   const rootDirPath = parentDirId ? await getDirectoryPath(parentDirId) : [];
 
   const rootDirectory = new Directory({
@@ -144,7 +149,20 @@ export const cloneRepoToVaultLogic = async ({ owner, repo, branch, destinationFo
   });
   await rootDirectory.save();
 
-  // 5. Create GitWorkspace record
+  // 5. Clean up any stale orphaned GitWorkspace records for this repo
+  const oldWorkspaces = await GitWorkspace.find({
+    userId: ownerId,
+    repoOwner: new RegExp(`^${cleanOwner}$`, "i"),
+    repoName: new RegExp(`^${cleanRepo}$`, "i"),
+  }).lean();
+  for (const oldWs of oldWorkspaces) {
+    const dirExists = await Directory.exists({ _id: oldWs.rootDirectoryId });
+    if (!dirExists) {
+      await GitWorkspace.deleteOne({ _id: oldWs._id });
+    }
+  }
+
+  // Create GitWorkspace record
   const gitWorkspace = new GitWorkspace({
     userId: ownerId,
     rootDirectoryId: rootDirectory._id,
@@ -272,6 +290,13 @@ export const cloneRepoToVaultLogic = async ({ owner, repo, branch, destinationFo
   rootDirectory.size = totalBytes;
   await rootDirectory.save();
 
+  // Invalidate Redis caches for parent directory so it shows up immediately
+  if (parentDirId) {
+    await updateParentDirectorySize(parentDirId, totalBytes).catch(() => {});
+    await cacheDel("dir:meta:" + parentDirId).catch(() => {});
+    await cacheDel("dir:contents:" + parentDirId).catch(() => {});
+  }
+
   return {
     message: `Repository '${cleanOwner}/${cleanRepo}' cloned to Vault successfully!`,
     workspaceId: gitWorkspace._id,
@@ -326,17 +351,53 @@ export const getWorkspaceStatusLogic = async ({ workspaceId, folderId, req }) =>
     dirPathMap.set(dir._id.toString(), getRelativePathForDir(dir._id));
   }
 
-  // Inspect files to classify status (untracked/added, modified, unmodified)
+  // Look for .gitignore file in workspace root
+  let gitignoreContent = "";
+  const gitignoreFile = allFiles.find(
+    (f) => f.name === ".gitignore" && f.parentDir?.toString() === workspace.rootDirectoryId.toString()
+  );
+  if (gitignoreFile) {
+    try {
+      const b2Res = await getObjectFromB2(`${gitignoreFile._id}${gitignoreFile.extension || ""}`);
+      if (b2Res?.Body) {
+        gitignoreContent = await b2Res.Body.transformToString("utf-8");
+      }
+    } catch (err) {
+      console.warn("Could not read .gitignore:", err.message);
+    }
+  }
+
+  const gitignoreRules = parseGitignore(gitignoreContent);
+
+  // Inspect files to classify status (untracked/added, modified, unmodified, ignored)
   const untracked = [];
   const modified = [];
   const staged = [];
+  const ignored = [];
 
   for (const file of allFiles) {
     const parentRel = dirPathMap.get(file.parentDir?.toString()) || "";
     const relPath = parentRel ? `${parentRel}/${file.name}` : file.name;
 
+    // Filter ignored files (.gitignore itself is never ignored)
+    if (file.name !== ".gitignore" && isPathIgnored(relPath, gitignoreRules)) {
+      ignored.push({
+        _id: file._id,
+        name: file.name,
+        path: relPath,
+        size: file.size,
+        extension: file.extension,
+      });
+      continue;
+    }
+
     const fileGitStatus = file.gitStatus || {};
     const isStaged = workspace.stagedFiles.some((s) => s.path === relPath) || fileGitStatus.staged;
+
+    const lastCommittedVer = fileGitStatus.lastCommittedVersion || 1;
+    const isModified =
+      fileGitStatus.status === "modified" ||
+      ((file.contentVersion || 1) > lastCommittedVer && Boolean(fileGitStatus.originalSha));
 
     if (!fileGitStatus.originalSha || fileGitStatus.status === "added") {
       untracked.push({
@@ -348,7 +409,10 @@ export const getWorkspaceStatusLogic = async ({ workspaceId, folderId, req }) =>
         status: "added",
         staged: isStaged,
       });
-    } else if (fileGitStatus.status === "modified") {
+    } else if (isModified) {
+      if (fileGitStatus.status !== "modified") {
+        File.updateOne({ _id: file._id }, { $set: { "gitStatus.status": "modified" } }).catch(() => {});
+      }
       modified.push({
         _id: file._id,
         name: file.name,
@@ -423,6 +487,8 @@ export const getWorkspaceStatusLogic = async ({ workspaceId, folderId, req }) =>
     modified,
     deleted: [],
     staged,
+    ignored,
+    gitignoreContent,
     aheadBy,
     behindBy,
     isClean: untracked.length === 0 && modified.length === 0 && staged.length === 0,
@@ -513,6 +579,7 @@ export const commitWorkspaceLogic = async ({ workspaceId, message, description, 
 
   // 1. Upload blobs to GitHub for each staged file
   const treeEntries = [];
+  const blobMap = new Map();
 
   for (const staged of workspace.stagedFiles) {
     if (staged.status === "deleted") {
@@ -560,6 +627,11 @@ export const commitWorkspaceLogic = async ({ workspaceId, message, description, 
           mode: "100644",
           type: "blob",
           sha: blobData.sha,
+        });
+        blobMap.set(staged.fileId.toString(), {
+          sha: blobData.sha,
+          contentVersion: fileDoc.contentVersion || 1,
+          parentDir: fileDoc.parentDir,
         });
       }
     }
@@ -637,6 +709,25 @@ export const commitWorkspaceLogic = async ({ workspaceId, message, description, 
   }
 
   // 5. Update local database records
+  for (const [fileIdStr, info] of blobMap.entries()) {
+    await File.updateOne(
+      { _id: fileIdStr },
+      {
+        $set: {
+          "gitStatus.status": "unmodified",
+          "gitStatus.staged": false,
+          "gitStatus.originalSha": info.sha,
+          "gitStatus.remoteSha": info.sha,
+          "gitStatus.lastCommittedVersion": info.contentVersion,
+        },
+      }
+    );
+    if (info.parentDir) {
+      await cacheDel("dir:contents:" + info.parentDir.toString()).catch(() => {});
+    }
+  }
+
+  // Also catch any other staged files (e.g. deleted files)
   const stagedFileIds = workspace.stagedFiles.map((s) => s.fileId).filter(Boolean);
   await File.updateMany(
     { _id: { $in: stagedFileIds } },
@@ -655,7 +746,7 @@ export const commitWorkspaceLogic = async ({ workspaceId, message, description, 
   workspace.status = "clean";
   await workspace.save();
 
-  // Update root directory baseSha
+  // Update root directory baseSha & invalidate root cache
   await Directory.updateOne(
     { _id: workspace.rootDirectoryId },
     {
@@ -665,6 +756,7 @@ export const commitWorkspaceLogic = async ({ workspaceId, message, description, 
       },
     }
   );
+  await cacheDel("dir:contents:" + workspace.rootDirectoryId.toString()).catch(() => {});
 
   return {
     message: `Committed and pushed ${treeEntries.length} file changes to '${branch}' successfully!`,
@@ -1304,5 +1396,113 @@ export const runFolderBackupSyncLogic = async ({ directoryId, req }) => {
     commitSha,
     shortSha: commitSha.substring(0, 7),
     filesCount: treeEntries.length,
+  };
+};
+
+/* ============================================================================
+   10. GITIGNORE MANAGEMENT
+   ============================================================================ */
+
+export const getGitignoreLogic = async ({ req, workspaceId, folderId }) => {
+  const { ownerId } = await getGithubToken(req);
+  const workspace = await resolveWorkspace(workspaceId, folderId, ownerId);
+
+  const gitignoreFile = await File.findOne({
+    userId: ownerId,
+    parentDir: workspace.rootDirectoryId,
+    name: ".gitignore",
+  }).lean();
+
+  let content = "";
+  if (gitignoreFile) {
+    try {
+      const b2Res = await getObjectFromB2(`${gitignoreFile._id}${gitignoreFile.extension || ""}`);
+      if (b2Res?.Body) {
+        content = await b2Res.Body.transformToString("utf-8");
+      }
+    } catch (e) {
+      console.warn("Could not fetch .gitignore body:", e);
+    }
+  }
+
+  return {
+    content,
+    fileId: gitignoreFile?._id || null,
+    workspaceId: workspace._id,
+    rootDirectoryId: workspace.rootDirectoryId,
+  };
+};
+
+export const updateGitignoreLogic = async ({ req, workspaceId, folderId, content }) => {
+  const { ownerId } = await getGithubToken(req);
+  const workspace = await resolveWorkspace(workspaceId, folderId, ownerId);
+
+  let gitignoreFile = await File.findOne({
+    userId: ownerId,
+    parentDir: workspace.rootDirectoryId,
+    name: ".gitignore",
+  });
+
+  const buffer = Buffer.from(content || "", "utf-8");
+
+  if (!gitignoreFile) {
+    const dirPath = await getDirectoryPath(workspace.rootDirectoryId);
+    gitignoreFile = new File({
+      name: ".gitignore",
+      extension: "",
+      type: "file",
+      userId: ownerId,
+      parentDir: workspace.rootDirectoryId,
+      size: buffer.length,
+      path: dirPath,
+      gitStatus: {
+        status: "added",
+        staged: false,
+      },
+    });
+    await gitignoreFile.save();
+  } else {
+    gitignoreFile.size = buffer.length;
+    gitignoreFile.gitStatus = {
+      ...gitignoreFile.gitStatus,
+      status: gitignoreFile.gitStatus?.originalSha ? "modified" : "added",
+      staged: false,
+    };
+    await gitignoreFile.save();
+  }
+
+  await uploadToB2({
+    key: `${gitignoreFile._id}`,
+    body: buffer,
+    contentType: "text/plain",
+  });
+
+  await cacheDel("dir:contents:" + workspace.rootDirectoryId.toString()).catch(() => {});
+  await cacheDel("dir:meta:" + workspace.rootDirectoryId.toString()).catch(() => {});
+
+  return {
+    message: ".gitignore updated successfully",
+    content,
+    fileId: gitignoreFile._id,
+    workspaceId: workspace._id,
+  };
+};
+
+export const addIgnoreRuleLogic = async ({ req, workspaceId, folderId, pattern }) => {
+  if (!pattern || typeof pattern !== "string") {
+    throw new Error("Pattern is required");
+  }
+  const cleanPattern = pattern.trim();
+  const { content } = await getGitignoreLogic({ req, workspaceId, folderId });
+
+  const existingLines = content ? content.split(/\r?\n/).map((l) => l.trim()) : [];
+  if (!existingLines.includes(cleanPattern)) {
+    const newContent = content ? `${content.trim()}\n${cleanPattern}\n` : `${cleanPattern}\n`;
+    return await updateGitignoreLogic({ req, workspaceId, folderId, content: newContent });
+  }
+
+  return {
+    message: `Rule '${cleanPattern}' is already in .gitignore`,
+    content,
   };
 };

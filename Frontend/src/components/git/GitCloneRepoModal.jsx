@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FolderGit2,
   GitBranch,
@@ -6,6 +7,8 @@ import {
   X,
   CheckCircle2,
   FolderPlus,
+  ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { cloneRepoToVault } from "../../api/gitWorkspace.api";
 import { getRepositories, getRepoBranches } from "../../api/github.api";
@@ -18,6 +21,7 @@ export default function GitCloneRepoModal({
   destinationFolderId = null,
   onCloned,
 }) {
+  const navigate = useNavigate();
   const [repositories, setRepositories] = useState([]);
   const [loadingRepos, setLoadingRepos] = useState(true);
   const [selectedRepo, setSelectedRepo] = useState(
@@ -29,6 +33,12 @@ export default function GitCloneRepoModal({
   const [selectedBranch, setSelectedBranch] = useState("main");
   const [folderName, setFolderName] = useState("");
   const [cloning, setCloning] = useState(false);
+
+  const matchedRepo = repositories.find(
+    (r) => (r.githubPath || r.name)?.toLowerCase() === selectedRepo?.toLowerCase()
+  );
+  const existingWorkspace =
+    preselectedRepo?.vaultWorkspace || matchedRepo?.vaultWorkspace;
 
   useEffect(() => {
     if (isOpen) {
@@ -137,7 +147,7 @@ export default function GitCloneRepoModal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#18181b]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-accent-primary flex items-center justify-center border border-accent-border">
               <FolderGit2 size={20} />
             </div>
             <div>
@@ -166,7 +176,7 @@ export default function GitCloneRepoModal({
             <select
               value={selectedRepo}
               onChange={(e) => setSelectedRepo(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-xl outline-none font-mono text-slate-900 dark:text-white focus:border-emerald-500 cursor-pointer"
+              className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-xl outline-none font-mono text-slate-900 dark:text-white focus:border-accent-primary cursor-pointer"
             >
               <option value="">-- Select a repository --</option>
               {repositories.map((r) => (
@@ -177,6 +187,37 @@ export default function GitCloneRepoModal({
               <option value="__custom__">+ Enter custom repository...</option>
             </select>
           </div>
+
+          {/* If repo is already cloned, provide instant 1-click Open Workspace option */}
+          {existingWorkspace?.rootDirectoryId && (
+            <div className="p-4 rounded-2xl bg-emerald-500/10 dark:bg-emerald-950/40 border border-accent-border space-y-2.5 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FolderGit2 size={16} className="text-accent-primary shrink-0" />
+                  <span className="font-bold text-slate-900 dark:text-accent-primary text-xs">
+                    Workspace Already Cloned in Vault
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-accent-primary bg-emerald-500/20 px-2 py-0.5 rounded-md font-bold">
+                  {existingWorkspace.branch || "main"}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                An active Vault workspace is already linked to this repository. You can jump directly into it to edit files, stage changes, and push back to GitHub.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  navigate(`/dashboard/folder/${existingWorkspace.rootDirectoryId}`);
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-98 transition-all cursor-pointer"
+              >
+                <ExternalLink size={14} />
+                <span>Open Cloned Workspace Now</span>
+              </button>
+            </div>
+          )}
 
           {selectedRepo === "__custom__" && (
             <div className="grid grid-cols-2 gap-3">
@@ -189,7 +230,7 @@ export default function GitCloneRepoModal({
                   value={customOwner}
                   onChange={(e) => setCustomOwner(e.target.value)}
                   placeholder="octocat"
-                  className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-xl outline-none font-mono text-slate-900 dark:text-white focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-xl outline-none font-mono text-slate-900 dark:text-white focus:border-accent-primary"
                   required
                 />
               </div>
@@ -202,7 +243,7 @@ export default function GitCloneRepoModal({
                   value={customRepo}
                   onChange={(e) => setCustomRepo(e.target.value)}
                   placeholder="Hello-World"
-                  className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-xl outline-none font-mono text-slate-900 dark:text-white focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-xl outline-none font-mono text-slate-900 dark:text-white focus:border-accent-primary"
                   required
                 />
               </div>
@@ -218,7 +259,7 @@ export default function GitCloneRepoModal({
                 <select
                   value={selectedBranch}
                   onChange={(e) => setSelectedBranch(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-xl outline-none font-mono text-slate-900 dark:text-white focus:border-emerald-500 cursor-pointer"
+                  className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-xl outline-none font-mono text-slate-900 dark:text-white focus:border-accent-primary cursor-pointer"
                 >
                   {branches.map((b) => (
                     <option key={b} value={b}>
@@ -232,7 +273,7 @@ export default function GitCloneRepoModal({
                   value={selectedBranch}
                   onChange={(e) => setSelectedBranch(e.target.value)}
                   placeholder="main"
-                  className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-xl outline-none font-mono text-slate-900 dark:text-white focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-xl outline-none font-mono text-slate-900 dark:text-white focus:border-accent-primary"
                 />
               )}
             </div>
@@ -246,12 +287,12 @@ export default function GitCloneRepoModal({
                 value={folderName}
                 onChange={(e) => setFolderName(e.target.value)}
                 placeholder="my-workspace"
-                className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-xl outline-none text-slate-900 dark:text-white focus:border-emerald-500"
+                className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-white/10 rounded-xl outline-none text-slate-900 dark:text-white focus:border-accent-primary"
               />
             </div>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-600 dark:text-emerald-300 leading-relaxed">
+          <div className="p-3.5 rounded-2xl bg-accent-soft border border-accent-border text-[11px] text-accent-primary dark:text-accent-primary leading-relaxed">
             ⚡ <strong>Vault Git Workspace</strong>: Downloads all repository files into your Vault storage with working tree tracking, live staging, branch switching, and direct multi-file push capabilities.
           </div>
 
@@ -266,7 +307,7 @@ export default function GitCloneRepoModal({
             <Button
               type="submit"
               disabled={cloning}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 text-xs font-bold shadow-lg shadow-emerald-500/25 flex items-center gap-2"
+              className="bg-accent-primary text-accent-foreground px-6 py-2 text-xs font-bold shadow-lg shadow-accent-glow hover:opacity-90 flex items-center gap-2"
             >
               {cloning ? (
                 <>
