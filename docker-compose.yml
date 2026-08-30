@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Node.js & Express 5 Backend API
+  # ----------------------------------------------------------------------------
+  vault-backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: vault-backend
+    restart: always
+    env_file:
+      - ./Backend/.env
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://vault-redis:6379
+    depends_on:
+      - vault-redis
+    networks:
+      - vault-network
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+  # ----------------------------------------------------------------------------
+  # 2. React 19 Frontend SPA
+  # ----------------------------------------------------------------------------
+  vault-frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/api
+    container_name: vault-frontend
+    restart: always
+    networks:
+      - vault-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ----------------------------------------------------------------------------
+  # 3. Redis High-Performance Cache & Rate Limiter
+  # ----------------------------------------------------------------------------
+  vault-redis:
+    image: redis:7-alpine
+    container_name: vault-redis
+    restart: always
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis-data:/data
+    networks:
+      - vault-network
+
+  # ----------------------------------------------------------------------------
+  # 4. Nginx Reverse Proxy Gateway
+  # ----------------------------------------------------------------------------
+  vault-gateway:
+    image: nginx:1.27-alpine
+    container_name: vault-gateway
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/www/certbot
+    depends_on:
+      - vault-backend
+      - vault-frontend
+    networks:
+      - vault-network
+
+networks:
+  vault-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  certbot-etc:
+  certbot-var:
