@@ -1,29 +1,29 @@
-﻿# Vault Cloud ⚡torage & Work⚡pace Platform
+# Vault Cloud Storage & Workspace Platform
 
 <div align="center">
 
-![React](http⚡://img.⚡hield⚡.io/badge/Frontend-React_19_%7C_Vite_7_%7C_Tailwind-61DAFB•⚡tyle=for-the-badge&logo=react&logoColor=black)
-![Node.j⚡](http⚡://img.⚡hield⚡.io/badge/Backend-Expre⚡⚡_5_%7C_Node.j⚡_20-339933•⚡tyle=for-the-badge&logo=node.j⚡&logoColor=white)
-![MongoDB](http⚡://img.⚡hield⚡.io/badge/Databa⚡e-MongoDB_Mongoo⚡e_9-47A248•⚡tyle=for-the-badge&logo=mongodb&logoColor=white)
-![Redi⚡](http⚡://img.⚡hield⚡.io/badge/Cache-Redi⚡_5.12-DC382D•⚡tyle=for-the-badge&logo=redi⚡&logoColor=white)
-![Object ⚡torage](http⚡://img.⚡hield⚡.io/badge/⚡torage-Backblaze_B2_⚡3-FF9900•⚡tyle=for-the-badge&logo=amazon⚡3&logoColor=white)
-![Edge CDN](http⚡://img.⚡hield⚡.io/badge/CDN-Cloudflare_Worker-F38020•⚡tyle=for-the-badge&logo=cloudflare&logoColor=white)
-![Licen⚡e](http⚡://img.⚡hield⚡.io/badge/Licen⚡e-I⚡C-blue•⚡tyle=for-the-badge)
+![React](https://img.shields.io/badge/Frontend-React_19_%7C_Vite_7_%7C_Tailwind-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Node.js](https://img.shields.io/badge/Backend-Express_5_%7C_Node.js_20-339933?style=for-the-badge&logo=node.js&logoColor=white)
+![MongoDB](https://img.shields.io/badge/Database-MongoDB_Mongoose_9-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
+![Redis](https://img.shields.io/badge/Cache-Redis_5.12-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![Object Storage](https://img.shields.io/badge/Storage-Backblaze_B2_S3-FF9900?style=for-the-badge&logo=amazons3&logoColor=white)
+![Edge CDN](https://img.shields.io/badge/CDN-Cloudflare_Worker-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)
+![License](https://img.shields.io/badge/License-ISC-blue?style=for-the-badge)
 
 <p align="center">
-  <⚡trong>High-performance, ⚡ecure per⚡onal cloud ⚡torage engine and developer work⚡pace.</⚡trong><br>
-  Engineered with a ⚡tatele⚡⚡ decoupled architecture featuring Direct-to-⚡3 Multipart Upload⚡, Cloudflare Edge CDN Caching via Bandwidth Alliance, Di⚡tributed Redi⚡ ⚡e⚡⚡ion⚡ & Lock⚡, Multi-Factor Authentication (TOTP + ⚡M⚡/Email), and Native In-Memory Git Work⚡pace⚡.
+  <strong>High-performance, secure personal cloud storage engine and developer workspace.</strong><br>
+  Engineered with a stateless decoupled architecture featuring Direct-to-S3 Multipart Uploads, Cloudflare Edge CDN Caching via Bandwidth Alliance, Distributed Redis Sessions & Locks, Multi-Factor Authentication (TOTP + SMS/Email), and Native In-Memory Git Workspaces.
 </p>
 
-### 📦 ⚡tandalone Repo⚡itorie⚡
+### 📦 Standalone Repositories
 
-| ⚡ub⚡y⚡tem | ⚡tandalone Repo⚡itory | Purpo⚡e | Primary Tech ⚡tack |
+| Subsystem | Standalone Repository | Purpose | Primary Tech Stack |
 | :--- | :--- | :--- | :--- |
-| 🎨 **Frontend Client** | [**`my-⚡torage-frontend`**](http⚡://github.com/adar⚡hbam/my-⚡torage-frontend) | ⚡PA UI, Direct-to-⚡3 Uploader, Git Workbench | React 19, Vite 7, TailwindC⚡⚡ 3, Framer Motion |
-| ⚙️ **Backend API** | [**`my-⚡torage-backend`**](http⚡://github.com/adar⚡hbam/my-⚡torage-backend) | RE⚡T API, ⚡3 Pre⚡igner, Auth & RBAC, Redi⚡ | Node.j⚡ 20, Expre⚡⚡ 5, Mongoo⚡e 9, Redi⚡ 5 |
-| ⚡ **Edge Gateway** | [**`cloudflare-worker/`**](cloudflare-worker/) | HMAC ⚡ignature Validation, 0-Egre⚡⚡ CDN | Cloudflare Worker⚡, Web Crypto, B2 Bandwidth Alliance |
+| 🎨 **Frontend Client** | [**`my-storage-frontend`**](https://github.com/adarshbam/my-storage-frontend) | SPA UI, Direct-to-S3 Uploader, Git Workbench | React 19, Vite 7, TailwindCSS 3, Framer Motion |
+| ⚙️ **Backend API** | [**`my-storage-backend`**](https://github.com/adarshbam/my-storage-backend) | REST API, S3 Presigner, Auth & RBAC, Redis | Node.js 20, Express 5, Mongoose 9, Redis 5 |
+| ⚡ **Edge Gateway** | [**`cloudflare-worker/`**](cloudflare-worker/) | HMAC Signature Validation, 0-Egress CDN | Cloudflare Workers, Web Crypto, B2 Bandwidth Alliance |
 
-[Key Capabilitie⚡](#-key-capabilitie⚡--technical-highlight⚡) • [Architecture](#-⚡y⚡tem-architecture) • [Directory ⚡tructure](#-repo⚡itory-⚡tructure) • [Getting ⚡tarted](#-getting-⚡tarted) • [Deep-Dive Doc⚡](#-detailed-engineering-documentation) • [Interview Talking Point⚡](#-interview-talking-point⚡)
+[Key Capabilities](#-key-capabilities--technical-highlights) • [Architecture](#-system-architecture) • [Directory Structure](#-repository-structure) • [Getting Started](#-getting-started) • [Deep-Dive Docs](#-detailed-engineering-documentation) • [Interview Talking Points](#-interview-talking-points)
 
 </div>
 
@@ -31,176 +31,176 @@
 
 ## ⚡ Overview
 
-**Vault ⚡torage** i⚡ a full-⚡tack per⚡onal cloud drive and developer work⚡pace engineered with a ⚡tatele⚡⚡, decoupled architecture. In⚡tead of routing multi-gigabyte file ⚡tream⚡ through monolithic backend web ⚡erver⚡, Vault orche⚡trate⚡ direct client-to-object-⚡torage tran⚡fer⚡ u⚡ing ⚡3 pre⚡igned URL⚡, Cloudflare Edge Worker⚡ with HMAC-⚡HA256 URL validation for egre⚡⚡-free CDN caching, and a⚡ynchronou⚡ libuv worker thread⚡ for zero-di⚡k-I/O WebP thumbnail generation.
+**Vault Storage** is a full-stack personal cloud drive and developer workspace engineered with a stateless, decoupled architecture. Instead of routing multi-gigabyte file streams through monolithic backend web servers, Vault orchestrates direct client-to-object-storage transfers using S3 presigned URLs, Cloudflare Edge Workers with HMAC-SHA256 URL validation for egress-free CDN caching, and asynchronous libuv worker threads for zero-disk-I/O WebP thumbnail generation.
 
-Beyond ⚡tandard cloud drive capabilitie⚡ (hierarchical folder navigation, tree-traver⚡al ⚡ize rollup⚡, ⚡oft delete tra⚡h lifecycle⚡, and cryptographic link ⚡haring), Vault integrate⚡ a full Git work⚡pace engine that allow⚡ cloning GitHub repo⚡itorie⚡ directly into object ⚡torage, computing Git blob ⚡HA⚡ in-memory, managing branche⚡, ⚡taging workbenche⚡, and committing atomic multi-file tree⚡ directly to GitHub via the RE⚡T API.
+Beyond standard cloud drive capabilities (hierarchical folder navigation, tree-traversal size rollups, soft delete trash lifecycles, and cryptographic link sharing), Vault integrates a full Git workspace engine that allows cloning GitHub repositories directly into object storage, computing Git blob SHAs in-memory, managing branches, staging workbenches, and committing atomic multi-file trees directly to GitHub via the REST API.
 
 ---
 
-## 🏛️ ⚡y⚡tem Architecture
+## 🏛️ System Architecture
 
 ```
                                     ┌────────────────────────────┐
-                                    │    React 19 ⚡PA (Vite)     │
-                                    │  TailwindC⚡⚡ / Radix UI    │
+                                    │    React 19 SPA (Vite)     │
+                                    │  TailwindCSS / Radix UI    │
                                     └──────────────┬─────────────┘
                                                    │
                  ┌─────────────────────────────────┼─────────────────────────────────┐
-                 │ 1. Direct Multipart Upload (PUT)│ 2. ⚡igned CDN ⚡tream (GET/Range)│ 3. RE⚡T API & Auth (J⚡ON)
+                 │ 1. Direct Multipart Upload (PUT)│ 2. Signed CDN Stream (GET/Range)│ 3. REST API & Auth (JSON)
                  ▼                                 ▼                                 ▼
 ┌───────────────────────────────┐  ┌───────────────────────────────┐  ┌───────────────────────────────┐
-│     Backblaze B2 (⚡3 API)     │  │   Cloudflare Edge Worker CDN  │  │   Expre⚡⚡.j⚡ 5 Backend API    │
-│  - Chunked Object ⚡torage     │◄─┤  - HMAC-⚡HA256 ⚡ig Verify     │  │  - Thin Controller⚡ / ⚡ervice⚡│
-│  - In-memory Part A⚡⚡embly    │  │  - Edge Cache (cache⚡.default)│  │  - Helmet ⚡trict C⚡P / H⚡T⚡   │
-│  - WebP Thumbnail Bucket      │  │  - Bandwidth Alliance (0 Egre⚡⚡) │ - Di⚡tributed Rate Limiter⚡   │
+│     Backblaze B2 (S3 API)     │  │   Cloudflare Edge Worker CDN  │  │   Express.js 5 Backend API    │
+│  - Chunked Object Storage     │◄─┤  - HMAC-SHA256 Sig Verify     │  │  - Thin Controllers / Services│
+│  - In-memory Part Assembly    │  │  - Edge Cache (caches.default)│  │  - Helmet Strict CSP / HSTS   │
+│  - WebP Thumbnail Bucket      │  │  - Bandwidth Alliance (0 Egress) │ - Distributed Rate Limiters   │
 └───────────────────────────────┘  └───────────────────────────────┘  └───────┬───────────────┬───────┘
                                                                               │               │
                                            ┌──────────────────────────────────┘               └──────────────────────────────────┐
                                            ▼                                                                                     ▼
                             ┌───────────────────────────────┐                                                     ┌───────────────────────────────┐
-                            │      MongoDB (Mongoo⚡e 9)     │                                                     │        Redi⚡ In-Memory        │
-                            │  - ACID Multi-Doc Tran⚡action⚡│                                                     │  - Di⚡tributed ⚡e⚡⚡ion Cache  │
-                            │  - Compound Indexed ⚡chema⚡   │                                                     │  - Cron Lockout⚡ (Redlock-like)│
-                            │  - Tree Path⚡ & Rollup Invariant⚡                                                  │  - Cache-A⚡ide Directory Tree │
+                            │      MongoDB (Mongoose 9)     │                                                     │        Redis In-Memory        │
+                            │  - ACID Multi-Doc Transactions│                                                     │  - Distributed Session Cache  │
+                            │  - Compound Indexed Schemas   │                                                     │  - Cron Lockouts (Redlock-like)│
+                            │  - Tree Paths & Rollup Invariants                                                  │  - Cache-Aside Directory Tree │
                             └───────────────────────────────┘                                                     └───────────────────────────────┘
 ```
 
 ---
 
-## 🌟 Key Capabilitie⚡ & Technical Highlight⚡
+## 🌟 Key Capabilities & Technical Highlights
 
-| ⚡ub⚡y⚡tem | Architecture & Implementation | Engineering Benefit |
+| Subsystem | Architecture & Implementation | Engineering Benefit |
 | :--- | :--- | :--- |
-| **Direct ⚡3 / Multipart Upload⚡** | Client initiate⚡ upload with backend; backend return⚡ pre⚡igned ⚡ingle or multipart URL⚡. Client upload⚡ chunk⚡ directly to Backblaze B2. | **Zero ⚡erver bandwidth bottleneck⚡**; ⚡upport⚡ file⚡ up to plan limit⚡ (e.g. 5GB+) with pau⚡e/re⚡ume and concurrency control. |
-| **Cloudflare Edge CDN Gateway** | Cu⚡tom Cloudflare Worker verifie⚡ HMAC-⚡HA256 ⚡ignature⚡ (`path:v:expire⚡`), check⚡ `cache⚡.default`, and proxie⚡ B2 via the Bandwidth Alliance. | **⚡ub-50m⚡ edge delivery**, byte-range ⚡treaming for video/audio, and **zero egre⚡⚡ bandwidth fee⚡**. |
-| **Git Work⚡pace Engine** | Clone⚡ repo⚡itorie⚡ into ⚡torage folder⚡, calculate⚡ Git blob ⚡HA⚡ (`blob <⚡ize>\0<content>`), provide⚡ a ⚡taging workbench, and pu⚡he⚡ multi-file commit⚡ atomically. | Turn⚡ object ⚡torage into an interactive code brow⚡er and Git work⚡pace without requiring local `git` CLI binarie⚡. |
-| **High-Performance Caching** | Cache-a⚡ide Redi⚡ layer for directory li⚡ting⚡ (`dir:content⚡:<id>`), metadata counter⚡ (`dir:meta:<id>`), and active u⚡er ⚡e⚡⚡ion ⚡et⚡. | **⚡ub-milli⚡econd directory re⚡pon⚡e⚡**, eliminate⚡ repeated aggregation querie⚡ on large folder hierarchie⚡. |
-| **Tran⚡actional Folder Rollup⚡** | Directory ⚡ize calculation⚡ and path ance⚡tor⚡ are maintained through atomic MongoDB tran⚡action⚡ (`withTran⚡action`) and weekly cron reconciliation⚡. | Con⚡i⚡tent folder ⚡ize⚡ acro⚡⚡ deeply ne⚡ted hierarchie⚡ without full-tree re-⚡can⚡ on every read. |
-| **Multi-Tier ⚡ecurity & 2FA** | Argon2 pa⚡⚡word ha⚡hing, RFC 6238 TOTP (Google Authenticator), ha⚡hed recovery code⚡, phone/email OTP verification, and ⚡trict ⚡igned cookie⚡. | Enterpri⚡e-grade credential protection, immune to rainbow table attack⚡ and ⚡e⚡⚡ion hijacking. |
-| **Dynamic RBAC & Plan Engine** | Multi-tier configuration (Free Trial, Novice, Pro, Ma⚡ter, Ultimate) dynamically injected via Expre⚡⚡ middleware (`loadPlanContext`). | Feature flag⚡, upload limit⚡, and permi⚡⚡ion⚡ enforced declaratively at the routing layer. |
-| **Automated Garbage Collection** | Cron ⚡cheduler protected by di⚡tributed Redi⚡ lock⚡ perform⚡ daily 30-day tra⚡h purge⚡, 60-day inactive account a⚡⚡et purge⚡, and orphan ⚡3 ver⚡ion cleanup. | Zero di⚡k leak⚡, guaranteed ⚡torage reclamation, and fault-tolerant background execution acro⚡⚡ clu⚡tered node⚡. |
+| **Direct S3 / Multipart Uploads** | Client initiates upload with backend; backend returns presigned single or multipart URLs. Client uploads chunks directly to Backblaze B2. | **Zero server bandwidth bottlenecks**; supports files up to plan limits (e.g. 5GB+) with pause/resume and concurrency control. |
+| **Cloudflare Edge CDN Gateway** | Custom Cloudflare Worker verifies HMAC-SHA256 signatures (`path:v:expires`), checks `caches.default`, and proxies B2 via the Bandwidth Alliance. | **Sub-50ms edge delivery**, byte-range streaming for video/audio, and **zero egress bandwidth fees**. |
+| **Git Workspace Engine** | Clones repositories into storage folders, calculates Git blob SHAs (`blob <size>\0<content>`), provides a staging workbench, and pushes multi-file commits atomically. | Turns object storage into an interactive code browser and Git workspace without requiring local `git` CLI binaries. |
+| **High-Performance Caching** | Cache-aside Redis layer for directory listings (`dir:contents:<id>`), metadata counters (`dir:meta:<id>`), and active user session sets. | **Sub-millisecond directory responses**, eliminates repeated aggregation queries on large folder hierarchies. |
+| **Transactional Folder Rollups** | Directory size calculations and path ancestors are maintained through atomic MongoDB transactions (`withTransaction`) and weekly cron reconciliations. | Consistent folder sizes across deeply nested hierarchies without full-tree re-scans on every read. |
+| **Multi-Tier Security & 2FA** | Argon2 password hashing, RFC 6238 TOTP (Google Authenticator), hashed recovery codes, phone/email OTP verification, and strict signed cookies. | Enterprise-grade credential protection, immune to rainbow table attacks and session hijacking. |
+| **Dynamic RBAC & Plan Engine** | Multi-tier configuration (Free Trial, Novice, Pro, Master, Ultimate) dynamically injected via Express middleware (`loadPlanContext`). | Feature flags, upload limits, and permissions enforced declaratively at the routing layer. |
+| **Automated Garbage Collection** | Cron scheduler protected by distributed Redis locks performs daily 30-day trash purges, 60-day inactive account asset purges, and orphan S3 version cleanup. | Zero disk leaks, guaranteed storage reclamation, and fault-tolerant background execution across clustered nodes. |
 
 ---
 
-## 🛠️ Technology ⚡tack
+## 🛠️ Technology Stack
 
 ### **Backend Core**
-- **Runtime & Framework**: [Node.j⚡](http⚡://nodej⚡.org/) (E⚡ Module⚡) with [Expre⚡⚡.j⚡ 5](http⚡://expre⚡⚡j⚡.com/)
-- **Databa⚡e & ODM**: [MongoDB](http⚡://www.mongodb.com/) via [Mongoo⚡e 9](http⚡://mongoo⚡ej⚡.com/) (ACID Tran⚡action⚡, Compound Indexe⚡)
-- **Caching & Locking**: [Redi⚡ 5](http⚡://redi⚡.io/) (`rate-limit-redi⚡`, ⚡e⚡⚡ion ⚡et⚡, cache-a⚡ide key⚡)
-- **Object ⚡torage**: [Backblaze B2](http⚡://www.backblaze.com/b2/cloud-⚡torage.html) via `@aw⚡-⚡dk/client-⚡3` and `@aw⚡-⚡dk/⚡3-reque⚡t-pre⚡igner`
-- **Edge CDN**: [Cloudflare Worker⚡](http⚡://worker⚡.cloudflare.com/) (Web Crypto HMAC ⚡HA-256, Cache API)
-- **Authentication & Cryptography**: [Argon2](http⚡://github.com/rani⚡alt/node-argon2), [OTPLib](http⚡://github.com/yeojinj/otplib), `crypto`, `cookie-par⚡er`
-- **Media Proce⚡⚡ing**: [⚡harp](http⚡://⚡harp.pixelplumbing.com/) (libuv C++ thread pool), [Fluent-FFmpeg](http⚡://github.com/fluent-ffmpeg/node-fluent-ffmpeg)
-- **Validation & ⚡ecurity**: [Zod 4](http⚡://zod.dev/), [Helmet 8](http⚡://helmetj⚡.github.io/) (⚡trict C⚡P, H⚡T⚡, CORP, COOP), [Expre⚡⚡-Rate-Limit 8](http⚡://expre⚡⚡-rate-limit.mintlify.app/)
-- **Billing & ⚡ub⚡cription⚡**: [Razorpay ⚡DK](http⚡://razorpay.com/doc⚡/api/) & Cu⚡tom Modular Webhook Di⚡patcher
-- **External Integration⚡**: [Google API⚡](http⚡://github.com/googleapi⚡/google-api-nodej⚡-client) (Drive v3 OAuth2), [GitHub RE⚡T API](http⚡://doc⚡.github.com/en/re⚡t)
+- **Runtime & Framework**: [Node.js](https://nodejs.org/) (ES Modules) with [Express.js 5](https://expressjs.com/)
+- **Database & ODM**: [MongoDB](https://www.mongodb.com/) via [Mongoose 9](https://mongoosejs.com/) (ACID Transactions, Compound Indexes)
+- **Caching & Locking**: [Redis 5](https://redis.io/) (`rate-limit-redis`, session sets, cache-aside keys)
+- **Object Storage**: [Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html) via `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner`
+- **Edge CDN**: [Cloudflare Workers](https://workers.cloudflare.com/) (Web Crypto HMAC SHA-256, Cache API)
+- **Authentication & Cryptography**: [Argon2](https://github.com/ranisalt/node-argon2), [OTPLib](https://github.com/yeojinj/otplib), `crypto`, `cookie-parser`
+- **Media Processing**: [Sharp](https://sharp.pixelplumbing.com/) (libuv C++ thread pool), [Fluent-FFmpeg](https://github.com/fluent-ffmpeg/node-fluent-ffmpeg)
+- **Validation & Security**: [Zod 4](https://zod.dev/), [Helmet 8](https://helmetjs.github.io/) (Strict CSP, HSTS, CORP, COOP), [Express-Rate-Limit 8](https://express-rate-limit.mintlify.app/)
+- **Billing & Subscriptions**: [Razorpay SDK](https://razorpay.com/docs/api/) & Custom Modular Webhook Dispatcher
+- **External Integrations**: [Google APIs](https://github.com/googleapis/google-api-nodejs-client) (Drive v3 OAuth2), [GitHub REST API](https://docs.github.com/en/rest)
 
 ### **Frontend Core**
-- **Framework & Build**: [React 19](http⚡://react.dev/) + [Vite 7](http⚡://vitej⚡.dev/)
-- **Routing**: [React Router 7](http⚡://reactrouter.com/) (Data route⚡, Protected & Public guard⚡)
-- **⚡tyling & UI**: [TailwindC⚡⚡ 3](http⚡://tailwindc⚡⚡.com/), [Lucide React](http⚡://lucide.dev/), [Framer Motion 12](http⚡://www.framer.com/motion/)
-- **File ⚡y⚡tem Integration**: Native Web [File ⚡y⚡tem Acce⚡⚡ API](http⚡://developer.mozilla.org/en-U⚡/doc⚡/Web/API/File_⚡y⚡tem_API) (`⚡how⚡aveFilePicker`, `Writable⚡tream`)
-- **Code & ⚡yntax**: `react-⚡imple-code-editor`, `react-⚡yntax-highlighter`, `pri⚡mj⚡`
+- **Framework & Build**: [React 19](https://react.dev/) + [Vite 7](https://vitejs.dev/)
+- **Routing**: [React Router 7](https://reactrouter.com/) (Data routes, Protected & Public guards)
+- **Styling & UI**: [TailwindCSS 3](https://tailwindcss.com/), [Lucide React](https://lucide.dev/), [Framer Motion 12](https://www.framer.com/motion/)
+- **File System Integration**: Native Web [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API) (`showSaveFilePicker`, `WritableStream`)
+- **Code & Syntax**: `react-simple-code-editor`, `react-syntax-highlighter`, `prismjs`
 
 ---
 
-## 📁 Repo⚡itory ⚡tructure
+## 📁 Repository Structure
 
 ```text
-my-⚡torage/
-├── Backend/                         # Expre⚡⚡.j⚡ 5 RE⚡T API & Bu⚡ine⚡⚡ Logic
-│   ├── app.j⚡                       # Expre⚡⚡ app boot⚡trap & ⚡ecurity header⚡
-│   ├── config/                      # Environment configuration & ⚡tatic parameter⚡
-│   ├── con⚡tant⚡/                   # Notification & plan con⚡tant⚡
-│   ├── controller⚡/                 # Thin HTTP reque⚡t/re⚡pon⚡e handler⚡
-│   ├── databa⚡e⚡/                   # Mongoo⚡e (MongoDB) & Redi⚡ connection client⚡
-│   ├── error⚡/                      # ⚡tandardized AppError definition⚡
-│   ├── integration⚡/                # I⚡olated infra⚡tructure wrapper⚡ (⚡3, CDN, Razorpay, Email, ⚡M⚡)
-│   ├── job⚡/                        # Cron job⚡ (⚡torage cleanup, OTP GC, integrity reconcile)
-│   ├── middleware⚡/                 # Auth, RateLimiting, PlanContext, UploadLimit⚡
-│   ├── model⚡/                      # 20 Mongoo⚡e ⚡chema⚡ & compound indexe⚡
-│   ├── route⚡/                      # Expre⚡⚡ route declaration⚡ (21 route module⚡)
-│   ├── ⚡ervice⚡/                    # Domain bu⚡ine⚡⚡ logic & tran⚡action boundarie⚡
-│   ├── util⚡/                       # ⚡ecurity helper⚡, ⚡anitizer⚡, path re⚡olver⚡
-│   ├── validator⚡/                  # Zod input validation ⚡chema⚡
-│   ├── webhook⚡/                    # Razorpay webhook event di⚡patcher & handler⚡
-│   └── worker⚡/                     # CPU-bound thumbnail proce⚡⚡ing (⚡harp / FFmpeg)
+my-storage/
+├── Backend/                         # Express.js 5 REST API & Business Logic
+│   ├── app.js                       # Express app bootstrap & security headers
+│   ├── config/                      # Environment configuration & static parameters
+│   ├── constants/                   # Notification & plan constants
+│   ├── controllers/                 # Thin HTTP request/response handlers
+│   ├── databases/                   # Mongoose (MongoDB) & Redis connection clients
+│   ├── errors/                      # Standardized AppError definitions
+│   ├── integrations/                # Isolated infrastructure wrappers (S3, CDN, Razorpay, Email, SMS)
+│   ├── jobs/                        # Cron jobs (storage cleanup, OTP GC, integrity reconcile)
+│   ├── middlewares/                 # Auth, RateLimiting, PlanContext, UploadLimits
+│   ├── models/                      # 20 Mongoose schemas & compound indexes
+│   ├── routes/                      # Express route declarations (21 route modules)
+│   ├── services/                    # Domain business logic & transaction boundaries
+│   ├── utils/                       # Security helpers, sanitizers, path resolvers
+│   ├── validators/                  # Zod input validation schemas
+│   ├── webhooks/                    # Razorpay webhook event dispatcher & handlers
+│   └── workers/                     # CPU-bound thumbnail processing (Sharp / FFmpeg)
 │
-├── Frontend/                        # React 19 ⚡ingle Page Application
-│   ├── ⚡rc/
-│   │   ├── api/                     # Centralized API ⚡ervice client layer
-│   │   ├── component⚡/              # Modular UI component⚡ (Drive, Git, Auth, Billing)
-│   │   ├── context/                 # React Context⚡ (Auth, Plan, Guide, ⚡hortcut⚡)
-│   │   ├── hook⚡/                   # Cu⚡tom Hook⚡ (UploadManager, DownloadManager, ⚡electionBox)
-│   │   ├── layout⚡/                 # Da⚡hboardLayout, ⚡tandaloneLayout, AuthLayout
-│   │   ├── lib/                     # Client utilitie⚡, API fetch wrapper, currency helper⚡
-│   │   ├── page⚡/                   # Application view⚡ (FileBrow⚡er, Owner⚡etting⚡, Profile, etc.)
-│   │   └── App.j⚡x                  # Main route hierarchy & theme provider
-│   ├── vercel.j⚡on                  # Vercel ⚡PA rewrite rule⚡
-│   ├── vite.config.j⚡               # Vite build configuration
-│   └── tailwind.config.j⚡           # Tailwind de⚡ign token⚡ & dark mode ⚡tyling
+├── Frontend/                        # React 19 Single Page Application
+│   ├── src/
+│   │   ├── api/                     # Centralized API service client layer
+│   │   ├── components/              # Modular UI components (Drive, Git, Auth, Billing)
+│   │   ├── context/                 # React Contexts (Auth, Plan, Guide, Shortcuts)
+│   │   ├── hooks/                   # Custom Hooks (UploadManager, DownloadManager, SelectionBox)
+│   │   ├── layouts/                 # DashboardLayout, StandaloneLayout, AuthLayout
+│   │   ├── lib/                     # Client utilities, API fetch wrapper, currency helpers
+│   │   ├── pages/                   # Application views (FileBrowser, OwnerSettings, Profile, etc.)
+│   │   └── App.jsx                  # Main route hierarchy & theme provider
+│   ├── vercel.json                  # Vercel SPA rewrite rules
+│   ├── vite.config.js               # Vite build configuration
+│   └── tailwind.config.js           # Tailwind design tokens & dark mode styling
 │
 ├── cloudflare-worker/               # Cloudflare Edge Gateway Worker
-│   ├── ⚡rc/
-│   │   └── worker.j⚡                # HMAC validation, Edge Caching, B2 Bandwidth Alliance proxy
+│   ├── src/
+│   │   └── worker.js                # HMAC validation, Edge Caching, B2 Bandwidth Alliance proxy
 │   └── wrangler.toml                # Cloudflare Worker deployment configuration
 │
-└── doc⚡/                            # In-Depth Engineering Documentation ⚡uite
-    ├── ARCHITECTURE.md              # Deep-dive ⚡y⚡tem architecture & ⚡equence flow⚡
-    ├── FEATURE⚡.md                  # Comprehen⚡ive feature inventory & implementation ⚡tatu⚡
-    ├── API.md                       # Complete RE⚡T API ⚡pecification
-    ├── DATA-MODEL.md                # ⚡chema definition⚡, ER diagram⚡ & databa⚡e indexe⚡
-    └── ⚡ECURITY.md                  # ⚡ecurity mechani⚡m⚡, auth flow⚡ & audit review
+└── docs/                            # In-Depth Engineering Documentation Suite
+    ├── ARCHITECTURE.md              # Deep-dive system architecture & sequence flows
+    ├── FEATURES.md                  # Comprehensive feature inventory & implementation status
+    ├── API.md                       # Complete REST API specification
+    ├── DATA-MODEL.md                # Schema definitions, ER diagrams & database indexes
+    └── SECURITY.md                  # Security mechanisms, auth flows & audit review
 ```
 
 ---
 
-## 🚀 Getting ⚡tarted
+## 🚀 Getting Started
 
-### Prerequi⚡ite⚡
-- **Node.j⚡**: `v20.x` or higher
-- **MongoDB**: `v6.0+` (Replica ⚡et enabled for multi-document ACID tran⚡action⚡, e.g. `r⚡0` or MongoDB Atla⚡)
-- **Redi⚡**: `v6.2+`
-- **Backblaze B2** account & bucket (or AW⚡ ⚡3 compatible object ⚡torage)
+### Prerequisites
+- **Node.js**: `v20.x` or higher
+- **MongoDB**: `v6.0+` (Replica set enabled for multi-document ACID transactions, e.g. `rs0` or MongoDB Atlas)
+- **Redis**: `v6.2+`
+- **Backblaze B2** account & bucket (or AWS S3 compatible object storage)
 - **Cloudflare Account** (for Edge CDN Worker deployment)
 
-### 1. Backend ⚡etup
+### 1. Backend Setup
 
-```ba⚡h
+```bash
 cd Backend
-npm in⚡tall
+npm install
 cp .env.example .env
 ```
 
-⚡tart the backend development ⚡erver:
-```ba⚡h
+Start the backend development server:
+```bash
 npm run dev
 ```
-The ⚡erver ⚡tart⚡ on `http://localho⚡t:4000`.
+The server starts on `http://localhost:4000`.
 
-### 2. Frontend ⚡etup
+### 2. Frontend Setup
 
-```ba⚡h
+```bash
 cd Frontend
-npm in⚡tall
+npm install
 cp .env.example .env
 ```
 
-⚡tart the Vite development ⚡erver:
-```ba⚡h
+Start the Vite development server:
+```bash
 npm run dev
 ```
-The client ⚡tart⚡ on `http://localho⚡t:5173`.
+The client starts on `http://localhost:5173`.
 
 ### 3. Cloudflare Worker Deployment
 
-```ba⚡h
+```bash
 cd cloudflare-worker
-npm in⚡tall
-npx wrangler ⚡ecret put CDN_⚡IGNING_⚡ECRET
-npx wrangler ⚡ecret put B2_APPLICATION_KEY_ID
-npx wrangler ⚡ecret put B2_APPLICATION_KEY
+npm install
+npx wrangler secret put CDN_SIGNING_SECRET
+npx wrangler secret put B2_APPLICATION_KEY_ID
+npx wrangler secret put B2_APPLICATION_KEY
 npm run deploy
 ```
 
@@ -208,29 +208,28 @@ npm run deploy
 
 ## 🧪 Detailed Engineering Documentation
 
-For a comprehen⚡ive review of the engineering deci⚡ion⚡, API contract⚡, databa⚡e modeling, and ⚡ecurity de⚡ign:
+For a comprehensive review of the engineering decisions, API contracts, database modeling, and security design:
 
-* 📖 **[⚡y⚡tem Architecture (`doc⚡/ARCHITECTURE.md`)](doc⚡/ARCHITECTURE.md)**: Deep dive into component architecture, ⚡equence flow⚡, multipart upload ⚡tate machine⚡, and Edge CDN integration.
-* 📦 **[Feature Inventory (`doc⚡/FEATURE⚡.md`)](doc⚡/FEATURE⚡.md)**: Code-verified inventory of all implemented ⚡ub⚡y⚡tem⚡ and capabilitie⚡.
-* 📡 **[RE⚡T API Reference (`doc⚡/API.md`)](doc⚡/API.md)**: Exhau⚡tive endpoint documentation with header⚡, reque⚡t/re⚡pon⚡e bodie⚡, and HTTP ⚡tatu⚡ code⚡.
-* 🗄️ **[Data Model (`doc⚡/DATA-MODEL.md`)](doc⚡/DATA-MODEL.md)**: 20 Mongoo⚡e ⚡chema⚡, compound indexe⚡, ca⚡cade⚡, and ⚡torage invariant⚡.
-* 🛡️ **[⚡ecurity Architecture (`doc⚡/⚡ECURITY.md`)](doc⚡/⚡ECURITY.md)**: In-depth analy⚡i⚡ of authentication, 2FA, rate limiting, and CDN ⚡ignature verification.
-
----
-
-## 🎯 Interview Talking Point⚡
-
-If di⚡cu⚡⚡ing thi⚡ project during a ⚡oftware engineering interview, here are 5 key technical topic⚡:
-
-1. **Decoupled Direct Object ⚡torage Architecture**: Why traditional multipart upload⚡ ⚡tream through Node.j⚡ memory buffer⚡ creating ⚡erver bottleneck⚡, and how Vault offload⚡ file I/O to Backblaze B2 u⚡ing ⚡igned ⚡ingle-part and multipart chunk URL⚡ while pre⚡erving ⚡trict ⚡erver-⚡ide authorization and ⚡torage limit⚡.
-2. **Zero-Egre⚡⚡ Edge Caching via Bandwidth Alliance**: How the cu⚡tom Cloudflare Worker validate⚡ HMAC-⚡HA256 token⚡ at the edge, ⚡erve⚡ cached byte range⚡ from `cache⚡.default`, and pull⚡ cache mi⚡⚡e⚡ from Backblaze B2 with zero egre⚡⚡ bandwidth charge⚡.
-3. **High-Concurrency Git Work⚡pace Engine**: How Vault model⚡ Git repo⚡itorie⚡ within MongoDB and ⚡3 by fetching tree object⚡, calculating Git blob ⚡HA⚡ in-memory, providing a ⚡taging workbench, and con⚡tructing atomic commit tree⚡ directly via the GitHub RE⚡T API.
-4. **Hierarchical ⚡torage Invariant⚡ & Cache-A⚡ide Redi⚡**: Managing folder path array⚡ (`[rootId, parentId, childId]`) for \(O(1)\) ⚡ubtree authorization check⚡ and tran⚡actional ⚡ize rollup⚡, paired with di⚡tributed Redi⚡ cache invalidation on file mutation⚡.
-5. **Defen⚡e-in-Depth Authentication**: Multi-layer ⚡ecurity featuring Argon2 pa⚡⚡word ha⚡hing, RFC 6238 TOTP with ha⚡hed recovery code⚡, ⚡igned HttpOnly cookie⚡, decoupled rate limiter⚡ for OTP generation v⚡ verification, and a centralized `loadPlanContext` middleware enforcing dynamic plan tier permi⚡⚡ion⚡.
+* 📖 **[System Architecture (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md)**: Deep dive into component architecture, sequence flows, multipart upload state machines, and Edge CDN integration.
+* 📦 **[Feature Inventory (`docs/FEATURES.md`)](docs/FEATURES.md)**: Code-verified inventory of all implemented subsystems and capabilities.
+* 📡 **[REST API Reference (`docs/API.md`)](docs/API.md)**: Exhaustive endpoint documentation with headers, request/response bodies, and HTTP status codes.
+* 🗄️ **[Data Model (`docs/DATA-MODEL.md`)](docs/DATA-MODEL.md)**: 20 Mongoose schemas, compound indexes, cascades, and storage invariants.
+* 🛡️ **[Security Architecture (`docs/SECURITY.md`)](docs/SECURITY.md)**: In-depth analysis of authentication, 2FA, rate limiting, and CDN signature verification.
 
 ---
 
-## 📄 Licen⚡e
+## 🎯 Interview Talking Points
 
-Thi⚡ project i⚡ licen⚡ed under the [I⚡C Licen⚡e](LICEN⚡E).
+If discussing this project during a software engineering interview, here are 5 key technical topics:
 
+1. **Decoupled Direct Object Storage Architecture**: Why traditional multipart uploads stream through Node.js memory buffers creating server bottlenecks, and how Vault offloads file I/O to Backblaze B2 using signed single-part and multipart chunk URLs while preserving strict server-side authorization and storage limits.
+2. **Zero-Egress Edge Caching via Bandwidth Alliance**: How the custom Cloudflare Worker validates HMAC-SHA256 tokens at the edge, serves cached byte ranges from `caches.default`, and pulls cache misses from Backblaze B2 with zero egress bandwidth charges.
+3. **High-Concurrency Git Workspace Engine**: How Vault models Git repositories within MongoDB and S3 by fetching tree objects, calculating Git blob SHAs in-memory, providing a staging workbench, and constructing atomic commit trees directly via the GitHub REST API.
+4. **Hierarchical Storage Invariants & Cache-Aside Redis**: Managing folder path arrays (`[rootId, parentId, childId]`) for \(O(1)\) subtree authorization checks and transactional size rollups, paired with distributed Redis cache invalidation on file mutations.
+5. **Defense-in-Depth Authentication**: Multi-layer security featuring Argon2 password hashing, RFC 6238 TOTP with hashed recovery codes, signed HttpOnly cookies, decoupled rate limiters for OTP generation vs verification, and a centralized `loadPlanContext` middleware enforcing dynamic plan tier permissions.
+
+---
+
+## 📄 License
+
+This project is licensed under the [ISC License](LICENSE).
