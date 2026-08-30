@@ -1,7 +1,8 @@
 {
-  "name": "modern-saas-landing",
+  "name": "vault-cloud-storage-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "High-performance React 19 single-page application for Vault Cloud Storage & Git Workspace",
   "type": "module",
   "scripts": {
     "dev": "vite",

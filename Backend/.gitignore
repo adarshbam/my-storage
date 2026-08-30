@@ -1,0 +1,42 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Dependencies
+node_modules/
+
+# Environment variables & secrets (CRITICAL: Never commit secrets)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*
+!.env.example
+
+# Local SSL Certificates and Keys
+server.cert
+server.key
+*.cert
+*.key
+*.pem
+*.crt
+
+# Local Storage, Upload caches & Temporary files
+storage/
+uploads/
+temp/
+tmp/
+
+# Testing & Coverage
+coverage/
+
+# Editor & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

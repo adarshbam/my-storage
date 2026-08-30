@@ -6,8 +6,8 @@ export default async function sendEmail(mail) {
     port: 587,
     secure: false, // use STARTTLS (upgrade connection to TLS after connecting)
     auth: {
-      user: "adarshsingh800515@gmail.com",
-      pass: "ukui pftm aeos sgza",
+      user: process.env.SMTP_USER || "adarshsingh800515@gmail.com",
+      pass: process.env.SMTP_PASS || "ukui pftm aeos sgza",
     },
   });
 
