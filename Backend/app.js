@@ -1,6 +1,15 @@
+import "./config/config.js";
 import express from "express";
 import cookieParser from "cookie-parser";
 import compression from "compression";
+import cors from "cors";
+import helmet from "helmet";
+import checkAuth from "./middlewares/authMiddleware.js";
+import "./databases/mongoose.js";
+import { reconcileDirectoryPathsAndSizes } from "./utils/reconcile.js";
+import { startScheduledJobs } from "./jobs/scheduler.js";
+import { AppError } from "./errors/AppError.js";
+
 import directoryRouter from "./routes/directoryRoutes.js";
 import fileRouter from "./routes/fileRoutes.js";
 import trashRouter from "./routes/trashRoutes.js";
@@ -21,15 +30,6 @@ import ownerSettingsRouter from "./routes/ownerSettingsRoutes.js";
 import webhookRouter from "./routes/webhookRoutes.js";
 import billingRouter from "./routes/billingRoutes.js";
 import notificationRouter from "./routes/notificationRoutes.js";
-import cors from "cors";
-import checkAuth from "./middlewares/authMiddleware.js";
-import https from "https";
-import { readFileSync } from "fs";
-import "./databases/mongoose.js";
-import { reconcileDirectoryPathsAndSizes } from "./utils/reconcile.js";
-import helmet from "helmet";
-import { startScheduledJobs } from "./jobs/scheduler.js";
-import { AppError } from "./errors/AppError.js";
 
 import { PORT, CLIENT_URL, SESSION_SECRET } from "./config/config.js";
 
@@ -128,6 +128,16 @@ app.use((req, res, next) => {
   next();
 });
 
+const allowedOrigins = [
+  CLIENT_URL,
+  "http://yourvaultstorage.com",
+  "https://yourvaultstorage.com",
+  "http://www.yourvaultstorage.com",
+  "https://www.yourvaultstorage.com",
+  "http://localhost:5173",
+  "http://localhost:4000",
+].filter(Boolean);
+
 app.use(
   cors({
     exposedHeaders: [
@@ -137,7 +147,13 @@ app.use(
       "Content-Length",
       "Accept-Ranges",
     ],
-    origin: [CLIENT_URL],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin) || origin.includes("yourvaultstorage.com")) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   }),
 );

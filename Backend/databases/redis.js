@@ -1,6 +1,5 @@
 import { createClient } from "redis";
-
-const REDIS_URL = process.env.REDIS_URL;
+import { REDIS_URL } from "../config/config.js";
 
 const redis = createClient({
   url: REDIS_URL,
