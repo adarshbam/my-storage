@@ -195,25 +195,17 @@ app.use((err, req, res, next) => {
    ROUTES
    ======================= */
 
-app.get("/", (req, res) => {
-  return res.send("Server running");
-});
-
-const sslOptions = {
-  key: readFileSync("server.key"),
-  cert: readFileSync("server.cert"),
-};
-
-const httpsServer = https.createServer(sslOptions, app);
-
 startScheduledJobs();
 
-// httpsServer.listen(PORT, () => {
-//   console.log(`HTTPS Server running on port ${PORT}`);
-// });
-
-reconcileDirectoryPathsAndSizes().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+reconcileDirectoryPathsAndSizes()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Reconciliation warning (starting server anyway):", err);
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
   });
-});
