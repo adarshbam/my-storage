@@ -409,12 +409,12 @@ export default function Register() {
             onError={() => setError("Google sign-up failed")}
           />
 
-          <button
-            type="button"
             onClick={() => {
               const clientId = import.meta.env.VITE_GITHUB_CLIENTID;
-              const redirectUri = `${SERVER_URL}/user/auth/github`;
-              window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user:email`;
+              const redirectUri = SERVER_URL.startsWith("http")
+                ? `${SERVER_URL}/user/auth/github`
+                : `${window.location.origin}${SERVER_URL}/user/auth/github`;
+              window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email`;
             }}
             className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-50 dark:hover:bg-white/10 transition-colors"
           >

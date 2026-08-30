@@ -71,8 +71,10 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
 
   const connectGithub = async () => {
     const clientId = import.meta.env.VITE_GITHUB_CLIENTID;
-    const redirectUri = `${SERVER_URL}/user/auth/github`;
-    window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user:email,repo&state=connect`;
+    const redirectUri = SERVER_URL.startsWith("http")
+      ? `${SERVER_URL}/user/auth/github`
+      : `${window.location.origin}${SERVER_URL}/user/auth/github`;
+    window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email,repo&state=connect`;
   };
 
   const disconnectGithub = async () => {
