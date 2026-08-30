@@ -211,6 +211,14 @@ app.use((err, req, res, next) => {
    ROUTES
    ======================= */
 
+app.get("/", (req, res) => {
+  return res.json({
+    status: "online",
+    service: "Vault Cloud Storage API",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 startScheduledJobs();
 
 reconcileDirectoryPathsAndSizes()
