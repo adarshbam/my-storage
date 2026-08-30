@@ -409,6 +409,8 @@ export default function Register() {
             onError={() => setError("Google sign-up failed")}
           />
 
+          <button
+            type="button"
             onClick={() => {
               const clientId = import.meta.env.VITE_GITHUB_CLIENTID;
               const redirectUri = SERVER_URL.startsWith("http")

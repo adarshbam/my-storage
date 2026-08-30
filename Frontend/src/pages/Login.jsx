@@ -455,6 +455,8 @@ export default function Login() {
                 onError={() => setError("Google sign-in failed")}
               />
 
+              <button
+                type="button"
                 onClick={() => {
                   const clientId = import.meta.env.VITE_GITHUB_CLIENTID;
                   const redirectUri = SERVER_URL.startsWith("http")
