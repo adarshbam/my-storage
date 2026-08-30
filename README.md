@@ -1,6 +1,31 @@
 # Vault Cloud Storage & Workspace Platform
 
-> **High-performance, secure personal cloud storage engine and developer workspace featuring Direct-to-S3 Multipart Uploads, Cloudflare Edge CDN Caching via Bandwidth Alliance, Distributed Redis Sessions & Locks, Multi-Factor Authentication (TOTP + Biometric/SMS/Email), and Native Git Workspaces.**
+<div align="center">
+
+![React](https://img.shields.io/badge/Frontend-React_19_%7C_Vite_7_%7C_Tailwind-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Node.js](https://img.shields.io/badge/Backend-Express_5_%7C_Node.js_20-339933?style=for-the-badge&logo=node.js&logoColor=white)
+![MongoDB](https://img.shields.io/badge/Database-MongoDB_Mongoose_9-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
+![Redis](https://img.shields.io/badge/Cache-Redis_5.12-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![Object Storage](https://img.shields.io/badge/Storage-Backblaze_B2_S3-FF9900?style=for-the-badge&logo=amazons3&logoColor=white)
+![Edge CDN](https://img.shields.io/badge/CDN-Cloudflare_Worker-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)
+![License](https://img.shields.io/badge/License-ISC-blue?style=for-the-badge)
+
+<p align="center">
+  <strong>High-performance, secure personal cloud storage engine and developer workspace.</strong><br>
+  Engineered with a stateless decoupled architecture featuring Direct-to-S3 Multipart Uploads, Cloudflare Edge CDN Caching via Bandwidth Alliance, Distributed Redis Sessions & Locks, Multi-Factor Authentication (TOTP + SMS/Email), and Native In-Memory Git Workspaces.
+</p>
+
+### 📦 Standalone Repositories
+
+| Subsystem | Standalone Repository | Purpose | Primary Tech Stack |
+| :--- | :--- | :--- | :--- |
+| 🎨 **Frontend Client** | [**`my-storage-frontend`**](https://github.com/adarshbam/my-storage-frontend) | SPA UI, Direct-to-S3 Uploader, Git Workbench | React 19, Vite 7, TailwindCSS 3, Framer Motion |
+| ⚙️ **Backend API** | [**`my-storage-backend`**](https://github.com/adarshbam/my-storage-backend) | REST API, S3 Presigner, Auth & RBAC, Redis | Node.js 20, Express 5, Mongoose 9, Redis 5 |
+| ⚡ **Edge Gateway** | [**`cloudflare-worker/`**](cloudflare-worker/) | HMAC Signature Validation, 0-Egress CDN | Cloudflare Workers, Web Crypto, B2 Bandwidth Alliance |
+
+[Key Capabilities](#-key-capabilities--technical-highlights) • [Architecture](#-system-architecture) • [Directory Structure](#-repository-structure) • [Getting Started](#-getting-started) • [Deep-Dive Docs](#-detailed-engineering-documentation) • [Interview Talking Points](#-interview-talking-points)
+
+</div>
 
 ---
 
@@ -20,9 +45,9 @@ Beyond standard cloud drive capabilities (hierarchical folder navigation, tree-t
                                     │  TailwindCSS / Radix UI    │
                                     └──────────────┬─────────────┘
                                                    │
-                ┌──────────────────────────────────┼─────────────────────────────────┐
-                │ 1. Direct Multipart Upload (PUT) │ 2. Signed CDN Stream (GET/Range)│ 3. REST API & Auth (JSON)
-                ▼                                  ▼                                 ▼
+                 ┌─────────────────────────────────┼─────────────────────────────────┐
+                 │ 1. Direct Multipart Upload (PUT)│ 2. Signed CDN Stream (GET/Range)│ 3. REST API & Auth (JSON)
+                 ▼                                 ▼                                 ▼
 ┌───────────────────────────────┐  ┌───────────────────────────────┐  ┌───────────────────────────────┐
 │     Backblaze B2 (S3 API)     │  │   Cloudflare Edge Worker CDN  │  │   Express.js 5 Backend API    │
 │  - Chunked Object Storage     │◄─┤  - HMAC-SHA256 Sig Verify     │  │  - Thin Controllers / Services│
@@ -95,7 +120,7 @@ my-storage/
 │   ├── jobs/                        # Cron jobs (storage cleanup, OTP GC, integrity reconcile)
 │   ├── middlewares/                 # Auth, RateLimiting, PlanContext, UploadLimits
 │   ├── models/                      # 20 Mongoose schemas & compound indexes
-│   ├── routes/                      # Express route declarations
+│   ├── routes/                      # Express route declarations (21 route modules)
 │   ├── services/                    # Domain business logic & transaction boundaries
 │   ├── utils/                       # Security helpers, sanitizers, path resolvers
 │   ├── validators/                  # Zod input validation schemas
@@ -112,6 +137,7 @@ my-storage/
 │   │   ├── lib/                     # Client utilities, API fetch wrapper, currency helpers
 │   │   ├── pages/                   # Application views (FileBrowser, OwnerSettings, Profile, etc.)
 │   │   └── App.jsx                  # Main route hierarchy & theme provider
+│   ├── vercel.json                  # Vercel SPA rewrite rules
 │   ├── vite.config.js               # Vite build configuration
 │   └── tailwind.config.js           # Tailwind design tokens & dark mode styling
 │
@@ -120,7 +146,7 @@ my-storage/
 │   │   └── worker.js                # HMAC validation, Edge Caching, B2 Bandwidth Alliance proxy
 │   └── wrangler.toml                # Cloudflare Worker deployment configuration
 │
-└── docs/                            # In-Depth Engineering Documentation
+└── docs/                            # In-Depth Engineering Documentation Suite
     ├── ARCHITECTURE.md              # Deep-dive system architecture & sequence flows
     ├── FEATURES.md                  # Comprehensive feature inventory & implementation status
     ├── API.md                       # Complete REST API specification
@@ -134,7 +160,7 @@ my-storage/
 
 ### Prerequisites
 - **Node.js**: `v20.x` or higher
-- **MongoDB**: `v6.0+` (Replica set enabled for multi-document ACID transactions)
+- **MongoDB**: `v6.0+` (Replica set enabled for multi-document ACID transactions, e.g. `rs0` or MongoDB Atlas)
 - **Redis**: `v6.2+`
 - **Backblaze B2** account & bucket (or AWS S3 compatible object storage)
 - **Cloudflare Account** (for Edge CDN Worker deployment)
@@ -144,95 +170,51 @@ my-storage/
 ```bash
 cd Backend
 npm install
-```
-
-Create a `.env` file in `Backend/` based on the following template:
-
-```env
-PORT=3000
-NODE_ENV=development
-CLIENT_URL=http://localhost:5173
-BACKEND_URL=http://localhost:3000
-DB_URL=mongodb://localhost:27017/vault_storage?replicaSet=rs0
-REDIS_URL=redis://localhost:6379
-SESSION_SECRET=your_super_secret_cookie_signing_key_min_32_chars
-
-# Backblaze B2 / S3 Storage Credentials
-BACKBLAZE_ENDPOINT=https://s3.us-east-005.backblazeb2.com
-BACKBLAZE_REGION=us-east-005
-BACKBLAZE_ACCESS_KEY_ID=your_b2_key_id
-BACKBLAZE_SECRET_ACCESS_KEY=your_b2_app_key
-BACKBLAZE_BUCKET_NAME=your_vault_bucket_name
-
-# Cloudflare CDN Configuration
-CLOUDFLARE_CDN_DOMAIN=https://cdn.yourdomain.com
-CLOUDFLARE_CDN_SECRET=your_hmac_signing_secret_shared_with_worker
-
-# Razorpay (Optional - for subscription payments)
-RAZORPAY_KEY_ID=rzp_test_xxxxxx
-RAZORPAY_KEY_SECRET=xxxxxx
-RAZORPAY_WEBHOOK_SECRET=xxxxxx
-
-# OAuth Integrations (Optional)
-GOOGLE_CLIENT_ID=xxxxxx.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=xxxxxx
-GITHUB_CLIENT_ID=xxxxxx
-GITHUB_CLIENT_SECRET=xxxxxx
-
-# Email (SMTP / Nodemailer)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=465
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
+cp .env.example .env
 ```
 
 Start the backend development server:
 ```bash
 npm run dev
 ```
+The server starts on `http://localhost:4000`.
 
 ### 2. Frontend Setup
 
 ```bash
 cd Frontend
 npm install
-```
-
-Create a `.env` file in `Frontend/`:
-
-```env
-VITE_SERVER_URL=http://localhost:3000
-VITE_GOOGLE_CLIENT_ID=xxxxxx.apps.googleusercontent.com
-VITE_GITHUB_CLIENT_ID=xxxxxx
+cp .env.example .env
 ```
 
 Start the Vite development server:
 ```bash
 npm run dev
 ```
+The client starts on `http://localhost:5173`.
 
 ### 3. Cloudflare Worker Deployment
 
 ```bash
 cd cloudflare-worker
-npm install -g wrangler
-wrangler secret put CDN_SIGNING_SECRET
-wrangler secret put B2_APPLICATION_KEY_ID
-wrangler secret put B2_APPLICATION_KEY
-wrangler deploy
+npm install
+npx wrangler secret put CDN_SIGNING_SECRET
+npx wrangler secret put B2_APPLICATION_KEY_ID
+npx wrangler secret put B2_APPLICATION_KEY
+npm run deploy
 ```
 
 ---
 
-## 🧪 Detailed Documentation
+## 🧪 Detailed Engineering Documentation
 
 For a comprehensive review of the engineering decisions, API contracts, database modeling, and security design:
 
-* 📖 **[System Architecture (`docs/ARCHITECTURE.md`)](file:///docs/ARCHITECTURE.md)**: Deep dive into the component architecture, data flows, multipart upload state machines, and Edge CDN integration.
-* 📦 **[Feature Inventory (`docs/FEATURES.md`)](file:///docs/FEATURES.md)**: Detailed breakdown of all implemented, partial, and integrated capabilities.
-* 📡 **[REST API Reference (`docs/API.md`)](file:///docs/API.md)**: Exhaustive endpoint documentation with headers, request/response bodies, and HTTP status codes.
-* 🗄️ **[Data Model (`docs/DATA-MODEL.md`)](file:///docs/DATA-MODEL.md)**: 20 Mongoose schemas, compound indexes, cascades, and storage invariants.
-* 🛡️ **[Security Architecture (`docs/SECURITY.md`)](file:///docs/SECURITY.md)**: In-depth analysis of authentication, 2FA, rate limiting, and CDN signature verification.
+* 📖 **[System Architecture (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md)**: Deep dive into component architecture, sequence flows, multipart upload state machines, and Edge CDN integration.
+* 📦 **[Feature Inventory (`docs/FEATURES.md`)](docs/FEATURES.md)**: Code-verified inventory of all implemented subsystems and capabilities.
+* 📡 **[REST API Reference (`docs/API.md`)](docs/API.md)**: Exhaustive endpoint documentation with headers, request/response bodies, and HTTP status codes.
+* 🗄️ **[Data Model (`docs/DATA-MODEL.md`)](docs/DATA-MODEL.md)**: 20 Mongoose schemas, compound indexes, cascades, and storage invariants.
+* 🛡️ **[Security Architecture (`docs/SECURITY.md`)](docs/SECURITY.md)**: In-depth analysis of authentication, 2FA, rate limiting, and CDN signature verification.
 
 ---
 
