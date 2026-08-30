@@ -77,6 +77,11 @@ const userSchema = new Schema(
   { strict: "throw" },
 );
 
+userSchema.index({ resetPasswordToken: 1 }, { sparse: true });
+userSchema.index({ phone: 1 }, { sparse: true });
+userSchema.index({ secondaryRecoveryEmail: 1 }, { sparse: true });
+userSchema.index({ status: 1 });
+
 userSchema.pre("save", async function () {
   if (!this.isModified("password") || !this.password) return;
   this.password = await argon2.hash(this.password);

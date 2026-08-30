@@ -36,5 +36,7 @@ const shareLinkSchema = new Schema(
   { strict: "throw" },
 );
 
+shareLinkSchema.index({ userId: 1, createdAt: -1 });
+
 const ShareLink = model("ShareLink", shareLinkSchema);
 export default ShareLink;

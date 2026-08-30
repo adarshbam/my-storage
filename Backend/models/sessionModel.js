@@ -2,10 +2,10 @@ import { Schema, Types, model } from "mongoose";
 
 const userSchema = new Schema(
   {
-    userId: { type: Types.ObjectId, require: true },
+    userId: { type: Types.ObjectId, required: true },
     devices: {
       type: Array,
-      defualt: [],
+      default: [],
     },
     createdAt: {
       type: Date,
@@ -15,6 +15,8 @@ const userSchema = new Schema(
   },
   { strict: "throw" },
 );
+
+userSchema.index({ userId: 1 });
 
 const Session = model("Session", userSchema);
 export default Session;

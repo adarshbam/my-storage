@@ -68,6 +68,7 @@ directorySchema.index({ parentDir: 1, userId: 1 });
 directorySchema.index({ userId: 1, starred: 1 });
 directorySchema.index({ parentDir: 1, name: 1 });
 directorySchema.index({ userId: 1, createdAt: -1 });
+directorySchema.index({ userId: 1, openedAt: -1 });
 
 const Directory = model("Directory", directorySchema);
 export default Directory;

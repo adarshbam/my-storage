@@ -55,6 +55,11 @@ const billingPlanSchema = new mongoose.Schema(
   },
 );
 
+billingPlanSchema.index({ slug: 1, period: 1 });
+billingPlanSchema.index({ razorpayPlanId: 1 });
+billingPlanSchema.index({ tier: 1 });
+billingPlanSchema.index({ active: 1 });
+
 const BillingPlan = mongoose.model("BillingPlan", billingPlanSchema);
 
 export default BillingPlan;

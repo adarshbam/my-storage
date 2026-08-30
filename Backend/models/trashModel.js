@@ -14,5 +14,9 @@ const trashSchema = new Schema(
   { strict: false }, // Allows flexibility if other fields exist since it's a mixed collection
 );
 
+trashSchema.index({ userId: 1, deleted_at: -1 });
+trashSchema.index({ deleted_at: 1 });
+trashSchema.index({ parentDir: 1 });
+
 const Trash = model("Trash", trashSchema);
 export default Trash;

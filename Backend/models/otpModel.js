@@ -17,6 +17,8 @@ const OTPSchema = new Schema(
   { strict: "throw" },
 );
 
+OTPSchema.index({ email: 1 });
+
 const OTP = model("OTP", OTPSchema);
 export default OTP;
 

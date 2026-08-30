@@ -40,7 +40,7 @@ const gitStashSchema = new Schema(
   }
 );
 
-gitStashSchema.index({ workspaceId: 1, userId: 1 });
+gitStashSchema.index({ workspaceId: 1, userId: 1, createdAt: -1 });
 gitStashSchema.index({ userId: 1, createdAt: -1 });
 
 export const GitStash = model("GitStash", gitStashSchema);
@@ -125,6 +125,7 @@ const gitWorkspaceSchema = new Schema(
 
 gitWorkspaceSchema.index({ userId: 1, rootDirectoryId: 1 }, { unique: true });
 gitWorkspaceSchema.index({ userId: 1, repoOwner: 1, repoName: 1 });
+gitWorkspaceSchema.index({ userId: 1, updatedAt: -1 });
 
 const GitWorkspace = model("GitWorkspace", gitWorkspaceSchema);
 export default GitWorkspace;

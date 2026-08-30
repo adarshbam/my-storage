@@ -34,5 +34,10 @@ const shareAccessSchema = new Schema(
   { strict: true }
 );
 
+shareAccessSchema.index({ targetUserId: 1, expiresAt: 1 });
+shareAccessSchema.index({ targetUserId: 1, "items.id": 1 });
+shareAccessSchema.index({ grantedBy: 1 });
+shareAccessSchema.index({ userId: 1, targetUserId: 1, grantedBy: 1 });
+
 const ShareAccess = model("SharedAccess", shareAccessSchema);
 export default ShareAccess;

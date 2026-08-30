@@ -153,6 +153,7 @@ const subscriptionSchema = new mongoose.Schema(
 
 subscriptionSchema.index({ userId: 1, status: 1 });
 subscriptionSchema.index({ userId: 1, createdAt: -1 });
+subscriptionSchema.index({ billingPlan: 1, status: 1 });
 
 const Subscription = model("Subscription", subscriptionSchema);
 export default Subscription;
