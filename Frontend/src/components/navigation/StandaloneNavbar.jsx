@@ -166,7 +166,7 @@ export default function StandaloneNavbar() {
             <VaultLogo className="text-accent-primary" size={18} />
           </div>
           <span className="text-base sm:text-lg font-black tracking-widest text-slate-900 dark:text-white uppercase hidden xs:inline-block">
-            Vault Os
+            Vault O
           </span>
         </Link>
 
