@@ -136,10 +136,18 @@ export default function StandaloneNavbar() {
     if (item.exact) {
       return location.pathname === item.path;
     }
-    if (location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)) {
+    if (
+      location.pathname === item.path ||
+      location.pathname.startsWith(`${item.path}/`)
+    ) {
       return true;
     }
-    if (item.aliases && item.aliases.some((a) => location.pathname === a || location.pathname.startsWith(`${a}/`))) {
+    if (
+      item.aliases &&
+      item.aliases.some(
+        (a) => location.pathname === a || location.pathname.startsWith(`${a}/`),
+      )
+    ) {
       return true;
     }
     return false;
@@ -158,7 +166,7 @@ export default function StandaloneNavbar() {
             <VaultLogo className="text-accent-primary" size={18} />
           </div>
           <span className="text-base sm:text-lg font-black tracking-widest text-slate-900 dark:text-white uppercase hidden xs:inline-block">
-            Vault OS
+            Vault Os
           </span>
         </Link>
 
@@ -191,7 +199,11 @@ export default function StandaloneNavbar() {
             >
               <Icon
                 size={14}
-                className={active ? "text-accent-primary" : "text-slate-400 dark:text-white/40"}
+                className={
+                  active
+                    ? "text-accent-primary"
+                    : "text-slate-400 dark:text-white/40"
+                }
               />
               <span>{item.name}</span>
             </Link>
@@ -251,7 +263,9 @@ export default function StandaloneNavbar() {
                 >
                   <div
                     className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                      active ? "bg-accent-primary text-accent-foreground" : "bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-white/50"
+                      active
+                        ? "bg-accent-primary text-accent-foreground"
+                        : "bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-white/50"
                     }`}
                   >
                     <Icon size={16} />

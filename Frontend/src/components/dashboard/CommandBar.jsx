@@ -445,7 +445,7 @@ export default function CommandBar({
             <VaultLogo className="text-accent-primary" size={18} />
           </div>
           <span className="text-base sm:text-lg font-black tracking-widest text-slate-900 dark:text-white uppercase group-hover:text-accent-primary transition-colors">
-            Vault OS
+            Vault Os
           </span>
         </Link>
       </div>
@@ -471,7 +471,9 @@ export default function CommandBar({
                 onChange={(e) => setGlobalSearchQuery(e.target.value)}
                 onKeyDown={onSearchExecute}
                 onFocus={() => setShowRecentSearches(true)}
-                onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
+                onBlur={() =>
+                  setTimeout(() => setShowRecentSearches(false), 200)
+                }
                 className="w-full bg-transparent border-none outline-none text-sm text-slate-900 dark:text-white px-3 placeholder:text-slate-400 dark:placeholder:text-white/30 font-medium"
               />
               <button
@@ -509,7 +511,9 @@ export default function CommandBar({
                 </h3>
                 <div className="space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                    <label className="text-xs text-slate-500 dark:text-white/50 w-20">Scope</label>
+                    <label className="text-xs text-slate-500 dark:text-white/50 w-20">
+                      Scope
+                    </label>
                     <div className="flex gap-2 flex-1 w-full">
                       <button
                         onClick={() => setSearchScope("current")}
@@ -538,7 +542,9 @@ export default function CommandBar({
                     />
                   </div>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                    <label className="text-xs text-slate-500 dark:text-white/50 w-20">Max Size</label>
+                    <label className="text-xs text-slate-500 dark:text-white/50 w-20">
+                      Max Size
+                    </label>
                     <select
                       value={searchSize}
                       onChange={(e) => setSearchSize(e.target.value)}
@@ -568,7 +574,9 @@ export default function CommandBar({
           >
             {location.pathname === "/dashboard/github" ? (
               <button
-                onClick={() => document.dispatchEvent(new CustomEvent("createRepoTrigger"))}
+                onClick={() =>
+                  document.dispatchEvent(new CustomEvent("createRepoTrigger"))
+                }
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-soft text-accent-primary border border-accent-border hover:bg-accent-primary hover:text-accent-foreground text-xs font-bold transition-all shadow-sm active:scale-95"
                 title="Create New GitHub Repository"
               >
@@ -655,7 +663,9 @@ export default function CommandBar({
             <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-accent-soft text-accent-primary border border-accent-border">
               <Search size={16} />
             </div>
-            <span className="text-xs font-semibold">Search Vault Assets...</span>
+            <span className="text-xs font-semibold">
+              Search Vault Assets...
+            </span>
           </button>
 
           {/* Quick Actions (Vault Only) */}
@@ -668,7 +678,9 @@ export default function CommandBar({
                 <button
                   onClick={() => {
                     setShowMobileMenu(false);
-                    document.dispatchEvent(new CustomEvent("createRepoTrigger"));
+                    document.dispatchEvent(
+                      new CustomEvent("createRepoTrigger"),
+                    );
                   }}
                   className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-accent-primary text-accent-foreground font-bold text-xs shadow-accent-glow active:scale-95 transition-transform"
                 >
@@ -692,7 +704,10 @@ export default function CommandBar({
                           backgroundColor: `${action.color}15`,
                         }}
                       >
-                        <action.icon size={16} style={{ color: action.color }} />
+                        <action.icon
+                          size={16}
+                          style={{ color: action.color }}
+                        />
                       </div>
                       <span className="text-xs font-bold text-slate-800 dark:text-white/90 truncate">
                         {action.label}
