@@ -114,7 +114,7 @@ export function triggerDeployment({
   }
 
   console.log(`\n======================================================`);
-  console.log(`🚀 [CI/CD Runner] Initiating Pipeline Deployment`);
+  console.log(`🚀 [CI/CD Runner] Initiating Pipeline Deploymen`);
   console.log(`📦 Commit: ${commit} | Author: ${author}`);
   console.log(`📜 Script: ${scriptPath}`);
   console.log(`======================================================\n`);
