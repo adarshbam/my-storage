@@ -76,11 +76,24 @@ export async function handleGithubWebhook(req, res) {
       });
     }
 
-    const headCommit = req.body?.head_commit;
-    const commit = headCommit?.id ? headCommit.id.slice(0, 7) : "latest";
+    const commitsArr = Array.isArray(req.body?.commits) ? req.body.commits : [];
+    const targetCommit =
+      req.body?.head_commit ||
+      (commitsArr.length > 0 ? commitsArr[commitsArr.length - 1] : null);
+
+    const commit = targetCommit?.id
+      ? targetCommit.id.slice(0, 7)
+      : req.body?.after
+        ? req.body.after.slice(0, 7)
+        : "latest";
+
     const author =
-      headCommit?.author?.name || req.body?.sender?.login || "github-committer";
-    const commitMessage = headCommit?.message || "No commit message";
+      targetCommit?.author?.name ||
+      req.body?.sender?.login ||
+      "github-committer";
+
+    const rawMessage = targetCommit?.message || "No commit message";
+    const commitMessage = rawMessage.split("\n")[0].trim();
 
     // Immediate HTTP 200 response to satisfy GitHub's 10-second timeout
     res.status(200).json({
