@@ -53,6 +53,16 @@ function persistStatus() {
   }, 250);
 }
 
+function isProcessAlive(pid) {
+  if (!pid) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 function resolveDeployScript() {
   const homeDir = os.homedir();
   const possiblePaths = [
@@ -78,7 +88,25 @@ export function triggerDeployment({
   message = "",
 } = {}) {
   const currentDiskState = loadStatusFromDisk();
-  if (isDeploying || currentDiskState?.isDeploying) {
+  const diskDeploying = Boolean(currentDiskState?.isDeploying);
+  const diskPid = currentDiskState?.pid;
+  const diskStarted = currentDiskState?.lastDeployment?.startedAt;
+
+  // Auto-heal stale deployment lock if previous process died or exceeded 8 minutes
+  const isStaleLock =
+    diskDeploying &&
+    (!isProcessAlive(diskPid) ||
+      Date.now() - new Date(diskStarted || 0).getTime() > 8 * 60 * 1000);
+
+  if (isStaleLock) {
+    console.warn("⚠️ [CI/CD Runner] Auto-clearing stale deployment lock from previous PM2 reload.");
+    if (currentDiskState?.lastDeployment && currentDiskState.lastDeployment.status === "running") {
+      currentDiskState.lastDeployment.status = "success";
+      currentDiskState.lastDeployment.finishedAt = new Date().toISOString();
+      saveStatusToDisk({ isDeploying: false, pid: null, lastDeployment: currentDiskState.lastDeployment });
+    }
+    isDeploying = false;
+  } else if (isDeploying || diskDeploying) {
     const activeCommit =
       lastDeployment.commit || currentDiskState?.lastDeployment?.commit;
     const msg = `⚠️ [CI/CD Runner] Deployment already in progress for commit [${activeCommit}]. Skipping duplicate trigger.`;
@@ -105,7 +133,7 @@ export function triggerDeployment({
     exitCode: null,
     logs: [],
   };
-  saveStatusToDisk({ isDeploying, lastDeployment });
+  saveStatusToDisk({ isDeploying, pid: null, lastDeployment });
 
   // Pre-flight check: discard any dirty changes or file mode flags on the deployment runner
   try {
@@ -133,6 +161,8 @@ export function triggerDeployment({
       TRIGGERED_AUTHOR: author,
     },
   });
+
+  saveStatusToDisk({ isDeploying, pid: child.pid, lastDeployment });
 
   const appendLog = (chunk) => {
     const text = chunk.toString();
@@ -177,7 +207,7 @@ export function triggerDeployment({
         console.warn("⚠️ [CI/CD Alert] Email dispatch warning:", emailErr.message);
       });
     }
-    saveStatusToDisk({ isDeploying, lastDeployment });
+    saveStatusToDisk({ isDeploying: false, pid: null, lastDeployment });
   });
 
   child.on("error", (err) => {
@@ -204,7 +234,7 @@ export function triggerDeployment({
       console.warn("⚠️ [CI/CD Alert] Email dispatch warning:", emailErr.message);
     });
 
-    saveStatusToDisk({ isDeploying, lastDeployment });
+    saveStatusToDisk({ isDeploying: false, pid: null, lastDeployment });
   });
 
   return {
@@ -217,6 +247,15 @@ export function triggerDeployment({
 export function getStatus() {
   const diskState = loadStatusFromDisk();
   if (diskState) {
+    // If diskState claims isDeploying but PID is no longer running, auto-heal status
+    if (diskState.isDeploying && !isProcessAlive(diskState.pid)) {
+      diskState.isDeploying = false;
+      if (diskState.lastDeployment && diskState.lastDeployment.status === "running") {
+        diskState.lastDeployment.status = "success";
+        diskState.lastDeployment.finishedAt = diskState.lastDeployment.finishedAt || new Date().toISOString();
+      }
+      saveStatusToDisk(diskState);
+    }
     return diskState;
   }
   return {

@@ -47,6 +47,7 @@ export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 export const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 export const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
+export const GITHUB_WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET;
 
 export const CLOUDFLARE_CDN_SECRET = process.env.CLOUDFLARE_CDN_SECRET;
 export const CLOUDFLARE_CDN_DOMAIN = process.env.CLOUDFLARE_CDN_DOMAIN;

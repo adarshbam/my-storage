@@ -1,5 +1,6 @@
 import * as deployService from "./github.webhook.service.js";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
+import { GITHUB_WEBHOOK_SECRET } from "../../config/config.js";
 
 /**
  * Handles incoming GitHub Webhook events (push, ping, etc.)
@@ -7,28 +8,43 @@ import { createHmac } from "crypto";
 export async function handleGithubWebhook(req, res) {
   const event = req.headers["x-github-event"] || "push";
   const signature = req.headers["x-hub-signature-256"];
-  if (!signature) {
-    return res.status(403).json({
-      success: false,
-      message: `No signature`,
-    });
+  const secret = GITHUB_WEBHOOK_SECRET || process.env.GITHUB_WEBHOOK_SECRET;
+
+  // 1. Authenticate webhook signature if secret is configured
+  if (secret) {
+    if (!signature) {
+      console.warn("⚠️ [GitHub Webhook] Rejected: Missing x-hub-signature-256 header.");
+      return res.status(401).json({
+        success: false,
+        message: "Missing x-hub-signature-256 header",
+      });
+    }
+
+    // Must use the exact raw unparsed request Buffer!
+    const rawPayload = req.rawBody || Buffer.from(JSON.stringify(req.body));
+    const generatedSignature =
+      "sha256=" +
+      createHmac("sha256", secret).update(rawPayload).digest("hex");
+
+    const sigBuffer = Buffer.from(signature);
+    const genBuffer = Buffer.from(generatedSignature);
+
+    const isMatch =
+      sigBuffer.length === genBuffer.length &&
+      timingSafeEqual(sigBuffer, genBuffer);
+
+    if (!isMatch) {
+      console.warn("❌ [GitHub Webhook] Rejected: Invalid signature.");
+      return res.status(403).json({
+        success: false,
+        message: "Invalid webhook signature",
+      });
+    }
+  } else {
+    console.warn("⚠️ [GitHub Webhook] GITHUB_WEBHOOK_SECRET not set. Proceeding without signature check.");
   }
 
-  const generatedSignature =
-    `sha256=` +
-    createHmac("sha256", process.env.GITHUB_WEBHOOK_SECRET)
-      .update(Buffer.from(JSON.stringify(req.body)))
-      .digest("hex");
-
-  console.log(signature);
-  console.log(generatedSignature);
-  if (generatedSignature != signature) {
-    return res.status(403).json({
-      success: false,
-      message: `Invalid signature`,
-    });
-  }
-  console.log(`📥 [GitHub Webhook] Received event: "${event}"`);
+  console.log(`📥 [GitHub Webhook] Received authenticated event: "${event}"`);
 
   // 1. Handle GitHub ping verification
   if (event === "ping") {
