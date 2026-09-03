@@ -13,7 +13,9 @@ export async function handleGithubWebhook(req, res) {
   // 1. Authenticate webhook signature if secret is configured
   if (secret) {
     if (!signature) {
-      console.warn("⚠️ [GitHub Webhook] Rejected: Missing x-hub-signature-256 header.");
+      console.warn(
+        "⚠️ [GitHub Webhook] Rejected: Missing x-hub-signature-256 header.",
+      );
       return res.status(401).json({
         success: false,
         message: "Missing x-hub-signature-256 header",
@@ -23,8 +25,7 @@ export async function handleGithubWebhook(req, res) {
     // Must use the exact raw unparsed request Buffer!
     const rawPayload = req.rawBody || Buffer.from(JSON.stringify(req.body));
     const generatedSignature =
-      "sha256=" +
-      createHmac("sha256", secret).update(rawPayload).digest("hex");
+      "sha256=" + createHmac("sha256", secret).update(rawPayload).digest("hex");
 
     const sigBuffer = Buffer.from(signature);
     const genBuffer = Buffer.from(generatedSignature);
@@ -34,14 +35,16 @@ export async function handleGithubWebhook(req, res) {
       timingSafeEqual(sigBuffer, genBuffer);
 
     if (!isMatch) {
-      console.warn("❌ [GitHub Webhook] Rejected: Invalid signature.");
+      console.warn("❌ [GitHub Webhook] Rejected: Invalid signature");
       return res.status(403).json({
         success: false,
         message: "Invalid webhook signature",
       });
     }
   } else {
-    console.warn("⚠️ [GitHub Webhook] GITHUB_WEBHOOK_SECRET not set. Proceeding without signature check.");
+    console.warn(
+      "⚠️ [GitHub Webhook] GITHUB_WEBHOOK_SECRET not set. Proceeding without signature check.",
+    );
   }
 
   console.log(`📥 [GitHub Webhook] Received authenticated event: "${event}"`);
