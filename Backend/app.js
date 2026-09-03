@@ -36,6 +36,7 @@ import { PORT, CLIENT_URL, SESSION_SECRET } from "./config/config.js";
 import {
   handleGithubWebhook,
   getDeploymentStatus,
+  resetDeploymentLock,
 } from "./webhooks/github/github.webhook.controller.js";
 
 const app = express();
@@ -241,8 +242,10 @@ app.get("/", (req, res) => {
 // GitHub Webhook & Deployment Status (supporting direct & /api-prefixed reverse proxy)
 app.post("/github-webhook", handleGithubWebhook);
 app.get("/github-webhook/status", getDeploymentStatus);
+app.post("/github-webhook/reset", resetDeploymentLock);
 app.post("/api/github-webhook", handleGithubWebhook);
 app.get("/api/github-webhook/status", getDeploymentStatus);
+app.post("/api/github-webhook/reset", resetDeploymentLock);
 
 startScheduledJobs();
 

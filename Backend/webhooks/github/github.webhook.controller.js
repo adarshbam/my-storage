@@ -116,11 +116,15 @@ export async function handleGithubWebhook(req, res) {
       });
 
       // Execute the deployment asynchronously
-      deployService.triggerDeployment({
+      const deployResult = deployService.triggerDeployment({
         commit,
         author,
         message: commitMessage,
       });
+
+      console.log(
+        `📋 [GitHub Webhook] Trigger status: "${deployResult.status}" for commit [${commit}]`,
+      );
       return;
     }
 
@@ -149,4 +153,12 @@ export function getDeploymentStatus(req, res) {
     ...status,
     timestamp: new Date().toISOString(),
   });
+}
+
+/**
+ * Resets deployment lock if manually requested
+ */
+export function resetDeploymentLock(req, res) {
+  const result = deployService.resetLock();
+  return res.status(200).json(result);
 }
