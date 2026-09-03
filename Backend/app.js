@@ -32,6 +32,7 @@ import billingRouter from "./routes/billingRoutes.js";
 import notificationRouter from "./routes/notificationRoutes.js";
 
 import { PORT, CLIENT_URL, SESSION_SECRET } from "./config/config.js";
+import deployWorker from "../cloudflare-worker/src/deploy-worker.js";
 
 const app = express();
 
@@ -149,7 +150,10 @@ app.use(
     ],
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin) || origin.includes("yourvaultstorage.com")) {
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.includes("yourvaultstorage.com")
+      ) {
         return callback(null, true);
       }
       return callback(null, true);
@@ -199,8 +203,8 @@ app.use((err, req, res, next) => {
       ...(err.details && { details: err.details }),
     });
   }
-  console.error('[Unhandled Error]', err);
-  return res.status(500).json({ message: 'Internal Server Error' });
+  console.error("[Unhandled Error]", err);
+  return res.status(500).json({ message: "Internal Server Error" });
 });
 
 /* =======================
@@ -217,6 +221,11 @@ app.get("/", (req, res) => {
     service: "Vault Cloud Storage API",
     timestamp: new Date().toISOString(),
   });
+});
+
+// github webhook
+app.post("/github-webhook", (req, res) => {
+  deployWorker();
 });
 
 startScheduledJobs();
