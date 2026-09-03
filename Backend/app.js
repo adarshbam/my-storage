@@ -32,7 +32,10 @@ import billingRouter from "./routes/billingRoutes.js";
 import notificationRouter from "./routes/notificationRoutes.js";
 
 import { PORT, CLIENT_URL, SESSION_SECRET } from "./config/config.js";
-import deployWorker from "../cloudflare-worker/src/deploy-worker.js";
+import {
+  handleGithubWebhook,
+  getDeploymentStatus,
+} from "./webhooks/github/github.webhook.controller.js";
 
 const app = express();
 
@@ -223,10 +226,9 @@ app.get("/", (req, res) => {
   });
 });
 
-// github webhook
-app.post("/github-webhook", (req, res) => {
-  deployWorker();
-});
+// GitHub Webhook & Deployment Status
+app.post("/github-webhook", handleGithubWebhook);
+app.get("/github-webhook/status", getDeploymentStatus);
 
 startScheduledJobs();
 

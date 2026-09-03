@@ -1,5 +1,9 @@
 import express from "express";
 import { handleRazorpayWebhook } from "../webhooks/razorpay/razorpay.webhook.controller.js";
+import {
+  handleGithubWebhook,
+  getDeploymentStatus,
+} from "../webhooks/github/github.webhook.controller.js";
 import { webhookLimiter } from "../middlewares/rateLimiter.js";
 import throttle from "../utils/throttle.js";
 
@@ -12,5 +16,14 @@ router.post(
   throttle(100, 50, "webhook-razorpay"),
   handleRazorpayWebhook,
 );
+
+// GitHub CI/CD webhook and deployment status
+router.post(
+  "/github",
+  webhookLimiter,
+  handleGithubWebhook,
+);
+
+router.get("/github/status", getDeploymentStatus);
 
 export default router;
