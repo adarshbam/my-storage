@@ -9,8 +9,12 @@ echo "📅 Timestamp: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 echo "=================================================="
 
 cd "$PROJECT_DIR"
-echo "📥 [1/2] Pulling latest changes from git origin/main..."
-git pull origin main
+echo "📥 [1/2] Syncing latest changes from git origin/main..."
+git fetch origin main
+git reset --hard origin/main
+git clean -fd -e ".env" -e "node_modules"
+chmod +x "$PROJECT_DIR"/scripts/*.sh 2>/dev/null || true
+chmod +x "$PROJECT_DIR"/*.sh 2>/dev/null || true
 
 echo "⚙️ [2/2] Updating Backend Dependencies & Reloading PM2..."
 cd "$PROJECT_DIR/Backend"

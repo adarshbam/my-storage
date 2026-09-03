@@ -238,9 +238,11 @@ app.get("/", (req, res) => {
   });
 });
 
-// GitHub Webhook & Deployment Status
+// GitHub Webhook & Deployment Status (supporting direct & /api-prefixed reverse proxy)
 app.post("/github-webhook", handleGithubWebhook);
 app.get("/github-webhook/status", getDeploymentStatus);
+app.post("/api/github-webhook", handleGithubWebhook);
+app.get("/api/github-webhook/status", getDeploymentStatus);
 
 startScheduledJobs();
 

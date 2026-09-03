@@ -11,8 +11,12 @@ echo "=================================================="
 
 cd "$PROJECT_DIR"
 
-echo "📥 [1/4] Pulling latest changes from git origin/main..."
-git pull origin main
+echo "📥 [1/4] Syncing latest changes from git origin/main..."
+git fetch origin main
+git reset --hard origin/main
+git clean -fd -e ".env" -e "node_modules"
+chmod +x "$PROJECT_DIR"/scripts/*.sh 2>/dev/null || true
+chmod +x "$PROJECT_DIR"/*.sh 2>/dev/null || true
 
 echo "🧪 [2/4] Running Frontend Automated Test Suite..."
 cd "$PROJECT_DIR/Frontend"

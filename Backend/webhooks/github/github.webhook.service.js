@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn, execSync } from "child_process";
 import path from "path";
 import os from "os";
 import fs from "fs";
@@ -7,9 +7,33 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const STATUS_FILE = path.join(os.homedir(), ".deployment-status.json");
+
+function saveStatusToDisk(data) {
+  try {
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (err) {
+    // Non-critical
+  }
+}
+
+function loadStatusFromDisk() {
+  try {
+    if (fs.existsSync(STATUS_FILE)) {
+      const content = fs.readFileSync(STATUS_FILE, "utf-8");
+      return JSON.parse(content);
+    }
+  } catch (err) {
+    // Non-critical
+  }
+  return null;
+}
+
+const initialSaved = loadStatusFromDisk();
+
 // State tracking for deployment pipeline
-let isDeploying = false;
-let lastDeployment = {
+let isDeploying = initialSaved?.isDeploying || false;
+let lastDeployment = initialSaved?.lastDeployment || {
   status: "idle",
   commit: null,
   author: null,
@@ -19,6 +43,14 @@ let lastDeployment = {
   exitCode: null,
   logs: [],
 };
+
+let saveTimeout = null;
+function persistStatus() {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    saveStatusToDisk({ isDeploying, lastDeployment });
+  }, 250);
+}
 
 function resolveDeployScript() {
   const homeDir = os.homedir();
@@ -44,19 +76,23 @@ export function triggerDeployment({
   author = "github-webhook",
   message = "",
 } = {}) {
-  if (isDeploying) {
-    const msg = `⚠️ [CI/CD Runner] Deployment already in progress for commit [${lastDeployment.commit}]. Skipping duplicate trigger.`;
+  const currentDiskState = loadStatusFromDisk();
+  if (isDeploying || currentDiskState?.isDeploying) {
+    const activeCommit =
+      lastDeployment.commit || currentDiskState?.lastDeployment?.commit;
+    const msg = `⚠️ [CI/CD Runner] Deployment already in progress for commit [${activeCommit}]. Skipping duplicate trigger.`;
     console.warn(msg);
     return {
       started: false,
       reason: "ALREADY_IN_PROGRESS",
-      currentDeployment: lastDeployment,
+      currentDeployment: currentDiskState?.lastDeployment || lastDeployment,
     };
   }
 
   isDeploying = true;
   const scriptPath = resolveDeployScript();
   const projectRoot = path.dirname(path.dirname(scriptPath));
+  const workingDir = fs.existsSync(projectRoot) ? projectRoot : os.homedir();
 
   lastDeployment = {
     status: "running",
@@ -68,6 +104,14 @@ export function triggerDeployment({
     exitCode: null,
     logs: [],
   };
+  saveStatusToDisk({ isDeploying, lastDeployment });
+
+  // Pre-flight check: discard any dirty changes or file mode flags on the deployment runner
+  try {
+    execSync("git reset --hard HEAD", { cwd: workingDir, stdio: "ignore" });
+  } catch (err) {
+    // Non-critical: script will also run git reset --hard origin/main
+  }
 
   console.log(`\n======================================================`);
   console.log(`🚀 [CI/CD Runner] Initiating Pipeline Deployment`);
@@ -76,7 +120,7 @@ export function triggerDeployment({
   console.log(`======================================================\n`);
 
   const child = spawn("bash", [scriptPath], {
-    cwd: fs.existsSync(projectRoot) ? projectRoot : os.homedir(),
+    cwd: workingDir,
     env: {
       ...process.env,
       HOME: os.homedir(),
@@ -90,9 +134,10 @@ export function triggerDeployment({
     process.stdout.write(text);
     const lines = text.split("\n").filter(Boolean);
     lastDeployment.logs.push(...lines);
-    if (lastDeployment.logs.length > 200) {
-      lastDeployment.logs = lastDeployment.logs.slice(-200);
+    if (lastDeployment.logs.length > 250) {
+      lastDeployment.logs = lastDeployment.logs.slice(-250);
     }
+    persistStatus();
   };
 
   child.stdout.on("data", appendLog);
@@ -114,6 +159,7 @@ export function triggerDeployment({
         `\n❌ [CI/CD Runner] Pipeline deployment failed with exit code: ${code}\n`,
       );
     }
+    saveStatusToDisk({ isDeploying, lastDeployment });
   });
 
   child.on("error", (err) => {
@@ -125,6 +171,7 @@ export function triggerDeployment({
       `❌ [CI/CD Runner] Failed to spawn deployment process:`,
       err.message,
     );
+    saveStatusToDisk({ isDeploying, lastDeployment });
   });
 
   return {
@@ -135,6 +182,10 @@ export function triggerDeployment({
 }
 
 export function getStatus() {
+  const diskState = loadStatusFromDisk();
+  if (diskState) {
+    return diskState;
+  }
   return {
     isDeploying,
     lastDeployment,
