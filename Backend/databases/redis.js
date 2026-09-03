@@ -1,21 +1,47 @@
 import { createClient } from "redis";
 import { REDIS_URL } from "../config/config.js";
 
+const isTls = typeof REDIS_URL === "string" && REDIS_URL.startsWith("rediss://");
+
 const redis = createClient({
   url: REDIS_URL,
   socket: {
-    reconnectStrategy: (retries) => Math.min(retries * 50, 2000),
+    connectTimeout: 10000,
+    keepAlive: 30000,
+    ...(isTls && { tls: true, rejectUnauthorized: false }),
+    reconnectStrategy: (retries) => {
+      if (retries > 20) {
+        return new Error("Redis reconnection retry limit reached");
+      }
+      return Math.min(retries * 200, 3000);
+    },
   },
   disableOfflineQueue: true, // Fail fast: reject commands immediately if disconnected
 });
 
+let lastRedisErrorLog = 0;
 redis.on("error", (err) => {
-  console.error("Redis connection error:", err.message);
+  const now = Date.now();
+  if (now - lastRedisErrorLog > 10000) {
+    lastRedisErrorLog = now;
+    console.warn("⚠️ Redis connection notice:", err.message);
+  }
 });
 
 redis.connect().catch((err) => {
-  console.error("Redis initial connect failed:", err.message);
+  console.warn("⚠️ Redis initial connect notice:", err.message);
 });
+
+export async function disconnectRedis() {
+  try {
+    if (redis.isOpen) {
+      await redis.quit();
+      console.log("✅ Redis disconnected cleanly");
+    }
+  } catch (err) {
+    console.warn("Redis disconnect notice:", err.message);
+  }
+}
 
 export async function cacheGet(key) {
   try {

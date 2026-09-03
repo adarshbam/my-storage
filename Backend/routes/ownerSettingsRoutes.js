@@ -16,6 +16,16 @@ import { getLegacyTrafficMetrics } from "../utils/legacyObservability.js";
 
 const router = express.Router();
 
+const requireOwner = (req, res, next) => {
+  if (req.user?.role !== "Owner") {
+    return res.status(403).json({
+      error: "Access denied. Only Owners can view or modify system settings.",
+      code: "FORBIDDEN",
+    });
+  }
+  next();
+};
+
 // GET /owner-settings/legacy-traffic — Inspect legacy byte endpoint traffic metrics
 router.get(
   "/legacy-traffic",
@@ -33,6 +43,7 @@ router.get(
 router.get(
   "/",
   checkAuth,
+  requireOwner,
   lightReadLimiter,
   throttle(100, 15, "owner-settings-get"),
   getOwnerSettings,

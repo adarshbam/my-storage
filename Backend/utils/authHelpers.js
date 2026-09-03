@@ -83,7 +83,7 @@ export async function createSessionAndSetCookies(userId, rootDirId, req, res) {
       $setOnInsert: { userId },
       $addToSet: { devices: { deviceId } },
     },
-    { new: true, upsert: true },
+    { returnDocument: "after", upsert: true },
   );
 
   const sessionId = session._id;

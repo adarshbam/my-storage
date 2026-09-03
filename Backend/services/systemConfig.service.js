@@ -43,7 +43,7 @@ export const updateSystemConfigLogic = async ({ maxDevicesLimit, maxFileSizeLimi
   const config = await SystemConfig.findOneAndUpdate(
     { key: "global" },
     { $set: updateData },
-    { new: true, upsert: true },
+    { returnDocument: "after", upsert: true },
   );
 
   return { message: "Settings updated successfully", config };

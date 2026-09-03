@@ -15,6 +15,7 @@ import {
 } from "../databases/redis.js";
 import { subscriptionActivated } from "./notification.service.js";
 import { withTransaction } from "../utils/transaction.js";
+import { AppError } from "../errors/AppError.js";
 
 export const createPlanLogic = async ({ planData, userId, userRole }) => {
   const { slug, amount, storage, period, currency } = planData;
@@ -188,10 +189,7 @@ export const getAllActivePlansLogic = async () => {
 
 export const getOwnerSettingsLogic = async ({ userRole }) => {
   if (userRole !== "Owner") {
-    throw Object.assign(
-      new Error("Access denied. Only Owners can view settings."),
-      { status: 403 },
-    );
+    throw AppError.forbidden("Access denied. Only Owners can view settings.");
   }
 
   // 1. Delete any legacy/invalid Yearly Free Trial plans from database
@@ -393,7 +391,7 @@ export const updateGlobalLimitsLogic = async ({ limits, userRole }) => {
   const globalLimits = await SystemConfig.findOneAndUpdate(
     { key: "global" },
     { $set: updateDoc },
-    { new: true, upsert: true },
+    { returnDocument: "after", upsert: true },
   );
 
   await invalidateGlobalPlanCache();

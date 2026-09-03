@@ -15,8 +15,12 @@ export async function connectDB() {
 }
 await connectDB();
 
-process.on("SIGINT", async () => {
-  await mongoose.disconnect();
-  console.log("✅ MongoDB disconnected");
-  process.exit(0);
-});
+export async function disconnectDB() {
+  try {
+    await mongoose.disconnect();
+    console.log("✅ MongoDB disconnected");
+  } catch (err) {
+    console.error("❌ MongoDB disconnect error:", err.message);
+  }
+}
+

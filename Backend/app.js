@@ -5,7 +5,8 @@ import compression from "compression";
 import cors from "cors";
 import helmet from "helmet";
 import checkAuth from "./middlewares/authMiddleware.js";
-import "./databases/mongoose.js";
+import { disconnectDB } from "./databases/mongoose.js";
+import { disconnectRedis } from "./databases/redis.js";
 import { reconcileDirectoryPathsAndSizes } from "./utils/reconcile.js";
 import { startScheduledJobs } from "./jobs/scheduler.js";
 import { AppError } from "./errors/AppError.js";
@@ -200,12 +201,23 @@ app.use((err, req, res, next) => {
   if (res.headersSent) {
     return next(err);
   }
-  if (err.isOperational) {
-    return res.status(err.statusCode).json({
-      message: err.message,
+
+  const statusCode =
+    err.statusCode ||
+    err.status ||
+    (res.statusCode >= 400 && res.statusCode < 600 ? res.statusCode : 500);
+
+  const isClientError = statusCode >= 400 && statusCode < 500;
+  const isOperational = Boolean(err.isOperational || isClientError);
+
+  if (isOperational) {
+    return res.status(statusCode).json({
+      message: err.message || "Request failed",
       ...(err.details && { details: err.details }),
+      ...(err.code && { code: err.code }),
     });
   }
+
   console.error("[Unhandled Error]", err);
   return res.status(500).json({ message: "Internal Server Error" });
 });
@@ -232,15 +244,48 @@ app.get("/github-webhook/status", getDeploymentStatus);
 
 startScheduledJobs();
 
+let server;
+
+function startServer() {
+  server = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
 reconcileDirectoryPathsAndSizes()
   .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+    startServer();
   })
   .catch((err) => {
     console.error("Reconciliation warning (starting server anyway):", err);
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+    startServer();
   });
+
+/* =======================
+   GRACEFUL SHUTDOWN
+   ======================= */
+let isShuttingDown = false;
+
+async function handleShutdown(signal) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  console.log(`\n🛑 [Shutdown] Received ${signal}. Initiating graceful shutdown...`);
+
+  if (server) {
+    server.close(() => {
+      console.log("✅ [Shutdown] HTTP server closed to new connections");
+    });
+  }
+
+  try {
+    await Promise.allSettled([disconnectDB(), disconnectRedis()]);
+  } catch (err) {
+    console.warn("⚠️ [Shutdown] Teardown notice:", err.message);
+  }
+
+  console.log("👋 [Shutdown] Process exited cleanly.");
+  process.exit(0);
+}
+
+process.on("SIGINT", () => handleShutdown("SIGINT"));
+process.on("SIGTERM", () => handleShutdown("SIGTERM"));

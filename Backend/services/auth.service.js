@@ -437,7 +437,7 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
               },
             },
           },
-          { new: true, session },
+          { returnDocument: "after", session },
         );
 
         if (user) {

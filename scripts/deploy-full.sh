@@ -25,8 +25,19 @@ aws cloudfront create-invalidation --distribution-id E1GUK9KTGYZNFE --paths "/*"
 
 echo "⚙️ [4/4] Updating Backend & Reloading PM2 Cluster..."
 cd "$PROJECT_DIR/Backend"
+
+# Approve install scripts for critical native/binary packages if npm install-scripts is enabled
+if command -v npm &> /dev/null; then
+  npm install-scripts approve @ffmpeg-installer/linux-x64 argon2 protobufjs @firebase/util 2>/dev/null || true
+fi
+
 npm install --omit=dev
-pm2 reload vault-backend || pm2 restart vault-backend
+
+# Rebuild native addons and grant executable permissions
+npm rebuild argon2 2>/dev/null || true
+chmod +x node_modules/@ffmpeg-installer/linux-x64/ffmpeg 2>/dev/null || true
+
+pm2 reload vault-backend --update-env || pm2 restart vault-backend --update-env
 
 echo "=================================================="
 echo "✅ [CI/CD Pipeline] Deployment Completed Successfully!"
