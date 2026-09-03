@@ -1,4 +1,5 @@
 import * as deployService from "./github.webhook.service.js";
+import { createHmac } from "crypto";
 
 /**
  * Handles incoming GitHub Webhook events (push, ping, etc.)
@@ -6,7 +7,27 @@ import * as deployService from "./github.webhook.service.js";
 export async function handleGithubWebhook(req, res) {
   const event = req.headers["x-github-event"] || "push";
   const signature = req.headers["x-hub-signature-256"];
+  if (!signature) {
+    return res.status(403).json({
+      success: false,
+      message: `No signature`,
+    });
+  }
 
+  const generatedSignature =
+    `sha256=` +
+    createHmac("sha256", process.env.GITHUB_WEBHOOK_SECRET)
+      .update(Buffer.from(JSON.stringify(req.body)))
+      .digest("hex");
+
+  console.log(signature);
+  console.log(generatedSignature);
+  if (generatedSignature != signature) {
+    return res.status(403).json({
+      success: false,
+      message: `Invalid signature`,
+    });
+  }
   console.log(`📥 [GitHub Webhook] Received event: "${event}"`);
 
   // 1. Handle GitHub ping verification
@@ -25,7 +46,8 @@ export async function handleGithubWebhook(req, res) {
   if (event === "push") {
     const ref = req.body?.ref || "";
     // Only deploy on main/master branch push
-    const isMainBranch = ref === "refs/heads/main" || ref === "refs/heads/master";
+    const isMainBranch =
+      ref === "refs/heads/main" || ref === "refs/heads/master";
 
     if (!isMainBranch) {
       return res.status(200).json({
@@ -37,7 +59,8 @@ export async function handleGithubWebhook(req, res) {
 
     const headCommit = req.body?.head_commit;
     const commit = headCommit?.id ? headCommit.id.slice(0, 7) : "latest";
-    const author = headCommit?.author?.name || req.body?.sender?.login || "github-committer";
+    const author =
+      headCommit?.author?.name || req.body?.sender?.login || "github-committer";
     const commitMessage = headCommit?.message || "No commit message";
 
     // Immediate HTTP 200 response to satisfy GitHub's 10-second timeout

@@ -3,6 +3,7 @@ import path from "path";
 import os from "os";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { sendDeploymentFailureEmail } from "./github.webhook.email.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -114,9 +115,11 @@ export function triggerDeployment({
   }
 
   console.log(`\n======================================================`);
-  console.log(`🚀 [CI/CD Runner] Initiating Pipeline Deploymen`);
-  console.log(`📦 Commit: ${commit} | Author: ${author}`);
-  console.log(`📜 Script: ${scriptPath}`);
+  console.log(`🚀 [CI/CD Runner] Initiating Pipeline Deployment`);
+  console.log(`📦 Commit ID:       [${commit}]`);
+  console.log(`💬 Commit Message:  "${message}"`);
+  console.log(`👤 Author:          ${author}`);
+  console.log(`📜 Script:          ${scriptPath}`);
   console.log(`======================================================\n`);
 
   const child = spawn("bash", [scriptPath], {
@@ -126,6 +129,8 @@ export function triggerDeployment({
       HOME: os.homedir(),
       CI: "true",
       TRIGGERED_COMMIT: commit,
+      TRIGGERED_MESSAGE: message,
+      TRIGGERED_AUTHOR: author,
     },
   });
 
@@ -151,13 +156,26 @@ export function triggerDeployment({
     if (code === 0) {
       lastDeployment.status = "success";
       console.log(
-        `\n🎉 [CI/CD Runner] Pipeline deployed successful for commit [${commit}] (Exit Code: 0)\n`,
+        `\n🎉 [CI/CD Runner] Pipeline deployed successfully for commit [${commit}] (Exit Code: 0)\n`,
       );
     } else {
       lastDeployment.status = "failed";
       console.error(
         `\n❌ [CI/CD Runner] Pipeline deployment failed with exit code: ${code}\n`,
       );
+
+      // Dispatch automated failure alert email
+      sendDeploymentFailureEmail({
+        commit,
+        commitMessage: message,
+        author,
+        exitCode: code,
+        logs: lastDeployment.logs,
+        startedAt: lastDeployment.startedAt,
+        finishedAt: lastDeployment.finishedAt,
+      }).catch((emailErr) => {
+        console.warn("⚠️ [CI/CD Alert] Email dispatch warning:", emailErr.message);
+      });
     }
     saveStatusToDisk({ isDeploying, lastDeployment });
   });
@@ -171,6 +189,21 @@ export function triggerDeployment({
       `❌ [CI/CD Runner] Failed to spawn deployment process:`,
       err.message,
     );
+
+    // Dispatch automated failure alert email
+    sendDeploymentFailureEmail({
+      commit,
+      commitMessage: message,
+      author,
+      exitCode: -1,
+      errorMessage: err.message,
+      logs: lastDeployment.logs,
+      startedAt: lastDeployment.startedAt,
+      finishedAt: lastDeployment.finishedAt,
+    }).catch((emailErr) => {
+      console.warn("⚠️ [CI/CD Alert] Email dispatch warning:", emailErr.message);
+    });
+
     saveStatusToDisk({ isDeploying, lastDeployment });
   });
 
