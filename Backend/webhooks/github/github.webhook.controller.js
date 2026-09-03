@@ -6,120 +6,137 @@ import { GITHUB_WEBHOOK_SECRET } from "../../config/config.js";
  * Handles incoming GitHub Webhook events (push, ping, etc.)
  */
 export async function handleGithubWebhook(req, res) {
-  const event = req.headers["x-github-event"] || "push";
-  const signature = req.headers["x-hub-signature-256"];
-  const secret = GITHUB_WEBHOOK_SECRET || process.env.GITHUB_WEBHOOK_SECRET;
+  try {
+    const event = req.headers["x-github-event"] || "push";
+    const signature = req.headers["x-hub-signature-256"];
+    const secret = GITHUB_WEBHOOK_SECRET || process.env.GITHUB_WEBHOOK_SECRET;
+    const clientIp =
+      req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+      req.socket?.remoteAddress ||
+      "unknown-ip";
 
-  // 1. Authenticate webhook signature if secret is configured
-  if (secret) {
-    if (!signature) {
+    // 1. Authenticate webhook signature if secret is configured
+    if (secret) {
+      if (!signature) {
+        console.warn(
+          `⚠️ [GitHub Webhook] Rejected: Missing x-hub-signature-256 header (IP: ${clientIp}).`,
+        );
+        return res.status(401).json({
+          success: false,
+          message: "Missing x-hub-signature-256 header",
+        });
+      }
+
+      // Must use the exact raw unparsed request Buffer!
+      const rawPayload = req.rawBody || Buffer.from(JSON.stringify(req.body));
+      const generatedSignature =
+        "sha256=" + createHmac("sha256", secret).update(rawPayload).digest("hex");
+
+      const sigBuffer = Buffer.from(signature);
+      const genBuffer = Buffer.from(generatedSignature);
+
+      const isMatch =
+        sigBuffer.length === genBuffer.length &&
+        timingSafeEqual(sigBuffer, genBuffer);
+
+      if (!isMatch) {
+        console.warn(
+          `❌ [GitHub Webhook Security Alert] Signature mismatch from IP: ${clientIp} for event: "${event}".`,
+        );
+        return res.status(401).json({
+          success: false,
+          message: "Invalid webhook signature",
+        });
+      }
+    } else {
       console.warn(
-        "⚠️ [GitHub Webhook] Rejected: Missing x-hub-signature-256 header.",
+        "⚠️ [GitHub Webhook] GITHUB_WEBHOOK_SECRET not set. Proceeding without signature check.",
       );
-      return res.status(401).json({
-        success: false,
-        message: "Missing x-hub-signature-256 header",
-      });
     }
 
-    // Must use the exact raw unparsed request Buffer!
-    const rawPayload = req.rawBody || Buffer.from(JSON.stringify(req.body));
-    const generatedSignature =
-      "sha256=" + createHmac("sha256", secret).update(rawPayload).digest("hex");
-
-    const sigBuffer = Buffer.from(signature);
-    const genBuffer = Buffer.from(generatedSignature);
-
-    const isMatch =
-      sigBuffer.length === genBuffer.length &&
-      timingSafeEqual(sigBuffer, genBuffer);
-
-    if (!isMatch) {
-      console.warn("❌ [GitHub Webhook] Rejected: Invalid signature");
-      return res.status(403).json({
-        success: false,
-        message: "Invalid webhook signature",
-      });
-    }
-  } else {
-    console.warn(
-      "⚠️ [GitHub Webhook] GITHUB_WEBHOOK_SECRET not set. Proceeding without signature check.",
+    console.log(
+      `📥 [GitHub Webhook] Received verified event: "${event}" from IP: ${clientIp}`,
     );
-  }
 
-  console.log(`📥 [GitHub Webhook] Received authenticated event: "${event}"`);
-
-  // 1. Handle GitHub ping verification
-  if (event === "ping") {
-    return res.status(200).json({
-      success: true,
-      event: "ping",
-      message: "GitHub webhook connected successfully! CI/CD runner is ready.",
-      zen: req.body?.zen,
-      hookId: req.body?.hook_id,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  // 2. Handle push events
-  if (event === "push") {
-    const ref = req.body?.ref || "";
-    // Only deploy on main/master branch push
-    const isMainBranch =
-      ref === "refs/heads/main" || ref === "refs/heads/master";
-
-    if (!isMainBranch) {
+    // 1. Handle GitHub ping verification
+    if (event === "ping") {
       return res.status(200).json({
         success: true,
-        message: `Push to non-production branch (${ref}) ignored.`,
-        branch: ref,
+        event: "ping",
+        message: "GitHub webhook connected successfully! CI/CD runner is ready.",
+        zen: req.body?.zen,
+        hookId: req.body?.hook_id,
+        timestamp: new Date().toISOString(),
       });
     }
 
-    const commitsArr = Array.isArray(req.body?.commits) ? req.body.commits : [];
-    const targetCommit =
-      req.body?.head_commit ||
-      (commitsArr.length > 0 ? commitsArr[commitsArr.length - 1] : null);
+    // 2. Handle push events
+    if (event === "push") {
+      const ref = req.body?.ref || "";
+      // Only deploy on main/master branch push
+      const isMainBranch =
+        ref === "refs/heads/main" || ref === "refs/heads/master";
 
-    const commit = targetCommit?.id
-      ? targetCommit.id.slice(0, 7)
-      : req.body?.after
-        ? req.body.after.slice(0, 7)
-        : "latest";
+      if (!isMainBranch) {
+        return res.status(200).json({
+          success: true,
+          message: `Push to non-production branch (${ref}) ignored.`,
+          branch: ref,
+        });
+      }
 
-    const author =
-      targetCommit?.author?.name ||
-      req.body?.sender?.login ||
-      "github-committer";
+      const commitsArr = Array.isArray(req.body?.commits) ? req.body.commits : [];
+      const targetCommit =
+        req.body?.head_commit ||
+        (commitsArr.length > 0 ? commitsArr[commitsArr.length - 1] : null);
 
-    const rawMessage = targetCommit?.message || "No commit message";
-    const commitMessage = rawMessage.split("\n")[0].trim();
+      const commit = targetCommit?.id
+        ? targetCommit.id.slice(0, 7)
+        : req.body?.after
+          ? req.body.after.slice(0, 7)
+          : "latest";
 
-    // Immediate HTTP 200 response to satisfy GitHub's 10-second timeout
-    res.status(200).json({
+      const author =
+        targetCommit?.author?.name ||
+        req.body?.sender?.login ||
+        "github-committer";
+
+      const rawMessage = targetCommit?.message || "No commit message";
+      const commitMessage = rawMessage.split("\n")[0].trim();
+
+      // Immediate HTTP 200 response to satisfy GitHub's 10-second timeout
+      res.status(200).json({
+        success: true,
+        status: "queued",
+        message: `Deployment pipeline queued for commit [${commit}]`,
+        commit,
+        author,
+        commitMessage,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Execute the deployment asynchronously
+      deployService.triggerDeployment({
+        commit,
+        author,
+        message: commitMessage,
+      });
+      return;
+    }
+
+    // 3. Fallback for other events
+    return res.status(200).json({
       success: true,
-      status: "queued",
-      message: `Deployment pipeline queued for commit [${commit}]`,
-      commit,
-      author,
-      commitMessage,
-      timestamp: new Date().toISOString(),
+      message: `GitHub event "${event}" acknowledged without deployment action.`,
     });
-
-    // Execute the deployment asynchronously
-    deployService.triggerDeployment({
-      commit,
-      author,
-      message: commitMessage,
+  } catch (err) {
+    console.error("❌ [GitHub Webhook Error] Unexpected failure handling webhook:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error processing webhook",
+      error: err.message,
     });
-    return;
   }
-
-  // 3. Fallback for other events
-  return res.status(200).json({
-    success: true,
-    message: `GitHub event "${event}" acknowledged without deployment action.`,
-  });
 }
 
 /**
