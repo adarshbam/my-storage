@@ -183,6 +183,18 @@ export function triggerDeployment({
     lastDeployment.finishedAt = new Date().toISOString();
     lastDeployment.exitCode = code;
 
+    // Enrich commit details directly from git repository if webhook payload used fallbacks
+    try {
+      if (!lastDeployment.message || lastDeployment.message === "No commit message") {
+        lastDeployment.message = execSync('git log -1 --pretty=format:"%s"', { cwd: workingDir }).toString().trim();
+      }
+      if (!lastDeployment.author || lastDeployment.author === "Unknown" || lastDeployment.author === "github-committer") {
+        lastDeployment.author = execSync('git log -1 --pretty=format:"%an"', { cwd: workingDir }).toString().trim();
+      }
+    } catch (gitErr) {
+      // Non-critical fallback
+    }
+
     if (code === 0) {
       lastDeployment.status = "success";
       console.log(

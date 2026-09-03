@@ -28,7 +28,11 @@ chmod +x "$PROJECT_DIR"/*.sh 2>/dev/null || true
 SYNCED_HASH=$(git rev-parse --short HEAD)
 SYNCED_MSG=$(git log -1 --pretty=format:"%s")
 SYNCED_AUTHOR=$(git log -1 --pretty=format:"%an")
-echo "✅ Synced to Git Commit: [$SYNCED_HASH] - \"$SYNCED_MSG\" by $SYNCED_AUTHOR"
+echo "=================================================="
+echo "✅ Synced to Git Commit: [$SYNCED_HASH]"
+echo "💬 Commit Message:       \"$SYNCED_MSG\""
+echo "👤 Commit Author:        $SYNCED_AUTHOR"
+echo "=================================================="
 
 # Check if Backend dependencies changed
 BACKEND_PKG_CHANGED=""
