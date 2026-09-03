@@ -39,7 +39,11 @@ function resolveDeployScript() {
   return "/home/ubuntu/my-storage/scripts/deploy-full.sh";
 }
 
-export function triggerDeployment({ commit = "HEAD", author = "github-webhook", message = "" } = {}) {
+export function triggerDeployment({
+  commit = "HEAD",
+  author = "github-webhook",
+  message = "",
+} = {}) {
   if (isDeploying) {
     const msg = `⚠️ [CI/CD Runner] Deployment already in progress for commit [${lastDeployment.commit}]. Skipping duplicate trigger.`;
     console.warn(msg);
@@ -101,10 +105,14 @@ export function triggerDeployment({ commit = "HEAD", author = "github-webhook", 
 
     if (code === 0) {
       lastDeployment.status = "success";
-      console.log(`\n🎉 [CI/CD Runner] Pipeline deployed successfully for commit [${commit}] (Exit Code: 0)\n`);
+      console.log(
+        `\n🎉 [CI/CD Runner] Pipeline deployed successfuly for commit [${commit}] (Exit Code: 0)\n`,
+      );
     } else {
       lastDeployment.status = "failed";
-      console.error(`\n❌ [CI/CD Runner] Pipeline deployment failed with exit code: ${code}\n`);
+      console.error(
+        `\n❌ [CI/CD Runner] Pipeline deployment failed with exit code: ${code}\n`,
+      );
     }
   });
 
@@ -113,7 +121,10 @@ export function triggerDeployment({ commit = "HEAD", author = "github-webhook", 
     lastDeployment.status = "error";
     lastDeployment.finishedAt = new Date().toISOString();
     lastDeployment.error = err.message;
-    console.error(`❌ [CI/CD Runner] Failed to spawn deployment process:`, err.message);
+    console.error(
+      `❌ [CI/CD Runner] Failed to spawn deployment process:`,
+      err.message,
+    );
   });
 
   return {
