@@ -254,17 +254,21 @@ let server;
 function startServer() {
   server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+
+    // Signal PM2 cluster manager that port is open and ready to accept traffic
+    if (process.send) {
+      process.send("ready");
+    }
   });
 }
 
-reconcileDirectoryPathsAndSizes()
-  .then(() => {
-    startServer();
-  })
-  .catch((err) => {
-    console.error("Reconciliation warning (starting server anyway):", err);
-    startServer();
-  });
+// Start HTTP listener immediately so PM2 readiness handshake succeeds without delay
+startServer();
+
+// Run heavy reconciliation in background without blocking port binding or PM2 reload
+reconcileDirectoryPathsAndSizes().catch((err) => {
+  console.error("Reconciliation notice:", err.message);
+});
 
 /* =======================
    GRACEFUL SHUTDOWN
@@ -274,11 +278,17 @@ let isShuttingDown = false;
 async function handleShutdown(signal) {
   if (isShuttingDown) return;
   isShuttingDown = true;
-  console.log(`\n🛑 [Shutdown] Received ${signal}. Initiating graceful shutdown...`);
+  console.log(`\n🛑 [Shutdown] Received ${signal}. Draining in-flight requests...`);
 
   if (server) {
-    server.close(() => {
-      console.log("✅ [Shutdown] HTTP server closed to new connections");
+    await new Promise((resolve) => {
+      // Stop accepting new connections and drain existing ones
+      server.close(() => {
+        console.log("✅ [Shutdown] HTTP server closed cleanly");
+        resolve();
+      });
+      // Safety timeout: force resolve after 8s if keep-alive sockets linger
+      setTimeout(resolve, 8000);
     });
   }
 

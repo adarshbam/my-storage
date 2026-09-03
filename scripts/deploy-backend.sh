@@ -58,7 +58,11 @@ else
   echo "⚡ [Backend] No package.json changes detected. Skipping npm install."
 fi
 
-pm2 reload vault-backend --update-env || pm2 restart vault-backend --update-env
+if [ -f "$PROJECT_DIR/ecosystem.config.cjs" ]; then
+  pm2 reload "$PROJECT_DIR/ecosystem.config.cjs" --update-env || pm2 reload vault-backend --update-env
+else
+  pm2 reload vault-backend --update-env
+fi
 
 echo "=================================================="
 echo "✅ [CI/CD Pipeline] Backend Deployed Successfully!"
