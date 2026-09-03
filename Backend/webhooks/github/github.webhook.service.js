@@ -106,7 +106,7 @@ export function triggerDeployment({
     if (code === 0) {
       lastDeployment.status = "success";
       console.log(
-        `\n🎉 [CI/CD Runner] Pipeline deployed successfuly for commit [${commit}] (Exit Code: 0)\n`,
+        `\n🎉 [CI/CD Runner] Pipeline deployed successful for commit [${commit}] (Exit Code: 0)\n`,
       );
     } else {
       lastDeployment.status = "failed";
