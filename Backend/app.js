@@ -31,6 +31,8 @@ import ownerSettingsRouter from "./routes/ownerSettingsRoutes.js";
 import webhookRouter from "./routes/webhookRoutes.js";
 import billingRouter from "./routes/billingRoutes.js";
 import notificationRouter from "./routes/notificationRoutes.js";
+import testRouter from "./routes/testRoutes.js";
+
 
 import { PORT, CLIENT_URL, SESSION_SECRET } from "./config/config.js";
 import {
@@ -197,6 +199,9 @@ app.use("/owner-settings", ownerSettingsRouter);
 app.use("/webhooks", webhookRouter);
 app.use("/billing", checkAuth, billingRouter);
 app.use("/notifications", checkAuth, notificationRouter);
+app.use("/test", testRouter);
+app.use("/api/test", testRouter);
+
 
 app.use((err, req, res, next) => {
   if (res.headersSent) {

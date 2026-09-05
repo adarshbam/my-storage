@@ -365,3 +365,12 @@ export const recoveryEmailVerifyLimiter = createLimiter(
 
 // Backwards compatibility alias
 export const recoveryEmailLimiter = recoveryEmailSendLimiter;
+
+// 23. Test Route Limiter: max 120 requests per 1 minute (safe for deployment checks & monitoring)
+export const testLimiter = createLimiter(
+  60 * 1000, // 1 minute window
+  120,
+  "Too many test requests. Please slow down.",
+  "test",
+);
+
