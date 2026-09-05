@@ -1,0 +1,83 @@
+name: Deploy Frontend to S3 and CloudFront
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  my-frontend-deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      S3_BUCKET_NAME: yourvaultstoragefrontend
+      CLOUDFRONT_DISTRIBUTION_ID: E1GUK9KTGYZNFE
+      AWS_REGION: ap-south-1
+
+      # Basic Frontend Environment Variables for Vite Build
+      VITE_SERVER_URL: ${{ secrets.VITE_SERVER_URL || vars.VITE_SERVER_URL || '/api' }}
+      VITE_MAX_FILE_SIZE: ${{ vars.VITE_MAX_FILE_SIZE || '104857600' }}
+      VITE_GOOGLE_CLIENTID: ${{ secrets.VITE_GOOGLE_CLIENTID || vars.VITE_GOOGLE_CLIENTID || '621477951745-lmj5ogqo7fkmd9sv50t97dj11kdjffpa.apps.googleusercontent.com' }}
+      VITE_GITHUB_CLIENTID: ${{ secrets.VITE_GITHUB_CLIENTID || vars.VITE_GITHUB_CLIENTID || 'Ov23lizS9BOqZ4r4jQPZ' }}
+      VITE_RAZORPAY_KEY_ID: ${{ secrets.VITE_RAZORPAY_KEY_ID || 'rzp_live_T6hzM3zzz0kYbG' }}
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || 'AIzaSyCDDE-n_Ef8GUIIUxuVd4aOZ3Jj3pCDutM' }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN || 'yourvaultstorage.firebaseapp.com' }}
+      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID || 'yourvaultstorage' }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET || 'yourvaultstorage.firebasestorage.app' }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID || '471747616446' }}
+      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID || '1:471747616446:web:5cc4c60c26908c8e2648ef' }}
+      VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID || 'G-Q0HFRDCLP7' }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            Frontend/package-lock.json
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Dependencies
+        run: |
+          if [ -f "Frontend/package.json" ]; then
+            cd Frontend
+          fi
+          npm ci
+
+      - name: Run Automated Tests
+        run: |
+          if [ -f "Frontend/package.json" ]; then
+            cd Frontend
+          fi
+          npm run test
+
+      - name: Build Frontend Application
+        run: |
+          if [ -f "Frontend/package.json" ]; then
+            cd Frontend
+          fi
+          npm run build
+
+      - name: Sync Build to S3 Bucket
+        run: |
+          DIST_DIR="./dist"
+          if [ -d "Frontend/dist" ]; then
+            DIST_DIR="Frontend/dist"
+          fi
+          aws s3 sync "$DIST_DIR" "s3://${{ env.S3_BUCKET_NAME }}" --delete
+
+      - name: Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation --distribution-id "${{ env.CLOUDFRONT_DISTRIBUTION_ID }}" --paths "/*"
