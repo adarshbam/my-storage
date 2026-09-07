@@ -44,7 +44,7 @@ echo "⚙️ [2/2] Updating Backend Dependencies & Reloading PM2..."
 cd "$PROJECT_DIR/Backend"
 
 # Smart install for Backend with native script approvals & builds
-if [ ! -d "$PROJECT_DIR/Backend/node_modules" ] || [ -n "$BACKEND_PKG_CHANGED" ]; then
+if [ ! -d "$PROJECT_DIR/Backend/node_modules" ] || [ ! -d "$PROJECT_DIR/Backend/node_modules/@aws-sdk/lib-storage" ] || [ -n "$BACKEND_PKG_CHANGED" ]; then
   echo "📦 [Backend] Package changes detected (or node_modules missing). Running full install & build..."
 
   if command -v npm &> /dev/null; then
