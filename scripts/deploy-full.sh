@@ -44,9 +44,9 @@ echo "🧪 [2/4] Running Frontend Automated Test Suite..."
 cd "$PROJECT_DIR/Frontend"
 
 # Smart install for Frontend
-if [ ! -d "$PROJECT_DIR/Frontend/node_modules" ] || [ -n "$FRONTEND_PKG_CHANGED" ]; then
-  echo "📦 [Frontend] Package changes detected (or node_modules missing). Installing frontend dependencies..."
-  npm install
+if [ ! -d "$PROJECT_DIR/Frontend/node_modules" ] || [ ! -f "$PROJECT_DIR/Frontend/node_modules/.bin/vite" ] || [ -n "$FRONTEND_PKG_CHANGED" ]; then
+  echo "📦 [Frontend] Installing frontend dependencies (including devDependencies)..."
+  NODE_ENV=development npm install --include=dev
 else
   echo "⚡ [Frontend] No package.json changes detected. Skipping npm install."
 fi
