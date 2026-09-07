@@ -2,7 +2,7 @@ import React from 'react';
 import { Upload, Share2, Clock, Star, Plus } from "lucide-react";
 import { cn } from "../../lib/utils";
 
-export default function EmptyState({ specialView, isSearch, openUploadModal, setModalInput, setModalType, setSelectedExt, setNewFileContent }) {
+export default function EmptyState({ specialView, isSearch, openUploadModal, setModalInput, setModalType, setSelectedExt, setNewFileContent, title, description }) {
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-12 sm:py-20 px-4 text-center text-slate-400 max-w-full">
       {specialView ? (
@@ -26,7 +26,7 @@ export default function EmptyState({ specialView, isSearch, openUploadModal, set
             )}
           </div>
           <p className="text-base sm:text-lg font-medium mb-1.5 text-slate-800 dark:text-white">
-            {isSearch
+            {title || (isSearch
               ? "No search results found"
               : specialView === "shared"
                 ? "No secure relays active"
@@ -34,17 +34,17 @@ export default function EmptyState({ specialView, isSearch, openUploadModal, set
                   ? "No recent activity pulse"
                   : specialView === "starred"
                     ? "No priority beacons found"
-                    : "No files yet"}
+                    : "No files yet")}
           </p>
           {!isSearch && (
             <p className="text-xs sm:text-sm text-slate-500 dark:text-white/40 max-w-sm text-center leading-relaxed">
-              {specialView === "shared"
+              {description || (specialView === "shared"
                 ? "Shared access vaults from other nodes will appear here once authenticated."
                 : specialView === "recent"
                   ? "Your recently accessed or modified vault assets will be indexed here."
                   : specialView === "starred"
                     ? "Star your critical assets or directories to beacon them to this control panel."
-                    : ""}
+                    : "")}
             </p>
           )}
           {specialView === "github-repo" && !isSearch && (
@@ -71,10 +71,10 @@ export default function EmptyState({ specialView, isSearch, openUploadModal, set
             <Upload size={36} className="sm:w-10 sm:h-10 text-accent-primary" />
           </div>
           <p className="text-base sm:text-lg font-medium mb-1.5 text-slate-800 dark:text-white">
-            {isSearch ? "No search results found" : "This folder is empty"}
+            {title || (isSearch ? "No search results found" : "This folder is empty")}
           </p>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-white/40 max-w-sm text-center leading-relaxed">
-            {isSearch ? "Try adjusting your search query" : "Drag and drop files here or use the upload button"}
+            {description || (isSearch ? "Try adjusting your search query" : "Drag and drop files here or use the upload button")}
           </p>
         </>
       )}

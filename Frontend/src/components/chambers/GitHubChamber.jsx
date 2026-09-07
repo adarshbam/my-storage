@@ -190,20 +190,34 @@ export default function GitHubChamber() {
 
       if (!isRepoView) {
         // Mapping repos as directory items
-        const repos = Array.isArray(result) ? result : result.repositories || [];
-        directories = repos.map((repo) => ({
-          _id: repo.id || repo.name,
-          name: repo.name,
-          type: "directory",
-          provider: "github",
-          owner: repo.owner?.login || repo.owner || githubOwner,
-          description: repo.description || "",
-          isPrivate: repo.private,
-          stars: repo.stargazers_count || 0,
-          updatedAt: repo.updated_at,
-          defaultBranch: repo.default_branch,
-          githubPath: `${repo.owner?.login || repo.owner}/${repo.name}`,
-        }));
+        const repos = Array.isArray(result)
+          ? result
+          : (result.directories || result.repositories || []);
+
+        directories = repos.map((repo) => {
+          const owner =
+            repo.owner?.login ||
+            repo.owner ||
+            (repo.githubPath ? repo.githubPath.split("/")[0] : githubOwner);
+          const githubPath =
+            repo.githubPath ||
+            (owner ? `${owner}/${repo.name}` : repo.name);
+
+          return {
+            ...repo,
+            _id: repo.id || repo._id || repo.name,
+            name: repo.name,
+            type: "directory",
+            provider: "github",
+            owner,
+            description: repo.description || "",
+            isPrivate: repo.private !== undefined ? repo.private : Boolean(repo.isPrivate),
+            stars: repo.stargazers_count ?? repo.stars ?? 0,
+            updatedAt: repo.updated_at || repo.updatedAt,
+            defaultBranch: repo.default_branch || repo.defaultBranch,
+            githubPath,
+          };
+        });
       } else {
         if (Array.isArray(result)) {
           directories = result.filter((item) => item.type === "directory" || item.type === "dir");
@@ -617,15 +631,43 @@ export default function GitHubChamber() {
         </div>
       ) : allItems.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-          <EmptyState
-            type="empty"
-            title={!isRepoView ? "No repositories found" : "This folder is empty"}
-            description={
-              !isRepoView
-                ? "Create a new repository or clone one from GitHub."
-                : "No files or directories found in this repository branch."
-            }
-          />
+          <div className="w-16 h-16 bg-linkgit-accent/10 border border-linkgit-accent/20 rounded-2xl flex items-center justify-center text-linkgit-accent mb-4 shadow-lg shadow-linkgit-accent/5">
+            <VaultGitIcon size={32} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1.5">
+            {!isRepoView ? "No repositories found" : "This folder is empty"}
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-white/40 max-w-sm mb-6 leading-relaxed">
+            {!isRepoView
+              ? "Create a new repository or clone one from GitHub to get started."
+              : "No files or directories found in this repository branch."}
+          </p>
+          {!isRepoView ? (
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => {
+                  setModalInput("");
+                  setIsPrivate(false);
+                  setModalType("create-repo");
+                }}
+                className="px-4 py-2 text-xs font-bold bg-linkgit-accent hover:bg-linkgit-accent/90 text-white shadow-md shadow-linkgit-accent/20 flex items-center gap-2"
+              >
+                <Plus size={15} />
+                <span>New Repository</span>
+              </Button>
+              <Button
+                onClick={() => {
+                  setClonePreselectedRepo(null);
+                  setShowCloneModal(true);
+                }}
+                variant="outline"
+                className="px-4 py-2 text-xs font-bold border-slate-200 dark:border-white/10 hover:bg-white/5 text-slate-700 dark:text-white flex items-center gap-2"
+              >
+                <FolderGit2 size={15} className="text-linkgit-accent" />
+                <span>Clone to Vault</span>
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto custom-scrollbar pb-12">

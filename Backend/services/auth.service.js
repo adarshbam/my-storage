@@ -465,13 +465,21 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
     }
 
     if (actualAction === "connect") {
-      console.log("connecting...");
-      console.log(access_token);
+      console.log("connecting GitHub integration...");
+
+      let targetUserId = req.user?.id || req.user?._id;
+      if (!targetUserId && req.signedCookies?.sessionId) {
+        const sessionDoc = await Session.findById(req.signedCookies.sessionId).select("userId").lean();
+        if (sessionDoc?.userId) {
+          targetUserId = sessionDoc.userId;
+        }
+      }
 
       let user = null;
       await withTransaction(async (session) => {
+        const query = targetUserId ? { _id: targetUserId } : { email };
         user = await User.findOneAndUpdate(
-          { email },
+          query,
           {
             $set: {
               "integrations.github": {
@@ -521,7 +529,7 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
         await invalidateUserSessions(user._id.toString());
       }
 
-      return res.redirect(`${targetClientUrl}/dashboard`);
+      return res.redirect(`${targetClientUrl}/dashboard/github`);
     }
 
     const existingUser = await User.findOne({ email })
@@ -546,6 +554,20 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
         e.status = 500;
         throw e;
       }
+
+      // Sync GitHub integration accessToken on login
+      await User.updateOne(
+        { _id: existingUser._id },
+        {
+          $set: {
+            "integrations.github": {
+              connected: true,
+              accessToken: access_token,
+              connectedAt: new Date(),
+            },
+          },
+        }
+      );
 
       if (userData.avatar_url) {
         await syncUserOAuthAvatar(existingUser, userData.avatar_url, "github-profile-pic");
@@ -588,6 +610,19 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
       isVerified: true,
       userId: newUserId,
     });
+
+    await User.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          "integrations.github": {
+            connected: true,
+            accessToken: access_token,
+            connectedAt: new Date(),
+          },
+        },
+      }
+    );
 
     await createSessionAndSetCookies(userId, rootDirId, req, res);
     return res.redirect(`${targetClientUrl}/dashboard`);

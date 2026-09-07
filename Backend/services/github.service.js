@@ -153,7 +153,7 @@ export const listRepositoriesLogic = async ({ req }) => {
   const { githubAccessToken } = auth;
 
   const response = await fetch(
-    "https://api.github.com/user/repos?per_page=100&sort=updated",
+    "https://api.github.com/user/repos?per_page=100&sort=updated&visibility=all&affiliation=owner,collaborator,organization_member",
     {
       headers: {
         Authorization: `Bearer ${githubAccessToken}`,
@@ -202,16 +202,19 @@ export const listRepositoriesLogic = async ({ req }) => {
   const githubRepositories = repos.map((repo) => {
     const isStarred = starredSet.has(repo.full_name) || starredSet.has(repo.name) || starredSet.has(String(repo.id));
     const repoFullName = repo.full_name || `${repo.owner?.login || ""}/${repo.name}`;
+    const ownerLogin = repo.owner?.login || (repo.full_name ? repo.full_name.split("/")[0] : "");
     const existingWs = workspaceMap.get(repoFullName.toLowerCase());
 
     return {
       _id: repo.id,
       name: repo.name,
+      owner: ownerLogin,
       type: "directory",
       provider: "github",
       githubPath: repo.full_name,
       updatedAt: repo.updated_at,
       private: repo.private,
+      isPrivate: repo.private,
       default_branch: repo.default_branch,
       description: repo.description,
       stargazers_count: repo.stargazers_count,
@@ -234,6 +237,7 @@ export const listRepositoriesLogic = async ({ req }) => {
 
   return {
     directories: githubRepositories,
+    repositories: githubRepositories,
     files: [],
     name: "Github",
   };
