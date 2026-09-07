@@ -82,7 +82,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
     const redirectUri = SERVER_URL.startsWith("http")
       ? `${SERVER_URL}/user/auth/github`
       : `${window.location.origin}${SERVER_URL}/user/auth/github`;
-    window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email,repo&state=connect`;
+    window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email,repo&state=${encodeURIComponent(`connect|${window.location.origin}`)}`;
   };
 
   const disconnectGithub = async () => {

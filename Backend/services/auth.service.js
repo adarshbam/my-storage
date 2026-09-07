@@ -362,10 +362,53 @@ export const authGoogleLogic = async ({ credential, req, res }) => {
   }
 };
 
+const resolveClientUrl = (req, state) => {
+  const allowedOrigins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://localhost:4173",
+    "https://yourvaultstorage.com",
+    "http://yourvaultstorage.com",
+    "https://www.yourvaultstorage.com",
+    "http://www.yourvaultstorage.com",
+  ];
+  if (CLIENT_URL && !allowedOrigins.includes(CLIENT_URL)) {
+    allowedOrigins.push(CLIENT_URL);
+  }
+
+  if (typeof state === "string" && state.includes("|")) {
+    const rawOrigin = state.split("|")[1];
+    let decodedOrigin = rawOrigin;
+    try {
+      decodedOrigin = decodeURIComponent(rawOrigin);
+    } catch {
+      // ignore
+    }
+    if (allowedOrigins.includes(decodedOrigin)) {
+      return decodedOrigin;
+    }
+  }
+
+  const host = req?.headers?.["x-forwarded-host"] || req?.headers?.host || "";
+  if (host.includes("localhost") || host.includes("127.0.0.1")) {
+    return "http://localhost:5173";
+  }
+
+  return CLIENT_URL || "https://yourvaultstorage.com";
+};
+
 export const authGithubLogic = async ({ code, action, req, res }) => {
+  const rawState = action || req?.query?.state || "";
+  let actualAction = rawState;
+  if (typeof rawState === "string" && rawState.includes("|")) {
+    actualAction = rawState.split("|")[0];
+  }
+  const targetClientUrl = resolveClientUrl(req, rawState);
+
   try {
     if (!code) {
-      return res.redirect(`${CLIENT_URL}/login?error=NoCodeProvided`);
+      return res.redirect(`${targetClientUrl}/login?error=NoCodeProvided`);
     }
 
     const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
@@ -387,7 +430,7 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
     const { access_token } = await response.json();
 
     if (!access_token) {
-      return res.redirect(`${CLIENT_URL}/login?error=InvalidToken`);
+      return res.redirect(`${targetClientUrl}/login?error=InvalidToken`);
     }
 
     const responseUserData = await fetch("https://api.github.com/user", {
@@ -418,10 +461,10 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
     }
 
     if (!email) {
-      return res.redirect(`${CLIENT_URL}/login?error=NoEmailFound`);
+      return res.redirect(`${targetClientUrl}/login?error=NoEmailFound`);
     }
 
-    if (action === "connect") {
+    if (actualAction === "connect") {
       console.log("connecting...");
       console.log(access_token);
 
@@ -478,7 +521,7 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
         await invalidateUserSessions(user._id.toString());
       }
 
-      return res.redirect(`${CLIENT_URL}/dashboard`);
+      return res.redirect(`${targetClientUrl}/dashboard`);
     }
 
     const existingUser = await User.findOne({ email })
@@ -487,11 +530,11 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
 
     if (existingUser) {
       if (existingUser.status === "Terminated") {
-        return res.redirect(`${CLIENT_URL}/login?error=AccountTerminated`);
+        return res.redirect(`${targetClientUrl}/login?error=AccountTerminated`);
       }
 
       if (existingUser.status === "Deleted") {
-        return res.redirect(`${CLIENT_URL}/login?error=AccountDeactivated`);
+        return res.redirect(`${targetClientUrl}/login?error=AccountDeactivated`);
       }
 
       const rootDir = await Directory.findOne({ _id: existingUser.rootDirId })
@@ -522,12 +565,12 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
         );
 
         return res.redirect(
-          `${CLIENT_URL}/login?twoFactorRequired=true&tempToken=${tempToken}`
+          `${targetClientUrl}/login?twoFactorRequired=true&tempToken=${tempToken}`
         );
       }
 
       await createSessionAndSetCookies(existingUser._id, rootDir._id, req, res);
-      return res.redirect(`${CLIENT_URL}/dashboard`);
+      return res.redirect(`${targetClientUrl}/dashboard`);
     }
 
     const newUserId = new mongoose.Types.ObjectId();
@@ -547,10 +590,10 @@ export const authGithubLogic = async ({ code, action, req, res }) => {
     });
 
     await createSessionAndSetCookies(userId, rootDirId, req, res);
-    return res.redirect(`${CLIENT_URL}/dashboard`);
+    return res.redirect(`${targetClientUrl}/dashboard`);
   } catch (err) {
     console.error("GitHub auth error:", err);
-    return res.redirect(`${CLIENT_URL}/login?error=AuthFailed`);
+    return res.redirect(`${targetClientUrl}/login?error=AuthFailed`);
   }
 };
 

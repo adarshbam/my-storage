@@ -434,7 +434,7 @@ export default function Register() {
               const redirectUri = SERVER_URL.startsWith("http")
                 ? `${SERVER_URL}/user/auth/github`
                 : `${window.location.origin}${SERVER_URL}/user/auth/github`;
-              window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email`;
+              window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email&state=${encodeURIComponent(`login|${window.location.origin}`)}`;
             }}
             className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/[0.06] backdrop-blur-sm text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-50 dark:hover:bg-white/10 transition-colors"
           >
