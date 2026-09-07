@@ -1,6 +1,15 @@
 import mongoose from "mongoose";
 import path from "node:path";
+import fs from "node:fs";
+import os from "node:os";
 import User from "../models/userModel.js";
+
+const AVATAR_CACHE_DIR = process.env.AVATAR_CACHE_DIR || path.join(os.homedir(), ".vault-avatar-cache");
+try {
+  if (!fs.existsSync(AVATAR_CACHE_DIR)) {
+    fs.mkdirSync(AVATAR_CACHE_DIR, { recursive: true });
+  }
+} catch {}
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import BillingPlan from "../models/billingPlanModel.js";
@@ -154,11 +163,22 @@ export const uploadProfilePicLogic = async ({ userId, req }) => {
       console.warn("Avatar worker compression fallback:", compressErr.message);
     }
 
-    await uploadToB2({
-      key: `${profilePicId.toString()}${ext}`,
-      body: finalBuffer,
-      contentType: finalContentType,
-    });
+    try {
+      const cachePath = path.join(AVATAR_CACHE_DIR, `${profilePicId.toString()}${ext}`);
+      fs.writeFileSync(cachePath, finalBuffer);
+    } catch (cacheErr) {
+      console.warn("Failed to write uploaded avatar to disk cache:", cacheErr.message);
+    }
+
+    try {
+      await uploadToB2({
+        key: `${profilePicId.toString()}${ext}`,
+        body: finalBuffer,
+        contentType: finalContentType,
+      });
+    } catch (b2UploadErr) {
+      console.warn("B2 avatar upload warning (saved locally):", b2UploadErr.message);
+    }
 
     let oldProfilePic = null;
     if (user.profilepic) {
@@ -268,15 +288,88 @@ export const getProfilePicLogic = async ({
     }
   }
 
+  const cacheFile = path.join(
+    AVATAR_CACHE_DIR,
+    `${profilePic._id.toString()}${profilePic.extension || ".png"}`
+  );
+
+  // 1. Check local persistent disk cache first (instant response, zero B2 bandwidth/cap usage)
+  if (fs.existsSync(cacheFile)) {
+    try {
+      const stat = fs.statSync(cacheFile);
+      if (stat.size > 0) {
+        const ext = profilePic.extension || path.extname(cacheFile);
+        const contentType =
+          ext === ".webp"
+            ? "image/webp"
+            : ext === ".png"
+              ? "image/png"
+              : "image/jpeg";
+        res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+        res.setHeader("Content-Type", contentType);
+        res.setHeader("Content-Length", stat.size);
+        return fs.createReadStream(cacheFile).pipe(res);
+      }
+    } catch (cacheReadErr) {
+      console.warn("Avatar disk cache read warning:", cacheReadErr.message);
+    }
+  }
+
+  // 2. Fetch from B2 if not yet cached locally
   try {
     const s3Response = await getObjectFromB2({
       key: `${profilePic._id.toString()}${profilePic.extension}`,
     });
     res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
-    res.setHeader("Content-Type", s3Response.ContentType || "image/png");
+    const contentType = s3Response.ContentType || "image/png";
+    res.setHeader("Content-Type", contentType);
+
+    // Save to local disk cache in background while streaming
+    try {
+      const writeStream = fs.createWriteStream(cacheFile);
+      s3Response.Body.pipe(writeStream);
+    } catch (writeErr) {
+      console.warn("Failed to save avatar to disk cache:", writeErr.message);
+    }
+
     return s3Response.Body.pipe(res);
   } catch (s3Err) {
-    console.error("Failed to fetch profile pic from B2:", s3Err);
+    console.warn("B2 profile pic download unavailable (checking fallbacks):", s3Err.message || s3Err);
+
+    // 3. Fallback: If B2 download cap exceeded, recover using user's connected OAuth integrations
+    try {
+      const ownerUser = await User.findById(profilePic.userId || profilePicId)
+        .select("integrations email")
+        .lean();
+
+      if (ownerUser?.integrations?.github?.accessToken) {
+        const ghRes = await fetch("https://api.github.com/user", {
+          headers: {
+            Authorization: `Bearer ${ownerUser.integrations.github.accessToken}`,
+            "User-Agent": "Vault-Storage",
+          },
+        });
+        if (ghRes.ok) {
+          const ghData = await ghRes.json();
+          if (ghData.avatar_url) {
+            const imgRes = await fetch(ghData.avatar_url);
+            if (imgRes.ok) {
+              const arrayBuf = await imgRes.arrayBuffer();
+              const buf = Buffer.from(arrayBuf);
+              try {
+                fs.writeFileSync(cacheFile, buf);
+              } catch {}
+              res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+              res.setHeader("Content-Type", imgRes.headers.get("content-type") || "image/jpeg");
+              return res.send(buf);
+            }
+          }
+        }
+      }
+    } catch (fbErr) {
+      console.warn("Avatar fallback error:", fbErr.message);
+    }
+
     const e = new Error("Profile pic file not found");
     e.status = 404;
     throw e;
