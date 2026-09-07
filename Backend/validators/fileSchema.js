@@ -148,3 +148,17 @@ export const markFileOpenedSchema = {
   }),
 };
 
+export const recordItemOpenedSchema = {
+  body: z.object({
+    itemId: z.string().min(1),
+    provider: z.enum(["local", "google_drive", "github", "dropbox"]).default("local"),
+    name: z.string().optional(),
+    type: z.enum(["file", "directory"]).default("file"),
+    size: z.number().optional(),
+    mimeType: z.string().optional(),
+    metaUrl: z.string().optional(),
+    githubPath: z.string().optional(),
+    metadata: z.record(z.string(), z.any()).optional(),
+  }),
+};
+

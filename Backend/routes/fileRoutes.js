@@ -10,6 +10,7 @@ import {
   getThumbnail,
   getThumbnailCdnUrl,
   markFileOpened,
+  recordItemOpened,
   renameFile,
   search,
   uploadFile,
@@ -33,6 +34,7 @@ import {
   getCdnUrlSchema,
   getFileByIdSchema,
   markFileOpenedSchema,
+  recordItemOpenedSchema,
   uploadFileSchema,
   renameFileSchema,
   saveFileSchema,
@@ -116,6 +118,14 @@ router.get(
   checkAuth,
   directoryReadLimiter,
   getAllRecentItems,
+);
+
+router.post(
+  "/opened",
+  checkAuth,
+  directoryReadLimiter,
+  validate(recordItemOpenedSchema),
+  recordItemOpened,
 );
 
 router.post(

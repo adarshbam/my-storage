@@ -221,3 +221,9 @@ export const importWorkflowArtifactToVault = (owner, repo, artifactId, data, par
   return apiClient.post(`/github/repositories/${owner}/${repo}/actions/artifacts/${artifactId}/import-to-vault${query ? `?${query}` : ''}`, data);
 };
 
+export const getWorkflowArtifactDownloadUrl = (owner, repo, artifactId, params = {}) => {
+  const query = new URLSearchParams({ ...params, json: "true" }).toString();
+  return apiClient.get(`/github/repositories/${owner}/${repo}/actions/artifacts/${artifactId}/download${query ? `?${query}` : ''}`);
+};
+
+

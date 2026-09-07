@@ -14,6 +14,7 @@ import File from "../models/fileModel.js";
 import Directory from "../models/directoryModel.js";
 import Trash from "../models/trashModel.js";
 import StarredItem from "../models/starredItemModel.js";
+import RecentItem from "../models/recentItemModel.js";
 import { cacheDel, cacheHgetall, cacheHset } from "../databases/redis.js";
 import {
   createUploadSignedUrl,
@@ -1178,11 +1179,71 @@ export const setStarredItem = async ({
   });
 };
 
+export const recordItemOpenedLogic = async ({
+  userId,
+  itemId,
+  provider = "local",
+  name,
+  type = "file",
+  size = 0,
+  mimeType = "",
+  metaUrl = "",
+  githubPath = "",
+  metadata = {},
+}) => {
+  if (!itemId) {
+    const error = new Error("Invalid item ID");
+    error.status = 400;
+    throw error;
+  }
+
+  const now = new Date();
+
+  if (provider === "local") {
+    if (type === "directory") {
+      await Directory.updateOne(
+        { _id: itemId, userId },
+        { $set: { openedAt: now } }
+      ).catch(() => {});
+    } else {
+      await File.updateOne(
+        { _id: itemId, userId },
+        { $set: { openedAt: now } }
+      ).catch(() => {});
+    }
+  } else {
+    const resolvedName = name || (type === "directory" ? "Folder" : "File");
+    await RecentItem.findOneAndUpdate(
+      { userId, itemId: itemId.toString(), provider },
+      {
+        $set: {
+          name: resolvedName,
+          type: type === "directory" ? "directory" : "file",
+          size: Number(size) || 0,
+          mimeType: mimeType || "",
+          metaUrl: metaUrl || "",
+          githubPath: githubPath || "",
+          openedAt: now,
+          metadata: metadata || {},
+        },
+      },
+      { upsert: true, returnDocument: "after" }
+    ).catch((err) => console.error("RecentItem upsert error:", err));
+  }
+
+  return {
+    success: true,
+    itemId,
+    provider,
+    openedAt: now,
+  };
+};
+
 export const getRecentItems = async (userId, rootDirId) => {
-  const [recentFiles, recentDirectories] = await Promise.all([
+  const [recentFiles, recentDirectories, recentIntegrations, starredList] = await Promise.all([
     File.find({ userId, openedAt: { $ne: null }, uploadStatus: { $ne: "uploading" } })
       .sort({ openedAt: -1 })
-      .limit(10)
+      .limit(15)
       .lean(),
     Directory.find({
       userId,
@@ -1190,9 +1251,20 @@ export const getRecentItems = async (userId, rootDirId) => {
       ...(rootDirId ? { _id: { $ne: rootDirId } } : {}),
     })
       .sort({ openedAt: -1 })
-      .limit(10)
+      .limit(15)
       .lean(),
+    RecentItem.find({ userId, openedAt: { $ne: null } })
+      .sort({ openedAt: -1 })
+      .limit(15)
+      .lean(),
+    userId
+      ? StarredItem.find({ userId, starred: true }).select("itemId provider").lean()
+      : [],
   ]);
+
+  const starredSet = new Set(
+    (starredList || []).map((s) => `${s.provider}:${s.itemId}`)
+  );
 
   const populatedDirs = await populateDirectoryItemCounts(recentDirectories);
 
@@ -1210,19 +1282,53 @@ export const getRecentItems = async (userId, rootDirId) => {
         })
       : null;
 
+    const isStarred = Boolean(file.starred || starredSet.has(`local:${fileIdStr}`));
+
     return {
       ...file,
       _id: fileIdStr,
       type: "file",
       hasThumbnail: hasThumb,
       thumbnailUrl,
+      isStarred,
+      starred: isStarred,
+    };
+  });
+
+  const processedDirs = populatedDirs.map((dir) => {
+    const dirIdStr = dir._id.toString();
+    const isStarred = Boolean(dir.starred || starredSet.has(`local:${dirIdStr}`));
+    return {
+      ...dir,
+      isStarred,
+      starred: isStarred,
+    };
+  });
+
+  const processedIntegrations = recentIntegrations.map((item) => {
+    const isDir = item.type === "directory";
+    const ext =
+      !isDir && item.name && item.name.includes(".")
+        ? `.${item.name.split(".").pop().toLowerCase()}`
+        : "";
+    const isStarred = starredSet.has(`${item.provider}:${item.itemId}`);
+    return {
+      ...item,
+      _id: item.itemId,
+      id: item.itemId,
+      extension: ext,
+      type: isDir ? "directory" : "file",
+      isStarred,
+      starred: isStarred,
+      isIntegration: true,
     };
   });
 
   const combined = processedFiles
-    .concat(populatedDirs)
+    .concat(processedDirs)
+    .concat(processedIntegrations)
     .sort((a, b) => new Date(b.openedAt) - new Date(a.openedAt))
-    .slice(0, 10);
+    .slice(0, 20);
 
   return combined;
 };

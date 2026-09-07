@@ -88,6 +88,8 @@ export const generateShareLinkLogic = async ({
           size: Number(item.size || fileMeta?.size || dirMeta?.size || 0),
           extension: String(item.extension || fileMeta?.extension || ""),
           mimeType: String(item.mimeType || ""),
+          githubPath: String(item.githubPath || ""),
+          metaUrl: String(item.metaUrl || ""),
         };
       })
       .filter((item) => item.id && item.type && item.name);

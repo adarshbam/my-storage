@@ -28,6 +28,8 @@ const shareLinkSchema = new Schema(
           size: { type: Number, default: 0 },
           extension: { type: String, default: "" },
           mimeType: { type: String, default: "" },
+          githubPath: { type: String, default: "" },
+          metaUrl: { type: String, default: "" },
         },
       ],
       default: [],

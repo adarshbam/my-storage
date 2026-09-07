@@ -136,15 +136,17 @@ export function useFiles({ folderId, specialView, isSearch, searchQuery, searchE
         files = responseData.files || [];
       }
 
-      // Filter out external integration directories from Vault Chamber
-      directories = directories.filter(
-        (dir) =>
-          dir.provider !== "google_drive" &&
-          dir.provider !== "github" &&
-          dir.name !== "Google Drive" &&
-          dir.name !== "GitHub" &&
-          dir.name !== "Github",
-      );
+      // Filter out external integration directories from Vault Chamber root
+      if (!specialView && !folderId) {
+        directories = directories.filter(
+          (dir) =>
+            dir.provider !== "google_drive" &&
+            dir.provider !== "github" &&
+            dir.name !== "Google Drive" &&
+            dir.name !== "GitHub" &&
+            dir.name !== "Github",
+        );
+      }
 
       const dataPayload = {
         directories,

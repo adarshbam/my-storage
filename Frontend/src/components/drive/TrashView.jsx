@@ -378,8 +378,8 @@ export default function TrashView() {
         <div
           className={`pb-20 relative select-none flex-1 content-start min-w-0 w-full ${
             viewMode === "list"
-              ? "flex flex-col gap-1"
-              : "grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] min-[360px]:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2.5 min-[360px]:gap-3 sm:gap-6 p-2 min-[360px]:p-3 sm:p-6 rounded-2xl sm:rounded-[2.5rem] vault-glass-panel"
+              ? "flex flex-col gap-2 p-1 sm:p-2"
+              : "grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] min-[360px]:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 sm:gap-6 p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] vault-glass-panel"
           }`}
           onMouseDown={handleMouseDown}
         >

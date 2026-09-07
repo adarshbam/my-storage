@@ -72,6 +72,7 @@ export const getRecentItems = (params = {}) => {
   const query = new URLSearchParams(params).toString();
   return apiClient.get(`/file/recent${query ? `?${query}` : ''}`);
 };
+export const recordItemOpened = (data) => apiClient.post('/file/opened', data);
 
 export const getShareLinks = () => apiClient.get('/share/links');
 export const createShareLink = (data) => apiClient.post('/share/link', data);

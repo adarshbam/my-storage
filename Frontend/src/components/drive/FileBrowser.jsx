@@ -68,7 +68,7 @@ import {
   CloudUpload,
 } from "lucide-react";
 
-import { batchDelete } from "../../api/files.api";
+import { batchDelete, recordItemOpened } from "../../api/files.api";
 import { useFiles } from "../../hooks/useFiles";
 import { useSelectionBox } from "../../hooks/useSelectionBox";
 import { useClipboard } from "../../hooks/useClipboard";
@@ -491,6 +491,17 @@ export default function FileBrowser({ specialView }) {
 
   const handlePreview = (file) => {
     setPreviewFile(file);
+    if (file) {
+      recordItemOpened({
+        itemId: file._id || file.id || file.githubPath,
+        provider: file.provider || "local",
+        name: file.name,
+        type: "file",
+        size: file.size || 0,
+        mimeType: file.mimeType || "",
+        githubPath: file.githubPath || "",
+      }).catch(() => {});
+    }
   };
 
   useEffect(() => {
@@ -666,15 +677,17 @@ export default function FileBrowser({ specialView }) {
         }
 
         // Google Drive and GitHub are decoupled into their own dedicated chambers.
-        // Never render external integration mount points as directories inside the Vault chamber.
-        directories = directories.filter(
-          (dir) =>
-            dir.provider !== "google_drive" &&
-            dir.provider !== "github" &&
-            dir.name !== "Google Drive" &&
-            dir.name !== "GitHub" &&
-            dir.name !== "Github",
-        );
+        // Never render external integration mount points as directories inside the Vault chamber root.
+        if (!specialView && !folderId) {
+          directories = directories.filter(
+            (dir) =>
+              dir.provider !== "google_drive" &&
+              dir.provider !== "github" &&
+              dir.name !== "Google Drive" &&
+              dir.name !== "GitHub" &&
+              dir.name !== "Github",
+          );
+        }
 
         if (specialView === "github" && isSearch) {
           const query = searchQuery.toLowerCase();
@@ -1279,7 +1292,8 @@ export default function FileBrowser({ specialView }) {
     const ownerParam = targetOwnerId ? `?ownerId=${targetOwnerId}` : "";
 
     if (dir.provider === "google_drive") {
-      if (!isObjectId(dir._id) && dir.name !== "Google Drive") {
+      const isRoot = !dir._id || dir.name === "Google Drive" || dir._id === "google-drive-root";
+      if (!isRoot) {
         // Direct Google Drive subfolder navigation
         navigate(`/dashboard/google-drive/${dir._id}${ownerParam}`);
       } else {
@@ -1287,8 +1301,11 @@ export default function FileBrowser({ specialView }) {
         navigate(`/dashboard/google-drive${ownerParam}`);
       }
     } else if (dir.provider === "github") {
-      if (dir.githubPath) {
-        navigate(`/dashboard/github/${dir.githubPath}${ownerParam}`);
+      const ghPath =
+        dir.githubPath ||
+        (dir.owner && dir.name ? `${dir.owner}/${dir.name}` : (dir.name?.includes("/") ? dir.name : ""));
+      if (ghPath && ghPath !== "github-root") {
+        navigate(`/dashboard/github/${ghPath}${ownerParam}`);
       } else {
         navigate(`/dashboard/github${ownerParam}`);
       }
@@ -1984,6 +2001,7 @@ export default function FileBrowser({ specialView }) {
       <div className="flex flex-wrap items-center justify-between gap-y-3 gap-x-2 pb-4 mb-4 border-b border-white/5 shrink-0 px-1 sm:px-2">
         <div className="flex items-center gap-2 min-w-0 max-w-full flex-wrap">
           {(data.parentDir ||
+            folderId ||
             (specialView === "shared" && folderId) ||
             specialView === "admin" ||
             specialView === "owner" ||
@@ -2024,10 +2042,10 @@ export default function FileBrowser({ specialView }) {
                       `/dashboard/github/${parts.slice(0, -1).join("/")}`,
                     );
                   }
-                } else if (data.parentDir === user?.rootDirId) {
-                  navigate("/dashboard");
-                } else {
+                } else if (data.parentDir && data.parentDir !== user?.rootDirId) {
                   navigate(`/dashboard/folder/${data.parentDir}`);
+                } else {
+                  navigate("/dashboard");
                 }
               }}
               onDrop={(e) => {
@@ -2241,7 +2259,7 @@ export default function FileBrowser({ specialView }) {
 
       {/* ── GIT REPOSITORY WORKSPACE TABS ── */}
       {specialView === "github-repo" && (
-        <div className="flex items-center gap-1.5 p-1 bg-white/40 dark:bg-[#111113]/60 backdrop-blur-md border border-slate-200 dark:border-white/5 rounded-2xl mb-4 overflow-x-auto custom-scrollbar">
+        <div className="shrink-0 flex items-center gap-1.5 p-1.5 bg-white/40 dark:bg-[#111113]/60 backdrop-blur-md border border-slate-200 dark:border-white/5 rounded-2xl mb-4 overflow-x-auto custom-scrollbar">
           {[
             { id: "files", label: "Files", icon: Folder, count: data.files.length + data.directories.length },
             { id: "commits", label: "Commits", icon: GitCommit },
@@ -2424,8 +2442,8 @@ export default function FileBrowser({ specialView }) {
             data-tour="file-grid"
             className={`pb-20 relative select-none flex-1 content-start ${
               viewMode === "list"
-                ? "flex flex-col gap-1"
-                : "grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 sm:gap-6 p-3 sm:p-6 rounded-2xl sm:rounded-[2.5rem] vault-glass-panel"
+                ? "flex flex-col gap-2 p-1 sm:p-2"
+                : "grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 sm:gap-6 p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] vault-glass-panel"
             }`}
             onMouseDown={handleMouseDown}
           >
@@ -2449,6 +2467,12 @@ export default function FileBrowser({ specialView }) {
                   height: selectionBox.height,
                 }}
               />
+            )}
+
+            {data.directories.length > 0 && data.files.length > 0 && (
+              <div className="col-span-full text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mb-1 mt-1">
+                Folders ({data.directories.length})
+              </div>
             )}
 
             {data.directories.map((dir) => (
@@ -2500,6 +2524,13 @@ export default function FileBrowser({ specialView }) {
                 }}
               />
             ))}
+
+            {data.directories.length > 0 && data.files.length > 0 && (
+              <div className="col-span-full text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mb-1 mt-6 sm:mt-8 border-t border-slate-200/40 dark:border-white/5 pt-4 sm:pt-6">
+                Files ({data.files.length})
+              </div>
+            )}
+
             {data.files.map((file) => (
               <AssetCard
                 id={`file-card-${file._id}`}

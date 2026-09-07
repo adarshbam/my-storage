@@ -107,6 +107,27 @@ export const markFileOpened = async (req, res, next) => {
   }
 };
 
+export const recordItemOpened = async (req, res, next) => {
+  try {
+    const data = await fileService.recordItemOpenedLogic({
+      userId: req.user.id,
+      itemId: req.body.itemId,
+      provider: req.body.provider || "local",
+      name: req.body.name,
+      type: req.body.type || "file",
+      size: req.body.size,
+      mimeType: req.body.mimeType,
+      metaUrl: req.body.metaUrl,
+      githubPath: req.body.githubPath,
+      metadata: req.body.metadata,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status && !res.headersSent) return res.status(error.status).json({ error: error.message });
+    next(error);
+  }
+};
+
 export const getFileById = async (req, res, next) => {
   const startTime = Date.now();
   let bytesStreamed = false;

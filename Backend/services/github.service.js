@@ -9,10 +9,11 @@ import path from "path";
 import { Readable } from "stream";
 import SharedAccess from "../models/sharedAccessModel.js";
 import { invalidateUserSessions, cacheGet, cacheSet } from "../databases/redis.js";
-import { getObjectFromB2 } from "../integrations/storage/s3.client.js";
+import { getObjectFromB2, uploadToB2 } from "../integrations/storage/s3.client.js";
 import { resolveIntegrationOwnerId } from "../utils/integrationHelper.js";
 import { withTransaction } from "../utils/transaction.js";
-import { deleteItemsBatchLogic } from "./directory.service.js";
+import { deleteItemsBatchLogic, getDirectoryPath } from "./directory.service.js";
+import { recordItemOpenedLogic } from "./file.service.js";
 
 async function getAuthenticatedAccessToken(req, requireWrite = false) {
   try {
@@ -344,6 +345,20 @@ export const getRepositoryContentsLogic = async ({ owner, repo, path: reqPath, r
     }
   }
 
+  if (userId && owner && repo) {
+    const isSub = Boolean(reqPath && reqPath.trim());
+    const openedPath = isSub ? `${owner}/${repo}/${reqPath.trim()}` : `${owner}/${repo}`;
+    const openedName = isSub ? reqPath.trim().split("/").pop() : repo;
+    recordItemOpenedLogic({
+      userId,
+      itemId: openedPath,
+      provider: "github",
+      name: openedName,
+      type: "directory",
+      githubPath: openedPath,
+    }).catch(() => {});
+  }
+
   return {
     directories,
     files,
@@ -360,6 +375,20 @@ export const getRepositoryContentsLogic = async ({ owner, repo, path: reqPath, r
 };
 
 export const getFilesLogic = async ({ owner, repo, path: reqPath, ref, action, req, res }) => {
+  const currentUserId = req.user?.id || req.user?._id;
+  if (currentUserId && owner && repo && reqPath) {
+    const fileName = reqPath.split("/").pop();
+    const githubPath = `${owner}/${repo}/${reqPath}`;
+    recordItemOpenedLogic({
+      userId: currentUserId,
+      itemId: githubPath,
+      provider: "github",
+      name: fileName,
+      type: "file",
+      githubPath,
+    }).catch(() => {});
+  }
+
   const cacheKey = `gh:file:${owner}:${repo}:${ref || "default"}:${reqPath}`;
   const range = req.headers.range;
 
@@ -2547,15 +2576,23 @@ export const downloadReleaseAssetToVaultLogic = async ({ owner, repo, assetId, a
   const auth = await getAuthenticatedAccessToken(req, true);
   const { githubAccessToken, ownerId } = auth;
 
-  const response = await fetch(
+  let response = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/releases/assets/${assetId}`,
     {
       headers: {
         Authorization: `Bearer ${githubAccessToken}`,
         Accept: "application/octet-stream",
       },
+      redirect: "manual",
     }
   );
+
+  if (response.status === 302 || response.status === 301) {
+    const downloadLocation = response.headers.get("location");
+    if (downloadLocation) {
+      response = await fetch(downloadLocation);
+    }
+  }
 
   if (!response.ok) {
     const err = new Error("Failed to download release asset from GitHub");
@@ -2588,6 +2625,8 @@ export const downloadReleaseAssetToVaultLogic = async ({ owner, repo, assetId, a
     body: buffer,
     contentType: "application/octet-stream",
   });
+
+  await User.findByIdAndUpdate(ownerId, { $inc: { usedStorage: buffer.length } });
 
   return {
     message: `Release asset '${fileName}' downloaded to Vault successfully!`,
@@ -2750,14 +2789,23 @@ export const importWorkflowArtifactToVaultLogic = async ({ owner, repo, artifact
   const auth = await getAuthenticatedAccessToken(req, true);
   const { githubAccessToken, ownerId } = auth;
 
-  const response = await fetch(
+  let response = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/actions/artifacts/${artifactId}/zip`,
     {
       headers: {
         Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
       },
+      redirect: "manual",
     }
   );
+
+  if (response.status === 302 || response.status === 301) {
+    const downloadLocation = response.headers.get("location");
+    if (downloadLocation) {
+      response = await fetch(downloadLocation);
+    }
+  }
 
   if (!response.ok) {
     const err = new Error("Failed to download workflow artifact from GitHub");
@@ -2767,9 +2815,8 @@ export const importWorkflowArtifactToVaultLogic = async ({ owner, repo, artifact
 
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  const fileName = (artifactName || `artifact_${artifactId}`).endsWith(".zip")
-    ? artifactName
-    : `${artifactName || `artifact_${artifactId}`}.zip`;
+  const rawName = artifactName || `artifact_${artifactId}`;
+  const fileName = rawName.endsWith(".zip") ? rawName : `${rawName}.zip`;
 
   const parentId = destinationFolderId && destinationFolderId !== "root" ? destinationFolderId : null;
   const currentPath = parentId ? await getDirectoryPath(parentId) : [];
@@ -2792,8 +2839,49 @@ export const importWorkflowArtifactToVaultLogic = async ({ owner, repo, artifact
     contentType: "application/zip",
   });
 
+  await User.findByIdAndUpdate(ownerId, { $inc: { usedStorage: buffer.length } });
+
   return {
     message: `Artifact '${fileName}' imported into Vault successfully!`,
     file: fileDoc,
   };
+};
+
+export const downloadWorkflowArtifactLogic = async ({ owner, repo, artifactId, req, res }) => {
+  const auth = await getAuthenticatedAccessToken(req, false);
+  const { githubAccessToken } = auth;
+
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/actions/artifacts/${artifactId}/zip`,
+    {
+      headers: {
+        Authorization: `Bearer ${githubAccessToken}`,
+        Accept: "application/vnd.github+json",
+      },
+      redirect: "manual",
+    }
+  );
+
+  const downloadUrl = response.headers.get("location");
+
+  if (req.query.json === "true") {
+    if (downloadUrl) {
+      return res.status(200).json({ downloadUrl });
+    }
+  }
+
+  if ((response.status === 302 || response.status === 301) && downloadUrl) {
+    return res.redirect(downloadUrl);
+  }
+
+  if (!response.ok) {
+    const err = new Error("Failed to download workflow artifact from GitHub");
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Disposition", `attachment; filename="artifact-${artifactId}.zip"`);
+  return res.send(Buffer.from(arrayBuffer));
 };

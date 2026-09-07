@@ -15,6 +15,7 @@ import { updateParentDirectorySize } from "../controllers/fileController.js";
 import { uploadToB2, uploadStreamToB2, getObjectFromB2, deleteFromB2 } from "../integrations/storage/s3.client.js";
 import { withTransaction } from "../utils/transaction.js";
 import { deleteItemsBatchLogic } from "./directory.service.js";
+import { recordItemOpenedLogic } from "./file.service.js";
 
 import {
   resolveIntegrationOwnerId,
@@ -290,6 +291,17 @@ export const listDriveFolderLogic = async ({ folderId, req }) => {
   // frontend's (parentId !== "root") check works correctly.
   const parentId = rawParentId === rootId ? "root" : rawParentId;
 
+  const currentUserId = req.user?.id || req.user?._id;
+  if (currentUserId && folderMeta.data.name) {
+    recordItemOpenedLogic({
+      userId: currentUserId,
+      itemId: folderId,
+      provider: "google_drive",
+      name: folderMeta.data.name,
+      type: "directory",
+    }).catch(() => {});
+  }
+
   return {
     directories: mappedItems.filter((i) => i.type === "directory"),
     files: mappedItems.filter((i) => i.type === "file"),
@@ -310,6 +322,19 @@ export const getFileFromDriveLogic = async ({ fileId, action, req, res }) => {
   });
 
   const { name, mimeType } = metaRes.data;
+
+  const currentUserId = req.user?.id || req.user?._id;
+  if (currentUserId && name) {
+    recordItemOpenedLogic({
+      userId: currentUserId,
+      itemId: fileId,
+      provider: "google_drive",
+      name,
+      type: "file",
+      size: Number(metaRes.data.size) || 0,
+      mimeType,
+    }).catch(() => {});
+  }
 
   // Google Docs/Sheets/Slides can't be streamed directly — export instead
   const exportMimeMap = {

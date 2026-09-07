@@ -647,3 +647,16 @@ export const importWorkflowArtifactSchema = {
   }).optional(),
 };
 
+export const downloadWorkflowArtifactSchema = {
+  params: z.object({
+    owner: z.string().min(1),
+    repo: z.string().min(1),
+    artifactId: z.string().min(1),
+  }),
+  query: z.object({
+    ownerId: z.string().optional(),
+    json: z.string().optional(),
+  }).optional(),
+};
+
+

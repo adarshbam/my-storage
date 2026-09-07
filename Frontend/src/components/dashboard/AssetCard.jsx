@@ -17,6 +17,7 @@ import {
   History,
   CloudUpload,
   FolderGit2,
+  FolderOpen,
 } from "lucide-react";
 import getFileImage, { renderFileIcon } from "../../lib/FileImages";
 import { formatSize, isSpecialFolder } from "../../lib/utils";
@@ -308,7 +309,7 @@ export default function AssetCard({
               ? "bg-accent-primary/20 dark:bg-emerald-950/70 border-2 border-accent-primary dark:border-emerald-400 ring-4 ring-accent-primary/60 shadow-[0_0_40px_rgba(16,185,129,0.85),0_0_80px_rgba(16,185,129,0.45),inset_0_0_20px_rgba(16,185,129,0.3)] scale-[1.03] z-30"
               : "bg-white dark:bg-vault-surface/80 border-slate-200/90 dark:border-white/10 shadow-sm hover:shadow-md"
           }
-          ${selected && !isDragOver ? "ring-2 ring-accent-primary bg-accent-soft/30 dark:bg-accent-soft/20 border-accent-border shadow-md" : !isDragOver ? "hover:bg-slate-50/90 dark:hover:bg-vault-surface hover:border-slate-300 dark:hover:border-white/20" : ""}
+          ${selected && !isDragOver ? "border border-accent-primary ring-2 ring-accent-primary ring-inset bg-accent-soft/30 dark:bg-accent-soft/20 shadow-md" : !isDragOver ? "hover:bg-slate-50/90 dark:hover:bg-vault-surface hover:border-slate-300 dark:hover:border-white/20" : ""}
           ${isCut ? "opacity-35" : ""}
           ${isBeingDragged ? "opacity-40 scale-95 border-dashed border-accent-primary/60" : ""}
         `}
@@ -392,6 +393,18 @@ export default function AssetCard({
 
         {/* Action buttons for list row */}
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {!isTrash && isDirectory && onNavigate && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onNavigate(item);
+              }}
+              className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-black/40 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg transition-all"
+              title="Open"
+            >
+              <FolderOpen size={16} />
+            </button>
+          )}
           {!isTrash && !isDirectory && onPreview && (
             <button
               onClick={(e) => {
@@ -402,6 +415,35 @@ export default function AssetCard({
               title="Preview"
             >
               <ExternalLink size={16} />
+            </button>
+          )}
+          {!isTrash && !isSpecial && onStarred && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onStarred(item);
+              }}
+              className={`p-1.5 bg-slate-100 dark:bg-black/40 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg transition-all ${
+                item.isStarred || item.starred ? "text-[#FF7A3D]" : "text-slate-400 hover:text-[#FF7A3D]"
+              }`}
+              title="Priority"
+            >
+              <Star
+                size={16}
+                fill={item.isStarred || item.starred ? "#FF7A3D" : "none"}
+              />
+            </button>
+          )}
+          {!isTrash && !isSpecial && onShare && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare(item);
+              }}
+              className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 bg-slate-100 dark:bg-black/40 hover:bg-purple-500/10 rounded-lg transition-all"
+              title="Share"
+            >
+              <Share2 size={16} />
             </button>
           )}
           {onDetails && (
@@ -493,7 +535,7 @@ export default function AssetCard({
             ? "bg-accent-primary/20 dark:bg-emerald-950/80 border-2 border-accent-primary dark:border-emerald-400 ring-4 ring-accent-primary/60 shadow-[0_0_50px_rgba(16,185,129,0.9),0_0_100px_rgba(16,185,129,0.5),inset_0_0_30px_rgba(16,185,129,0.35)] scale-[1.06] -translate-y-2 z-30"
             : "bg-white dark:bg-vault-surface/80 border border-slate-200/90 dark:border-white/10 shadow-sm hover:shadow-xl dark:hover:shadow-black/60"
         }
-        ${selected && !isDragOver ? `ring-2 ring-accent-primary bg-accent-soft/30 dark:bg-accent-soft/20 border-accent-border shadow-md` : !isDragOver ? "" : ""}
+        ${selected && !isDragOver ? `border border-accent-primary ring-2 ring-accent-primary ring-inset bg-accent-soft/30 dark:bg-accent-soft/20 shadow-lg shadow-accent-glow/20` : !isDragOver ? "" : ""}
         ${isHovered && !selected && !isDragOver ? `border-slate-300 dark:border-white/25 ${envClass}` : ""}
         ${isCut ? "opacity-35" : ""}
         ${isBeingDragged ? "opacity-40 scale-95 border-dashed border-accent-primary/60" : ""}
@@ -752,7 +794,7 @@ export default function AssetCard({
               </button>
             )}
 
-            {!isTrash && !effectiveReadOnly && !isSpecial && onStarred && (
+            {!isTrash && !isSpecial && onStarred && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -781,7 +823,7 @@ export default function AssetCard({
                 Rename
               </button>
             )}
-            {!isTrash && !effectiveReadOnly && !isSpecial && onShare && (
+            {!isTrash && !isSpecial && onShare && (
               <button
                 onClick={() => {
                   closeMenu();
@@ -967,7 +1009,7 @@ export default function AssetCard({
       {/* ── Selected checkmark ── */}
       {selected && (
         <div
-          className={`absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center border-2 border-white/20 dark:border-vault-surface z-10 shadow-lg ${
+          className={`absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center border-2 border-white/90 dark:border-vault-surface z-10 shadow-lg ${
             isTrash
               ? "bg-danger-accent shadow-[0_0_15px_rgba(255,90,122,0.6)] text-white"
               : provider === "github" || item.name?.toLowerCase() === "github"

@@ -50,6 +50,7 @@ import {
   dispatchWorkflow,
   listWorkflowArtifacts,
   importWorkflowArtifactToVault,
+  downloadWorkflowArtifact,
 } from "../controllers/githubController.js";
 import { validate } from "../middlewares/validationMiddleware.js";
 import {
@@ -100,6 +101,7 @@ import {
   dispatchWorkflowSchema,
   listWorkflowArtifactsSchema,
   importWorkflowArtifactSchema,
+  downloadWorkflowArtifactSchema,
 } from "../validators/githubSchema.js";
 import {
   heavyOpLimiter,
@@ -570,6 +572,13 @@ router.post(
   throttle(3000, 2, "gh-artifact-import"),
   validate(importWorkflowArtifactSchema),
   importWorkflowArtifactToVault
+);
+
+router.get(
+  "/repositories/:owner/:repo/actions/artifacts/:artifactId/download",
+  directoryReadLimiter,
+  validate(downloadWorkflowArtifactSchema),
+  downloadWorkflowArtifact
 );
 
 export default router;

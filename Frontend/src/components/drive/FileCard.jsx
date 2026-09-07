@@ -124,7 +124,7 @@ export default function FileCard({
           : "vault-card-interactive flex flex-col p-4 rounded-2xl bg-white dark:bg-vault-surface/80 border border-slate-200/90 dark:border-white/10 hover:border-accent-border/60 shadow-sm hover:shadow-xl dark:hover:shadow-black/50 transition-all duration-200 backdrop-blur-xl"
       } ${
         selected
-          ? "ring-2 ring-accent-primary bg-accent-soft/30 dark:bg-accent-soft/20 border-accent-border shadow-md"
+          ? "border border-accent-primary ring-2 ring-accent-primary ring-inset bg-accent-soft/30 dark:bg-accent-soft/20 shadow-md"
           : ""
       }`}
       onClick={(e) => {

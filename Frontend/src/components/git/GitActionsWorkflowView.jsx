@@ -6,6 +6,7 @@ import {
   Clock,
   RotateCw,
   Download,
+  FolderPlus,
   ExternalLink,
   Loader2,
   Workflow,
@@ -19,7 +20,9 @@ import {
   dispatchWorkflow,
   getWorkflowArtifacts,
   importWorkflowArtifactToVault,
+  getWorkflowArtifactDownloadUrl,
 } from "../../api/github.api";
+import { SERVER_URL } from "../../lib/api";
 import Button from "../ui/Button";
 import { formatSize } from "../../lib/utils";
 
@@ -41,6 +44,8 @@ export default function GitActionsWorkflowView({
   // Artifacts state
   const [activeRunArtifacts, setActiveRunArtifacts] = useState({});
   const [loadingArtifacts, setLoadingArtifacts] = useState({});
+  const [downloadingArtifacts, setDownloadingArtifacts] = useState({});
+  const [savingArtifacts, setSavingArtifacts] = useState({});
 
   const fetchData = async () => {
     try {
@@ -95,14 +100,49 @@ export default function GitActionsWorkflowView({
     }
   };
 
+  const handleDownloadArtifact = async (artifact) => {
+    try {
+      setDownloadingArtifacts((prev) => ({ ...prev, [artifact.id]: true }));
+      let downloadUrl = null;
+      try {
+        const res = await getWorkflowArtifactDownloadUrl(owner, repo, artifact.id);
+        if (res && res.downloadUrl) {
+          downloadUrl = res.downloadUrl;
+        }
+      } catch (apiErr) {
+        console.warn("Could not get direct URL from JSON endpoint, falling back to direct navigation:", apiErr);
+      }
+
+      if (downloadUrl) {
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = artifact.name.endsWith(".zip") ? artifact.name : `${artifact.name}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        window.location.href = `${SERVER_URL}/github/repositories/${owner}/${repo}/actions/artifacts/${artifact.id}/download`;
+      }
+    } catch (err) {
+      alert(err.message || "Failed to download artifact");
+    } finally {
+      setTimeout(() => {
+        setDownloadingArtifacts((prev) => ({ ...prev, [artifact.id]: false }));
+      }, 1200);
+    }
+  };
+
   const handleImportArtifactToVault = async (artifact) => {
     try {
+      setSavingArtifacts((prev) => ({ ...prev, [artifact.id]: true }));
       const res = await importWorkflowArtifactToVault(owner, repo, artifact.id, {
         artifactName: artifact.name,
       });
       alert(res.message || "Artifact zip package imported into Vault successfully!");
     } catch (err) {
       alert(err.message || "Failed to import artifact into Vault");
+    } finally {
+      setSavingArtifacts((prev) => ({ ...prev, [artifact.id]: false }));
     }
   };
 
@@ -289,24 +329,45 @@ export default function GitActionsWorkflowView({
                       {activeRunArtifacts[run.id].map((art) => (
                         <div
                           key={art.id}
-                          className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#1c1c1f] border border-slate-200 dark:border-white/5 text-xs"
+                          className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-[#1c1c1f] border border-slate-200 dark:border-white/5 text-xs gap-3 shadow-sm"
                         >
                           <div className="min-w-0 pr-2">
-                            <p className="font-mono font-bold text-slate-800 dark:text-slate-200 truncate">
-                              {art.name}.zip
+                            <p className="font-mono font-bold text-slate-800 dark:text-slate-200 truncate flex items-center gap-1.5">
+                              <Archive size={13} className="text-cyan-400 shrink-0" />
+                              <span className="truncate">{art.name}.zip</span>
                             </p>
-                            <p className="text-[10px] text-slate-400">
-                              {formatSize(art.size_in_bytes)}
+                            <p className="text-[10px] text-slate-400 mt-0.5">
+                              {formatSize(art.size_in_bytes)} {art.expired ? "• Expired" : ""}
                             </p>
                           </div>
-                          <button
-                            onClick={() => handleImportArtifactToVault(art)}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-[11px] transition-colors shrink-0"
-                            title="Import zip artifact to Vault"
-                          >
-                            <Download size={12} />
-                            <span>Save to Vault</span>
-                          </button>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={() => handleDownloadArtifact(art)}
+                              disabled={downloadingArtifacts[art.id] || art.expired}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 disabled:opacity-50 font-bold text-[11px] transition-colors cursor-pointer"
+                              title="Download zip artifact directly to your computer"
+                            >
+                              {downloadingArtifacts[art.id] ? (
+                                <Loader2 size={12} className="animate-spin" />
+                              ) : (
+                                <Download size={12} />
+                              )}
+                              <span>Download</span>
+                            </button>
+                            <button
+                              onClick={() => handleImportArtifactToVault(art)}
+                              disabled={savingArtifacts[art.id] || art.expired}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 disabled:opacity-50 font-bold text-[11px] transition-colors cursor-pointer"
+                              title="Import zip artifact into Vault storage"
+                            >
+                              {savingArtifacts[art.id] ? (
+                                <Loader2 size={12} className="animate-spin" />
+                              ) : (
+                                <FolderPlus size={12} />
+                              )}
+                              <span>Save to Vault</span>
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

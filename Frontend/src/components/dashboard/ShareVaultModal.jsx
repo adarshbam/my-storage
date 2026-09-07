@@ -144,6 +144,8 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
             name: item.name,
             size: item.size || 0,
             extension: item.extension || "",
+            githubPath: item.githubPath || "",
+            metaUrl: item.metaUrl || item.webViewLink || item.url || "",
           })),
         }),
         credentials: "include",

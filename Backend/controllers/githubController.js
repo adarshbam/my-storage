@@ -860,3 +860,18 @@ export const importWorkflowArtifactToVault = async (req, res, next) => {
   }
 };
 
+export const downloadWorkflowArtifact = async (req, res, next) => {
+  try {
+    await githubService.downloadWorkflowArtifactLogic({
+      owner: req.params.owner,
+      repo: req.params.repo,
+      artifactId: req.params.artifactId,
+      req,
+      res,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+

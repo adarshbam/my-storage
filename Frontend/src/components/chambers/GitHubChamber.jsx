@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, lazy, Suspense } from "react";
-import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Link, useOutletContext } from "react-router-dom";
 import { SERVER_URL } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { usePlan } from "../../context/PlanContext";
@@ -8,10 +8,12 @@ import { cn, formatSize } from "../../lib/utils";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import AssetCard from "../dashboard/AssetCard";
+import FileDetailsModal from "../dashboard/FileDetailsModal";
 import FileBrowserSkeleton from "../drive/FileBrowserSkeleton";
 import EmptyState from "../drive/EmptyState";
 import { VaultGitIcon } from "../ui/VaultIcons";
 import {
+  ArrowLeft,
   GitBranch,
   GitCommit,
   GitPullRequest,
@@ -31,6 +33,7 @@ import {
   Loader2,
   Trash2,
   Clipboard,
+  Share2,
 } from "lucide-react";
 
 import GitCommitHistoryView from "../git/GitCommitHistoryView";
@@ -42,7 +45,7 @@ import GitBranchDropdown from "../git/GitBranchDropdown";
 import GitCloneRepoModal from "../git/GitCloneRepoModal";
 import GitReleasesView from "../git/GitReleasesView";
 import GitActionsWorkflowView from "../git/GitActionsWorkflowView";
-import { toggleStar } from "../../api/files.api";
+import { toggleStar, recordItemOpened } from "../../api/files.api";
 
 // Lazy-load Preview Modal
 const FilePreviewModal = lazy(() => import("../drive/FilePreviewModal"));
@@ -94,6 +97,140 @@ export default function GitHubChamber() {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("tab", tabId);
     setSearchParams(nextParams);
+  };
+
+  // Smart back navigation: parent subfolder if inside repo, or GitHub chamber if at repo root
+  const handleGoBack = () => {
+    if (pathSegments.length > 2) {
+      const parentPath = pathSegments.slice(0, -1).join("/");
+      navigate(`/dashboard/github/${parentPath}`);
+    } else {
+      navigate("/dashboard/github");
+    }
+  };
+
+  const { openShareModal, downloadFile } = useOutletContext() || {};
+  const [detailsItem, setDetailsItem] = useState(null);
+  const [lastSelectedId, setLastSelectedId] = useState(null);
+
+  // Toggle Star
+  const handleToggleStar = async (item) => {
+    try {
+      const isFolder = item.type === "directory";
+      const owner = item.owner || githubOwner;
+      const repo = item.repo || githubRepo;
+      const ghPath = item.githubPath || (owner && repo ? `${owner}/${repo}` : item.name);
+      const rawId = item._id || item.id || ghPath;
+
+      const res = await toggleStar(rawId, {
+        itemId: rawId,
+        type: isFolder ? "directory" : "file",
+        provider: "github",
+        name: item.name,
+        size: item.size || 0,
+        mimeType: item.mimeType || "",
+        metaUrl: item.html_url || item.url || "",
+        githubPath: ghPath,
+      });
+
+      setData((prev) => {
+        const isStarred = res.starred;
+        const targetId = rawId;
+        const updateItem = (i) =>
+          (i._id === targetId || i.id === targetId || i.githubPath === ghPath)
+            ? { ...i, isStarred, starred: isStarred }
+            : i;
+        return {
+          directories: prev.directories.map(updateItem),
+          files: prev.files.map(updateItem),
+        };
+      });
+    } catch (err) {
+      console.error("Failed to toggle star:", err);
+    }
+  };
+
+  // Download Repo, Folder, or File
+  const handleDownload = (item) => {
+    if (!item) return;
+    const isFolder = item.type === "directory";
+    const parts = (item.githubPath || "").split("/").filter(Boolean);
+    const owner = parts[0] || githubOwner;
+    const repo = parts[1] || githubRepo;
+    const queryParams = selectedBranch ? `?ref=${encodeURIComponent(selectedBranch)}` : "";
+    let url = "";
+
+    if (isFolder) {
+      if (parts.length <= 2) {
+        url = `${SERVER_URL}/github/repositories/${owner}/${repo}/download${queryParams}`;
+      } else {
+        const sub = parts.slice(2).join("/");
+        url = `${SERVER_URL}/github/repositories/${owner}/${repo}/folder-download/${sub}${queryParams}`;
+      }
+    } else {
+      url = `${SERVER_URL}/github/file/${item.githubPath}?action=download${queryParams.replace("?", "&")}`;
+    }
+
+    const downloadName = isFolder ? `${item.name}.zip` : item.name;
+    if (downloadFile) {
+      downloadFile(url, downloadName);
+    } else {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = downloadName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  // Selection Handler
+  const handleSelect = (item, e) => {
+    const itemId = item._id || item.id || item.githubPath;
+    if (e && e.shiftKey && lastSelectedId) {
+      const all = [...data.directories, ...data.files];
+      const lastIdx = all.findIndex((i) => (i._id || i.id || i.githubPath) === lastSelectedId);
+      const currIdx = all.findIndex((i) => (i._id || i.id || i.githubPath) === itemId);
+      if (lastIdx !== -1 && currIdx !== -1) {
+        const start = Math.min(lastIdx, currIdx);
+        const end = Math.max(lastIdx, currIdx);
+        const range = all.slice(start, end + 1);
+        setSelectedItems((prev) => {
+          const set = new Set(prev.map((i) => i._id || i.id || i.githubPath));
+          const added = range.filter((i) => !set.has(i._id || i.id || i.githubPath));
+          return [...prev, ...added];
+        });
+        setLastSelectedId(itemId);
+        return;
+      }
+    }
+
+    if (e && (e.ctrlKey || e.metaKey)) {
+      setLastSelectedId(itemId);
+      setSelectedItems((prev) =>
+        prev.some((i) => (i._id || i.id || i.githubPath) === itemId)
+          ? prev.filter((i) => (i._id || i.id || i.githubPath) !== itemId)
+          : [...prev, item]
+      );
+    } else {
+      setLastSelectedId(itemId);
+      setSelectedItems([item]);
+    }
+  };
+
+  // File Preview with recent activity logging
+  const handleFilePreview = (file) => {
+    setPreviewFile(file);
+    if (file) {
+      recordItemOpened({
+        itemId: file.githubPath || file._id || file.name,
+        provider: "github",
+        name: file.name,
+        type: "file",
+        size: file.size || 0,
+        githubPath: file.githubPath || "",
+      }).catch(() => {});
+    }
   };
 
   // Branch change
@@ -244,6 +381,19 @@ export default function GitHubChamber() {
       }
 
       setData({ directories, files });
+
+      if (isRepoView && githubOwner && githubRepo) {
+        const isSub = Boolean(githubSubPath);
+        const openedPath = isSub ? `${githubOwner}/${githubRepo}/${githubSubPath}` : `${githubOwner}/${githubRepo}`;
+        const openedName = isSub ? githubSubPath.split("/").pop() : githubRepo;
+        recordItemOpened({
+          itemId: openedPath,
+          provider: "github",
+          name: openedName,
+          type: "directory",
+          githubPath: openedPath,
+        }).catch(() => {});
+      }
     } catch (err) {
       console.error("Error fetching GitHub data:", err);
       setError(err.message || "Failed to communicate with GitHub API");
@@ -299,34 +449,6 @@ export default function GitHubChamber() {
     }
   };
 
-  // Toggle Star
-  const handleToggleStar = async (item) => {
-    try {
-      const rawId = item._id || item.githubPath || item.name;
-      const res = await toggleStar(rawId, {
-        itemId: rawId,
-        type: item.type,
-        provider: "github",
-        name: item.name,
-        size: item.size || 0,
-        githubPath: item.githubPath || "",
-      });
-
-      setData((prev) => {
-        const isStarred = res.starred;
-        const updateItem = (i) =>
-          i._id === item._id || i.githubPath === item.githubPath
-            ? { ...i, isStarred, starred: isStarred }
-            : i;
-        return {
-          directories: prev.directories.map(updateItem),
-          files: prev.files.map(updateItem),
-        };
-      });
-    } catch (err) {
-      console.error("Failed to toggle star:", err);
-    }
-  };
 
   // Paste from clipboard into GitHub repo
   const handlePasteIntoRepo = async () => {
@@ -391,15 +513,30 @@ export default function GitHubChamber() {
   const allItems = [...data.directories, ...data.files];
 
   return (
-    <div className="flex-1 flex flex-col h-full min-w-0">
+    <div className="flex-1 min-w-0 w-full flex flex-col relative">
       {/* ── CHAMBER HEADER TOOLBAR ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-200 dark:border-white/5">
+      <div className="shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-200 dark:border-white/5">
         {/* Breadcrumb Navigation & Branch Dropdown */}
         <div className="flex items-center gap-2 flex-wrap min-w-0">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-linkgit-accent/10 border border-linkgit-accent/20 text-linkgit-accent font-bold text-sm">
+          {/* Smart Back Button: hidden on GitHub chamber root, navigates up to parent or chamber */}
+          {isRepoView && (
+            <button
+              onClick={handleGoBack}
+              className="p-2 text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all border border-slate-200 dark:border-white/10 mr-1 shadow-sm shrink-0 active:scale-95 cursor-pointer"
+              title={pathSegments.length > 2 ? "Go to Parent Folder" : "Back to GitHub Repositories"}
+            >
+              <ArrowLeft size={18} />
+            </button>
+          )}
+
+          <Link
+            to="/dashboard/github"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-linkgit-accent/10 hover:bg-linkgit-accent/20 border border-linkgit-accent/20 hover:border-linkgit-accent/40 text-linkgit-accent font-bold text-sm transition-all duration-150 cursor-pointer shadow-sm active:scale-95 shrink-0"
+            title="Return to GitHub Repositories"
+          >
             <VaultGitIcon size={18} />
             <span>GitHub</span>
-          </div>
+          </Link>
 
           {breadcrumbList.slice(1).map((b, idx) => (
             <div key={b.path} className="flex items-center gap-1 text-sm font-medium">
@@ -434,6 +571,47 @@ export default function GitHubChamber() {
 
         {/* Header Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap shrink-0">
+          <Button
+            onClick={() => {
+              if (selectedItems.length > 0) {
+                openShareModal?.(selectedItems);
+              } else if (isRepoView) {
+                openShareModal?.([
+                  {
+                    _id: `${githubOwner}/${githubRepo}`,
+                    name: `${githubOwner}/${githubRepo}`,
+                    type: "directory",
+                    provider: "github",
+                    githubPath: `${githubOwner}/${githubRepo}`,
+                    metaUrl: `https://github.com/${githubOwner}/${githubRepo}`,
+                  },
+                ]);
+              } else {
+                openShareModal?.([
+                  {
+                    _id: "github-chamber",
+                    name: "GitHub Chamber",
+                    type: "chamber",
+                    provider: "github",
+                    metaUrl: "https://github.com",
+                  },
+                ]);
+              }
+            }}
+            variant="outline"
+            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border-linkgit-accent/30 text-linkgit-accent hover:bg-linkgit-accent/10 transition-all"
+            title="Share via Secure Relay"
+          >
+            <Share2 size={15} />
+            <span>
+              {selectedItems.length > 0
+                ? `Share (${selectedItems.length})`
+                : isRepoView
+                ? "Share Repo"
+                : "Share Chamber"}
+            </span>
+          </Button>
+
           {!isRepoView ? (
             <>
               <Button
@@ -518,7 +696,7 @@ export default function GitHubChamber() {
 
       {/* ── GIT REPO WORKSPACE TABS (WHEN INSIDE REPO) ── */}
       {isRepoView && (
-        <div className="flex items-center gap-1.5 p-1 bg-white/40 dark:bg-[#111113]/60 backdrop-blur-md border border-slate-200 dark:border-white/5 rounded-2xl mb-4 overflow-x-auto custom-scrollbar">
+        <div className="shrink-0 flex items-center gap-1.5 p-1.5 bg-white/40 dark:bg-[#111113]/60 backdrop-blur-md border border-slate-200 dark:border-white/5 rounded-2xl mb-4 overflow-x-auto custom-scrollbar">
           {[
             { id: "files", label: "Files", icon: Folder, count: data.files.length + data.directories.length },
             { id: "commits", label: "Commits", icon: GitCommit },
@@ -670,18 +848,18 @@ export default function GitHubChamber() {
           ) : null}
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto custom-scrollbar pb-12">
+        <div className="flex-1 pb-16 px-1 pt-2 sm:px-2">
           {/* Directories / Repositories */}
           {data.directories.length > 0 && (
-            <div className="mb-6">
-              <h4 className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mb-3">
+            <div className="mb-8 sm:mb-10">
+              <h4 className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mb-4 sm:mb-5">
                 {!isRepoView ? `Repositories (${data.directories.length})` : `Folders (${data.directories.length})`}
               </h4>
               <div
                 className={
                   viewMode === "grid"
-                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
-                    : "flex flex-col gap-1.5"
+                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6 p-1.5 sm:p-2"
+                    : "flex flex-col gap-2 p-1 sm:p-2"
                 }
               >
                 {data.directories.map((dir) => {
@@ -695,9 +873,14 @@ export default function GitHubChamber() {
                       item={dir}
                       viewMode={viewMode}
                       specialView={!isRepoView ? "github" : "github-repo"}
+                      selected={selectedItems.some((i) => (i._id || i.githubPath) === (dir._id || dir.githubPath))}
+                      onSelect={handleSelect}
                       onNavigate={() => navigate(targetUrl)}
                       onPreview={() => navigate(targetUrl)}
                       onStarred={handleToggleStar}
+                      onShare={(item) => (openShareModal ? openShareModal([item]) : null)}
+                      onDownload={handleDownload}
+                      onDetails={(item) => setDetailsItem(item)}
                       onCopy={(item) => copyItems([item], "github")}
                       onCut={(item) => cutItems([item], "github")}
                     />
@@ -709,15 +892,15 @@ export default function GitHubChamber() {
 
           {/* Files */}
           {data.files.length > 0 && (
-            <div>
-              <h4 className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mb-3">
+            <div className="mb-8 sm:mb-10">
+              <h4 className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mb-4 sm:mb-5">
                 Files ({data.files.length})
               </h4>
               <div
                 className={
                   viewMode === "grid"
-                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
-                    : "flex flex-col gap-1.5"
+                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6 p-1.5 sm:p-2"
+                    : "flex flex-col gap-2 p-1 sm:p-2"
                 }
               >
                 {data.files.map((file) => (
@@ -726,8 +909,14 @@ export default function GitHubChamber() {
                     item={file}
                     viewMode={viewMode}
                     specialView="github-repo"
-                    onPreview={(item) => setPreviewFile(item)}
+                    selected={selectedItems.some((i) => (i._id || i.githubPath) === (file._id || file.githubPath))}
+                    onSelect={handleSelect}
+                    onPreview={handleFilePreview}
                     onStarred={handleToggleStar}
+                    onShare={(item) => (openShareModal ? openShareModal([item]) : null)}
+                    onDownload={handleDownload}
+                    onDetails={(item) => setDetailsItem(item)}
+                    onViewHistory={(item) => setFileForHistory(item)}
                     onCopy={(item) => copyItems([item], "github")}
                     onCut={(item) => cutItems([item], "github")}
                   />
@@ -868,6 +1057,15 @@ export default function GitHubChamber() {
             Clear
           </button>
         </div>
+      )}
+
+      {/* ── FILE DETAILS MODAL ── */}
+      {detailsItem && (
+        <FileDetailsModal
+          item={detailsItem}
+          isOpen={Boolean(detailsItem)}
+          onClose={() => setDetailsItem(null)}
+        />
       )}
     </div>
   );

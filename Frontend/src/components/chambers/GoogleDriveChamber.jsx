@@ -14,6 +14,7 @@ import FileBrowserSkeleton from "../drive/FileBrowserSkeleton";
 import EmptyState from "../drive/EmptyState";
 import { VaultDriveIcon } from "../ui/VaultIcons";
 import {
+  ArrowLeft,
   Upload,
   FolderPlus,
   Loader2,
@@ -34,8 +35,9 @@ import {
   ExternalLink,
   X,
   ClipboardPaste,
+  Share2,
 } from "lucide-react";
-import { toggleStar } from "../../api/files.api";
+import { toggleStar, recordItemOpened } from "../../api/files.api";
 
 // Lazy-load Preview Modal
 const FilePreviewModal = lazy(() => import("../drive/FilePreviewModal"));
@@ -48,7 +50,7 @@ export default function GoogleDriveChamber() {
   const { user, setUser } = useAuth();
   const { hasFeature } = usePlan();
   const outletContext = useOutletContext() || {};
-  const { downloadFile } = outletContext;
+  const { downloadFile, openShareModal } = outletContext;
 
   const {
     activeDragSource,
@@ -112,6 +114,16 @@ export default function GoogleDriveChamber() {
 
       setData({ directories, files });
       setDirName(resData.name || (driveFolderId ? "Folder" : "Google Drive"));
+
+      if (driveFolderId && resData.name) {
+        recordItemOpened({
+          itemId: driveFolderId,
+          provider: "google_drive",
+          name: resData.name,
+          type: "directory",
+          size: 0,
+        }).catch(() => {});
+      }
 
       // Build breadcrumbs
       if (!driveFolderId) {
@@ -346,11 +358,34 @@ export default function GoogleDriveChamber() {
   // Preview file modal trigger
   const handlePreview = (file) => {
     setPreviewFile(file);
+    if (file) {
+      recordItemOpened({
+        itemId: file._id,
+        provider: "google_drive",
+        name: file.name,
+        type: "file",
+        size: file.size || 0,
+        mimeType: file.mimeType || "",
+        metaUrl: file.webViewLink || file.webContentLink || "",
+      }).catch(() => {});
+    }
   };
 
   // Open directory
   const handleNavigate = (dir) => {
     navigate(`/dashboard/google-drive/${dir._id}`);
+  };
+
+  // Smart back navigation: parent Google Drive directory or Google Drive root
+  const handleGoBack = () => {
+    if (breadcrumbs.length >= 2) {
+      const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
+      if (parentCrumb && parentCrumb.id) {
+        navigate(`/dashboard/google-drive/${parentCrumb.id}`);
+        return;
+      }
+    }
+    navigate("/dashboard/google-drive");
   };
 
   // Paste handler for Google Drive chamber
@@ -621,15 +656,30 @@ export default function GoogleDriveChamber() {
   const allItems = [...data.directories, ...data.files];
 
   return (
-    <div className="flex-1 flex flex-col h-full min-w-0" onClick={handleBackgroundClick}>
+    <div className="flex-1 min-w-0 w-full flex flex-col relative" onClick={handleBackgroundClick}>
       {/* ── CHAMBER HEADER TOOLBAR ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-white/5">
+      <div className="shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-white/5">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 flex-wrap min-w-0">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-linkdrive-accent/10 border border-linkdrive-accent/20 text-linkdrive-accent font-bold text-sm">
+          {/* Smart Back Button: hidden on Google Drive root, navigates to parent or Drive root */}
+          {Boolean(driveFolderId) && (
+            <button
+              onClick={handleGoBack}
+              className="p-2 text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all border border-slate-200 dark:border-white/10 mr-1 shadow-sm shrink-0 active:scale-95 cursor-pointer"
+              title="Go to Parent Folder"
+            >
+              <ArrowLeft size={18} />
+            </button>
+          )}
+
+          <Link
+            to="/dashboard/google-drive"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-linkdrive-accent/10 hover:bg-linkdrive-accent/20 border border-linkdrive-accent/20 hover:border-linkdrive-accent/40 text-linkdrive-accent font-bold text-sm transition-all duration-150 cursor-pointer shadow-sm active:scale-95 shrink-0"
+            title="Return to Google Drive root"
+          >
             <VaultDriveIcon size={18} />
             <span>Google Drive</span>
-          </div>
+          </Link>
 
           {breadcrumbs.slice(1).map((b, idx) => (
             <div key={b.id || idx} className="flex items-center gap-1 text-sm font-medium">
@@ -653,6 +703,44 @@ export default function GoogleDriveChamber() {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap shrink-0">
+          <Button
+            onClick={() => {
+              if (selectedItems.length > 0) {
+                openShareModal?.(selectedItems);
+              } else if (driveFolderId) {
+                openShareModal?.([
+                  {
+                    _id: driveFolderId,
+                    name: dirName,
+                    type: "directory",
+                    provider: "google_drive",
+                  },
+                ]);
+              } else {
+                openShareModal?.([
+                  {
+                    _id: "google-drive-chamber",
+                    name: "Google Drive Chamber",
+                    type: "chamber",
+                    provider: "google_drive",
+                  },
+                ]);
+              }
+            }}
+            variant="outline"
+            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border-linkdrive-accent/30 text-linkdrive-accent hover:bg-linkdrive-accent/10 transition-all"
+            title="Share via Secure Relay"
+          >
+            <Share2 size={15} />
+            <span>
+              {selectedItems.length > 0
+                ? `Share (${selectedItems.length})`
+                : driveFolderId
+                ? "Share Folder"
+                : "Share Drive"}
+            </span>
+          </Button>
+
           <input
             type="file"
             ref={fileInputRef}
@@ -796,7 +884,7 @@ export default function GoogleDriveChamber() {
       {/* ── CONTENT (GRID / LIST) ── */}
       {!loading && !error && allItems.length > 0 && (
         <div
-          className="flex-1 overflow-y-auto custom-scrollbar pb-12"
+          className="flex-1 pb-16 px-1 pt-2 sm:px-2"
           onClick={handleBackgroundClick}
           onDragOver={(e) => {
             e.preventDefault();
@@ -806,15 +894,15 @@ export default function GoogleDriveChamber() {
         >
           {/* Folders Section */}
           {data.directories.length > 0 && (
-            <div className="mb-6">
-              <h4 className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mb-3">
+            <div className="mb-8 sm:mb-10">
+              <h4 className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mb-4 sm:mb-5">
                 Folders ({data.directories.length})
               </h4>
               <div
                 className={
                   viewMode === "grid"
-                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
-                    : "flex flex-col gap-1.5"
+                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6 p-1.5 sm:p-2"
+                    : "flex flex-col gap-2 p-1 sm:p-2"
                 }
               >
                 {data.directories.map((dir) => (
@@ -828,6 +916,7 @@ export default function GoogleDriveChamber() {
                     onNavigate={handleNavigate}
                     onPreview={handleNavigate}
                     onStarred={handleToggleStar}
+                    onShare={(item) => (openShareModal ? openShareModal([item]) : null)}
                     onRename={(item) => {
                       setModalItem(item);
                       setModalInput(item.name);
@@ -870,15 +959,15 @@ export default function GoogleDriveChamber() {
 
           {/* Files Section */}
           {data.files.length > 0 && (
-            <div>
-              <h4 className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mb-3">
+            <div className="mb-8 sm:mb-10">
+              <h4 className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mb-4 sm:mb-5">
                 Files ({data.files.length})
               </h4>
               <div
                 className={
                   viewMode === "grid"
-                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
-                    : "flex flex-col gap-1.5"
+                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6 p-1.5 sm:p-2"
+                    : "flex flex-col gap-2 p-1 sm:p-2"
                 }
               >
                 {data.files.map((file) => (
@@ -892,6 +981,7 @@ export default function GoogleDriveChamber() {
                     onNavigate={() => {}}
                     onPreview={handlePreview}
                     onStarred={handleToggleStar}
+                    onShare={(item) => (openShareModal ? openShareModal([item]) : null)}
                     onRename={(item) => {
                       setModalItem(item);
                       setModalInput(item.name);

@@ -370,7 +370,7 @@ export default function DashboardLayout() {
           />
 
           <main className="flex-1 min-w-0 w-full overflow-y-auto overflow-x-hidden relative p-3 sm:p-6 lg:p-8 custom-scrollbar">
-            <div className="mx-auto max-w-7xl min-w-0 w-full h-full flex flex-col">
+            <div className="mx-auto max-w-7xl min-w-0 w-full min-h-full flex flex-col">
               <Outlet context={contextValue} />
             </div>
             <ShareVaultModal
