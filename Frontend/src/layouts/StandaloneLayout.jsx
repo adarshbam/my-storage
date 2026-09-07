@@ -10,8 +10,8 @@ export default function StandaloneLayout() {
       <VaultBackground />
       <StandaloneNavbar />
 
-      <main className="flex-1 relative z-10 p-3 sm:p-6 lg:p-8 custom-scrollbar">
-        <div className="mx-auto max-w-7xl h-full flex flex-col">
+      <main className="flex-1 min-w-0 w-full relative z-10 p-3 sm:p-6 lg:p-8 custom-scrollbar">
+        <div className="mx-auto max-w-7xl min-w-0 w-full h-full flex flex-col">
           <Outlet />
         </div>
       </main>

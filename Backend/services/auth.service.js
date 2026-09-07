@@ -15,6 +15,7 @@ import { sanitize } from "../utils/sanitize.js";
 import { createSessionAndSetCookies, createUserWithRootDir } from "../utils/authHelpers.js";
 import { withTransaction } from "../utils/transaction.js";
 import sendEmail from "../integrations/email/email.service.js";
+import { buildPasswordResetEmail } from "../integrations/email/emailTemplates.js";
 import { z } from "zod";
 import { loginSchema, registerSchema } from "../validators/authSchema.js";
 
@@ -629,32 +630,17 @@ export const forgotPasswordLogic = async ({ email }) => {
 
     const resetUrl = `${CLIENT_URL}/reset-password?token=${resetToken}`;
 
+    const emailContent = buildPasswordResetEmail({
+      resetUrl,
+      expiryMinutes: 15,
+    });
+
     await sendEmail({
       from: `"Vault" <no-reply@vault.com>`,
       to: cleanEmail,
-      subject: "Reset Your Vault Password",
-      text: `
-      We received a request to reset your Vault account password.
-      
-      Reset your password using the link below:
-      ${resetUrl}
-      
-      This link will expire in 15 minutes.
-      
-      If you did not request a password reset, you can safely ignore this email.
-      `,
-      html: `
-        <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px 20px; color: #333;">
-          <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 40px 30px; border-radius: 12px; border: 1px solid #e5e5e5; text-align: center;">
-            <h1 style="margin-bottom: 10px; font-size: 28px; color: #111827;">Vault</h1>
-            <p style="font-size: 16px; line-height: 1.6; color: #4b5563; margin-top: 20px;">We received a request to reset your password.</p>
-            <p style="font-size: 16px; line-height: 1.6; color: #4b5563;">Click the button below to set a new password.</p>
-            <a href="${resetUrl}" style="display: inline-block; margin-top: 25px; padding: 14px 28px; background-color: #111827; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold;">Reset Password</a>
-            <p style="margin-top: 30px; font-size: 14px; color: #6b7280; line-height: 1.6;">This link will expire in 15 minutes.</p>
-            <p style="margin-top: 10px; font-size: 13px; color: #9ca3af; line-height: 1.6;">If you did not request a password reset, you can safely ignore this email.</p>
-          </div>
-        </div>
-      `,
+      subject: emailContent.subject,
+      text: emailContent.text,
+      html: emailContent.html,
     });
   }
 

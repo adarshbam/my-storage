@@ -12,6 +12,10 @@ import {
   invalidateUserSessions,
   invalidateGlobalPlanCache,
   invalidateAllPlanContexts,
+  cacheGet,
+  cacheSet,
+  ACTIVE_PLANS_CACHE_KEY,
+  OWNER_SETTINGS_CACHE_KEY,
 } from "../databases/redis.js";
 import { subscriptionActivated } from "./notification.service.js";
 import { withTransaction } from "../utils/transaction.js";
@@ -149,13 +153,20 @@ export const planTierManagementLogic = async ({
 };
 
 export const getAllActivePlansLogic = async () => {
-  const existingActivePlans = await BillingPlan.find({ active: true })
-    .populate("tier")
-    .lean();
+  // 1. Fast-path: Return cached active plans from Redis (< 2ms)
+  const cached = await cacheGet(ACTIVE_PLANS_CACHE_KEY);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) {
+      console.error("[getAllActivePlansLogic] Cache parse error:", e);
+    }
+  }
 
-  const planTierConfigurations = await PlanTierConfiguration.find()
-    .populate("features")
-    .lean();
+  const [existingActivePlans, planTierConfigurations] = await Promise.all([
+    BillingPlan.find({ active: true }).populate("tier").lean(),
+    PlanTierConfiguration.find().populate("features").lean(),
+  ]);
 
   const tierFeatureConfigs = {};
   const tierRuleConfigs = {};
@@ -172,6 +183,7 @@ export const getAllActivePlansLogic = async () => {
 
   const enrichedPlans = existingActivePlans.map((plan) => {
     const slugKey = plan.slug;
+    const isPopular = Boolean(plan.isPopular || plan.tier?.isPopular);
     return {
       ...plan,
       type:
@@ -179,10 +191,15 @@ export const getAllActivePlansLogic = async () => {
         (plan.slug
           ? plan.slug.charAt(0).toUpperCase() + plan.slug.slice(1)
           : "Plan"),
+      popular: isPopular,
+      isPopular: isPopular,
       features: tierFeatureConfigs[slugKey] || [],
       rules: tierRuleConfigs[slugKey] || {},
     };
   });
+
+  // Store in Redis with 1-hour TTL
+  await cacheSet(ACTIVE_PLANS_CACHE_KEY, JSON.stringify(enrichedPlans), 3600);
 
   return enrichedPlans;
 };
@@ -192,101 +209,118 @@ export const getOwnerSettingsLogic = async ({ userRole }) => {
     throw AppError.forbidden("Access denied. Only Owners can view settings.");
   }
 
-  // 1. Delete any legacy/invalid Yearly Free Trial plans from database
-  await BillingPlan.deleteMany({
-    slug: { $in: ["free-trial", "free-trail"] },
-    period: "Yearly",
-  });
-
-  const systemConfig = await SystemConfig.findOne({ key: "global" }).lean();
-  const features = await Feature.find().lean();
-  const allFeatureIds = features.map((f) => f._id);
-  const planTiers = await PlanTier.find().lean();
-
-  // 2. Auto-heal any tiers that might be missing billing plans or configurations
-  for (const tier of planTiers) {
-    const slug = tier.slug;
-    const isTrial = ["free-trial", "free-trail"].includes(slug);
-
-    // Ensure Monthly plan exists
-    const monthlyPlan = await BillingPlan.findOne({ slug, period: "Monthly" });
-    if (!monthlyPlan) {
-      await BillingPlan.create({
-        tier: tier._id,
-        slug,
-        period: "Monthly",
-        amount: isTrial ? 0 : 199,
-        currency: "INR",
-        storage: 5 * 1024 ** 3,
-        razorpayPlanId: isTrial ? "plan_free_monthly" : `plan_${slug}_monthly_auto`,
-        active: true,
-      });
+  // 1. Fast-path: Return cached owner settings from Redis (< 2ms)
+  const cached = await cacheGet(OWNER_SETTINGS_CACHE_KEY);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) {
+      console.error("[getOwnerSettingsLogic] Cache parse error:", e);
     }
+  }
 
-    // Ensure Yearly plan exists for non-trial plans
-    if (!isTrial) {
-      const yearlyPlan = await BillingPlan.findOne({ slug, period: "Yearly" });
-      if (!yearlyPlan) {
+  // 2. Parallelize read queries for maximum speed
+  let [systemConfig, features, planTiers, planTierConfigurations, billingPlans] =
+    await Promise.all([
+      SystemConfig.findOne({ key: "global" }).lean(),
+      Feature.find().lean(),
+      PlanTier.find().lean(),
+      PlanTierConfiguration.find()
+        .populate("tier")
+        .populate("features")
+        .lean(),
+      BillingPlan.find({
+        $nor: [
+          {
+            slug: { $in: ["free-trial", "free-trail"] },
+            period: "Yearly",
+          },
+        ],
+      }).lean(),
+    ]);
+
+  // 3. Fallback Auto-heal ONLY if database is uninitialized or missing tiers/plans
+  if (!planTiers.length || !billingPlans.length || !planTierConfigurations.length) {
+    const allFeatureIds = (features || []).map((f) => f._id);
+    for (const tier of planTiers) {
+      const slug = tier.slug;
+      const isTrial = ["free-trial", "free-trail"].includes(slug);
+
+      const monthlyPlan = await BillingPlan.findOne({ slug, period: "Monthly" });
+      if (!monthlyPlan) {
         await BillingPlan.create({
           tier: tier._id,
           slug,
-          period: "Yearly",
-          amount: 1999,
+          period: "Monthly",
+          amount: isTrial ? 0 : 199,
           currency: "INR",
           storage: 5 * 1024 ** 3,
-          razorpayPlanId: `plan_${slug}_yearly_auto`,
+          razorpayPlanId: isTrial ? "plan_free_monthly" : `plan_${slug}_monthly_auto`,
           active: true,
+        });
+      }
+
+      if (!isTrial) {
+        const yearlyPlan = await BillingPlan.findOne({ slug, period: "Yearly" });
+        if (!yearlyPlan) {
+          await BillingPlan.create({
+            tier: tier._id,
+            slug,
+            period: "Yearly",
+            amount: 1999,
+            currency: "INR",
+            storage: 5 * 1024 ** 3,
+            razorpayPlanId: `plan_${slug}_yearly_auto`,
+            active: true,
+          });
+        }
+      }
+
+      const config = await PlanTierConfiguration.findOne({
+        $or: [{ tier: tier._id }, { slug }],
+      });
+      if (!config) {
+        await PlanTierConfiguration.create({
+          tier: tier._id,
+          slug,
+          features: allFeatureIds,
+          rules: {
+            permissions: {
+              allowUpload: true,
+              allowDownload: true,
+              allowSharing: true,
+              allowEdit: true,
+              allowMove: true,
+              allowCopy: true,
+              allowDelete: true,
+            },
+            limits: {
+              storageLimit: 5 * 1024 * 1024 * 1024,
+              maxConnectedDevices: 5,
+              maxUploadFileSize: 5 * 1024 * 1024 * 1024,
+            },
+            settings: {
+              uploadSpeedMultiplier: 5,
+              versionHistoryDays: 30,
+              deleteFilesAfterExpiryDays: 0,
+            },
+          },
         });
       }
     }
 
-    // Ensure PlanTierConfiguration exists
-    const config = await PlanTierConfiguration.findOne({
-      $or: [{ tier: tier._id }, { slug }],
-    });
-    if (!config) {
-      await PlanTierConfiguration.create({
-        tier: tier._id,
-        slug,
-        features: allFeatureIds,
-        rules: {
-          permissions: {
-            allowUpload: true,
-            allowDownload: true,
-            allowSharing: true,
-            allowEdit: true,
-            allowMove: true,
-            allowCopy: true,
-            allowDelete: true,
+    [planTierConfigurations, billingPlans] = await Promise.all([
+      PlanTierConfiguration.find().populate("tier").populate("features").lean(),
+      BillingPlan.find({
+        $nor: [
+          {
+            slug: { $in: ["free-trial", "free-trail"] },
+            period: "Yearly",
           },
-          limits: {
-            storageLimit: 5 * 1024 * 1024 * 1024,
-            maxConnectedDevices: 5,
-            maxUploadFileSize: 5 * 1024 * 1024 * 1024,
-          },
-          settings: {
-            uploadSpeedMultiplier: 5,
-            versionHistoryDays: 30,
-            deleteFilesAfterExpiryDays: 0,
-          },
-        },
-      });
-    }
+        ],
+      }).lean(),
+    ]);
   }
-
-  const planTierConfigurations = await PlanTierConfiguration.find()
-    .populate("tier")
-    .populate("features")
-    .lean();
-
-  const billingPlans = await BillingPlan.find({
-    $nor: [
-      {
-        slug: { $in: ["free-trial", "free-trail"] },
-        period: "Yearly",
-      },
-    ],
-  }).lean();
 
   const tierFeatureConfigs = {};
   const tierRuleConfigs = {};
@@ -307,7 +341,7 @@ export const getOwnerSettingsLogic = async ({ userRole }) => {
     }
   });
 
-  return {
+  const result = {
     limits: systemConfig,
     planTiers,
     billingPlans,
@@ -316,6 +350,11 @@ export const getOwnerSettingsLogic = async ({ userRole }) => {
     tierRuleConfigs,
     tiersConfigs: planTierConfigurations,
   };
+
+  // Cache compiled response in Redis for 1 hour
+  await cacheSet(OWNER_SETTINGS_CACHE_KEY, JSON.stringify(result), 3600);
+
+  return result;
 };
 
 export const updateGlobalLimitsLogic = async ({ limits, userRole }) => {
@@ -469,6 +508,12 @@ export const updatePlansLogic = async ({ plans, userRole }) => {
         updateData.active = p.active;
       }
 
+      if (p.isPopular !== undefined) {
+        const isFree =
+          ["free-trial", "free-trail"].includes(p.slug) || numAmount === 0;
+        updateData.isPopular = isFree ? false : Boolean(p.isPopular);
+      }
+
       const filter = p._id
         ? { _id: p._id }
         : { slug: p.slug, period: p.period };
@@ -541,6 +586,35 @@ export const updatePlansLogic = async ({ plans, userRole }) => {
     }),
   );
 
+  // Sync popular tier across PlanTier and other BillingPlans if isPopular was specified
+  const popularPlan = plans.find(
+    (p) =>
+      Boolean(p.isPopular) &&
+      !["free-trial", "free-trail"].includes(p.slug) &&
+      Number(p.amount) > 0,
+  );
+  if (popularPlan) {
+    await PlanTier.updateMany({}, { $set: { isPopular: false } });
+    await PlanTier.updateOne(
+      { slug: popularPlan.slug },
+      { $set: { isPopular: true } },
+    );
+    await BillingPlan.updateMany(
+      { slug: { $ne: popularPlan.slug } },
+      { $set: { isPopular: false } },
+    );
+    await BillingPlan.updateMany(
+      { slug: popularPlan.slug },
+      { $set: { isPopular: true } },
+    );
+  } else if (plans.some((p) => p.isPopular === false)) {
+    const anyPopular = plans.some((p) => Boolean(p.isPopular));
+    if (!anyPopular) {
+      await PlanTier.updateMany({}, { $set: { isPopular: false } });
+      await BillingPlan.updateMany({}, { $set: { isPopular: false } });
+    }
+  }
+
   await invalidateGlobalPlanCache();
   return updatedPlans;
 };
@@ -553,23 +627,57 @@ export const updatePlanTiersLogic = async ({ tiers, userRole }) => {
     );
   }
 
-  const bulkOps = tiers.map((p) => ({
-    updateOne: {
-      filter: { _id: p._id },
-      update: {
-        $set: {
-          slug: p.slug,
-          title: p.title,
-          description: p.description,
-          badge: p.badge,
-          accentColor: p.accentColor,
+  // Identify the selected popular tier, strictly excluding free tiers
+  const popularTier = tiers.find(
+    (t) =>
+      Boolean(t.isPopular) &&
+      !t.slug?.toLowerCase().includes("free") &&
+      !t.type?.toLowerCase().includes("free") &&
+      !t.title?.toLowerCase().includes("free"),
+  );
+
+  const bulkOps = tiers.map((p) => {
+    const isFree =
+      p.slug?.toLowerCase().includes("free") ||
+      p.type?.toLowerCase().includes("free") ||
+      p.title?.toLowerCase().includes("free");
+    const isPopular = Boolean(
+      popularTier && !isFree && (p._id === popularTier._id || p.slug === popularTier.slug),
+    );
+
+    return {
+      updateOne: {
+        filter: p._id ? { _id: p._id } : { slug: p.slug },
+        update: {
+          $set: {
+            slug: p.slug,
+            title: p.title,
+            description: p.description,
+            badge: p.badge,
+            accentColor: p.accentColor,
+            isPopular: isPopular,
+          },
         },
       },
-    },
-  }));
+    };
+  });
 
   if (bulkOps.length > 0) {
     await PlanTier.bulkWrite(bulkOps);
+  }
+
+  // Synchronize isPopular to BillingPlans
+  if (popularTier) {
+    await BillingPlan.updateMany({}, { $set: { isPopular: false } });
+    await BillingPlan.updateMany(
+      { slug: popularTier.slug },
+      { $set: { isPopular: true } },
+    );
+  } else if (tiers.some((t) => t.isPopular !== undefined)) {
+    const anyTrue = tiers.some((t) => Boolean(t.isPopular));
+    if (!anyTrue) {
+      await BillingPlan.updateMany({}, { $set: { isPopular: false } });
+    }
   }
 
   await invalidateGlobalPlanCache();
@@ -955,6 +1063,14 @@ export const createPlanTierLogic = async ({ tierData, userRole }) => {
     "custom-tier"
   ).trim();
 
+  const isFreeTrial = ["free-trial", "free-trail"].includes(slugKey);
+  const isPopular = !isFreeTrial && Boolean(tierData.isPopular);
+
+  if (isPopular) {
+    await PlanTier.updateMany({}, { $set: { isPopular: false } });
+    await BillingPlan.updateMany({}, { $set: { isPopular: false } });
+  }
+
   const newTier = await PlanTier.findOneAndUpdate(
     { slug: slugKey },
     {
@@ -965,6 +1081,7 @@ export const createPlanTierLogic = async ({ tierData, userRole }) => {
         badge: badge || "",
         accentColor: accentColor || "rose",
         active: tierData.active !== undefined ? tierData.active : true,
+        isPopular: isPopular,
       },
     },
     { upsert: true, returnDocument: "after" },
@@ -973,7 +1090,6 @@ export const createPlanTierLogic = async ({ tierData, userRole }) => {
   const defaultStorage = Number(tierData.storage) || 5 * 1024 ** 3;
   const defaultAmount = Number(tierData.amount) || 199;
 
-  const isFreeTrial = ["free-trial", "free-trail"].includes(slugKey);
   const plans = isFreeTrial
     ? [
         {
@@ -1036,6 +1152,7 @@ export const createPlanTierLogic = async ({ tierData, userRole }) => {
             storage: plan.storage,
             razorpayPlanId: rzPlanId,
             active: true,
+            isPopular: isPopular,
           },
         },
         { upsert: true, returnDocument: "after" },

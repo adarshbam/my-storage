@@ -39,12 +39,12 @@ export const createDirectory = async (req, res, next) => {
       userRole: req.user.role,
       rootDirId: req.user.rootDirId.toString()
     });
-    return res.status(201).send("Folder created successfully");
+    return res.status(201).json({ success: true, message: "Folder created successfully" });
   } catch (error) {
     if (error.code === 11000 || error.code === "EEXIST") {
-      return res.status(409).send("Folder already exists");
+      return res.status(409).json({ error: "Folder already exists" });
     }
-    if (error.status) return res.status(error.status).send(error.message);
+    if (error.status) return res.status(error.status).json({ error: error.message });
     next(error);
   }
 };
@@ -57,9 +57,9 @@ export const renameDirectory = async (req, res, next) => {
       userId: req.user.id,
       userRole: req.user.role
     });
-    return res.status(200).send("Folder renamed successfully");
+    return res.status(200).json({ success: true, message: "Folder renamed successfully" });
   } catch (error) {
-    if (error.status) return res.status(error.status).send(error.message);
+    if (error.status) return res.status(error.status).json({ error: error.message });
     next(error);
   }
 };
@@ -127,7 +127,7 @@ export const deleteItemsBatch = async (req, res, next) => {
       userRole: req.user.role,
       permanent: req.query.permanent === "true"
     });
-    return res.status(200).send("Items deleted successfully");
+    return res.status(200).json({ success: true, message: "Items deleted successfully" });
   } catch (error) {
     if (error.status) return res.status(error.status).json({ error: error.message });
     next(error);

@@ -74,6 +74,7 @@ import { useSelectionBox } from "../../hooks/useSelectionBox";
 import { useClipboard } from "../../hooks/useClipboard";
 import { useFileOperations } from "../../hooks/useFileOperations";
 import { useContextMenu } from "../../hooks/useContextMenu";
+import { useChamberTransfer } from "../../context/ChamberTransferContext";
 
 import SelectionBox from "./SelectionBox";
 import EmptyState from "./EmptyState";
@@ -100,6 +101,9 @@ import GitActionsWorkflowView from "../git/GitActionsWorkflowView";
 const filePreviewPromise = import("./FilePreviewModal");
 const FilePreviewModal = lazy(() => filePreviewPromise);
 
+// Module-level persistent cache across route transitions for instant 0ms drive navigation
+const globalFolderCache = new Map();
+
 export default function FileBrowser({ specialView }) {
   const params = useParams();
   const folderId = params.folderId;
@@ -124,6 +128,8 @@ export default function FileBrowser({ specialView }) {
     setShowFilters,
   } = useOutletContext();
 
+  const { setActiveDragSource } = useChamberTransfer();
+
   const [data, setData] = useState({ directories: [], files: [] });
   const [loading, setLoading] = useState(true);
   const [dirName, setDirName] = useState("Home");
@@ -138,7 +144,7 @@ export default function FileBrowser({ specialView }) {
   const [error, setError] = useState(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const [detailsItem, setDetailsItem] = useState(null);
-  const folderCache = useRef(new Map());
+  const folderCache = useRef(globalFolderCache);
 
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -251,6 +257,12 @@ export default function FileBrowser({ specialView }) {
   };
 
   const {
+    transferDriveToVault,
+    transferVaultToDrive,
+    clearClipboard,
+  } = useChamberTransfer();
+
+  const {
     clipboard,
     updateClipboard,
     handleCopyItem,
@@ -269,6 +281,8 @@ export default function FileBrowser({ specialView }) {
     driveFolderId,
     githubPath,
     user,
+    transferDriveToVault,
+    transferVaultToDrive,
   });
 
   const [reconnectingDrive, setReconnectingDrive] = useState(false);
@@ -651,16 +665,16 @@ export default function FileBrowser({ specialView }) {
           files = result.files || [];
         }
 
-        // Hide external integration mount points from administrative eye views
-        if (specialView === "admin" || specialView === "owner") {
-          directories = directories.filter(
-            (dir) =>
-              dir.provider !== "google_drive" &&
-              dir.provider !== "github" &&
-              dir.name !== "Google Drive" &&
-              dir.name !== "GitHub",
-          );
-        }
+        // Google Drive and GitHub are decoupled into their own dedicated chambers.
+        // Never render external integration mount points as directories inside the Vault chamber.
+        directories = directories.filter(
+          (dir) =>
+            dir.provider !== "google_drive" &&
+            dir.provider !== "github" &&
+            dir.name !== "Google Drive" &&
+            dir.name !== "GitHub" &&
+            dir.name !== "Github",
+        );
 
         if (specialView === "github" && isSearch) {
           const query = searchQuery.toLowerCase();
@@ -858,6 +872,14 @@ export default function FileBrowser({ specialView }) {
     selectedBranch,
   ]);
 
+  useEffect(() => {
+    const handleVaultRefresh = () => {
+      fetchFiles(true);
+    };
+    window.addEventListener("vault:refresh", handleVaultRefresh);
+    return () => window.removeEventListener("vault:refresh", handleVaultRefresh);
+  }, [folderId, specialView]);
+
   const handleStarred = async (item) => {
     const type = item.type || (item.extension ? "file" : "directory");
     const provider =
@@ -944,13 +966,16 @@ export default function FileBrowser({ specialView }) {
         });
         setLastSelectedId(item._id);
       }
-    } else {
+    } else if (e && (e.ctrlKey || e.metaKey)) {
       setLastSelectedId(item._id);
       setSelectedItems((prev) =>
         prev.some((i) => i._id === item._id)
           ? prev.filter((i) => i._id !== item._id)
           : [...prev, item],
       );
+    } else {
+      setLastSelectedId(item._id);
+      setSelectedItems([item]);
     }
   };
 
@@ -1557,21 +1582,30 @@ export default function FileBrowser({ specialView }) {
       return;
     }
 
-    // Ensure type is present for all
+    // Ensure type is present for all and provider is explicitly local
     const preparedItems = itemsToDrag.map((i) => ({
       ...i,
+      provider: "local",
       type: i.type || (i.extension ? "file" : "directory"),
     }));
 
     setActiveDraggedIds(preparedItems.map((i) => i._id));
-    e.dataTransfer.setData("draggedItems", JSON.stringify(preparedItems));
-    e.dataTransfer.setData("draggedItem", JSON.stringify(preparedItems[0]));
-    e.dataTransfer.effectAllowed = "move";
+    setActiveDragSource({ items: preparedItems, provider: "local" });
+    window.__activeVaultDrag = { items: preparedItems, provider: "local" };
+    try {
+      e.dataTransfer.setData("draggedItems", JSON.stringify(preparedItems));
+      e.dataTransfer.setData("draggedItem", JSON.stringify(preparedItems[0]));
+      e.dataTransfer.setData("vault/provider-local", "true");
+      e.dataTransfer.setData("text/plain", JSON.stringify(preparedItems));
+    } catch {}
+    e.dataTransfer.effectAllowed = "all";
   };
 
   const handleDragEnd = () => {
     setActiveDraggedIds([]);
     setDragOverTargetId(null);
+    setActiveDragSource(null);
+    window.__activeVaultDrag = null;
   };
 
   const handleDragOver = (e, targetItem) => {
@@ -1742,28 +1776,32 @@ export default function FileBrowser({ specialView }) {
         if (!targetFolderId || targetFolderId === "root")
           targetFolderId = user?.rootDirId;
 
-        try {
-          await fetch(`${SERVER_URL}/drive/transfer-to-vault${ownerParam}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              items: itemsToMove
-                .filter((i) => i.provider === "google_drive")
-                .map((i) => ({
+        const driveItems = itemsToMove.filter((i) => i.provider === "google_drive");
+        if (transferDriveToVault) {
+          await transferDriveToVault(driveItems, targetFolderId);
+        } else {
+          try {
+            await fetch(`${SERVER_URL}/drive/transfer-to-vault${ownerParam}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                items: driveItems.map((i) => ({
                   _id: i._id || i.id,
                   name: i.name,
                   mimeType: i.mimeType || "application/octet-stream",
                   type: i.type,
                 })),
-              targetFolderId: targetFolderId,
-            }),
-            credentials: "include",
-          });
-          fetchFiles();
-          setSelectedItems([]);
-        } catch (err) {
-          console.error("Transfer to Vault failed", err);
+                targetFolderId: targetFolderId,
+                action: "move",
+              }),
+              credentials: "include",
+            });
+          } catch (err) {
+            console.error("Transfer to Vault failed", err);
+          }
         }
+        fetchFiles();
+        setSelectedItems([]);
         return;
       }
 
@@ -1773,37 +1811,33 @@ export default function FileBrowser({ specialView }) {
         if (!targetDriveFolderId || isObjectId(targetDriveFolderId))
           targetDriveFolderId = "root";
 
-        try {
-          const localItems = itemsToMove
-            .filter((i) => !i.provider || i.provider === "local");
-          const res = await fetch(`${SERVER_URL}/drive/transfer-from-vault${ownerParam}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              items: localItems.map((i) => ({
-                _id: i._id || i.id,
-                name: i.name,
-                extension: i.extension,
-                size: i.size,
-                type: i.type,
-              })),
-              targetDriveFolderId: targetDriveFolderId,
-            }),
-            credentials: "include",
-          });
-          if (res.ok && localItems.length > 0) {
-            await batchDelete(
-              localItems.map((i) => ({
-                _id: i._id || i.id,
-                type: i.type || (i.extension ? "file" : "directory"),
-              }))
-            ).catch(() => {});
+        const localItems = itemsToMove.filter((i) => !i.provider || i.provider === "local");
+        if (transferVaultToDrive) {
+          await transferVaultToDrive(localItems, targetDriveFolderId);
+        } else {
+          try {
+            await fetch(`${SERVER_URL}/drive/transfer-from-vault${ownerParam}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                items: localItems.map((i) => ({
+                  _id: i._id || i.id,
+                  name: i.name,
+                  extension: i.extension,
+                  size: i.size,
+                  type: i.type,
+                })),
+                targetDriveFolderId: targetDriveFolderId,
+                action: "move",
+              }),
+              credentials: "include",
+            });
+          } catch (err) {
+            console.error("Transfer from Vault failed", err);
           }
-          fetchFiles();
-          setSelectedItems([]);
-        } catch (err) {
-          console.error("Transfer from Vault failed", err);
         }
+        fetchFiles();
+        setSelectedItems([]);
         return;
       }
 
@@ -1942,7 +1976,7 @@ export default function FileBrowser({ specialView }) {
 
   return (
     <div
-      className="flex-1 flex flex-col relative"
+      className="flex-1 min-w-0 w-full flex flex-col relative"
       onDrop={handleZoneDrop}
       onDragOver={handleZoneDragOver}
     >
@@ -2047,7 +2081,7 @@ export default function FileBrowser({ specialView }) {
               </svg>
             </button>
           )}
-          <div className="flex items-center flex-wrap gap-1 text-lg sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight min-w-0">
+          <div className="flex items-center flex-wrap gap-1 text-base min-[360px]:text-lg sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight min-w-0">
             {breadcrumbs.map((crumb, idx) => {
               const isLast = idx === breadcrumbs.length - 1;
               return (
@@ -2058,7 +2092,7 @@ export default function FileBrowser({ specialView }) {
                     </span>
                   )}
                   {isLast ? (
-                    <span className="text-slate-900 dark:text-white font-black capitalize truncate max-w-[150px] sm:max-w-[280px] select-none">
+                    <span className="text-slate-900 dark:text-white font-black capitalize truncate max-w-[120px] min-[360px]:max-w-[160px] sm:max-w-[280px] select-none">
                       {crumb.label}
                     </span>
                   ) : (
@@ -2396,7 +2430,7 @@ export default function FileBrowser({ specialView }) {
             onMouseDown={handleMouseDown}
           >
             {viewMode === "list" && (
-              <div className="grid grid-cols-[1fr,40px] sm:grid-cols-[1fr,100px,40px] md:grid-cols-[1fr,100px,150px,40px] gap-2 sm:gap-4 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-500 border-b border-slate-200/50 dark:border-slate-800/50 mb-2 items-center sticky top-0 bg-transparent z-10">
+              <div className="grid grid-cols-[1fr,40px] sm:grid-cols-[1fr,100px,40px] md:grid-cols-[1fr,100px,150px,40px] gap-2 sm:gap-4 px-2 min-[360px]:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold text-slate-500 border-b border-slate-200/50 dark:border-slate-800/50 mb-2 items-center sticky top-0 bg-transparent z-10 min-w-0 w-full">
                 <div>Name</div>
                 <div className="text-right hidden sm:block">Size</div>
                 <div className="text-right pr-4 hidden md:block">Modified</div>
@@ -2511,12 +2545,12 @@ export default function FileBrowser({ specialView }) {
           ))}
 
           {data.directories.length === 0 && data.files.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
+            <div className="col-span-full flex flex-col items-center justify-center py-12 sm:py-20 px-3 min-[360px]:px-4 text-center text-slate-400 max-w-full">
               {specialView ? (
                 <>
                   <div
                     className={cn(
-                      "p-6 rounded-full mb-4 shadow-lg text-white/40 border border-white/5 bg-white/[0.02]",
+                      "p-4 min-[360px]:p-5 sm:p-6 rounded-full mb-3 sm:mb-4 shadow-lg text-white/40 border border-white/5 bg-white/[0.02]",
                       specialView === "shared" &&
                         "shadow-[0_0_30px_rgba(155,77,255,0.15)] text-relay-accent/80 border-relay-accent/20",
                       specialView === "recent" &&
@@ -2526,16 +2560,16 @@ export default function FileBrowser({ specialView }) {
                     )}
                   >
                     {specialView === "shared" ? (
-                      <Share2 size={40} />
+                      <Share2 size={32} className="sm:w-10 sm:h-10" />
                     ) : specialView === "recent" ? (
-                      <Clock size={40} />
+                      <Clock size={32} className="sm:w-10 sm:h-10" />
                     ) : specialView === "starred" ? (
-                      <Star size={40} />
+                      <Star size={32} className="sm:w-10 sm:h-10" />
                     ) : (
-                      <Upload size={40} />
+                      <Upload size={32} className="sm:w-10 sm:h-10" />
                     )}
                   </div>
-                  <p className="text-lg font-medium mb-2">
+                  <p className="text-base min-[360px]:text-lg font-bold mb-1.5 text-slate-800 dark:text-white">
                     {isSearch
                       ? "No search results found"
                       : specialView === "shared"
@@ -2547,7 +2581,7 @@ export default function FileBrowser({ specialView }) {
                             : "No files yet"}
                   </p>
                   {!isSearch && (
-                    <p className="text-sm text-white/40 max-w-sm text-center">
+                    <p className="text-xs min-[360px]:text-sm text-slate-500 dark:text-white/40 max-w-xs sm:max-w-sm text-center leading-relaxed">
                       {specialView === "shared"
                         ? "Shared access vaults from other nodes will appear here once authenticated."
                         : specialView === "recent"
@@ -2567,9 +2601,9 @@ export default function FileBrowser({ specialView }) {
                           "# New Repository\n\nThis is an empty repository.",
                         );
                       }}
-                      className="mt-4 px-6 py-2 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white rounded-xl hover:shadow-[0_0_20px_rgba(20,184,166,0.3)] transition-all duration-300 flex items-center gap-2"
+                      className="mt-4 px-4 min-[360px]:px-6 py-2 bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white rounded-xl hover:shadow-[0_0_20px_rgba(20,184,166,0.3)] transition-all duration-300 flex items-center gap-2 text-xs sm:text-sm font-bold"
                     >
-                      <Plus size={18} />
+                      <Plus size={16} />
                       Initialize with README.md
                     </button>
                   )}
@@ -2577,17 +2611,17 @@ export default function FileBrowser({ specialView }) {
               ) : (
                 <>
                   <div
-                    className="bg-white/40 dark:bg-white/[0.03] p-6 rounded-full mb-4 cursor-pointer hover:bg-white/60 dark:hover:bg-white/[0.06] transition-all duration-300 shadow-[0_0_30px_rgba(20,184,166,0.06)] dark:shadow-[0_0_30px_rgba(20,184,166,0.1)]"
+                    className="bg-white/40 dark:bg-white/[0.03] p-4 min-[360px]:p-5 sm:p-6 rounded-full mb-3 sm:mb-4 cursor-pointer hover:bg-white/60 dark:hover:bg-white/[0.06] transition-all duration-300 shadow-[0_0_30px_rgba(20,184,166,0.06)] dark:shadow-[0_0_30px_rgba(20,184,166,0.1)]"
                     onClick={openUploadModal}
                   >
-                    <Upload size={40} />
+                    <Upload size={32} className="sm:w-10 sm:h-10 text-accent-primary" />
                   </div>
-                  <p className="text-lg font-medium mb-2">
+                  <p className="text-base min-[360px]:text-lg font-bold mb-1.5 text-slate-800 dark:text-white">
                     {isSearch
                       ? "No search results found"
                       : "This folder is empty"}
                   </p>
-                  <p className="text-sm">
+                  <p className="text-xs min-[360px]:text-sm text-slate-500 dark:text-white/40 max-w-xs sm:max-w-sm text-center leading-relaxed">
                     {isSearch
                       ? "Try adjusting your search query"
                       : "Drag and drop files here or use the upload button"}

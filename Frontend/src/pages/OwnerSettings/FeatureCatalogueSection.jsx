@@ -43,14 +43,14 @@ export default function FeatureCatalogueSection({
       : features.filter((f) => f.category === selectedCategoryFilter);
 
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-blue-500/30">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center shadow-lg shadow-blue-500/5 shrink-0">
-            <Layers size={22} />
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-blue-500/30">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sm:mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center shadow-lg shadow-blue-500/5 shrink-0">
+            <Layers size={20} className="sm:w-[22px] sm:h-[22px]" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-base min-[360px]:text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
               Platform Feature Catalogue
             </h2>
             <p className="text-xs text-slate-500 dark:text-white/50 font-medium">

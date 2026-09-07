@@ -132,6 +132,24 @@ export default function WallGuideOverlay() {
 
   // Determine smart placement for the Dialog Card & Wall Mascot
   const layout = useMemo(() => {
+    const isMobile = windowSize.width < 640;
+
+    if (isMobile) {
+      return {
+        type: "mobile_bottom",
+        cardStyle: {
+          position: "fixed",
+          bottom: "12px",
+          left: "12px",
+          right: "12px",
+          maxHeight: "calc(100dvh - 24px)",
+          zIndex: 50,
+        },
+        wallSide: "top",
+        stickAngle: 0,
+      };
+    }
+
     if (!targetRect || !currentStep?.target) {
       // Centered Welcome/Finish modal
       return {
@@ -140,7 +158,6 @@ export default function WallGuideOverlay() {
           position: "fixed",
           top: "50%",
           left: "50%",
-          transform: "translate(-50%, -50%)",
           maxWidth: "520px",
           width: "92vw",
         },
@@ -311,9 +328,24 @@ export default function WallGuideOverlay() {
       <AnimatePresence mode="wait">
         <motion.div
           key={`${currentTour.id}-${currentStep.id}`}
-          initial={{ opacity: 0, scale: 0.92, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.92, y: -10 }}
+          initial={{
+            opacity: 0,
+            scale: 0.92,
+            x: layout.type === "center" ? "-50%" : 0,
+            y: layout.type === "center" ? "-50%" : 15,
+          }}
+          animate={{
+            opacity: 1,
+            scale: 1,
+            x: layout.type === "center" ? "-50%" : 0,
+            y: layout.type === "center" ? "-50%" : 0,
+          }}
+          exit={{
+            opacity: 0,
+            scale: 0.92,
+            x: layout.type === "center" ? "-50%" : 0,
+            y: layout.type === "center" ? "-50%" : -10,
+          }}
           transition={{ type: "spring", stiffness: 350, damping: 28 }}
           style={layout.cardStyle}
           className="z-50"
@@ -325,7 +357,9 @@ export default function WallGuideOverlay() {
             {/* ── WALL MASCOT (Positioned beside card or on top) ── */}
             <div
               className={`absolute z-30 pointer-events-none transition-all duration-300 ${
-                layout.type === "center"
+                layout.type === "mobile_bottom"
+                  ? "-top-14 right-4"
+                  : layout.type === "center"
                   ? "-top-24 left-1/2 -translate-x-1/2"
                   : layout.wallSide === "right"
                   ? "-top-16 -right-12 sm:-right-16"
@@ -335,18 +369,18 @@ export default function WallGuideOverlay() {
               <WallMascot
                 gesture={currentStep.gesture || "pointing"}
                 targetAngle={layout.stickAngle}
-                size={layout.type === "center" ? 130 : 110}
+                size={layout.type === "center" ? 130 : layout.type === "mobile_bottom" ? 80 : 110}
               />
             </div>
 
             {/* ── MAIN TRANSPARENT GLASS DIALOG CARD ── */}
-            <div className="relative rounded-[2rem] bg-[#071512]/85 dark:bg-[#030A08]/90 backdrop-blur-2xl border border-white/20 dark:border-white/15 p-5 sm:p-6 text-white shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.2)] overflow-hidden">
+            <div className="relative rounded-2xl sm:rounded-[2rem] bg-[#071512]/90 dark:bg-[#030A08]/95 backdrop-blur-2xl border border-white/20 dark:border-white/15 p-4 sm:p-6 text-white shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.2)] overflow-hidden">
               
               {/* Subtle Animated Top Scanline Bar */}
               <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#00CFFF] via-[#10B981] to-[#8B5CF6]" />
 
               {/* Header: Wall Badge, Step Pill, Controls */}
-              <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4">
                 {/* Wall Identity Badge */}
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-xl bg-accent-soft border border-accent-border flex items-center justify-center text-accent-primary shadow-accent-glow-sm">
@@ -361,9 +395,9 @@ export default function WallGuideOverlay() {
                 </div>
 
                 {/* Right Header Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   {/* Step Progress Pill */}
-                  <div className="px-2.5 py-0.5 rounded-full bg-white/10 dark:bg-white/5 border border-white/10 text-[10px] font-mono font-bold text-white/80 tracking-wider">
+                  <div className="px-2 py-0.5 rounded-full bg-white/10 dark:bg-white/5 border border-white/10 text-[10px] font-mono font-bold text-white/80 tracking-wider">
                     {currentStepIndex + 1} / {totalSteps}
                   </div>
 
@@ -388,7 +422,7 @@ export default function WallGuideOverlay() {
               </div>
 
               {/* Progress Line */}
-              <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden mb-4">
+              <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden mb-3 sm:mb-4">
                 <motion.div
                   className="h-full bg-gradient-to-r from-accent-primary to-[#00CFFF] rounded-full"
                   initial={{ width: 0 }}
@@ -398,8 +432,8 @@ export default function WallGuideOverlay() {
               </div>
 
               {/* Step Content */}
-              <div className="space-y-2 mb-5">
-                <h3 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
+              <div className="space-y-1.5 sm:space-y-2 mb-4 sm:mb-5">
+                <h3 className="text-sm sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
                   {currentStep.title}
                 </h3>
                 <p className="text-xs sm:text-sm text-white/80 leading-relaxed font-medium">
@@ -408,31 +442,31 @@ export default function WallGuideOverlay() {
 
                 {/* Action Tip Pill */}
                 {currentStep.actionTip && (
-                  <div className="flex items-start gap-2 p-2.5 mt-3 rounded-xl bg-accent-soft/60 border border-accent-border/40 text-accent-primary text-xs font-semibold">
-                    <Info size={14} className="shrink-0 mt-0.5 text-accent-primary" />
+                  <div className="flex items-start gap-2 p-2 sm:p-2.5 mt-2.5 sm:mt-3 rounded-xl bg-accent-soft/60 border border-accent-border/40 text-accent-primary text-[11px] sm:text-xs font-semibold">
+                    <Info size={13} className="shrink-0 mt-0.5 text-accent-primary" />
                     <span className="leading-snug text-white/90">{currentStep.actionTip}</span>
                   </div>
                 )}
               </div>
 
               {/* Footer Controls */}
-              <div className="flex items-center justify-between gap-3 pt-3 border-t border-white/10">
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-white/10">
                 {/* Left: Skip Tour Link */}
                 <button
                   type="button"
                   onClick={skipTour}
-                  className="text-xs font-bold text-white/40 hover:text-white/80 transition-colors tracking-wide"
+                  className="text-xs font-bold text-white/40 hover:text-white/80 transition-colors tracking-wide shrink-0"
                 >
                   Skip Tour
                 </button>
 
                 {/* Right Navigation: Prev / Next */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                   {!isFirstStep && (
                     <button
                       type="button"
                       onClick={prevStep}
-                      className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all border border-white/10"
+                      className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all border border-white/10"
                     >
                       <ChevronLeft size={14} />
                       <span>Back</span>
@@ -442,7 +476,7 @@ export default function WallGuideOverlay() {
                   <button
                     type="button"
                     onClick={isLastStep ? completeTour : nextStep}
-                    className="px-5 py-2 rounded-xl bg-accent-primary text-accent-foreground font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-accent-glow hover:opacity-95 active:scale-95 transition-all cursor-pointer"
+                    className="px-4 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-accent-primary text-accent-foreground font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-accent-glow hover:opacity-95 active:scale-95 transition-all cursor-pointer"
                   >
                     <span>{isLastStep ? "Finish" : "Next"}</span>
                     {isLastStep ? <Check size={14} /> : <ArrowRight size={14} />}

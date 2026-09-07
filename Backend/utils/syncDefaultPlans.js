@@ -15,6 +15,7 @@ export const initialPlanTiers = [
     badge: "30 Days Free",
     accentColor: "emerald",
     active: true,
+    isPopular: false,
   },
   {
     slug: "novice",
@@ -24,6 +25,7 @@ export const initialPlanTiers = [
     badge: "Personal",
     accentColor: "purple",
     active: true,
+    isPopular: false,
   },
   {
     slug: "professional",
@@ -34,6 +36,7 @@ export const initialPlanTiers = [
     badge: "Most Popular",
     accentColor: "rose",
     active: true,
+    isPopular: true,
   },
   {
     slug: "ultimate",
@@ -44,6 +47,7 @@ export const initialPlanTiers = [
     badge: "Best Value",
     accentColor: "sky",
     active: true,
+    isPopular: false,
   },
 ];
 
@@ -436,10 +440,10 @@ const resetToDefaultSettings = async (req, res, next) => {
     // 3. Plan Tiers & Tier Configurations reset or initial Set
     await Promise.all(
       initialPlanTiers.map(async (planTier) => {
-        const { slug, title, description, accentColor, active } = planTier;
+        const { slug, title, description, badge, accentColor, active, isPopular } = planTier;
         const currentPlanTier = await PlanTier.findOneAndUpdate(
           { slug },
-          { $set: { slug, title, description, accentColor, active } },
+          { $set: { slug, title, description, badge, accentColor, active, isPopular: Boolean(isPopular) } },
           { upsert: true, returnDocument: "after" },
         );
 
@@ -489,6 +493,7 @@ const resetToDefaultSettings = async (req, res, next) => {
               version,
               storage,
               active,
+              isPopular: Boolean(currentPlanTier?.isPopular || billingPlan.slug === "professional"),
               currency,
               ...(dynamicRazorpayId ? { razorpayPlanId: dynamicRazorpayId } : {}),
             },

@@ -7,13 +7,21 @@ export const validate = (schema) => (req, res, next) => {
     }
     if (schema.query) {
       const parsed = schema.query.parse(req.query);
-      Object.keys(req.query).forEach((key) => delete req.query[key]);
-      Object.assign(req.query, parsed);
+      Object.defineProperty(req, "query", {
+        value: parsed,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
     }
     if (schema.params) {
       const parsed = schema.params.parse(req.params);
-      Object.keys(req.params).forEach((key) => delete req.params[key]);
-      Object.assign(req.params, parsed);
+      Object.defineProperty(req, "params", {
+        value: parsed,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
     }
     next();
   } catch (error) {

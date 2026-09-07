@@ -33,8 +33,14 @@ export default function VerifyOtp() {
         setSuccess("OTP sent! Check your email.");
         setTimeout(() => document.getElementById("otp-0")?.focus(), 300);
       } else {
-        const data = await response.json();
-        setError(data.error || "Failed to send OTP");
+        let errorMsg = "Failed to send OTP";
+        try {
+          const data = await response.json();
+          errorMsg = data.error || data.message || errorMsg;
+        } catch {
+          // Non-JSON response
+        }
+        setError(errorMsg);
       }
     } catch (err) {
       setError("An error occurred. Please try again.");
@@ -62,8 +68,14 @@ export default function VerifyOtp() {
       if (response.ok) {
         setSuccess("Verified successfully!");
       } else {
-        const data = await response.json();
-        setError(data.error || "Invalid OTP");
+        let errorMsg = "Invalid OTP";
+        try {
+          const data = await response.json();
+          errorMsg = data.error || data.message || errorMsg;
+        } catch {
+          // Non-JSON response
+        }
+        setError(errorMsg);
       }
     } catch (err) {
       setError("An error occurred. Please try again.");

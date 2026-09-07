@@ -33,14 +33,28 @@ class ApiClient {
   async json(path, options = {}) {
     const response = await this.request(path, options);
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
+      const error = await response.json().catch(async () => {
+        const text = await response.text().catch(() => "");
+        return { message: text || response.statusText };
+      });
       const err = new Error(error.error || error.message || 'Request failed');
       err.status = response.status;
       err.data = error;
       err.response = { data: error, status: response.status };
       throw err;
     }
-    const data = await response.json();
+    const contentType = response.headers.get("content-type");
+    let data;
+    if (contentType && contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { message: text, success: true };
+      }
+    }
     if (data && typeof data === 'object' && !Array.isArray(data) && !('data' in data)) {
       Object.defineProperty(data, 'data', {
         value: data,

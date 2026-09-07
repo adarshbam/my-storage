@@ -45,22 +45,33 @@ const app = express();
 
 const isProduction = process.env.NODE_ENV === "production";
 
-app.use(
+app.use((req, res, next) => {
+  const host = req.headers.host || "";
+  const isLocal =
+    host.includes("localhost") ||
+    host.includes("127.0.0.1") ||
+    req.hostname === "localhost" ||
+    req.hostname === "127.0.0.1";
+
   helmet({
-    // 1. Content Security Policy (CSP) - Extremely strict whitelist
+    // 1. Content Security Policy (CSP) - Whitelist for production and local dev
     contentSecurityPolicy: {
       useDefaults: false,
       directives: {
         defaultSrc: ["'none'"],
         scriptSrc: [
           "'self'",
+          "'unsafe-inline'",
+          "'unsafe-eval'",
           "https://accounts.google.com/gsi/client",
           "https://apis.google.com",
+          "https://*.google.com",
         ],
         styleSrc: [
           "'self'",
           "'unsafe-inline'",
           "https://accounts.google.com/gsi/style",
+          "https://fonts.googleapis.com",
         ],
         imgSrc: [
           "'self'",
@@ -70,17 +81,30 @@ app.use(
           "https://*.googleusercontent.com",
           "https://avatars.githubusercontent.com",
           "https://*.githubusercontent.com",
+          "https://*.google.com",
+          "https://ssl.gstatic.com",
         ],
         connectSrc: [
           "'self'",
           CLIENT_URL,
+          "http://localhost:5173",
+          "http://localhost:4000",
+          "ws://localhost:5173",
+          "http://127.0.0.1:5173",
+          "http://127.0.0.1:4000",
           "https://accounts.google.com",
           "https://oauth2.googleapis.com",
           "https://api.github.com",
           "https://github.com",
           "https://*.googleapis.com",
+          "https://apis.google.com",
+          "https://*.google.com",
         ],
-        frameSrc: ["'self'", "https://accounts.google.com/"],
+        frameSrc: [
+          "'self'",
+          "https://accounts.google.com/",
+          "https://content.googleapis.com/",
+        ],
         formAction: [
           "'self'",
           CLIENT_URL,
@@ -88,20 +112,21 @@ app.use(
           "https://github.com/login/oauth/authorize",
         ],
         frameAncestors: ["'none'"],
-        fontSrc: ["'self'", "data:"],
+        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
         objectSrc: ["'none'"],
         baseUri: ["'none'"],
-        ...(isProduction ? { upgradeInsecureRequests: [] } : {}),
+        ...(!isLocal && isProduction ? { upgradeInsecureRequests: [] } : {}),
       },
     },
-    // 2. Strict Transport Security (HSTS) - Enforce HTTPS for 1 year in production only
-    strictTransportSecurity: isProduction
-      ? {
-          maxAge: 31536000,
-          includeSubDomains: true,
-          preload: true,
-        }
-      : false,
+    // 2. Strict Transport Security (HSTS) - Enforce HTTPS for production only (never on localhost)
+    strictTransportSecurity:
+      !isLocal && isProduction
+        ? {
+            maxAge: 31536000,
+            includeSubDomains: true,
+            preload: true,
+          }
+        : false,
     // 3. X-Frame-Options - Complete Clickjacking protection
     frameguard: {
       action: "deny",
@@ -114,9 +139,9 @@ app.use(
     },
     // 6. X-XSS-Protection - Enable legacy browser security
     xssFilter: true,
-    // 7. Cross-Origin Opener Policy (COOP) - Crucial for popup OAuth flows
+    // 7. Cross-Origin Opener Policy (COOP) - Crucial for popup OAuth flows (same-origin-allow-popups)
     crossOriginOpenerPolicy: {
-      policy: "unsafe-none",
+      policy: "same-origin-allow-popups",
     },
     // 8. Cross-Origin Resource Policy (CORP) - Allow client app to read static files
     crossOriginResourcePolicy: {
@@ -124,8 +149,8 @@ app.use(
     },
     // Disable COEP to allow loading external profile pictures without CORP headers
     crossOriginEmbedderPolicy: false,
-  }),
-);
+  })(req, res, next);
+});
 
 // 9. Extra Professional Header: Permissions-Policy - Disable all unused hardware features
 app.use((req, res, next) => {
@@ -144,6 +169,8 @@ const allowedOrigins = [
   "https://www.yourvaultstorage.com",
   "http://localhost:5173",
   "http://localhost:4000",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:4000",
 ].filter(Boolean);
 
 app.use(
@@ -159,7 +186,9 @@ app.use(
       if (!origin) return callback(null, true);
       if (
         allowedOrigins.includes(origin) ||
-        origin.includes("yourvaultstorage.com")
+        origin.includes("yourvaultstorage.com") ||
+        origin.includes("localhost") ||
+        origin.includes("127.0.0.1")
       ) {
         return callback(null, true);
       }
@@ -309,3 +338,19 @@ async function handleShutdown(signal) {
 
 process.on("SIGINT", () => handleShutdown("SIGINT"));
 process.on("SIGTERM", () => handleShutdown("SIGTERM"));
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("⚠️ [Server] Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("❌ [Server] Uncaught Exception:", err);
+});
+
+process.on("beforeExit", (code) => {
+  console.log(`⚠️ [Process beforeExit Event] Code: ${code}`);
+});
+
+process.on("exit", (code) => {
+  console.log(`🛑 [Process exit Event] Code: ${code}`);
+});

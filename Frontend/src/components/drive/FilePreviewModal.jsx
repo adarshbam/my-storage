@@ -17,6 +17,7 @@ import {
   WrapText,
   FileVideo,
   History,
+  ExternalLink,
 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
 import { getFileCdnUrl } from "../../api/files.api";
@@ -190,7 +191,8 @@ export default function FilePreviewModal({
   const allowEdit = !isNoPlan && (rules?.permissions?.allowUpload ?? true);
 
   // Check cache immediately on state initialization for instant 0ms mount
-  const initialCached = file?._id ? getCachedContent(file._id) : null;
+  const fileCacheKey = file?.sha || file?._id || file?.githubPath;
+  const initialCached = fileCacheKey ? getCachedContent(fileCacheKey) : null;
 
   const [content, setContent] = useState(initialCached);
   const [editedContent, setEditedContent] = useState(initialCached || "");
@@ -391,7 +393,8 @@ export default function FilePreviewModal({
       } else {
         // External provider (GitHub or Google Drive)
         if (isText) {
-          const cached = getCachedContent(file._id);
+          const externalCacheKey = file?.sha || file?._id || file?.githubPath;
+          const cached = externalCacheKey ? getCachedContent(externalCacheKey) : null;
           if (cached !== null) {
             setContent(cached);
             setEditedContent(cached);
@@ -425,7 +428,9 @@ export default function FilePreviewModal({
 
             if (abortController.signal.aborted) return;
 
-            setCachedContent(file._id, text);
+            if (externalCacheKey) {
+              setCachedContent(externalCacheKey, text);
+            }
 
             setContent(text);
             setEditedContent(text);
@@ -956,7 +961,7 @@ export default function FilePreviewModal({
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 shrink-0 flex-wrap justify-end">
-            {isTextOrCode(file.extension) && !loading && (
+            {isTextOrCode(getFileExt(file), file.name) && !loading && (
               <>
                 {!isEditing && (
                   <Button
@@ -1020,6 +1025,18 @@ export default function FilePreviewModal({
                 <span className="hidden sm:inline text-xs">History</span>
               </Button>
             )}
+            {(file.metaUrl || file.webViewLink) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.open(file.metaUrl || file.webViewLink, "_blank")}
+                title="Open in Google Drive"
+                className="text-slate-600 dark:text-white/70 hover:text-accent-primary flex items-center gap-1.5 font-bold"
+              >
+                <ExternalLink size={16} />
+                <span className="hidden sm:inline text-xs">Drive</span>
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -1050,7 +1067,7 @@ export default function FilePreviewModal({
         {/* Content */}
         <div
           className={`flex-1 overflow-auto bg-slate-100/70 dark:bg-black/40 ${
-            isPdf(file.extension) ? "p-0 overflow-hidden" : "p-4 md:p-6"
+            isPdf(getFileExt(file)) ? "p-0 overflow-hidden" : "p-4 md:p-6"
           }`}
         >
           {renderContent()}

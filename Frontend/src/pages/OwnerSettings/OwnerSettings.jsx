@@ -50,13 +50,28 @@ export default function OwnerSettings() {
 
     if (res.ok) {
       setLimits(ownerSettings.limits);
-      setPlanTiers(ownerSettings.planTiers);
-      setBillingPlans(ownerSettings.billingPlans);
-      setFeatures(ownerSettings.features);
+      const rawTiers = ownerSettings.planTiers || [];
+      const hasPopular = rawTiers.some((t) => Boolean(t.isPopular));
+      const resolvedTiers = rawTiers.map((t) => ({
+        ...t,
+        isPopular: hasPopular ? Boolean(t.isPopular) : t.slug === "professional",
+      }));
+      setPlanTiers(resolvedTiers);
+
+      const resolvedPlans = (ownerSettings.billingPlans || []).map((p) => {
+        const matchingTier = resolvedTiers.find((t) => t.slug === p.slug);
+        return {
+          ...p,
+          isPopular: matchingTier ? matchingTier.isPopular : Boolean(p.isPopular),
+        };
+      });
+      setBillingPlans(resolvedPlans);
+      setFeatures(ownerSettings.features || []);
+      const rawConfigs = Array.isArray(ownerSettings.tiersConfigs) ? ownerSettings.tiersConfigs : [];
       setTierFeatureConfigs(
         Object.assign(
           {},
-          ...ownerSettings.tiersConfigs.flatMap((tier) => {
+          ...rawConfigs.flatMap((tier) => {
             if (!Array.isArray(tier.features)) return { [tier.slug]: [] };
             return {
               [tier.slug]: tier.features
@@ -69,9 +84,9 @@ export default function OwnerSettings() {
       setTierRuleConfigs(
         Object.assign(
           {},
-          ...ownerSettings.tiersConfigs.flatMap((tier) => {
+          ...rawConfigs.flatMap((tier) => {
             return {
-              [tier.slug]: tier.rules,
+              [tier.slug]: tier.rules || {},
             };
           }),
         ),
@@ -119,6 +134,31 @@ export default function OwnerSettings() {
   };
 
   const handleUpdatePlan = (planId, field, val) => {
+    if (field === "isPopular") {
+      const targetPlan = billingPlans.find((p) => p._id === planId);
+      const targetSlug = targetPlan?.slug;
+      const isFree =
+        targetSlug?.toLowerCase().includes("free") || Number(targetPlan?.amount) === 0;
+      if (val && isFree) {
+        showToast("Free trial tier cannot be marked as Most Popular.");
+        return;
+      }
+
+      setBillingPlans((prev) =>
+        prev.map((plan) => ({
+          ...plan,
+          isPopular: val ? plan.slug === targetSlug : false,
+        })),
+      );
+      setPlanTiers((prev) =>
+        prev.map((tier) => ({
+          ...tier,
+          isPopular: val ? tier.slug === targetSlug : false,
+        })),
+      );
+      return;
+    }
+
     setBillingPlans((prev) =>
       prev.map((plan) =>
         plan._id === planId ? { ...plan, [field]: val } : plan,
@@ -254,6 +294,28 @@ export default function OwnerSettings() {
 
   // Handlers for state updates
   const handleUpdateTierDetail = async (tierSlug, field, val) => {
+    if (field === "isPopular") {
+      const isFree = tierSlug?.toLowerCase().includes("free");
+      if (val && isFree) {
+        showToast("Free trial tier cannot be marked as Most Popular.");
+        return;
+      }
+
+      setPlanTiers((prev) =>
+        prev.map((tier) => ({
+          ...tier,
+          isPopular: val ? tier.slug === tierSlug : false,
+        })),
+      );
+      setBillingPlans((prev) =>
+        prev.map((plan) => ({
+          ...plan,
+          isPopular: val ? plan.slug === tierSlug : false,
+        })),
+      );
+      return;
+    }
+
     setPlanTiers((prev) =>
       prev.map((tier) =>
         tier.slug === tierSlug ? { ...tier, [field]: val } : tier,
@@ -453,30 +515,30 @@ export default function OwnerSettings() {
   };
 
   return (
-    <div className="space-y-8 pb-24">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="space-y-6 sm:space-y-8 pb-24 min-w-0 w-full">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 min-w-0 w-full">
         {/* Navigation Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-8">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             <button
               onClick={() => navigate("/dashboard")}
-              className="p-2.5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm shrink-0"
+              className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm shrink-0"
               title="Return to Dashboard"
             >
-              <ArrowLeft size={18} />
+              <ArrowLeft size={16} />
             </button>
 
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-md bg-purple-500/15 text-purple-400 border border-purple-500/25">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="text-[9px] min-[360px]:text-[10px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-400 border border-purple-500/25">
                   Owner Dashboard
                 </span>
                 <span className="text-slate-400 text-xs font-semibold">/</span>
-                <span className="text-slate-500 dark:text-white/40 text-xs font-semibold">
+                <span className="text-slate-500 dark:text-white/40 text-[11px] min-[360px]:text-xs font-semibold truncate">
                   Settings
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white mt-1">
+              <h1 className="text-xl min-[360px]:text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white mt-0.5 truncate">
                 Owner Control Center
               </h1>
             </div>
@@ -485,23 +547,23 @@ export default function OwnerSettings() {
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
               onClick={handleResetDefaults}
-              className="flex-1 xs:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm"
+              className="flex-1 xs:flex-none flex items-center justify-center gap-1.5 px-3 min-[360px]:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[11px] min-[360px]:text-xs font-bold text-slate-700 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm"
             >
-              <RefreshCw size={14} /> Reset Defaults
+              <RefreshCw size={13} /> Reset Defaults
             </button>
 
             <button
               onClick={handleSaveAll}
-              className="flex-1 xs:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-xs font-black shadow-lg shadow-teal-500/20 hover:opacity-95 transition-opacity"
+              className="flex-1 xs:flex-none flex items-center justify-center gap-1.5 px-3.5 min-[360px]:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-[11px] min-[360px]:text-xs font-black shadow-lg shadow-teal-500/20 hover:opacity-95 transition-opacity"
             >
-              <Check size={14} strokeWidth={3} /> Save Configurations
+              <Check size={13} strokeWidth={3} /> Save Configurations
             </button>
           </div>
         </div>
 
         {/* Floating Toast Notification */}
         {toastMessage && (
-          <div className="fixed top-6 right-6 z-[100] bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-3 rounded-2xl font-bold text-xs shadow-2xl border border-white/10 flex items-center gap-2 animate-bounce">
+          <div className="fixed top-6 right-6 z-[100] bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-2.5 rounded-xl font-bold text-xs shadow-2xl border border-white/10 flex items-center gap-2 animate-bounce">
             <Sparkles
               size={14}
               className="text-emerald-400 dark:text-emerald-600"
@@ -511,7 +573,7 @@ export default function OwnerSettings() {
         )}
 
         {/* Section Navigation Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 border-b border-slate-200/60 dark:border-white/10 no-scrollbar custom-scrollbar -mx-3 sm:mx-0 px-3 sm:px-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-3 mb-6 border-b border-slate-200/60 dark:border-white/10 no-scrollbar custom-scrollbar -mx-2 sm:mx-0 px-2 sm:px-0">
           {[
             { id: "all", label: "All Sections", icon: Sliders },
             { id: "limits", label: "Global System Limits", icon: Zap },
@@ -527,13 +589,13 @@ export default function OwnerSettings() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all duration-200 shrink-0 ${
+                className={`flex items-center gap-1.5 px-3 min-[360px]:px-4 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-[11px] min-[360px]:text-xs font-bold whitespace-nowrap transition-all duration-200 shrink-0 ${
                   isActive
                     ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md"
                     : "bg-white dark:bg-white/5 text-slate-600 dark:text-white/60 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/60 dark:border-white/5"
                 }`}
               >
-                <Icon size={14} />
+                <Icon size={13} />
                 {tab.label}
               </button>
             );

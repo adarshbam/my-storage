@@ -59,7 +59,7 @@ export default function StandaloneNavbar() {
     try {
       const response = await fetch(`${SERVER_URL}/user/profilepic`, {
         method: "POST",
-        headers: { filename: file.name },
+        headers: { filename: encodeURIComponent(file.name) },
         body: file,
         credentials: "include",
       });
@@ -71,7 +71,11 @@ export default function StandaloneNavbar() {
         if (userRes.ok) {
           const newUser = await userRes.json();
           setUser(newUser);
+          window.dispatchEvent(new CustomEvent("auth:refresh"));
         }
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        console.error("Failed to upload profile picture:", errData);
       }
     } catch (err) {
       console.error("Error uploading profile pic", err);
@@ -156,24 +160,24 @@ export default function StandaloneNavbar() {
   return (
     <header className="h-[64px] shrink-0 bg-white/95 dark:bg-vault-surface/95 backdrop-blur-3xl border-b border-slate-200 dark:border-white/10 z-50 flex items-center justify-between px-3 sm:px-6 sticky top-0 shadow-sm transition-colors duration-200">
       {/* LEFT: Logo & Quick Return to Vault */}
-      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-4 shrink-0 min-w-0">
         <Link
           to="/"
-          className="flex items-center gap-2.5 group"
+          className="flex items-center gap-2 group shrink-0"
           title="Go to Home"
         >
           <div className="bg-accent-soft border border-accent-border p-1.5 rounded-xl shadow-sm group-hover:border-accent-primary transition-colors">
             <VaultLogo className="text-accent-primary" size={18} />
           </div>
-          <span className="text-base sm:text-lg font-black tracking-widest text-slate-900 dark:text-white uppercase hidden xs:inline-block">
-            Vault O
+          <span className="text-base sm:text-lg font-black tracking-widest text-slate-900 dark:text-white uppercase hidden min-[420px]:inline-block">
+            Vault OS
           </span>
         </Link>
 
         {/* Back to Vault quick button */}
         <Link
           to="/dashboard"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 text-xs font-bold transition-all ml-1"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 text-xs font-bold transition-all shrink-0"
           title="Back to Vault files"
         >
           <ArrowLeft size={13} />

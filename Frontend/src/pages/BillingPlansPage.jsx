@@ -66,10 +66,10 @@ export default function BillingPlansPage() {
     };
     document.addEventListener("visibilitychange", handleVisibility);
 
-    // 3. Background live-sync interval (every 5 seconds while viewing billing)
+    // 3. Background live-sync interval (every 60 seconds while viewing billing)
     const syncInterval = setInterval(() => {
       fetchInitialData(true);
-    }, 5000);
+    }, 60000);
 
     return () => {
       window.removeEventListener("subscription:updated", handleSync);
@@ -93,19 +93,18 @@ export default function BillingPlansPage() {
   const fetchInitialData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      // 1. Fetch Current Subscription
-      const subRes = await fetch(`${SERVER_URL}/subscriptions/current`, {
-        credentials: "include",
-      });
+      // Parallelize all 3 requests simultaneously for 3x faster page load
+      const [subRes, plansRes, invRes] = await Promise.all([
+        fetch(`${SERVER_URL}/subscriptions/current`, { credentials: "include" }),
+        fetch(`${SERVER_URL}/plan/get-active-plans`, { credentials: "include" }),
+        fetch(`${SERVER_URL}/billing/invoices`, { credentials: "include" }),
+      ]);
+
       if (subRes.ok) {
         const subData = await subRes.json();
         setSubscription(subData);
       }
 
-      // 2. Fetch Active Plans
-      const plansRes = await fetch(`${SERVER_URL}/plan/get-active-plans`, {
-        credentials: "include",
-      });
       if (plansRes.ok) {
         const plansData = await plansRes.json();
         if (Array.isArray(plansData)) {
@@ -113,10 +112,6 @@ export default function BillingPlansPage() {
         }
       }
 
-      // 3. Fetch Invoices
-      const invRes = await fetch(`${SERVER_URL}/billing/invoices`, {
-        credentials: "include",
-      });
       if (invRes.ok) {
         const invData = await invRes.json();
         setInvoices(invData.invoices || []);
@@ -435,17 +430,17 @@ export default function BillingPlansPage() {
           <div className="flex items-center gap-2 text-accent-primary text-xs uppercase font-bold tracking-widest mb-1">
             <Zap size={14} fill="currentColor" /> Vault Account Dashboard
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+          <h1 className="text-xl min-[360px]:text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
             Plans & Subscription
           </h1>
-          <p className="text-slate-500 dark:text-white/50 text-sm font-medium mt-1">
+          <p className="text-slate-500 dark:text-white/50 text-xs sm:text-sm font-medium mt-1">
             Manage your storage plan, subscription status, and billing lifecycle.
           </p>
         </div>
 
         <Link
           to="/dashboard"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 text-xs font-bold transition-colors self-start md:self-auto"
+          className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 text-xs font-bold transition-colors self-start md:self-auto"
         >
           <ArrowLeft size={14} /> Back to Vault
         </Link>
@@ -453,7 +448,7 @@ export default function BillingPlansPage() {
 
       {/* ── SECTION 1 & 2: CURRENT PLAN SUMMARY HERO ── */}
       {loading && !subscription ? (
-        <div className="p-8 rounded-3xl bg-white dark:bg-vault-surface/60 border border-slate-200 dark:border-white/10 animate-pulse space-y-4 shadow-sm">
+        <div className="p-4 min-[360px]:p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-white dark:bg-vault-surface/60 border border-slate-200 dark:border-white/10 animate-pulse space-y-4 shadow-sm">
           <div className="h-6 bg-slate-200 dark:bg-white/10 rounded w-1/4" />
           <div className="h-10 bg-slate-200 dark:bg-white/10 rounded w-1/2" />
           <div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-3/4" />
@@ -461,28 +456,28 @@ export default function BillingPlansPage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Current Plan Hero Card */}
-          <div className="lg:col-span-2 rounded-3xl p-5 sm:p-8 bg-white dark:bg-gradient-to-br dark:from-vault-surface dark:via-slate-900 dark:to-slate-950 border border-slate-200 dark:border-accent-border/30 shadow-md relative overflow-hidden flex flex-col justify-between text-slate-900 dark:text-white">
+          <div className="lg:col-span-2 rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-6 sm:p-8 bg-white dark:bg-gradient-to-br dark:from-vault-surface dark:via-slate-900 dark:to-slate-950 border border-slate-200 dark:border-accent-border/30 shadow-md relative overflow-hidden flex flex-col justify-between text-slate-900 dark:text-white min-w-0">
             {/* Background Ambient Glow */}
             <div className="absolute top-0 right-0 w-80 h-80 bg-accent-soft/20 rounded-full blur-3xl pointer-events-none" />
 
             <div>
-              <div className="flex items-center justify-between gap-4 mb-6">
-                <span className="text-xs font-bold uppercase tracking-widest text-accent-primary">
+              <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 mb-4 sm:mb-6">
+                <span className="text-[10px] min-[360px]:text-xs font-bold uppercase tracking-widest text-accent-primary">
                   Current Subscription
                 </span>
                 <span
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider ${statusConfig.badgeClass}`}
+                  className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full border text-[10px] min-[360px]:text-xs font-bold uppercase tracking-wider ${statusConfig.badgeClass} shrink-0`}
                 >
                   <StatusIcon size={12} /> {statusConfig.label}
                 </span>
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 mb-6">
-                <div>
-                  <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="min-w-0">
+                  <h2 className="text-xl min-[360px]:text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight break-words">
                     {isNoSubscription ? "No Active Subscription" : subscription?.planName || "Novice Vault"}
                   </h2>
-                  <p className="text-slate-500 dark:text-white/50 text-xs font-medium mt-1">
+                  <p className="text-slate-500 dark:text-white/50 text-[11px] min-[360px]:text-xs font-medium mt-1 leading-relaxed">
                     {isNoSubscription
                       ? "Read-Only data rescue vault access"
                       : status === "PAUSED"
@@ -490,11 +485,11 @@ export default function BillingPlansPage() {
                       : "High-performance cloud vault storage"}
                   </p>
                 </div>
-                <div className="text-left sm:text-right">
-                  <span className="text-3xl font-black text-slate-900 dark:text-white">
+                <div className="text-left sm:text-right shrink-0">
+                  <span className="text-xl min-[360px]:text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
                     {displayPrice}
                   </span>
-                  <span className="text-slate-500 dark:text-white/40 text-xs font-semibold">
+                  <span className="text-slate-500 dark:text-white/40 text-[11px] min-[360px]:text-xs font-semibold">
                     {displayPeriod}
                   </span>
                 </div>
@@ -660,10 +655,10 @@ export default function BillingPlansPage() {
           </div>
 
           {/* Billing Cycle Toggle */}
-          <div className="inline-flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 self-start sm:self-auto shadow-sm">
+          <div className="flex flex-wrap sm:inline-flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 self-start sm:self-auto shadow-sm gap-1">
             <button
               onClick={() => setIsYearly(false)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all text-center ${
                 !isYearly
                   ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
                   : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
@@ -673,7 +668,7 @@ export default function BillingPlansPage() {
             </button>
             <button
               onClick={() => setIsYearly(true)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all text-center ${
                 isYearly
                   ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
                   : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
@@ -739,77 +734,77 @@ export default function BillingPlansPage() {
       </div>
 
       {/* ── SECTION 9: PLAN COMPARISON MATRIX ── */}
-      <div className="space-y-6 pt-6">
+      <div className="space-y-4 sm:space-y-6 pt-6 min-w-0 w-full">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-            <Sliders size={20} className="text-accent-primary" /> Compare Plans
+          <h2 className="text-xl min-[360px]:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+            <Sliders size={18} className="text-accent-primary" /> Compare Plans
           </h2>
-          <p className="text-slate-500 dark:text-white/50 text-xs font-medium mt-1">
+          <p className="text-slate-500 dark:text-white/50 text-[11px] min-[360px]:text-xs font-medium mt-1">
             Detailed side-by-side feature comparison across storage tiers.
           </p>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-vault-surface/80 backdrop-blur-xl overflow-x-auto custom-scrollbar shadow-sm">
-          <table className="w-full text-left border-collapse min-w-[650px]">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-vault-surface/80 backdrop-blur-xl overflow-x-auto no-scrollbar custom-scrollbar shadow-sm max-w-full">
+          <table className="w-full text-left border-collapse min-w-[580px] sm:min-w-[650px]">
             <thead>
               <tr className="border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5">
-                <th className="p-4 sm:p-5 text-xs font-bold uppercase text-slate-500 dark:text-white/50">Feature</th>
+                <th className="p-3.5 sm:p-5 text-[11px] min-[360px]:text-xs font-bold uppercase text-slate-500 dark:text-white/50">Feature</th>
                 {plans
                   .filter((p) => p.period?.toLowerCase() === (isYearly ? "yearly" : "monthly"))
                   .map((p) => (
-                    <th key={p._id || p.razorpayPlanId} className="p-4 sm:p-5 text-sm font-black text-slate-900 dark:text-white">
+                    <th key={p._id || p.razorpayPlanId} className="p-3.5 sm:p-5 text-xs min-[360px]:text-sm font-black text-slate-900 dark:text-white">
                       {p.type || p.slug}
                     </th>
                   ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs text-slate-800 dark:text-white/80">
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-[11px] min-[360px]:text-xs text-slate-800 dark:text-white/80">
               <tr>
-                <td className="p-4 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Storage Quota</td>
+                <td className="p-3.5 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Storage Quota</td>
                 {plans
                   .filter((p) => p.period?.toLowerCase() === (isYearly ? "yearly" : "monthly"))
                   .map((p) => (
-                    <td key={p._id} className="p-4 sm:p-5 font-bold text-accent-primary">
+                    <td key={p._id} className="p-3.5 sm:p-5 font-bold text-accent-primary">
                       {formatSize(p.storage)}
                     </td>
                   ))}
               </tr>
               <tr>
-                <td className="p-4 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Max Devices</td>
+                <td className="p-3.5 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Max Devices</td>
                 {plans
                   .filter((p) => p.period?.toLowerCase() === (isYearly ? "yearly" : "monthly"))
                   .map((p) => (
-                    <td key={p._id} className="p-4 sm:p-5 font-medium">
+                    <td key={p._id} className="p-3.5 sm:p-5 font-medium">
                       {p.rules?.maxDevicesLimit || (p.type?.includes("Ultimate") ? "Unlimited" : p.type?.includes("Pro") ? "5 Devices" : "2 Devices")}
                     </td>
                   ))}
               </tr>
               <tr>
-                <td className="p-4 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Upload Speed</td>
+                <td className="p-3.5 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Upload Speed</td>
                 {plans
                   .filter((p) => p.period?.toLowerCase() === (isYearly ? "yearly" : "monthly"))
                   .map((p) => (
-                    <td key={p._id} className="p-4 sm:p-5 font-medium">
+                    <td key={p._id} className="p-3.5 sm:p-5 font-medium">
                       {p.type?.includes("Novice") ? "Standard Speed" : "10x Priority Speed"}
                     </td>
                   ))}
               </tr>
               <tr>
-                <td className="p-4 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Version History</td>
+                <td className="p-3.5 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Version History</td>
                 {plans
                   .filter((p) => p.period?.toLowerCase() === (isYearly ? "yearly" : "monthly"))
                   .map((p) => (
-                    <td key={p._id} className="p-4 sm:p-5 font-medium">
+                    <td key={p._id} className="p-3.5 sm:p-5 font-medium">
                       {p.type?.includes("Ultimate") ? "Unlimited History" : p.type?.includes("Pro") ? "30 Days" : "7 Days"}
                     </td>
                   ))}
               </tr>
               <tr>
-                <td className="p-4 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Price ({isYearly ? "Yearly" : "Monthly"})</td>
+                <td className="p-3.5 sm:p-5 font-semibold text-slate-500 dark:text-white/60">Price ({isYearly ? "Yearly" : "Monthly"})</td>
                 {plans
                   .filter((p) => p.period?.toLowerCase() === (isYearly ? "yearly" : "monthly"))
                   .map((p) => (
-                    <td key={p._id} className="p-4 sm:p-5 font-bold text-slate-900 dark:text-white">
+                    <td key={p._id} className="p-3.5 sm:p-5 font-bold text-slate-900 dark:text-white">
                       ₹{p.amount || p.price}
                     </td>
                   ))}
@@ -820,29 +815,29 @@ export default function BillingPlansPage() {
       </div>
 
       {/* ── SECTION 6: INVOICES / BILLING HISTORY ── */}
-      <div className="space-y-6 pt-6">
+      <div className="space-y-4 sm:space-y-6 pt-6 min-w-0 w-full">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-            <Download size={20} className="text-accent-primary" /> Billing History & Invoices
+          <h2 className="text-xl min-[360px]:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+            <Download size={18} className="text-accent-primary" /> Billing History & Invoices
           </h2>
-          <p className="text-slate-500 dark:text-white/50 text-xs font-medium mt-1">
+          <p className="text-slate-500 dark:text-white/50 text-[11px] min-[360px]:text-xs font-medium mt-1">
             Download past payment invoices and billing statements.
           </p>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-vault-surface/80 backdrop-blur-xl overflow-hidden shadow-sm">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-vault-surface/80 backdrop-blur-xl overflow-hidden shadow-sm max-w-full">
           {invoices.length === 0 ? (
-            <div className="p-12 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center mx-auto text-slate-400 dark:text-white/30">
-                <CreditCard size={24} />
+            <div className="p-8 sm:p-12 text-center space-y-2.5 sm:space-y-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center mx-auto text-slate-400 dark:text-white/30">
+                <CreditCard size={20} />
               </div>
-              <h4 className="text-base font-bold text-slate-900 dark:text-white">No Billing History Yet</h4>
+              <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">No Billing History Yet</h4>
               <p className="text-xs text-slate-500 dark:text-white/40 max-w-sm mx-auto">
                 Invoices will automatically appear here once payments are processed.
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto custom-scrollbar">
+            <div className="overflow-x-auto no-scrollbar custom-scrollbar max-w-full">
               <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-xs uppercase font-bold text-slate-500 dark:text-white/50">

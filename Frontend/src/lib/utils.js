@@ -126,9 +126,26 @@ export const getProfilePicUrl = (profilepic) => {
   ) {
     return str;
   }
-  if (str.startsWith("/user/profilepic") || str.startsWith("user/profilepic")) {
-    return `${SERVER_URL}${str.startsWith("/") ? "" : "/"}${str}`;
+
+  // Prevent double-wrapping if the string is already a profilepic endpoint URL
+  if (str.includes("/user/profilepic")) {
+    let decoded = str;
+    try {
+      decoded = decodeURIComponent(str);
+    } catch {}
+    const idMatch = decoded.match(/id=([0-9a-fA-F]{24})/);
+    if (idMatch) {
+      return `${SERVER_URL}/user/profilepic?id=${idMatch[1]}`;
+    }
+    if (SERVER_URL && str.startsWith(SERVER_URL)) {
+      return str;
+    }
+    if (str.startsWith("/user/profilepic") || str.startsWith("user/profilepic")) {
+      return `${SERVER_URL}${str.startsWith("/") ? "" : "/"}${str}`;
+    }
+    return str;
   }
+
   return `${SERVER_URL}/user/profilepic?id=${encodeURIComponent(str)}`;
 };
 

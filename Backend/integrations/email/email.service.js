@@ -2,8 +2,8 @@ import nodemailer from "nodemailer";
 
 export default async function sendEmail(mail) {
   const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: Number(process.env.SMTP_PORT) || 587,
     secure: false, // use STARTTLS (upgrade connection to TLS after connecting)
     auth: {
       user: process.env.SMTP_USER || "adarshsingh800515@gmail.com",
@@ -12,7 +12,12 @@ export default async function sendEmail(mail) {
   });
 
   try {
-    const info = await transporter.sendMail(mail);
+    const mailOptions = {
+      from: mail.from || `"Vault" <${process.env.SMTP_USER || "no-reply@vault.com"}>`,
+      ...mail,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
 
     console.log("Message sent: %s", info.messageId);
     return info;

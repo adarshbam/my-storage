@@ -162,7 +162,6 @@ router.post(
   loadPlanContext,
   requireFeature("gdrive_sync"),
   mediumWriteLimiter,
-  throttle(500, 6, "drive-transfer-to"),
   validate(transferToVaultSchema),
   transferToVault,
 );
@@ -173,7 +172,6 @@ router.post(
   loadPlanContext,
   requireFeature("gdrive_sync"),
   mediumWriteLimiter,
-  throttle(500, 6, "drive-transfer-from"),
   validate(transferFromVaultSchema),
   transferFromVault,
 );

@@ -6,11 +6,13 @@ import GitWorkspace from "../models/gitWorkspaceModel.js";
 import StarredItem from "../models/starredItemModel.js";
 import archiver from "archiver";
 import path from "path";
+import { Readable } from "stream";
 import SharedAccess from "../models/sharedAccessModel.js";
-import { invalidateUserSessions } from "../databases/redis.js";
+import { invalidateUserSessions, cacheGet, cacheSet } from "../databases/redis.js";
 import { getObjectFromB2 } from "../integrations/storage/s3.client.js";
 import { resolveIntegrationOwnerId } from "../utils/integrationHelper.js";
 import { withTransaction } from "../utils/transaction.js";
+import { deleteItemsBatchLogic } from "./directory.service.js";
 
 async function getAuthenticatedAccessToken(req, requireWrite = false) {
   try {
@@ -354,9 +356,45 @@ export const getRepositoryContentsLogic = async ({ owner, repo, path: reqPath, r
 };
 
 export const getFilesLogic = async ({ owner, repo, path: reqPath, ref, action, req, res }) => {
+  const cacheKey = `gh:file:${owner}:${repo}:${ref || "default"}:${reqPath}`;
+  const range = req.headers.range;
+
+  // 1. Fast-path: Check Redis cache (for non-range requests)
+  if (!range) {
+    const cached = await cacheGet(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        // ETag conditional check (HTTP 304 Not Modified for 0ms browser response)
+        if (req.headers["if-none-match"] === `"${parsed.sha}"`) {
+          return res.status(304).end();
+        }
+
+        res.setHeader("Content-Type", parsed.contentType || "text/plain");
+        res.setHeader("Accept-Ranges", "bytes");
+        res.setHeader("X-Total-Size", parsed.size);
+        if (parsed.sha) {
+          res.setHeader("X-File-Sha", parsed.sha);
+          res.setHeader("ETag", `"${parsed.sha}"`);
+        }
+        res.setHeader("Cache-Control", "private, max-age=86400");
+        if (action === "download") {
+          res.setHeader(
+            "Content-Disposition",
+            `attachment; filename="${parsed.name}"`,
+          );
+        }
+        return res.send(Buffer.from(parsed.contentBase64, "base64"));
+      } catch (parseErr) {
+        console.error("[getFilesLogic] Redis cache parse error:", parseErr);
+      }
+    }
+  }
+
   const auth = await getAuthenticatedAccessToken(req, false);
   const { githubAccessToken } = auth;
 
+  // 2. Fetch file metadata from GitHub
   const metaResponse = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/contents/${reqPath}${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`,
     {
@@ -381,9 +419,14 @@ export const getFilesLogic = async ({ owner, repo, path: reqPath, ref, action, r
     throw err;
   }
 
-  const fileSize = fileMeta.size;
-  const range = req.headers.range;
+  // HTTP 304 check against GitHub file SHA
+  if (!range && fileMeta.sha && req.headers["if-none-match"] === `"${fileMeta.sha}"`) {
+    res.setHeader("ETag", `"${fileMeta.sha}"`);
+    res.setHeader("Cache-Control", "private, max-age=86400");
+    return res.status(304).end();
+  }
 
+  const fileSize = fileMeta.size;
   const ext = fileMeta.name.split(".").pop().toLowerCase();
   const mimeTypes = {
     png: "image/png",
@@ -412,7 +455,9 @@ export const getFilesLogic = async ({ owner, repo, path: reqPath, ref, action, r
   res.setHeader("X-Total-Size", fileSize);
   if (fileMeta.sha) {
     res.setHeader("X-File-Sha", fileMeta.sha);
+    res.setHeader("ETag", `"${fileMeta.sha}"`);
   }
+  res.setHeader("Cache-Control", "private, max-age=86400");
 
   if (action === "download") {
     res.setHeader(
@@ -449,8 +494,29 @@ export const getFilesLogic = async ({ owner, repo, path: reqPath, ref, action, r
     throw err;
   }
 
+  // Cache files <= 5MB in Redis so future loads are instantaneous (< 5ms)
+  const MAX_CACHEABLE_BYTES = 5 * 1024 * 1024;
+  if (!range && fileSize <= MAX_CACHEABLE_BYTES && rawResponse.body) {
+    try {
+      const arrayBuffer = await rawResponse.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const cachePayload = {
+        name: fileMeta.name,
+        size: fileSize,
+        sha: fileMeta.sha,
+        contentType,
+        contentBase64: buffer.toString("base64"),
+      };
+      // Immutable SHA or ref cache TTL: 24h
+      const ttl = ref && /^[0-9a-f]{40}$/i.test(ref) ? 86400 : 3600;
+      await cacheSet(cacheKey, JSON.stringify(cachePayload), ttl);
+      return res.send(buffer);
+    } catch (cacheErr) {
+      console.error("[getFilesLogic] Error caching file content:", cacheErr);
+    }
+  }
+
   if (rawResponse.body) {
-    const { Readable } = await import("stream");
     Readable.fromWeb(rawResponse.body).pipe(res);
   } else {
     const err = new Error("No content body available");
@@ -2272,26 +2338,48 @@ export const transferFromVaultLogic = async ({ items, targetPath, req }) => {
       }
     } else {
       let ext = localItem.extension;
-      if (!ext) {
-        const fileDoc = await File.findById(itemId).select("extension name").lean();
-        ext = fileDoc?.extension || (localItem.name ? path.extname(localItem.name) : "");
+      let name = localItem.name;
+      const fileDoc = await File.findById(itemId).select("extension name").lean();
+      if (fileDoc) {
+        ext = fileDoc.extension || ext || (name ? path.extname(name) : "");
+        name = fileDoc.name || name || "Untitled";
+      } else {
+        if (!ext && name) ext = path.extname(name);
       }
-      const s3Key = `${itemId}${ext}`;
+      if (ext && !ext.startsWith(".")) {
+        ext = `.${ext}`;
+      }
+      const s3Key = `${itemId}${ext || ""}`;
       const objectData = await getObjectFromB2({ key: s3Key });
       const byteArray = await objectData.Body.transformToByteArray();
       const buffer = Buffer.from(byteArray);
       const content = buffer.toString("base64");
-      const fullPath = `${destPath}/${localItem.name}`;
+      const fullPath = `${destPath}/${name}`;
 
-      const res = await pushToGithub(content, fullPath, `Upload ${localItem.name} from Vault`);
+      const res = await pushToGithub(content, fullPath, `Upload ${name} from Vault`);
       if (res.ok) {
-        results.push({ name: localItem.name, path: fullPath, status: "transferred" });
+        results.push({ name: name, path: fullPath, status: "transferred" });
       }
     }
   };
 
   for (const item of items) {
     await exportItem(item, targetPath);
+  }
+
+  // Delete transferred items from Vault completely
+  try {
+    await deleteItemsBatchLogic({
+      items: items.map((i) => ({
+        _id: i._id || i.id,
+        type: i.type || (i.extension ? "file" : "directory"),
+      })),
+      userId: req.user.id,
+      userRole: req.user.role,
+      permanent: true,
+    });
+  } catch (deleteErr) {
+    console.warn("[transferFromVaultLogic GitHub] Local cleanup warning:", deleteErr?.message || deleteErr);
   }
 
   return { msg: "Transfer to GitHub successful", results };

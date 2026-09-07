@@ -24,18 +24,19 @@ const FinalCTA = () => {
               </span>
             </div>
 
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white mb-5 tracking-tight leading-[1.1]">
-              Your files, encrypted. <br />
+            <h2 className="text-2xl min-[360px]:text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white mb-4 sm:mb-5 tracking-tight leading-[1.12]">
+              Your files, encrypted.{" "}
+              <br className="hidden sm:inline" />
               <span className="text-accent-primary">Always at your fingertips.</span>
             </h2>
 
-            <p className="text-slate-600 dark:text-white/60 text-base sm:text-lg max-w-xl mx-auto mb-10 font-medium leading-relaxed">
+            <p className="text-slate-600 dark:text-white/60 text-sm min-[360px]:text-base sm:text-lg max-w-xl mx-auto mb-8 sm:mb-10 font-medium leading-relaxed">
               Create your account in under 30 seconds. No credit card required.
             </p>
 
             {/* CTA Button */}
             <Link to="/register">
-              <button className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-accent-primary text-accent-foreground font-bold text-base tracking-wide shadow-lg shadow-accent-glow/25 hover:opacity-95 transition-all duration-200 group cursor-pointer">
+              <button className="flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-accent-primary text-accent-foreground font-bold text-sm sm:text-base tracking-wide shadow-lg shadow-accent-glow/25 hover:opacity-95 transition-all duration-200 group cursor-pointer">
                 <span>Start Free Trial</span>
                 <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </button>

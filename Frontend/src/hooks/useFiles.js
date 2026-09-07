@@ -4,6 +4,9 @@ import { getDirectoryContents, searchFiles, getStarredItems, getRecentItems } fr
 import { getSharedDrives } from '../api/share.api';
 import { getUser } from '../lib/utils';
 
+// Module-level persistent cache across views
+const globalUseFilesCache = new Map();
+
 export function useFiles({ folderId, specialView, isSearch, searchQuery, searchExt, searchSize, ownerId, refreshTrigger, githubPath, driveFolderId, selectedBranch }) {
   const { user, setUser } = useAuth();
   const [data, setData] = useState({ directories: [], files: [] });
@@ -20,10 +23,21 @@ export function useFiles({ folderId, specialView, isSearch, searchQuery, searchE
       return; // Handled by other hooks
     }
 
-    setLoading(true);
+    const cacheKey = `${specialView || "local"}:${folderId || "root"}:${isSearch ? searchQuery || "" : ""}:${ownerId || ""}`;
+    const cached = globalUseFilesCache.get(cacheKey);
+
+    if (cached) {
+      setData(cached.data);
+      if (cached.dirName) setDirName(cached.dirName);
+      if (cached.dirPath) setDirPath(cached.dirPath);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
-      await getUser(setUser);
+      // Non-blocking background user refresh
+      getUser(setUser).catch(() => {});
 
       let responseData;
       
@@ -122,25 +136,26 @@ export function useFiles({ folderId, specialView, isSearch, searchQuery, searchE
         files = responseData.files || [];
       }
 
-      if (specialView === "admin" || specialView === "owner") {
-        directories = directories.filter(
-          (dir) =>
-            dir.provider !== "google_drive" &&
-            dir.provider !== "github" &&
-            dir.name !== "Google Drive" &&
-            dir.name !== "GitHub",
-        );
-      }
+      // Filter out external integration directories from Vault Chamber
+      directories = directories.filter(
+        (dir) =>
+          dir.provider !== "google_drive" &&
+          dir.provider !== "github" &&
+          dir.name !== "Google Drive" &&
+          dir.name !== "GitHub" &&
+          dir.name !== "Github",
+      );
 
-      setData({
+      const dataPayload = {
         directories,
         files,
-        parentDir: responseData.parentDir,
+        parentDir: responseData.parentDir || null,
         parentId: responseData.parentId ?? null,
         ownerName: responseData.ownerName || null,
         ownerEmail: responseData.ownerEmail || null,
         userId: responseData.userId || null,
-      });
+      };
+      setData(dataPayload);
 
       try {
         const cached = JSON.parse(sessionStorage.getItem("folder_paths") || "{}");
@@ -184,6 +199,11 @@ export function useFiles({ folderId, specialView, isSearch, searchQuery, searchE
                     : "Home");
       }
       setDirName(resolvedName);
+      globalUseFilesCache.set(cacheKey, {
+        data: dataPayload,
+        dirName: resolvedName,
+        dirPath: responseData.path,
+      });
     } catch (err) {
       console.error(err);
       setError(err.message || "An unexpected error occurred.");

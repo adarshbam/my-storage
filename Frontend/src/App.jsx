@@ -32,6 +32,8 @@ import StandaloneLayout from "./layouts/StandaloneLayout";
 import FileBrowser from "./components/drive/FileBrowser";
 import TrashView from "./components/drive/TrashView";
 import BillingPlansPage from "./pages/BillingPlansPage";
+import GoogleDriveChamber from "./components/chambers/GoogleDriveChamber";
+import GitHubChamber from "./components/chambers/GitHubChamber";
 
 function LandingPage() {
   return (
@@ -163,19 +165,19 @@ function App() {
                       />
                       <Route
                         path="google-drive"
-                        element={<FileBrowser specialView="google-drive" />}
+                        element={<GoogleDriveChamber />}
                       />
                       <Route
                         path="google-drive/:driveFolderId"
-                        element={<FileBrowser specialView="google-drive-folder" />}
+                        element={<GoogleDriveChamber />}
                       />
                       <Route
                         path="github"
-                        element={<FileBrowser specialView="github" />}
+                        element={<GitHubChamber />}
                       />
                       <Route
                         path="github/*"
-                        element={<FileBrowser specialView="github-repo" />}
+                        element={<GitHubChamber />}
                       />
                       <Route path="trash" element={<TrashView />} />
                     </Route>

@@ -12,6 +12,7 @@ import FileUploadModal from "../components/drive/FileUploadModal";
 import ShareVaultModal from "../components/dashboard/ShareVaultModal";
 import WallGuideOverlay from "../components/guide/WallGuideOverlay";
 import WallLauncher from "../components/guide/WallLauncher";
+import { ChamberTransferProvider } from "../context/ChamberTransferContext";
 
 export default function DashboardLayout() {
   const { user, setUser } = useAuth();
@@ -90,6 +91,14 @@ export default function DashboardLayout() {
 
   useEffect(() => {
     fetchRecentSearches();
+  }, []);
+
+  useEffect(() => {
+    const handleVaultRefresh = () => {
+      setRefreshTrigger((prev) => prev + 1);
+    };
+    window.addEventListener("vault:refresh", handleVaultRefresh);
+    return () => window.removeEventListener("vault:refresh", handleVaultRefresh);
   }, []);
 
   useEffect(() => {
@@ -267,7 +276,7 @@ export default function DashboardLayout() {
     try {
       const response = await fetch(`${SERVER_URL}/user/profilepic`, {
         method: "POST",
-        headers: { filename: file.name },
+        headers: { filename: encodeURIComponent(file.name) },
         body: file,
         credentials: "include",
       });
@@ -279,7 +288,11 @@ export default function DashboardLayout() {
         if (userRes.ok) {
           const newUser = await userRes.json();
           setUser(newUser);
+          window.dispatchEvent(new CustomEvent("auth:refresh"));
         }
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        console.error("Failed to upload profile picture:", errData);
       }
     } catch (err) {
       console.error("Error uploading profile pic", err);
@@ -317,81 +330,79 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div
-      className="h-[100dvh] flex flex-col bg-vault-bg text-white overflow-hidden relative font-sans"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEndHandler}
-    >
-      <VaultBackground />
+    <ChamberTransferProvider user={user} effectiveMaxStorage={effectiveMaxStorage}>
+      <div
+        className="h-[100dvh] flex flex-col bg-vault-bg text-white overflow-hidden relative font-sans"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEndHandler}
+      >
+        <VaultBackground />
 
-      <CommandBar
-        globalSearchQuery={globalSearchQuery}
-        setGlobalSearchQuery={setGlobalSearchQuery}
-        handleSearchSubmit={(term, filters) => handleSearch(term, filters)}
-        openUploadModal={() => {
-          if (user && user.usedStorage >= effectiveMaxStorage) {
-            alert("Not enough storage");
-            return;
-          }
-          setShowUploadModal(true);
-        }}
-        openShareModal={() => setIsShareModalOpen(true)}
-        isMobileOpen={isMobileOpen}
-        setIsMobileOpen={setIsMobileOpen}
-        handleCreateClick={() => {
-          // This should be handled inside VaultViewport if needed,
-          // or we emit an event. For now, rely on FileBrowser internal methods.
-          // In original DashboardLayout, it was handled in FileBrowser directly
-          // but there was a button in DashboardLayout too. Let's just pass a trigger if needed.
-          document.dispatchEvent(new CustomEvent("createFolderTrigger"));
-        }}
-        handleCreateFileClick={() => {
-          document.dispatchEvent(new CustomEvent("createFileTrigger"));
-        }}
-        handleProfilePicUpload={handleProfilePicUpload}
-        profilePicUrl={profilePicUrl}
-      />
-
-      <div className="flex flex-1 overflow-hidden relative z-10">
-        <NavigationRail
+        <CommandBar
+          globalSearchQuery={globalSearchQuery}
+          setGlobalSearchQuery={setGlobalSearchQuery}
+          handleSearchSubmit={(term, filters) => handleSearch(term, filters)}
+          openUploadModal={() => {
+            if (user && user.usedStorage >= effectiveMaxStorage) {
+              alert("Not enough storage");
+              return;
+            }
+            setShowUploadModal(true);
+          }}
+          openShareModal={() => setIsShareModalOpen(true)}
           isMobileOpen={isMobileOpen}
           setIsMobileOpen={setIsMobileOpen}
+          handleCreateClick={() => {
+            document.dispatchEvent(new CustomEvent("createFolderTrigger"));
+          }}
+          handleCreateFileClick={() => {
+            document.dispatchEvent(new CustomEvent("createFileTrigger"));
+          }}
+          handleProfilePicUpload={handleProfilePicUpload}
+          profilePicUrl={profilePicUrl}
         />
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-3 sm:p-6 lg:p-8 custom-scrollbar">
-          <div className="mx-auto max-w-7xl h-full flex flex-col">
-            <Outlet context={contextValue} />
-          </div>
-          <ShareVaultModal
-            isOpen={isShareModalOpen}
-            onClose={() => {
-              setIsShareModalOpen(false);
-              setShareItems([]);
-            }}
-            items={shareItems}
+        <div className="flex flex-1 overflow-hidden relative z-10">
+          <NavigationRail
+            isMobileOpen={isMobileOpen}
+            setIsMobileOpen={setIsMobileOpen}
           />
-        </main>
+
+          <main className="flex-1 min-w-0 w-full overflow-y-auto overflow-x-hidden relative p-3 sm:p-6 lg:p-8 custom-scrollbar">
+            <div className="mx-auto max-w-7xl min-w-0 w-full h-full flex flex-col">
+              <Outlet context={contextValue} />
+            </div>
+            <ShareVaultModal
+              isOpen={isShareModalOpen}
+              onClose={() => {
+                setIsShareModalOpen(false);
+                setShareItems([]);
+              }}
+              items={shareItems}
+            />
+          </main>
+        </div>
+
+        <FileUploadModal
+          isOpen={showUploadModal}
+          onClose={() => setShowUploadModal(false)}
+          onUpload={(files) => {
+            handleUpload(files, currentFolderId);
+            setShowUploadModal(false);
+          }}
+          onFilesSelected={(files) => {
+            handleUpload(files, currentFolderId);
+            setShowUploadModal(false);
+          }}
+        />
+
+        <TransferManager ref={transferRef} onUploadComplete={() => setRefreshTrigger(prev => prev + 1)} />
+
+        {/* Wall Interactive Onboarding Guide & Launcher */}
+        <WallGuideOverlay />
+        <WallLauncher />
       </div>
-
-      <FileUploadModal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        onUpload={(files) => {
-          handleUpload(files, currentFolderId);
-          setShowUploadModal(false);
-        }}
-        onFilesSelected={(files) => {
-          handleUpload(files, currentFolderId);
-          setShowUploadModal(false);
-        }}
-      />
-
-      <TransferManager ref={transferRef} onUploadComplete={() => setRefreshTrigger(prev => prev + 1)} />
-
-      {/* Wall Interactive Onboarding Guide & Launcher */}
-      <WallGuideOverlay />
-      <WallLauncher />
-    </div>
+    </ChamberTransferProvider>
   );
 }

@@ -76,7 +76,7 @@ export default function WallLauncher() {
   if (isTourOpen) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 font-sans select-none">
+    <div className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-40 font-sans select-none">
       {/* ─────────────────────────────────────────────────────────────
           1. FLOATING WALL MINI-ORB BUTTON
          ───────────────────────────────────────────────────────────── */}
@@ -87,18 +87,18 @@ export default function WallLauncher() {
           whileHover={{ scale: 1.06 }}
           whileTap={{ scale: 0.94 }}
           onClick={() => setIsOpen(true)}
-          className="relative group flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-slate-900/90 dark:bg-black/90 backdrop-blur-xl border border-white/20 dark:border-accent-border shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(0,207,255,0.25)] text-white transition-all cursor-pointer"
+          className="relative group flex items-center gap-2 p-2 min-[480px]:px-4 min-[480px]:py-2.5 rounded-full bg-slate-900/90 dark:bg-black/90 backdrop-blur-xl border border-white/20 dark:border-accent-border shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(0,207,255,0.25)] text-white transition-all cursor-pointer"
           title="Open Wall's Guidebook"
         >
           {/* Subtle glowing animated beacon */}
           <div className="absolute -inset-0.5 bg-gradient-to-r from-accent-primary to-[#00CFFF] rounded-full blur-md opacity-40 group-hover:opacity-80 transition-opacity" />
 
           {/* Wall mini icon */}
-          <div className="relative w-8 h-8 -my-1 -ml-1">
-            <WallMascot gesture="waving" size={36} />
+          <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
+            <WallMascot gesture="waving" size={32} />
           </div>
 
-          <div className="relative flex flex-col text-left">
+          <div className="relative hidden min-[480px]:flex flex-col text-left pr-1">
             <span className="text-xs font-black tracking-wider text-white uppercase flex items-center gap-1.5">
               Wally Guide
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10B981]" />
@@ -131,7 +131,7 @@ export default function WallLauncher() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: "spring", stiffness: 350, damping: 26 }}
-              className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-50 w-[92vw] max-w-md rounded-3xl bg-[#071613]/95 dark:bg-[#030A08]/95 backdrop-blur-3xl border border-white/20 dark:border-white/15 p-6 text-white shadow-[0_30px_80px_rgba(0,0,0,0.85),0_0_40px_rgba(0,207,255,0.15)] overflow-hidden max-h-[85vh] flex flex-col"
+              className="fixed bottom-3 inset-x-2.5 min-[480px]:inset-x-4 sm:inset-auto sm:bottom-8 sm:right-8 z-50 w-auto sm:w-[92vw] sm:max-w-md rounded-2xl sm:rounded-3xl bg-[#071613]/95 dark:bg-[#030A08]/95 backdrop-blur-3xl border border-white/20 dark:border-white/15 p-4 sm:p-6 text-white shadow-[0_30px_80px_rgba(0,0,0,0.85),0_0_40px_rgba(0,207,255,0.15)] overflow-hidden max-h-[85vh] flex flex-col"
             >
               {/* Top Neon Accent Line */}
               <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#00CFFF] via-[#10B981] to-[#8B5CF6]" />

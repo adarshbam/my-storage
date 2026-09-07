@@ -14,6 +14,8 @@ export function useClipboard({
   driveFolderId,
   githubPath,
   user,
+  transferDriveToVault,
+  transferVaultToDrive,
 }) {
   const [clipboard, setClipboard] = useState(() => {
     try {
@@ -30,7 +32,16 @@ export function useClipboard({
       sessionStorage.removeItem("vault_clipboard");
     }
     setClipboard(data);
+    window.dispatchEvent(new CustomEvent("vault:clipboard_change", { detail: data }));
   };
+
+  useEffect(() => {
+    const handleSync = (e) => {
+      setClipboard(e.detail);
+    };
+    window.addEventListener("vault:clipboard_change", handleSync);
+    return () => window.removeEventListener("vault:clipboard_change", handleSync);
+  }, []);
 
   const handleCopyItem = (item) => {
     if (isReadOnly || isSpecialFolder(item, specialView)) return;
@@ -157,33 +168,32 @@ export function useClipboard({
           // Drive -> Vault
           const destId = targetFolderId || user?.rootDirId;
           const driveItems = clipboard.items.filter((i) => i.provider === "google_drive");
-          const res = await fetch(`${SERVER_URL}/drive/transfer-to-vault${query}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              items: driveItems.map((i) => ({
-                _id: i._id,
-                name: i.name,
-                mimeType: i.mimeType || "application/octet-stream",
-                type: i.type,
-              })),
-              targetFolderId: destId,
-            }),
-            credentials: "include",
-          });
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.error || errData.message || "Failed to transfer from Drive to Vault");
+          if (transferDriveToVault) {
+            await transferDriveToVault(driveItems, destId);
+          } else {
+            const res = await fetch(`${SERVER_URL}/drive/transfer-to-vault${query}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                items: driveItems.map((i) => ({
+                  _id: i._id,
+                  name: i.name,
+                  mimeType: i.mimeType || "application/octet-stream",
+                  type: i.type,
+                })),
+                targetFolderId: destId,
+                action: clipboard.action === "cut" ? "move" : "copy",
+              }),
+              credentials: "include",
+            });
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData.error || errData.message || "Failed to transfer from Drive to Vault");
+            }
           }
 
-          // If action was cut, delete source items from Google Drive
           if (clipboard.action === "cut") {
-            for (const item of driveItems) {
-              await fetch(`${SERVER_URL}/drive/file/${item._id}${query}`, {
-                method: "DELETE",
-                credentials: "include",
-              }).catch(() => {});
-            }
+            updateClipboard(null);
           }
         }
       }
@@ -209,34 +219,33 @@ export function useClipboard({
         } else {
           // Vault -> Drive
           const localItems = clipboard.items.filter((i) => !i.provider || i.provider === "local");
-          const res = await fetch(`${SERVER_URL}/drive/transfer-from-vault${query}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              items: localItems.map((i) => ({
-                _id: i._id,
-                name: i.name,
-                extension: i.extension,
-                size: i.size,
-                type: i.type,
-              })),
-              targetDriveFolderId: destDriveId,
-            }),
-            credentials: "include",
-          });
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.error || errData.message || "Failed to transfer to Google Drive");
+          if (transferVaultToDrive) {
+            await transferVaultToDrive(localItems, destDriveId);
+          } else {
+            const res = await fetch(`${SERVER_URL}/drive/transfer-from-vault${query}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                items: localItems.map((i) => ({
+                  _id: i._id,
+                  name: i.name,
+                  extension: i.extension,
+                  size: i.size,
+                  type: i.type,
+                })),
+                targetDriveFolderId: destDriveId,
+                action: clipboard.action === "cut" ? "move" : "copy",
+              }),
+              credentials: "include",
+            });
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData.error || errData.message || "Failed to transfer to Google Drive");
+            }
           }
 
-          // If action was cut, delete source items from local Vault
-          if (clipboard.action === "cut" && localItems.length > 0) {
-            await batchDelete(
-              localItems.map((i) => ({
-                _id: i._id,
-                type: i.type || (i.extension ? "file" : "directory"),
-              }))
-            ).catch((err) => console.error("Failed to delete cut source items:", err));
+          if (clipboard.action === "cut") {
+            updateClipboard(null);
           }
         }
       }
@@ -333,6 +342,10 @@ export function useClipboard({
           e.preventDefault();
           handleCutSelected();
         }
+      }
+
+      if (e.key === "Escape") {
+        updateClipboard(null);
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === "v") {

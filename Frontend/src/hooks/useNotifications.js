@@ -184,11 +184,11 @@ export function useNotifications() {
     fetchUnreadCount();
     fetchNotifications(1, "all", false);
 
-    // Live Sync Polling interval (8 seconds)
+    // Live Sync Polling fallback interval (30 seconds)
     const interval = setInterval(() => {
       fetchUnreadCount();
       fetchNotifications(1, filterRef.current, false);
-    }, 8000);
+    }, 30000);
 
     // Window focus refresh (e.g. returning from Razorpay or external tabs)
     const handleFocus = () => {

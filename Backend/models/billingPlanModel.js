@@ -49,6 +49,11 @@ const billingPlanSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    isPopular: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

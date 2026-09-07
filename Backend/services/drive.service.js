@@ -5,15 +5,16 @@ import File from "../models/fileModel.js";
 import StarredItem from "../models/starredItemModel.js";
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "../config/config.js";
 import { google } from "googleapis";
-import { Readable } from "stream";
+import { Readable, PassThrough } from "stream";
 import archiver from "archiver";
 import path from "path";
 import mongoose from "mongoose";
 import SharedAccess from "../models/sharedAccessModel.js";
 import { invalidateUserSessions } from "../databases/redis.js";
 import { updateParentDirectorySize } from "../controllers/fileController.js";
-import { uploadToB2, getObjectFromB2, deleteFromB2 } from "../integrations/storage/s3.client.js";
+import { uploadToB2, uploadStreamToB2, getObjectFromB2, deleteFromB2 } from "../integrations/storage/s3.client.js";
 import { withTransaction } from "../utils/transaction.js";
+import { deleteItemsBatchLogic } from "./directory.service.js";
 
 import {
   resolveIntegrationOwnerId,
@@ -649,7 +650,7 @@ export const moveDriveItemsLogic = async ({ items, targetId, req }) => {
   };
 };
 
-export const transferToVaultLogic = async ({ items, targetFolderId, req }) => {
+export const transferToVaultLogic = async ({ items, targetFolderId, action = "move", req }) => {
   const client = await getAuthenticatedClient(req, true);
   const { drive, ownerId } = client;
 
@@ -678,16 +679,26 @@ export const transferToVaultLogic = async ({ items, targetFolderId, req }) => {
   const importItem = async (driveItem, localParentId, parentPath) => {
     const driveItemId = driveItem._id || driveItem.id;
     if (driveItem.type === "directory") {
-      // 1. Create local directory
+      // 1. Create local directory within an ACID transaction
       const newDirId = new mongoose.Types.ObjectId();
       const currentPath = [...parentPath, newDirId];
-      const newDir = await Directory.create({
-        _id: newDirId,
-        name: driveItem.name,
-        parentDir: localParentId,
-        userId: ownerId, // New folders belong to the actual folder owner
-        path: currentPath,
-        size: 0,
+      let newDir = null;
+
+      await withTransaction(async (session) => {
+        const [createdDir] = await Directory.create(
+          [
+            {
+              _id: newDirId,
+              name: driveItem.name,
+              parentDir: localParentId,
+              userId: ownerId, // New folders belong to the actual folder owner
+              path: currentPath,
+              size: 0,
+            },
+          ],
+          { session },
+        );
+        newDir = createdDir;
       });
 
       // 2. List children in Drive
@@ -707,45 +718,56 @@ export const transferToVaultLogic = async ({ items, targetFolderId, req }) => {
       const fileId = new mongoose.Types.ObjectId();
       const ext = path.extname(driveItem.name);
       const fileName = driveItem.name;
+      const b2Key = `${fileId}${ext}`;
 
-      // 2. Stream from Drive directly to Backblaze B2
+      // 2. Stream from Drive directly to Backblaze B2 without in-memory buffering
       const driveRes = await drive.files.get(
         { fileId: driveItemId, alt: "media" },
         { responseType: "stream" },
       );
 
-      const chunks = [];
-      for await (const chunk of driveRes.data) {
-        chunks.push(chunk);
-      }
-      const buffer = Buffer.concat(chunks);
-      const fileSize = buffer.length;
-
-      await uploadToB2({
-        key: `${fileId}${ext}`,
-        body: buffer,
+      let fileSize = Number(driveItem.size) || 0;
+      let countedBytes = 0;
+      const pass = new PassThrough();
+      pass.on("data", (chunk) => {
+        countedBytes += chunk.length;
       });
+      driveRes.data.pipe(pass);
+
+      await uploadStreamToB2({
+        key: b2Key,
+        stream: pass,
+        contentType: driveItem.mimeType || "application/octet-stream",
+      });
+
+      if (!fileSize) fileSize = countedBytes;
 
       let newFile = null;
-      await withTransaction(async (session) => {
-        const [createdFile] = await File.create(
-          [
-            {
-              _id: fileId,
-              name: fileName,
-              extension: ext,
-              size: fileSize,
-              userId: ownerId, // Transferred files belong to the actual folder owner
-              parentDir: localParentId,
-              type: "file",
-            },
-          ],
-          { session },
-        );
-        newFile = createdFile;
+      try {
+        await withTransaction(async (session) => {
+          const [createdFile] = await File.create(
+            [
+              {
+                _id: fileId,
+                name: fileName,
+                extension: ext,
+                size: fileSize,
+                userId: ownerId, // Transferred files belong to the actual folder owner
+                parentDir: localParentId,
+                type: "file",
+              },
+            ],
+            { session },
+          );
+          newFile = createdFile;
 
-        await updateParentDirectorySize(parentPath, fileSize, session);
-      });
+          await updateParentDirectorySize(parentPath, fileSize, session);
+        });
+      } catch (dbErr) {
+        // Rollback uploaded B2 object if MongoDB transaction fails
+        await deleteFromB2({ key: b2Key }).catch(() => {});
+        throw dbErr;
+      }
 
       return newFile;
     }
@@ -758,12 +780,25 @@ export const transferToVaultLogic = async ({ items, targetFolderId, req }) => {
       initialParentPath,
     );
     results.push(importedItem);
+
+    // If this was a move operation, delete the source file/folder from Google Drive
+    if (action !== "copy") {
+      const itemIdToDelete = item._id || item.id;
+      try {
+        await drive.files.delete({ fileId: itemIdToDelete });
+      } catch (delErr) {
+        console.warn(
+          `[transferToVaultLogic] Warning: Failed to delete item ${itemIdToDelete} from Google Drive:`,
+          delErr?.message,
+        );
+      }
+    }
   }
 
   return { msg: "Transfer to vault successful", results };
 };
 
-export const transferFromVaultLogic = async ({ items, targetFolderId, req }) => {
+export const transferFromVaultLogic = async ({ items, targetFolderId, action = "move", req }) => {
   const client = await getAuthenticatedClient(req, true);
   const { drive } = client;
   const results = [];
@@ -796,16 +831,23 @@ export const transferFromVaultLogic = async ({ items, targetFolderId, req }) => 
     } else {
       // Get file from B2 and upload to Drive
       let ext = localItem.extension;
-      if (!ext) {
-        const fileDoc = await File.findById(itemId).select("extension name").lean();
-        ext = fileDoc?.extension || (localItem.name ? path.extname(localItem.name) : "");
+      let name = localItem.name;
+      const fileDoc = await File.findById(itemId).select("extension name").lean();
+      if (fileDoc) {
+        ext = fileDoc.extension || ext || (name ? path.extname(name) : "");
+        name = fileDoc.name || name || "Untitled";
+      } else {
+        if (!ext && name) ext = path.extname(name);
       }
-      const s3Key = `${itemId}${ext}`;
+      if (ext && !ext.startsWith(".")) {
+        ext = `.${ext}`;
+      }
+      const s3Key = `${itemId}${ext || ""}`;
       const objectData = await getObjectFromB2({ key: s3Key });
-      
+
       const response = await drive.files.create({
         requestBody: {
-          name: localItem.name,
+          name: name,
           parents: [driveParentId || "root"],
         },
         media: {
@@ -821,6 +863,23 @@ export const transferFromVaultLogic = async ({ items, targetFolderId, req }) => 
   for (const item of items) {
     const exportedItem = await exportItem(item, targetFolderId);
     results.push(exportedItem);
+  }
+
+  // Delete transferred items from Vault completely if move operation
+  if (action !== "copy") {
+    try {
+      await deleteItemsBatchLogic({
+        items: items.map((i) => ({
+          _id: i._id || i.id,
+          type: i.type || (i.extension ? "file" : "directory"),
+        })),
+        userId: req.user.id,
+        userRole: req.user.role,
+        permanent: true,
+      });
+    } catch (deleteErr) {
+      console.warn("[transferFromVaultLogic] Local cleanup warning:", deleteErr?.message || deleteErr);
+    }
   }
 
   return { msg: "Transfer from vault successful", results };

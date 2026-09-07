@@ -143,10 +143,15 @@ export async function invalidateAllSessions() {
   }
 }
 
+export const ACTIVE_PLANS_CACHE_KEY = "cache:global:active_plans";
+export const OWNER_SETTINGS_CACHE_KEY = "cache:global:owner_settings";
+
 export async function invalidateGlobalPlanCache() {
   await Promise.all([
     invalidateAllPlanContexts(),
     invalidateAllSessions(),
+    cacheDel(ACTIVE_PLANS_CACHE_KEY),
+    cacheDel(OWNER_SETTINGS_CACHE_KEY),
   ]).catch((err) => {
     console.error("invalidateGlobalPlanCache error:", err.message);
   });

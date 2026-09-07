@@ -61,10 +61,10 @@ export function PlanProvider({ children }) {
     };
     document.addEventListener("visibilitychange", handleVisibility);
 
-    // 3. Live-polling interval (every 4s) to ensure instant real-time sync
+    // 3. Periodic fallback sync interval (60s), with real-time updates handled by events and window focus
     const pollInterval = setInterval(() => {
       fetchPlanContext(true);
-    }, 4000);
+    }, 60000);
 
     return () => {
       window.removeEventListener("subscription:updated", handleSync);

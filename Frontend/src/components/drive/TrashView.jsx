@@ -39,7 +39,10 @@ export default function TrashView() {
       });
       if (response.ok) {
         const data = await response.json();
-        setItems(data || []);
+        const rawItems = Array.isArray(data)
+          ? data
+          : [...(data?.files || []), ...(data?.directories || [])];
+        setItems(rawItems);
       }
     } catch (error) {
       console.error(error);
@@ -62,8 +65,10 @@ export default function TrashView() {
   const searchExt = searchParams.get("ext") || "";
   const searchSize = searchParams.get("size") || "";
 
+  const safeItems = Array.isArray(items) ? items : [];
+
   // Filter items by search, extension, and size
-  const filteredItems = items.filter((item) => {
+  const filteredItems = safeItems.filter((item) => {
     // 1. Search term filter
     if (
       searchQuery &&
@@ -308,10 +313,10 @@ export default function TrashView() {
   };
 
   return (
-    <div className="flex-1 flex flex-col relative h-full">
+    <div className="flex-1 min-w-0 w-full flex flex-col relative h-full">
       <div className="flex flex-wrap items-center justify-between gap-y-3 gap-x-2 pb-4 mb-4 border-b border-white/5 shrink-0 px-1 sm:px-2">
         <div className="flex items-center gap-2 shrink-0">
-          <h2 className="text-xl sm:text-2xl capitalize font-bold text-white flex items-center gap-2 drop-shadow-md tracking-wide">
+          <h2 className="text-lg min-[360px]:text-xl sm:text-2xl capitalize font-bold text-white flex items-center gap-2 drop-shadow-md tracking-wide">
             Recycle Vault
           </h2>
         </div>
@@ -342,22 +347,22 @@ export default function TrashView() {
             </button>
           </div>
 
-          {items.length > 0 && (
+          {safeItems.length > 0 && (
             <>
               <button
                 onClick={selectedItems.length > 0 ? () => handleRestore(selectedItems) : handleRestoreAll}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-vault-emerald/10 border border-vault-emerald/30 text-vault-emerald hover:bg-vault-emerald/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,212,165,0.3)] shrink-0"
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 min-[360px]:px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] min-[360px]:text-xs sm:text-sm font-semibold rounded-xl bg-vault-emerald/10 border border-vault-emerald/30 text-vault-emerald hover:bg-vault-emerald/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,212,165,0.3)] shrink-0"
               >
-                <RotateCcw size={16} />
+                <RotateCcw size={15} />
                 <span className="hidden sm:inline">
                   {selectedItems.length > 0 ? `Restore (${selectedItems.length})` : "Restore All"}
                 </span>
               </button>
               <button
                 onClick={selectedItems.length > 0 ? () => handleDeleteForever(selectedItems) : handleEmptyTrash}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-danger-accent/10 border border-danger-accent/30 text-danger-accent hover:bg-danger-accent/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,90,122,0.3)] shrink-0"
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 min-[360px]:px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] min-[360px]:text-xs sm:text-sm font-semibold rounded-xl bg-danger-accent/10 border border-danger-accent/30 text-danger-accent hover:bg-danger-accent/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,90,122,0.3)] shrink-0"
               >
-                <Trash2 size={18} />
+                <Trash2 size={16} />
                 <span className="hidden sm:inline">
                   {selectedItems.length > 0 ? `Delete (${selectedItems.length})` : "Empty Trash"}
                 </span>
@@ -371,15 +376,15 @@ export default function TrashView() {
         <FileBrowserSkeleton viewMode={viewMode} count={8} />
       ) : (
         <div
-          className={`pb-20 relative select-none flex-1 content-start ${
+          className={`pb-20 relative select-none flex-1 content-start min-w-0 w-full ${
             viewMode === "list"
               ? "flex flex-col gap-1"
-              : "grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 sm:gap-6 p-3 sm:p-6 rounded-2xl sm:rounded-[2.5rem] vault-glass-panel"
+              : "grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] min-[360px]:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2.5 min-[360px]:gap-3 sm:gap-6 p-2 min-[360px]:p-3 sm:p-6 rounded-2xl sm:rounded-[2.5rem] vault-glass-panel"
           }`}
           onMouseDown={handleMouseDown}
         >
           {viewMode === "list" && (
-            <div className="grid grid-cols-[1fr,40px] sm:grid-cols-[1fr,100px,40px] md:grid-cols-[1fr,100px,150px,40px] gap-2 sm:gap-4 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-500 border-b border-slate-200/50 dark:border-slate-800/50 mb-2 items-center sticky top-0 bg-transparent z-10">
+            <div className="grid grid-cols-[1fr,40px] sm:grid-cols-[1fr,100px,40px] md:grid-cols-[1fr,100px,150px,40px] gap-2 sm:gap-4 px-2 min-[360px]:px-3 sm:px-4 py-2 sm:py-3 text-[11px] min-[360px]:text-xs sm:text-sm font-semibold text-slate-500 border-b border-slate-200/50 dark:border-slate-800/50 mb-2 items-center sticky top-0 bg-transparent z-10 min-w-0 w-full">
               <div>Name</div>
               <div className="text-right hidden sm:block">Size</div>
               <div className="text-right pr-4 hidden md:block">Modified</div>
@@ -420,16 +425,16 @@ export default function TrashView() {
             );
           })}
           {filteredItems.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
-              <div className="bg-white/40 dark:bg-white/[0.03] p-6 rounded-full mb-4 shadow-[0_0_30px_rgba(255,90,122,0.05)] dark:shadow-[0_0_30px_rgba(255,90,122,0.1)] text-danger-accent/60">
-                <Trash2 size={40} />
+            <div className="col-span-full flex flex-col items-center justify-center py-12 sm:py-20 px-3 min-[360px]:px-4 text-center max-w-full">
+              <div className="bg-white/40 dark:bg-white/[0.03] p-4 min-[360px]:p-5 sm:p-6 rounded-full mb-3 sm:mb-4 shadow-[0_0_30px_rgba(255,90,122,0.05)] dark:shadow-[0_0_30px_rgba(255,90,122,0.1)] text-danger-accent/60">
+                <Trash2 className="w-8 h-8 sm:w-10 sm:h-10" />
               </div>
-              <p className="text-lg font-medium mb-2">
+              <p className="text-base min-[360px]:text-lg font-bold mb-1.5 text-white">
                 {searchQuery
                   ? "No search results in trash"
                   : "Trash is completely clear"}
               </p>
-              <p className="text-sm text-white/40 max-w-sm text-center">
+              <p className="text-xs min-[360px]:text-sm text-slate-500 max-w-xs sm:max-w-sm text-center leading-relaxed">
                 {searchQuery
                   ? "Try adjusting your search query parameters."
                   : "Any files or folders you delete will remain here until they are purged or expire."}
@@ -441,24 +446,24 @@ export default function TrashView() {
 
       {/* Floating Bulk Action Bar */}
       {selectedItems.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar bg-white/90 dark:bg-vault-surface/90 backdrop-blur-2xl text-slate-900 dark:text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-black/10 dark:border-white/[0.08] flex items-center gap-3 sm:gap-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
-          <span className="font-medium text-sm">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 max-w-[calc(100vw-16px)] sm:max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar bg-white/90 dark:bg-vault-surface/90 backdrop-blur-2xl text-slate-900 dark:text-white px-3 min-[360px]:px-4 sm:px-6 py-2 min-[360px]:py-2.5 sm:py-3 rounded-full shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-black/10 dark:border-white/[0.08] flex items-center gap-2 min-[360px]:gap-3 sm:gap-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300 text-xs min-[360px]:text-sm">
+          <span className="font-medium whitespace-nowrap">
             {selectedItems.length} selected
           </span>
-          <div className="h-4 w-px bg-slate-700"></div>
+          <div className="h-4 w-px bg-slate-700 shrink-0"></div>
 
           <button
             onClick={() => handleRestore(selectedItems)}
-            className="flex items-center gap-2 text-slate-200 hover:text-white transition-colors font-medium text-sm"
+            className="flex items-center gap-1.5 text-slate-200 hover:text-white transition-colors font-medium whitespace-nowrap"
           >
-            <RotateCcw size={16} /> Restore
+            <RotateCcw size={15} /> Restore
           </button>
 
           <button
             onClick={() => handleDeleteForever(selectedItems)}
-            className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors font-medium text-sm"
+            className="flex items-center gap-1.5 text-red-400 hover:text-red-300 transition-colors font-medium whitespace-nowrap"
           >
-            <Ban size={16} /> Delete Forever
+            <Ban size={15} /> Delete Forever
           </button>
         </div>
       )}

@@ -182,7 +182,7 @@ export default function SharedAccessClaim() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vh] bg-[radial-gradient(ellipse,rgba(20,184,166,0.12)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse,rgba(20,184,166,0.08)_0%,transparent_70%)]" />
       </div>
 
-      <div className="relative z-10 w-full max-w-lg bg-white/70 dark:bg-vault-surface/90 backdrop-blur-2xl border border-black/5 dark:border-white/10 rounded-3xl p-5 sm:p-8 shadow-2xl dark:shadow-[0_12px_40px_rgba(0,0,0,0.8)]">
+      <div className="relative z-10 w-full max-w-lg bg-white/70 dark:bg-vault-surface/90 backdrop-blur-2xl border border-black/5 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-5 sm:p-8 shadow-2xl dark:shadow-[0_12px_40px_rgba(0,0,0,0.8)] min-w-0">
         
         {loading ? (
           <div className="flex flex-col items-center text-center py-6 space-y-4">
@@ -230,7 +230,7 @@ export default function SharedAccessClaim() {
             <div className="p-4 bg-amber-500/10 text-amber-400 rounded-2xl border border-amber-500/20 mb-4 shadow-[0_0_20px_rgba(245,158,11,0.15)]">
               <Lock size={32} />
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold mb-1 text-white">
+            <h2 className="text-lg min-[360px]:text-xl sm:text-2xl font-extrabold mb-1 text-white">
               Password Protected Vault
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 mb-6">
@@ -292,7 +292,7 @@ export default function SharedAccessClaim() {
                 <Share2 size={22} />
               </div>
               <div className="overflow-hidden">
-                <h2 className="text-xl font-bold text-white truncate">
+                <h2 className="text-base min-[360px]:text-lg sm:text-xl font-bold text-white truncate">
                   {linkData?.title || (linkData?.items?.length === 1 ? linkData.items[0].name : "Shared Vault Node")}
                 </h2>
                 <div className="flex items-center gap-2 text-xs text-white/40 font-mono">

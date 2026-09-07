@@ -16,6 +16,7 @@ export const initialPlanTiers = [
     badge: "30 Days Free",
     accentColor: "emerald",
     active: true,
+    isPopular: false,
   },
   {
     slug: "novice",
@@ -25,6 +26,7 @@ export const initialPlanTiers = [
     badge: "Personal",
     accentColor: "purple",
     active: true,
+    isPopular: false,
   },
   {
     slug: "professional",
@@ -35,6 +37,7 @@ export const initialPlanTiers = [
     badge: "Most Popular",
     accentColor: "rose",
     active: true,
+    isPopular: true,
   },
   {
     slug: "ultimate",
@@ -45,6 +48,7 @@ export const initialPlanTiers = [
     badge: "Best Value",
     accentColor: "sky",
     active: true,
+    isPopular: false,
   },
 ];
 
@@ -57,6 +61,7 @@ export const initialBillingPlans = [
     currency: "INR",
     storage: 5368709120, // 5 GB
     active: true,
+    isPopular: false,
     version: "v1.0",
     description: "30-day free trial tier with 5 GB storage and full Ultimate features.",
   },
@@ -68,6 +73,7 @@ export const initialBillingPlans = [
     currency: "INR",
     storage: 5368709120, // 5 GB
     active: true,
+    isPopular: false,
     version: "v1.0",
     description: "Annual free trial tier with 5 GB storage and full Ultimate features.",
   },
@@ -79,6 +85,7 @@ export const initialBillingPlans = [
     currency: "INR",
     storage: 1099511627776, // 1 TB
     active: true,
+    isPopular: false,
     version: "v1.2",
     description: "1 TB secure storage for personal files and photos.",
   },
@@ -90,6 +97,7 @@ export const initialBillingPlans = [
     currency: "INR",
     storage: 1099511627776, // 1 TB
     active: true,
+    isPopular: false,
     version: "v1.2",
     description: "1 TB secure storage billed annually (2 months free).",
   },
@@ -101,6 +109,7 @@ export const initialBillingPlans = [
     currency: "INR",
     storage: 5497558138880, // 5 TB
     active: true,
+    isPopular: true,
     version: "v2.0",
     description:
       "5 TB storage with priority speed, cloud linkage and integrations.",
@@ -113,6 +122,7 @@ export const initialBillingPlans = [
     currency: "INR",
     storage: 5497558138880, // 5 TB
     active: true,
+    isPopular: true,
     version: "v2.0",
     description:
       "5 TB storage billed annually with priority speed and linkage.",
@@ -125,6 +135,7 @@ export const initialBillingPlans = [
     currency: "INR",
     storage: 16492674416640, // 15 TB
     active: true,
+    isPopular: false,
     version: "v3.1",
     description:
       "15 TB power storage for teams, AI search and unlimited versioning.",
@@ -137,6 +148,7 @@ export const initialBillingPlans = [
     currency: "INR",
     storage: 16492674416640, // 15 TB
     active: true,
+    isPopular: false,
     version: "v3.1",
     description: "15 TB annual power tier for teams and total backup.",
   },

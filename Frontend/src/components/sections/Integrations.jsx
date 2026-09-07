@@ -20,19 +20,19 @@ const PANELS = [
     textColor: "text-blue-500 dark:text-blue-400",
     desc: "Edit documents, spreadsheets, and markdown notes directly inside Vault. All modifications are encrypted instantly at the block level.",
     visual: () => (
-      <div className="absolute right-0 bottom-0 w-48 h-48 md:w-64 md:h-64 bg-blue-950/30 rounded-tl-3xl border-t border-l border-blue-500/20 p-5 flex flex-col shadow-lg backdrop-blur-md">
-        <div className="w-full h-6 flex items-center gap-2 mb-4 border-b border-blue-500/20 pb-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+      <div className="absolute right-0 bottom-0 w-28 h-28 min-[380px]:w-36 min-[380px]:h-36 sm:w-56 sm:h-56 md:w-64 md:h-64 bg-blue-950/30 rounded-tl-3xl border-t border-l border-blue-500/20 p-3 sm:p-5 flex flex-col shadow-lg backdrop-blur-md">
+        <div className="w-full h-4 sm:h-6 flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-4 border-b border-blue-500/20 pb-2 sm:pb-3">
+          <div className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-rose-500/80" />
+          <div className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-amber-500/80" />
+          <div className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-emerald-500/80" />
         </div>
-        <div className="space-y-2.5 flex-1">
-          <div className="w-full h-2.5 bg-blue-400/20 rounded-full" />
-          <div className="w-full h-2.5 bg-blue-400/20 rounded-full" />
-          <div className="w-3/4 h-2.5 bg-blue-400/20 rounded-full" />
-          <div className="w-1/2 h-2.5 bg-blue-400/20 rounded-full mt-4" />
+        <div className="space-y-1.5 sm:space-y-2.5 flex-1">
+          <div className="w-full h-1.5 sm:h-2.5 bg-blue-400/20 rounded-full" />
+          <div className="w-full h-1.5 sm:h-2.5 bg-blue-400/20 rounded-full" />
+          <div className="w-3/4 h-1.5 sm:h-2.5 bg-blue-400/20 rounded-full" />
+          <div className="w-1/2 h-1.5 sm:h-2.5 bg-blue-400/20 rounded-full mt-2 sm:mt-4" />
         </div>
-        <div className="absolute bottom-5 right-5 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/30">
+        <div className="absolute bottom-3 right-3 sm:bottom-5 sm:right-5 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-400/30">
           <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
         </div>
       </div>
@@ -49,7 +49,7 @@ const PANELS = [
     textColor: "text-fuchsia-500 dark:text-fuchsia-400",
     desc: "Never download massive design assets just to inspect them. Vault generates instant previews for high-resolution graphics in milliseconds.",
     visual: () => (
-      <div className="absolute right-0 bottom-0 w-48 h-48 md:w-64 md:h-64 bg-fuchsia-950/30 rounded-tl-3xl border-t border-l border-fuchsia-500/20 p-4 grid grid-cols-2 gap-2.5 shadow-lg backdrop-blur-md">
+      <div className="absolute right-0 bottom-0 w-28 h-28 min-[380px]:w-36 min-[380px]:h-36 sm:w-56 sm:h-56 md:w-64 md:h-64 bg-fuchsia-950/30 rounded-tl-3xl border-t border-l border-fuchsia-500/20 p-2.5 sm:p-4 grid grid-cols-2 gap-1.5 sm:gap-2.5 shadow-lg backdrop-blur-md">
         {[1, 2, 3, 4].map((i) => (
           <motion.div
             key={i}
@@ -57,7 +57,7 @@ const PANELS = [
             transition={{ duration: 3, delay: i * 0.4, repeat: Infinity }}
             className="w-full h-full bg-fuchsia-500/15 rounded-xl border border-fuchsia-500/20 flex items-center justify-center"
           >
-            <ImageIcon className="text-fuchsia-500/50 w-5 h-5" />
+            <ImageIcon className="text-fuchsia-500/50 w-4 h-4 sm:w-5 sm:h-5" />
           </motion.div>
         ))}
       </div>
@@ -74,10 +74,10 @@ const PANELS = [
     textColor: "text-rose-500 dark:text-rose-400",
     desc: "Hardware-accelerated media streaming directly from your encrypted vault without downloading the full archive first.",
     visual: () => (
-      <div className="absolute inset-0 flex items-center justify-end pr-4 md:pr-10">
-        <div className="relative w-44 h-28 md:w-56 md:h-36 bg-rose-950/40 rounded-2xl border border-rose-500/20 flex items-center justify-center shadow-lg backdrop-blur-md overflow-hidden">
-          <div className="w-10 h-10 rounded-full bg-rose-500 flex items-center justify-center shadow-md cursor-pointer hover:scale-110 transition-transform">
-            <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-[10px] border-l-white border-b-[5px] border-b-transparent ml-0.5" />
+      <div className="absolute inset-0 flex items-center justify-end pr-3 sm:pr-4 md:pr-10">
+        <div className="relative w-32 h-20 min-[380px]:w-40 min-[380px]:h-24 md:w-56 md:h-36 bg-rose-950/40 rounded-2xl border border-rose-500/20 flex items-center justify-center shadow-lg backdrop-blur-md overflow-hidden">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-rose-500 flex items-center justify-center shadow-md cursor-pointer hover:scale-110 transition-transform">
+            <div className="w-0 h-0 border-t-[4px] sm:border-t-[5px] border-t-transparent border-l-[8px] sm:border-l-[10px] border-l-white border-b-[4px] sm:border-b-[5px] border-b-transparent ml-0.5" />
           </div>
         </div>
       </div>
@@ -94,14 +94,14 @@ const PANELS = [
     textColor: "text-teal-500 dark:text-teal-400",
     desc: "Share secure, expiring links directly with team channels. Revoke access with one click whenever an asset is updated.",
     visual: () => (
-      <div className="absolute right-0 bottom-0 w-48 h-48 md:w-64 md:h-64 bg-teal-950/30 rounded-tl-3xl border-t border-l border-teal-500/20 p-4 flex flex-col justify-end gap-2.5 shadow-lg backdrop-blur-md">
-        <div className="w-3/4 h-10 bg-teal-500/20 rounded-xl ml-auto border border-teal-500/20 p-2 flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-teal-400/50" />
-          <div className="w-full h-1.5 bg-teal-400/20 rounded" />
+      <div className="absolute right-0 bottom-0 w-28 h-28 min-[380px]:w-36 min-[380px]:h-36 sm:w-56 sm:h-56 md:w-64 md:h-64 bg-teal-950/30 rounded-tl-3xl border-t border-l border-teal-500/20 p-2.5 sm:p-4 flex flex-col justify-end gap-1.5 sm:gap-2.5 shadow-lg backdrop-blur-md">
+        <div className="w-3/4 h-8 sm:h-10 bg-teal-500/20 rounded-xl ml-auto border border-teal-500/20 p-1.5 sm:p-2 flex items-center gap-1.5 sm:gap-2">
+          <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-teal-400/50" />
+          <div className="w-full h-1 sm:h-1.5 bg-teal-400/20 rounded" />
         </div>
-        <div className="w-5/6 h-10 bg-white/5 rounded-xl border border-white/10 p-2 flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-white/20" />
-          <div className="w-3/4 h-1.5 bg-white/20 rounded" />
+        <div className="w-5/6 h-8 sm:h-10 bg-white/5 rounded-xl border border-white/10 p-1.5 sm:p-2 flex items-center gap-1.5 sm:gap-2">
+          <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-white/20" />
+          <div className="w-3/4 h-1 sm:h-1.5 bg-white/20 rounded" />
         </div>
       </div>
     ),
@@ -118,17 +118,18 @@ const Integrations = () => {
           <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent-soft border border-accent-border text-accent-primary font-bold tracking-wider text-xs uppercase mb-4">
             Ecosystem
           </span>
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-5">
-            Deep integration with <br />
+          <h2 className="text-2xl min-[360px]:text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-4 sm:mb-5">
+            Deep integration with{" "}
+            <br className="hidden sm:inline" />
             <span className="text-accent-primary">your favorite tools.</span>
           </h2>
-          <p className="text-slate-600 dark:text-white/60 text-base sm:text-lg font-medium">
+          <p className="text-slate-600 dark:text-white/60 text-sm min-[360px]:text-base sm:text-lg font-medium">
             Vault connects seamlessly with the developer tools and storage providers you already use every day.
           </p>
         </div>
 
         {/* Accordion Container */}
-        <div className="w-full min-h-[520px] h-[620px] sm:h-[680px] lg:h-[500px] flex flex-col lg:flex-row gap-3 bg-slate-50 dark:bg-[#040c09] p-3 sm:p-4 rounded-3xl border border-slate-200 dark:border-white/10 relative overflow-hidden shadow-sm">
+        <div className="w-full min-h-[500px] h-[580px] sm:h-[650px] lg:h-[500px] flex flex-col lg:flex-row gap-2.5 sm:gap-3 bg-slate-50 dark:bg-[#040c09] p-2.5 sm:p-4 rounded-3xl border border-slate-200 dark:border-white/10 relative overflow-hidden shadow-sm">
           {PANELS.map((panel, idx) => {
             const isActive = activePanel === idx;
 
@@ -147,12 +148,12 @@ const Integrations = () => {
               >
                 {/* Inactive state icon & label */}
                 <div
-                  className={`absolute inset-0 p-5 flex flex-col items-center justify-center lg:justify-start lg:pt-10 transition-opacity duration-200 ${
+                  className={`absolute inset-0 p-4 sm:p-5 flex flex-col items-center justify-center lg:justify-start lg:pt-10 transition-opacity duration-200 ${
                     isActive ? "opacity-0 pointer-events-none" : "opacity-100"
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 dark:text-white/50">
-                    <panel.icon size={20} />
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-500 dark:text-white/50">
+                    <panel.icon size={18} />
                   </div>
                   <div
                     className="hidden lg:block mt-8 whitespace-nowrap"
@@ -175,27 +176,27 @@ const Integrations = () => {
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="absolute inset-0 p-6 md:p-10 h-full flex flex-col justify-between"
+                      className="absolute inset-0 p-4 min-[360px]:p-5 sm:p-6 md:p-10 h-full flex flex-col justify-between overflow-hidden"
                     >
                       <div className="relative z-20 max-w-md">
                         <div
-                          className={`w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br ${panel.color} text-white mb-5 shadow-md`}
+                          className={`w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 rounded-xl min-[360px]:rounded-2xl flex items-center justify-center bg-gradient-to-br ${panel.color} text-white mb-3 min-[360px]:mb-4 sm:mb-5 shadow-md`}
                         >
-                          <panel.icon size={24} />
+                          <panel.icon size={20} className="min-[360px]:w-6 min-[360px]:h-6" />
                         </div>
-                        <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">
+                        <h3 className="text-xl min-[360px]:text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-1.5 sm:mb-2 tracking-tight">
                           {panel.title}
                         </h3>
-                        <p className={`font-bold ${panel.textColor} mb-3 text-xs uppercase tracking-wider`}>
+                        <p className={`font-bold ${panel.textColor} mb-2 sm:mb-3 text-[10px] min-[360px]:text-xs uppercase tracking-wider`}>
                           {panel.subtitle}
                         </p>
-                        <p className="text-slate-600 dark:text-white/60 text-sm leading-relaxed max-w-sm">
+                        <p className="text-slate-600 dark:text-white/60 text-xs min-[360px]:text-sm leading-relaxed max-w-sm">
                           {panel.desc}
                         </p>
                       </div>
 
                       {/* Visual Content Component */}
-                      <div className="absolute inset-0 z-10 pointer-events-none opacity-40 lg:opacity-100">
+                      <div className="absolute inset-0 z-10 pointer-events-none opacity-25 sm:opacity-40 lg:opacity-100">
                         <panel.visual />
                       </div>
                     </motion.div>

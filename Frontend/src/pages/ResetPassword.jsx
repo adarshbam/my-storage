@@ -63,8 +63,8 @@ export default function ResetPassword() {
             <VaultLogo size={24} />
           </div>
         </div>
-        <div className="flex flex-col mb-6 text-center lg:text-left">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+        <div className="flex flex-col mb-5 sm:mb-6 text-center lg:text-left">
+          <h1 className="text-xl min-[360px]:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Reset Password
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-xs">

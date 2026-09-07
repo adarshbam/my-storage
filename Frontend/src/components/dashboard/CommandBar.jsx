@@ -438,13 +438,13 @@ export default function CommandBar({
         </button>
         <Link
           to="/"
-          className="flex items-center gap-2 sm:gap-3 group cursor-pointer"
+          className="flex items-center gap-2 sm:gap-3 group cursor-pointer shrink-0"
           title="Go to Home"
         >
           <div className="bg-accent-soft border border-accent-border p-1 sm:p-1.5 rounded-xl shadow-sm relative group-hover:border-accent-primary transition-colors">
             <VaultLogo className="text-accent-primary" size={18} />
           </div>
-          <span className="text-base sm:text-lg font-black tracking-widest text-slate-900 dark:text-white uppercase group-hover:text-accent-primary transition-colors">
+          <span className="text-base sm:text-lg font-black tracking-widest text-slate-900 dark:text-white uppercase group-hover:text-accent-primary transition-colors hidden min-[380px]:inline">
             Vault OS
           </span>
         </Link>
@@ -505,7 +505,7 @@ export default function CommandBar({
 
             {/* Filter Dropdown */}
             {showFilters && (
-              <div className="absolute top-full sm:top-[calc(100%+8px)] left-0 mt-2 sm:mt-0 w-[100vw] sm:w-full -ml-4 sm:ml-0 bg-white/95 dark:bg-vault-surface/95 backdrop-blur-xl border-y sm:border border-slate-200 dark:border-white/10 sm:rounded-2xl shadow-2xl z-50 p-4 text-slate-900 dark:text-white max-h-[75vh] overflow-y-auto custom-scrollbar">
+              <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white/95 dark:bg-vault-surface/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-4 text-slate-900 dark:text-white max-h-[75vh] overflow-y-auto custom-scrollbar">
                 <h3 className="text-xs font-bold tracking-widest text-accent-primary uppercase mb-4 border-b border-slate-200 dark:border-white/10 pb-2">
                   Advanced Search
                 </h3>

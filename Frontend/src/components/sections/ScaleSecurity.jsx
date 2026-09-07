@@ -72,8 +72,8 @@ const EncryptionVisualizer = () => {
   }, []);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-slate-950/20">
-      <div className="absolute inset-0 grid grid-cols-[repeat(auto-fit,minmax(24px,1fr))] gap-2 p-6 opacity-20 overflow-hidden select-none">
+    <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-slate-950/20 pb-12 sm:pb-0">
+      <div className="absolute inset-0 grid grid-cols-[repeat(auto-fit,minmax(24px,1fr))] gap-2 p-4 sm:p-6 opacity-20 overflow-hidden select-none">
         {matrix.map((char, i) => (
           <div
             key={i}
@@ -87,10 +87,10 @@ const EncryptionVisualizer = () => {
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.4 }}
-        className="relative z-10 w-36 h-36 sm:w-44 sm:h-44 rounded-3xl bg-white/80 dark:bg-vault-surface/80 border border-accent-border flex flex-col items-center justify-center shadow-xl shadow-accent-glow/20 backdrop-blur-xl"
+        className="relative z-10 w-32 h-32 sm:w-44 sm:h-44 rounded-2xl sm:rounded-3xl bg-white/80 dark:bg-vault-surface/80 border border-accent-border flex flex-col items-center justify-center shadow-xl shadow-accent-glow/20 backdrop-blur-xl"
       >
-        <ShieldCheck size={56} className="text-accent-primary mb-2" />
-        <span className="text-[11px] font-mono font-bold tracking-widest text-slate-700 dark:text-white/80 uppercase">
+        <ShieldCheck size={44} className="text-accent-primary mb-2 sm:w-14 sm:h-14" />
+        <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-widest text-slate-700 dark:text-white/80 uppercase">
           AES-256 ACTIVE
         </span>
       </motion.div>
@@ -100,34 +100,34 @@ const EncryptionVisualizer = () => {
 
 const SearchVisualizer = () => {
   return (
-    <div className="relative w-full h-full flex items-center justify-center p-6 bg-slate-950/20">
-      <div className="relative w-full max-w-sm h-72 rounded-2xl bg-white/80 dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 p-5 shadow-lg backdrop-blur-md overflow-hidden flex flex-col justify-between">
+    <div className="relative w-full h-full flex items-center justify-center p-3 sm:p-6 pb-12 sm:pb-0 bg-slate-950/20">
+      <div className="relative w-full max-w-sm rounded-2xl bg-white/80 dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 p-3.5 sm:p-5 shadow-lg backdrop-blur-md overflow-hidden flex flex-col justify-between gap-2.5 sm:gap-3">
         {/* Mock search items */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-500 flex items-center justify-center text-xs font-bold">
+        <div className="space-y-2 sm:space-y-3">
+          <div className="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-cyan-500/20 text-cyan-500 flex items-center justify-center text-[10px] sm:text-xs font-bold shrink-0">
                 JS
               </div>
-              <span className="text-xs font-bold text-slate-800 dark:text-white truncate">
+              <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-white truncate">
                 encryption-protocol.ts
               </span>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-500 font-bold font-mono">
+            <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-500 font-bold font-mono shrink-0">
               99% match
             </span>
           </div>
 
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 rounded-lg bg-accent-soft text-accent-primary flex items-center justify-center text-xs font-bold">
+          <div className="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-accent-soft text-accent-primary flex items-center justify-center text-[10px] sm:text-xs font-bold shrink-0">
                 PDF
               </div>
-              <span className="text-xs font-bold text-slate-800 dark:text-white truncate">
+              <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-white truncate">
                 security-audit-report.pdf
               </span>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent-soft text-accent-primary font-bold font-mono">
+            <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-accent-soft text-accent-primary font-bold font-mono shrink-0">
               Indexed
             </span>
           </div>
@@ -140,7 +140,7 @@ const SearchVisualizer = () => {
           className="absolute left-0 right-0 top-0 h-[2px] bg-cyan-400 shadow-[0_0_15px_#22d3ee] z-20 pointer-events-none"
         />
 
-        <div className="text-[11px] font-mono text-slate-400 dark:text-white/40 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/5">
+        <div className="text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-white/40 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/5">
           <span>Neural Query Engine</span>
           <span className="text-cyan-500 font-bold">0.4ms</span>
         </div>
@@ -151,27 +151,27 @@ const SearchVisualizer = () => {
 
 const BackupVisualizer = () => {
   return (
-    <div className="relative w-full h-full flex items-center justify-center p-6 bg-slate-950/20">
-      <div className="flex flex-col gap-3 w-full max-w-sm">
+    <div className="relative w-full h-full flex items-center justify-center p-3 sm:p-6 pb-12 sm:pb-0 bg-slate-950/20">
+      <div className="flex flex-col gap-2 sm:gap-3 w-full max-w-sm">
         {["Primary Node (Frankfurt)", "Secondary Node (N. Virginia)", "Cold Replica (Tokyo)"].map((node, i) => (
           <motion.div
             key={node}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.15 }}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-white/80 dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm"
+            className="flex items-center justify-between p-2.5 sm:p-3.5 rounded-2xl bg-white/80 dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
-                <HardDrive size={16} />
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center shrink-0">
+                <HardDrive size={15} />
               </div>
-              <div className="text-xs font-bold text-slate-800 dark:text-white">
+              <div className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-white truncate">
                 {node}
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
-              <span className="text-[10px] font-mono font-bold text-teal-600 dark:text-teal-400">
+              <span className="text-[9px] sm:text-[10px] font-mono font-bold text-teal-600 dark:text-teal-400">
                 SYNCED
               </span>
             </div>
@@ -184,25 +184,25 @@ const BackupVisualizer = () => {
 
 const SharingVisualizer = () => {
   return (
-    <div className="relative w-full h-full flex items-center justify-center p-6 bg-slate-950/20">
-      <div className="relative w-full max-w-sm rounded-2xl bg-white/80 dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 p-5 shadow-lg flex flex-col gap-4">
+    <div className="relative w-full h-full flex items-center justify-center p-3 sm:p-6 pb-12 sm:pb-0 bg-slate-950/20">
+      <div className="relative w-full max-w-sm rounded-2xl bg-white/80 dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 p-3.5 sm:p-5 shadow-lg flex flex-col gap-3 sm:gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Share2 size={18} className="text-indigo-500" />
-            <span className="text-xs font-bold text-slate-800 dark:text-white">
+            <Share2 size={16} className="text-indigo-500 sm:w-4 sm:h-4" />
+            <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-white">
               Secure Share Capsule
             </span>
           </div>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500 font-mono font-bold">
+          <span className="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500 font-mono font-bold shrink-0">
             Expiring in 24h
           </span>
         </div>
 
-        <div className="p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-xs font-mono text-slate-600 dark:text-white/60 truncate">
+        <div className="p-2.5 sm:p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 text-[11px] sm:text-xs font-mono text-slate-600 dark:text-white/60 truncate">
           https://vault.app/s/e7a9b2...
         </div>
 
-        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-white/40 pt-2 border-t border-slate-100 dark:border-white/5">
+        <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-500 dark:text-white/40 pt-2 border-t border-slate-100 dark:border-white/5">
           <span>Password Protected</span>
           <span className="text-emerald-500 font-bold">1/1 Access Used</span>
         </div>
@@ -213,28 +213,28 @@ const SharingVisualizer = () => {
 
 const RansomwareVisualizer = () => {
   return (
-    <div className="relative w-full h-full flex items-center justify-center p-6 bg-slate-950/20">
-      <div className="relative w-full max-w-sm rounded-2xl bg-white/80 dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 p-5 shadow-lg flex flex-col gap-4">
+    <div className="relative w-full h-full flex items-center justify-center p-3 sm:p-6 pb-12 sm:pb-0 bg-slate-950/20">
+      <div className="relative w-full max-w-sm rounded-2xl bg-white/80 dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 p-3.5 sm:p-5 shadow-lg flex flex-col gap-3 sm:gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <RefreshCw size={18} className="text-amber-500" />
-            <span className="text-xs font-bold text-slate-800 dark:text-white">
+            <RefreshCw size={16} className="text-amber-500 sm:w-4 sm:h-4" />
+            <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-white">
               Time Machine Rollback
             </span>
           </div>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-mono font-bold">
+          <span className="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-mono font-bold shrink-0">
             Snapshot OK
           </span>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1.5 sm:space-y-2">
           {["Target Snapshot: 10 mins ago", "State: 1,420 Files Restored", "Malware Invalidation: 100%"].map((item, i) => (
             <div
               key={i}
-              className="text-xs font-mono text-slate-600 dark:text-white/70 flex items-center gap-2"
+              className="text-[11px] sm:text-xs font-mono text-slate-600 dark:text-white/70 flex items-center gap-2"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              <span>{item}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="truncate">{item}</span>
             </div>
           ))}
         </div>
@@ -256,26 +256,26 @@ const ScaleSecurity = () => {
   }, []);
 
   return (
-    <section id="security" className="py-24 relative bg-vault-bg overflow-hidden">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 max-w-[1300px]">
+    <section id="security" className="py-16 sm:py-24 relative bg-vault-bg overflow-hidden">
+      <div className="container mx-auto px-3.5 sm:px-6 lg:px-8 relative z-10 max-w-[1300px]">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent-soft border border-accent-border text-accent-primary font-bold tracking-wider text-xs uppercase mb-4">
+        <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+          <span className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-accent-soft border border-accent-border text-accent-primary font-bold tracking-wider text-[11px] sm:text-xs uppercase mb-3 sm:mb-4">
             <ShieldCheck size={14} /> Zero-Knowledge Architecture
           </span>
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-5">
+          <h2 className="text-2xl min-[360px]:text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-3 sm:mb-5 break-words">
             Security built for <br />
             <span className="text-accent-primary">uncompromising privacy.</span>
           </h2>
-          <p className="text-slate-600 dark:text-white/60 text-base sm:text-lg font-medium max-w-xl mx-auto">
+          <p className="text-slate-600 dark:text-white/60 text-sm sm:text-lg font-medium max-w-xl mx-auto">
             From client-side cryptography to geo-distributed replicas, Vault is engineered so that only you have the keys to your files.
           </p>
         </div>
 
         {/* Feature Grid with Interactive Showcase */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center rounded-3xl p-5 sm:p-8 bg-white/60 dark:bg-vault-surface/40 border border-slate-200/80 dark:border-white/10 backdrop-blur-xl shadow-lg">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center rounded-2xl sm:rounded-3xl p-3.5 sm:p-8 bg-white/60 dark:bg-vault-surface/40 border border-slate-200/80 dark:border-white/10 backdrop-blur-xl shadow-lg">
           {/* Left Feature Selector Tabs */}
-          <div className="lg:col-span-6 flex flex-col gap-3">
+          <div className="lg:col-span-6 flex flex-col gap-2 sm:gap-3">
             {FEATURES.map((feat, idx) => {
               const isActive = idx === activeIndex;
               const Icon = feat.icon;
@@ -283,28 +283,28 @@ const ScaleSecurity = () => {
                 <button
                   key={feat.id}
                   onClick={() => setActiveIndex(idx)}
-                  className={`w-full text-left p-4 sm:p-4.5 rounded-2xl transition-all duration-300 border ${
+                  className={`w-full text-left p-3 sm:p-4 rounded-xl sm:rounded-2xl transition-all duration-300 border ${
                     isActive
                       ? "bg-white dark:bg-vault-surface/90 border-accent-border shadow-md shadow-accent-glow/10 scale-[1.01]"
                       : "bg-slate-50/60 dark:bg-white/[0.02] border-slate-200/60 dark:border-white/5 hover:bg-white dark:hover:bg-white/[0.05] hover:border-slate-300 dark:hover:border-white/15"
                   }`}
                 >
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-3 sm:gap-4">
                     <div
-                      className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 ${
+                      className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 ${
                         isActive
                           ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm scale-105"
                           : "bg-slate-200/70 dark:bg-white/5 text-slate-600 dark:text-white/50"
                       }`}
                     >
-                      <Icon size={19} />
+                      <Icon size={18} className="sm:w-5 sm:h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1 tracking-tight">
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-0.5 sm:mb-1 tracking-tight">
                         {feat.title}
                       </h3>
                       {isActive && (
-                        <p className="text-xs text-slate-600 dark:text-white/60 leading-relaxed animate-fade-in mt-1">
+                        <p className="text-[11px] sm:text-xs text-slate-600 dark:text-white/60 leading-relaxed animate-fade-in mt-1">
                           {feat.desc}
                         </p>
                       )}
@@ -316,7 +316,7 @@ const ScaleSecurity = () => {
           </div>
 
           {/* Right Monolith Visualizer */}
-          <div className="lg:col-span-6 w-full min-h-[280px] sm:min-h-[340px] aspect-[4/3] rounded-3xl overflow-hidden bg-slate-50 dark:bg-[#020806] border border-slate-200 dark:border-white/10 relative shadow-inner flex items-center justify-center">
+          <div className="lg:col-span-6 w-full min-h-[300px] sm:min-h-[360px] lg:aspect-[4/3] rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-50 dark:bg-[#020806] border border-slate-200 dark:border-white/10 relative shadow-inner flex items-center justify-center">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeIndex}
@@ -335,7 +335,7 @@ const ScaleSecurity = () => {
             </AnimatePresence>
 
             {/* Footer indicator pill */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-white/90 dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 shadow-md text-[11px] font-mono font-bold text-slate-700 dark:text-white/80 flex items-center gap-2">
+            <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-white/90 dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 shadow-md text-[10px] sm:text-[11px] font-mono font-bold text-slate-700 dark:text-white/80 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap z-20">
               <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse" />
               <span>Node Security Layer // {activeIndex + 1}</span>
             </div>

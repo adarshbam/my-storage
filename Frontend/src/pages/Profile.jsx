@@ -177,20 +177,20 @@ export default function Profile() {
         
         {/* ── TOP HEADER ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-white/10 pb-6">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => navigate("/dashboard")}
-              className="p-3 rounded-2xl bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all shadow-sm hover:scale-105 active:scale-95"
+              className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all shadow-sm shrink-0"
               title="Back to Dashboard"
             >
-              <ArrowLeft size={18} />
+              <ArrowLeft size={16} />
             </button>
 
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 text-accent-primary text-xs font-mono font-bold uppercase tracking-widest mb-1">
                 <ShieldCheck size={14} /> Vault Identity & Security
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              <h1 className="text-xl min-[360px]:text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight truncate">
                 Account Settings
               </h1>
               <p className="text-slate-500 dark:text-white/50 text-xs sm:text-sm font-medium mt-0.5">
@@ -199,10 +199,10 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 self-start sm:self-auto">
+          <div className="flex items-center gap-3 self-start sm:self-auto shrink-0">
             <Link
               to="/dashboard/billing"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent-soft hover:bg-accent-soft/80 border border-accent-border text-accent-primary text-xs font-mono font-bold tracking-wider transition-all shadow-sm hover:shadow-accent-glow"
+              className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-accent-soft hover:bg-accent-soft/80 border border-accent-border text-accent-primary text-xs font-mono font-bold tracking-wider transition-all shadow-sm hover:shadow-accent-glow"
             >
               <Zap size={14} />
               <span>Storage Plans</span>
@@ -211,16 +211,16 @@ export default function Profile() {
         </div>
 
         {/* ── MAIN CONTENT GRID ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           
           {/* Left 2 Columns: Identity + Quota */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-6 sm:space-y-8 min-w-0">
             
             {/* 1. Identity Hero Card */}
-            <div className="rounded-3xl p-5 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 group">
+            <div className="rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-6 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 group">
               <div className="absolute top-0 right-0 w-64 h-64 bg-accent-soft/20 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="flex flex-col xs:flex-row items-start xs:items-center gap-4 sm:gap-6 z-10 w-full sm:w-auto">
+              <div className="flex flex-col xs:flex-row items-start xs:items-center gap-3.5 min-[360px]:gap-4 sm:gap-6 z-10 w-full sm:w-auto min-w-0">
                 <UserAvatar
                   user={user}
                   src={profilePicUrl}
@@ -230,9 +230,9 @@ export default function Profile() {
                   shape="rounded"
                 />
 
-                <div className="space-y-1.5 min-w-0 flex-1">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
+                <div className="space-y-1 sm:space-y-1.5 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <h2 className="text-xl min-[360px]:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
                       {user?.name || "Vault Operative"}
                     </h2>
                     <button
@@ -246,16 +246,16 @@ export default function Profile() {
                   <p className="text-xs sm:text-sm font-mono text-slate-500 dark:text-white/50 truncate">
                     {user?.email}
                   </p>
-                  <div className="pt-2 flex items-center gap-2 flex-wrap">
+                  <div className="pt-1 sm:pt-2 flex items-center gap-2 flex-wrap">
                     <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold border uppercase tracking-wider ${getRoleBadgeStyle(
+                      className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] min-[360px]:text-[11px] font-mono font-bold border uppercase tracking-wider ${getRoleBadgeStyle(
                         userRole
                       )}`}
                     >
-                      <Shield size={12} /> {userRole} CLEARANCE
+                      <Shield size={11} /> {userRole} CLEARANCE
                     </span>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/60">
-                      <Cpu size={12} className="text-accent-primary" /> AES-256 GCM
+                    <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] min-[360px]:text-[11px] font-mono font-bold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/60">
+                      <Cpu size={11} className="text-accent-primary" /> AES-256 GCM
                     </span>
                   </div>
                 </div>
@@ -269,18 +269,18 @@ export default function Profile() {
             <NetworkSpeedSection />
 
             {/* 4. Storage Quota Visual Card */}
-            <div className="rounded-3xl p-6 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-5">
+            <div className="rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-6 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-4 sm:space-y-5">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="text-xs font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-white/40 flex items-center gap-2">
-                  <HardDrive size={15} className="text-accent-primary" /> Vault Storage Allocation
+                <span className="text-[11px] min-[360px]:text-xs font-mono font-bold uppercase tracking-widest text-slate-500 dark:text-white/40 flex items-center gap-1.5 sm:gap-2">
+                  <HardDrive size={14} className="text-accent-primary" /> Vault Storage Allocation
                 </span>
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-accent-soft border border-accent-border text-accent-primary text-xs font-mono font-bold uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-accent-soft border border-accent-border text-accent-primary text-[10px] min-[360px]:text-xs font-mono font-bold uppercase tracking-wider">
                   {usedPercent}% Quota Used
                 </span>
               </div>
 
-              <div className="space-y-3">
-                <div className="w-full h-4 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden p-0.5 border border-slate-200 dark:border-white/5">
+              <div className="space-y-2.5 sm:space-y-3">
+                <div className="w-full h-3.5 sm:h-4 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden p-0.5 border border-slate-200 dark:border-white/5">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${usedPercent}%` }}
@@ -289,7 +289,7 @@ export default function Profile() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between text-xs font-mono font-semibold text-slate-600 dark:text-white/60 pt-1">
+                <div className="flex items-center justify-between text-[11px] min-[360px]:text-xs font-mono font-semibold text-slate-600 dark:text-white/60 pt-1">
                   <span>Used: <strong className="text-slate-900 dark:text-white">{formatSize(usedStorage)}</strong></span>
                   <span>Total: <strong className="text-slate-900 dark:text-white">{formatSize(maxStorage)}</strong></span>
                 </div>
@@ -303,38 +303,38 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* 3. Security & Multi-Factor Guard */}
-            <div className="rounded-3xl p-6 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-6">
+            {/* 5. Security & Multi-Factor Guard */}
+            <div className="rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-6 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-5 sm:space-y-6">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-2xl bg-accent-soft border border-accent-border text-accent-primary">
-                    <ShieldCheck size={20} />
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-accent-soft border border-accent-border text-accent-primary shrink-0">
+                    <ShieldCheck size={18} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                    <h3 className="text-base min-[360px]:text-lg font-black text-slate-900 dark:text-white tracking-tight">
                       Security & Recovery Protocols
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-white/40 font-medium">
+                    <p className="text-[11px] min-[360px]:text-xs text-slate-500 dark:text-white/40 font-medium">
                       Multi-factor authentication, backup channels, and account protection.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
                 
                 {/* 2FA Card */}
-                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3.5 flex flex-col justify-between">
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2">
                         <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
-                          <ShieldCheck size={16} />
+                          <ShieldCheck size={15} />
                         </div>
                         <span className="text-xs font-bold text-slate-900 dark:text-white">Two-Factor Auth</span>
                       </div>
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
+                        className={`px-2 py-0.5 rounded-full text-[9px] min-[360px]:text-[10px] font-mono font-bold uppercase tracking-wider ${
                           user?.twoFactorEnabled
                             ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
                             : "bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white/50 border border-slate-300 dark:border-white/10"
@@ -343,40 +343,40 @@ export default function Profile() {
                         {user?.twoFactorEnabled ? "Active" : "Disabled"}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-600 dark:text-white/50 leading-relaxed">
-                      Require an authenticator app (Google Authenticator, Authy, 1Password) security token on every login.
+                    <p className="text-[10px] min-[360px]:text-[11px] text-slate-600 dark:text-white/50 leading-relaxed">
+                      Require an authenticator app security token on every login.
                     </p>
                   </div>
 
                   {user?.twoFactorEnabled ? (
                     <button
                       onClick={() => setTwoFactorManageOpen(true)}
-                      className="w-full py-2.5 rounded-xl text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                      className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                     >
-                      <Key size={13} /> Manage 2FA & Backup Codes
+                      <Key size={13} /> Manage 2FA
                     </button>
                   ) : (
                     <button
                       onClick={() => setTwoFactorSetupOpen(true)}
-                      className="w-full py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-white shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                      className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-white shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5"
                     >
-                      <ShieldCheck size={14} /> Enable Two-Factor Auth
+                      <ShieldCheck size={13} /> Enable 2FA
                     </button>
                   )}
                 </div>
 
                 {/* Secondary Recovery Email */}
-                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3.5 flex flex-col justify-between">
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2">
                         <div className="p-1.5 rounded-lg bg-teal-500/10 text-teal-500">
-                          <Mail size={16} />
+                          <Mail size={15} />
                         </div>
                         <span className="text-xs font-bold text-slate-900 dark:text-white">Recovery Email</span>
                       </div>
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
+                        className={`px-2 py-0.5 rounded-full text-[9px] min-[360px]:text-[10px] font-mono font-bold uppercase tracking-wider ${
                           user?.secondaryRecoveryEmailVerified
                             ? "bg-teal-500/20 text-teal-600 dark:text-teal-300 border border-teal-500/30"
                             : "bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white/50 border border-slate-300 dark:border-white/10"
@@ -386,42 +386,42 @@ export default function Profile() {
                       </span>
                     </div>
                     {user?.secondaryRecoveryEmailVerified ? (
-                      <div className="flex items-center justify-between text-xs text-slate-800 dark:text-white/90 font-mono bg-white dark:bg-black/30 p-2 rounded-xl border border-slate-200 dark:border-white/5">
+                      <div className="flex items-center justify-between text-[11px] text-slate-800 dark:text-white/90 font-mono bg-white dark:bg-black/30 p-2 rounded-xl border border-slate-200 dark:border-white/5">
                         <span className="truncate">{user.secondaryRecoveryEmail}</span>
-                        <CheckCircle2 size={14} className="text-teal-500 shrink-0 ml-2" />
+                        <CheckCircle2 size={13} className="text-teal-500 shrink-0 ml-1.5" />
                       </div>
                     ) : (
-                      <p className="text-[11px] text-slate-600 dark:text-white/50 leading-relaxed">
-                        Add a verified secondary email to recover your vault assets if you lose access to your primary email.
+                      <p className="text-[10px] min-[360px]:text-[11px] text-slate-600 dark:text-white/50 leading-relaxed">
+                        Add a verified secondary email to recover your vault assets.
                       </p>
                     )}
                   </div>
 
                   <button
                     onClick={() => setRecoveryEmailOpen(true)}
-                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                    className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                   >
-                    <Mail size={13} /> {user?.secondaryRecoveryEmailVerified ? "Update Recovery Email" : "Set Recovery Email"}
+                    <Mail size={13} /> {user?.secondaryRecoveryEmailVerified ? "Update Email" : "Set Email"}
                   </button>
                 </div>
 
                 {/* Password Management */}
-                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3.5 flex flex-col justify-between">
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 space-y-3 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <div className="p-1.5 rounded-lg bg-accent-soft text-accent-primary">
-                        <Lock size={16} />
+                        <Lock size={15} />
                       </div>
                       <span className="text-xs font-bold text-slate-900 dark:text-white">Account Password</span>
                     </div>
-                    <p className="text-[11px] text-slate-600 dark:text-white/50 leading-relaxed">
+                    <p className="text-[10px] min-[360px]:text-[11px] text-slate-600 dark:text-white/50 leading-relaxed">
                       Update your encrypted master password with high-entropy standards.
                     </p>
                   </div>
 
                   <button
                     onClick={() => setPasswordOpen(true)}
-                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                    className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                   >
                     <Lock size={13} /> Update Password
                   </button>
@@ -432,28 +432,28 @@ export default function Profile() {
           </div>
 
           {/* Right 1 Column: Capabilities & Clearance */}
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8 min-w-0">
             
             {/* Clearance Privileges */}
-            <div className="rounded-3xl p-6 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-6">
-              <div className="flex items-center gap-3 border-b border-slate-100 dark:border-white/10 pb-4">
-                <div className="p-2.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-600 dark:text-purple-300">
-                  <Shield size={20} />
+            <div className="rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-6 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-4 sm:space-y-6">
+              <div className="flex items-center gap-2.5 sm:gap-3 border-b border-slate-100 dark:border-white/10 pb-3 sm:pb-4">
+                <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-600 dark:text-purple-300 shrink-0">
+                  <Shield size={18} />
                 </div>
-                <div>
-                  <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight">
+                <div className="min-w-0">
+                  <h3 className="text-sm min-[360px]:text-base font-black text-slate-900 dark:text-white tracking-tight truncate">
                     Clearance Capabilities
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-white/40 font-medium">
+                  <p className="text-[11px] min-[360px]:text-xs text-slate-500 dark:text-white/40 font-medium truncate">
                     Permissions for <strong className="text-accent-primary font-mono">{userRole}</strong>
                   </p>
                 </div>
               </div>
 
-              <ul className="space-y-3">
+              <ul className="space-y-2.5 sm:space-y-3">
                 {userPermissions.map((perm, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-xs text-slate-700 dark:text-white/80 font-medium">
-                    <CheckCircle2 className="text-accent-primary shrink-0 mt-0.5" size={15} />
+                  <li key={idx} className="flex items-start gap-2.5 sm:gap-3 text-xs text-slate-700 dark:text-white/80 font-medium">
+                    <CheckCircle2 className="text-accent-primary shrink-0 mt-0.5" size={14} />
                     <span className="leading-relaxed">{perm}</span>
                   </li>
                 ))}
@@ -461,15 +461,15 @@ export default function Profile() {
             </div>
 
             {/* Quick Navigation Links */}
-            <div className="rounded-3xl p-6 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-3">
-              <div className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 dark:text-white/40 mb-2">
+            <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-2.5 sm:space-y-3">
+              <div className="text-[11px] min-[360px]:text-xs font-mono font-bold uppercase tracking-wider text-slate-400 dark:text-white/40 mb-2">
                 Quick Actions
               </div>
               <Link
                 to="/dashboard/billing"
-                className="w-full flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.02] hover:bg-slate-100 dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white transition-all text-xs font-bold group"
+                className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-white/[0.02] hover:bg-slate-100 dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white transition-all text-xs font-bold group"
               >
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2 sm:gap-2.5">
                   <Zap size={14} className="text-accent-primary" />
                   <span>Plans & Subscriptions</span>
                 </div>
@@ -478,9 +478,9 @@ export default function Profile() {
               {user?.role?.toUpperCase() === "OWNER" && (
                 <Link
                   to="/owner/settings"
-                  className="w-full flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.02] hover:bg-slate-100 dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white transition-all text-xs font-bold group"
+                  className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-white/[0.02] hover:bg-slate-100 dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white transition-all text-xs font-bold group"
                 >
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2 sm:gap-2.5">
                     <ShieldAlert size={14} className="text-purple-400" />
                     <span>Owner Configuration</span>
                   </div>
@@ -490,9 +490,9 @@ export default function Profile() {
               {["OWNER", "ADMIN"].includes(user?.role?.toUpperCase()) && (
                 <Link
                   to="/users"
-                  className="w-full flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.02] hover:bg-slate-100 dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white transition-all text-xs font-bold group"
+                  className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-white/[0.02] hover:bg-slate-100 dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white transition-all text-xs font-bold group"
                 >
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2 sm:gap-2.5">
                     <User size={14} className="text-cyan-400" />
                     <span>System User Management</span>
                   </div>
@@ -510,7 +510,7 @@ export default function Profile() {
       {/* ── EDIT DISPLAY NAME MODAL ── */}
       <AnimatePresence>
         {editNameOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -523,23 +523,23 @@ export default function Profile() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-white dark:bg-vault-surface text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 overflow-hidden"
+              className="relative w-full max-w-md bg-white dark:bg-vault-surface text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-6 sm:p-8 shadow-2xl z-10 overflow-hidden"
             >
               <button
                 type="button"
                 onClick={() => setEditNameOpen(false)}
-                className="absolute top-5 right-5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
 
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-accent-soft border border-accent-border flex items-center justify-center shrink-0">
-                  <User className="text-accent-primary" size={24} />
+              <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-accent-soft border border-accent-border flex items-center justify-center shrink-0">
+                  <User className="text-accent-primary" size={20} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Edit Display Name</h3>
-                  <p className="text-xs text-slate-500 dark:text-white/40 uppercase tracking-wider font-semibold">
+                  <h3 className="text-lg min-[360px]:text-xl font-bold text-slate-900 dark:text-white">Edit Display Name</h3>
+                  <p className="text-[10px] min-[360px]:text-xs text-slate-500 dark:text-white/40 uppercase tracking-wider font-semibold">
                     Profile Configuration
                   </p>
                 </div>
@@ -596,7 +596,7 @@ export default function Profile() {
       {/* ── UPDATE PASSWORD MODAL ── */}
       <AnimatePresence>
         {passwordOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -609,23 +609,23 @@ export default function Profile() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-white dark:bg-vault-surface text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 overflow-hidden"
+              className="relative w-full max-w-md bg-white dark:bg-vault-surface text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-6 sm:p-8 shadow-2xl z-10 overflow-hidden"
             >
               <button
                 type="button"
                 onClick={() => setPasswordOpen(false)}
-                className="absolute top-5 right-5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
 
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-accent-soft border border-accent-border flex items-center justify-center shrink-0">
-                  <Lock className="text-accent-primary" size={24} />
+              <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-accent-soft border border-accent-border flex items-center justify-center shrink-0">
+                  <Lock className="text-accent-primary" size={20} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Security Settings</h3>
-                  <p className="text-xs text-slate-500 dark:text-white/40 uppercase tracking-wider font-semibold">
+                  <h3 className="text-lg min-[360px]:text-xl font-bold text-slate-900 dark:text-white">Security Settings</h3>
+                  <p className="text-[10px] min-[360px]:text-xs text-slate-500 dark:text-white/40 uppercase tracking-wider font-semibold">
                     Account Password
                   </p>
                 </div>

@@ -234,23 +234,23 @@ export default function WallyAcademyPage() {
       {/* ─────────────────────────────────────────────────────────────
           1. HEADER BANNER WITH WALLY MASCOT
          ───────────────────────────────────────────────────────────── */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-[#071B16]/90 via-[#04100D]/90 to-[#0B1528]/90 border border-white/15 p-5 sm:p-8 backdrop-blur-3xl overflow-hidden shadow-2xl">
+      <div className="relative rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#071B16]/90 via-[#04100D]/90 to-[#0B1528]/90 border border-white/15 p-4 min-[360px]:p-5 sm:p-8 backdrop-blur-3xl overflow-hidden shadow-2xl min-w-0 w-full">
         {/* Glow ambient background */}
         <div className="absolute top-0 right-1/4 w-96 h-96 rounded-full bg-[radial-gradient(ellipse,rgba(0,207,255,0.15)_0%,transparent_70%)] pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-[radial-gradient(ellipse,rgba(16,185,129,0.15)_0%,transparent_70%)] pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex-1 space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-soft border border-accent-border text-accent-primary text-xs font-black tracking-wider uppercase">
-              <Sparkles size={14} />
+          <div className="flex-1 space-y-2.5 sm:space-y-3 min-w-0 w-full">
+            <div className="inline-flex items-center gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-accent-soft border border-accent-border text-accent-primary text-[10px] min-[360px]:text-xs font-black tracking-wider uppercase">
+              <Sparkles size={13} />
               <span>Wally's Academy & Shortcut Config</span>
             </div>
 
-            <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
+            <h1 className="text-xl min-[360px]:text-2xl sm:text-4xl font-black tracking-tight text-white">
               VS Code Level Keyboard Shortcuts
             </h1>
 
-            <p className="text-sm sm:text-base text-white/70 max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm md:text-base text-white/70 max-w-2xl leading-relaxed">
               Command Vault OS with zero mouse latency. Navigate files with Arrow keys, multi-select with Shift, trigger client-side encryption, and customize every hotkey to match your muscle memory.
             </p>
 
@@ -282,29 +282,29 @@ export default function WallyAcademyPage() {
       {/* ─────────────────────────────────────────────────────────────
           2. LIVE INTERACTIVE PRACTICE ARENA / SANDBOX
          ───────────────────────────────────────────────────────────── */}
-      <div className="rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-5 sm:p-7 space-y-5 shadow-xl">
+      <div className="rounded-2xl sm:rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-4 min-[360px]:p-5 sm:p-7 space-y-4 sm:space-y-5 shadow-xl min-w-0 w-full">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-          <div className="space-y-1">
-            <h2 className="text-lg font-black text-white flex items-center gap-2">
-              <Zap size={20} className="text-accent-primary" />
-              <span>Live Keyboard Practice Sandbox</span>
+          <div className="space-y-1 min-w-0">
+            <h2 className="text-base min-[360px]:text-lg font-black text-white flex items-center gap-2">
+              <Zap size={18} className="text-accent-primary shrink-0" />
+              <span className="truncate">Live Practice Sandbox</span>
             </h2>
-            <p className="text-xs text-white/50">
+            <p className="text-[11px] min-[360px]:text-xs text-white/50">
               Practice navigating, selecting, and previewing files using only your keyboard in real-time.
             </p>
           </div>
 
           {/* Real-time Keystroke Display */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-white/40 font-mono">Last Key:</span>
-            <div className="px-3 py-1 rounded-xl bg-accent-soft border border-accent-border text-accent-primary font-mono font-black text-xs min-w-[70px] text-center shadow-sm">
-              {lastKeyPressed || "Press any key..."}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] min-[360px]:text-xs text-white/40 font-mono">Last Key:</span>
+            <div className="px-2.5 sm:px-3 py-1 rounded-xl bg-accent-soft border border-accent-border text-accent-primary font-mono font-black text-[11px] min-[360px]:text-xs min-w-[65px] text-center shadow-sm">
+              {lastKeyPressed || "Press key..."}
             </div>
           </div>
         </div>
 
         {/* Quest Mastery Progress Pills */}
-        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
           {[
             { id: "arrowNav", label: "1. Arrow Navigation", hint: "Press ← → ↑ ↓", done: completedQuests.arrowNav },
             { id: "shiftSelect", label: "2. Shift Multi-Select", hint: "Hold Shift + Arrow", done: completedQuests.shiftSelect },
@@ -313,18 +313,18 @@ export default function WallyAcademyPage() {
           ].map((quest) => (
             <div
               key={quest.id}
-              className={`p-3 rounded-2xl border transition-all duration-300 flex items-center justify-between ${
+              className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border transition-all duration-300 flex items-center justify-between gap-2 ${
                 quest.done
                   ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
                   : "bg-white/[0.03] border-white/10 text-white/60"
               }`}
             >
-              <div>
-                <p className="text-xs font-bold">{quest.label}</p>
-                <p className="text-[10px] font-mono text-white/40">{quest.hint}</p>
+              <div className="min-w-0">
+                <p className="text-[11px] min-[360px]:text-xs font-bold truncate">{quest.label}</p>
+                <p className="text-[9px] min-[360px]:text-[10px] font-mono text-white/40">{quest.hint}</p>
               </div>
               {quest.done ? (
-                <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
               ) : (
                 <div className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0" />
               )}
@@ -333,7 +333,7 @@ export default function WallyAcademyPage() {
         </div>
 
         {/* Sandbox Grid View */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 p-4 rounded-2xl bg-black/40 border border-white/5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 min-[360px]:gap-3.5 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-black/40 border border-white/5">
           {SANDBOX_ITEMS.map((item, idx) => {
             const isFocused = sandboxFocusedIndex === idx;
             const isSelected = sandboxSelectedIds.includes(item.id);
@@ -347,7 +347,7 @@ export default function WallyAcademyPage() {
                   setSandboxSelectedIds([item.id]);
                   setSandboxAnchorIndex(idx);
                 }}
-                className={`group relative p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center gap-3 select-none ${
+                className={`group relative p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all duration-200 cursor-pointer flex items-center gap-2.5 sm:gap-3 select-none min-w-0 ${
                   isSelected
                     ? "bg-accent-soft/80 border-accent-primary shadow-[0_0_15px_rgba(0,207,255,0.25)]"
                     : isFocused
@@ -356,22 +356,22 @@ export default function WallyAcademyPage() {
                 }`}
               >
                 <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${
                     item.type === "directory"
                       ? "bg-purple-500/20 text-purple-400"
                       : "bg-accent-soft text-accent-primary"
                   }`}
                 >
-                  <Icon size={20} />
+                  <Icon size={18} />
                 </div>
 
-                <div className="overflow-hidden flex-1">
+                <div className="overflow-hidden flex-1 min-w-0">
                   <p className="text-xs font-bold text-white truncate">{item.name}</p>
                   <p className="text-[10px] font-mono text-white/40 mt-0.5">{item.size}</p>
                 </div>
 
                 {isSelected && (
-                  <div className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />
+                  <div className="w-2 h-2 rounded-full bg-accent-primary animate-pulse shrink-0" />
                 )}
               </div>
             );
@@ -381,8 +381,8 @@ export default function WallyAcademyPage() {
         {/* Live Feedback Status */}
         {sandboxActionMessage && (
           <div className="flex items-center gap-2 text-xs font-semibold text-accent-primary px-3 py-2 rounded-xl bg-accent-soft/50 border border-accent-border/30 animate-fade-in">
-            <Info size={14} />
-            <span>{sandboxActionMessage}</span>
+            <Info size={14} className="shrink-0" />
+            <span className="truncate">{sandboxActionMessage}</span>
           </div>
         )}
       </div>
@@ -390,25 +390,25 @@ export default function WallyAcademyPage() {
       {/* ─────────────────────────────────────────────────────────────
           3. ALL SHORTCUTS CATALOG & CUSTOMIZATION MANAGER
          ───────────────────────────────────────────────────────────── */}
-      <div className="rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-5 sm:p-7 space-y-6 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
-          <div>
-            <h2 className="text-lg font-black text-white flex items-center gap-2">
-              <Sliders size={20} className="text-accent-primary" />
-              <span>Custom Shortcut Keybindings</span>
+      <div className="rounded-2xl sm:rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-4 min-[360px]:p-5 sm:p-7 space-y-5 sm:space-y-6 shadow-xl min-w-0 w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-white/10 pb-4 sm:pb-5">
+          <div className="min-w-0">
+            <h2 className="text-base min-[360px]:text-lg font-black text-white flex items-center gap-2">
+              <Sliders size={18} className="text-accent-primary shrink-0" />
+              <span className="truncate">Custom Keybindings</span>
             </h2>
-            <p className="text-xs text-white/50">
-              Customize any keybinding to match your preferences. Built-in conflict prevention and browser safety checks.
+            <p className="text-[11px] min-[360px]:text-xs text-white/50">
+              Customize any keybinding with conflict prevention.
             </p>
           </div>
 
           <Button
             variant="secondary"
             onClick={resetAllShortcuts}
-            className="text-xs font-bold text-white/70 hover:text-white flex items-center gap-1.5 self-start sm:self-auto"
+            className="text-[11px] min-[360px]:text-xs font-bold text-white/70 hover:text-white flex items-center gap-1.5 self-start sm:self-auto py-1.5 px-3 rounded-xl"
           >
-            <RotateCcw size={14} />
-            <span>Reset All to Defaults</span>
+            <RotateCcw size={13} />
+            <span>Reset All</span>
           </Button>
         </div>
 
@@ -504,20 +504,20 @@ export default function WallyAcademyPage() {
       {/* ─────────────────────────────────────────────────────────────
           4. INTERACTIVE TUTORIAL WALKTROUGHS WITH WALLY
          ───────────────────────────────────────────────────────────── */}
-      <div className="rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-5 sm:p-7 space-y-5 shadow-xl">
+      <div className="rounded-2xl sm:rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-4 min-[360px]:p-5 sm:p-7 space-y-4 sm:space-y-5 shadow-xl min-w-0 w-full">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-          <div className="space-y-1">
-            <h2 className="text-lg font-black text-white flex items-center gap-2">
-              <Sparkles size={20} className="text-accent-primary" />
-              <span>Interactive Guided Tours with Wally</span>
+          <div className="space-y-1 min-w-0">
+            <h2 className="text-base min-[360px]:text-lg font-black text-white flex items-center gap-2">
+              <Sparkles size={18} className="text-accent-primary shrink-0" />
+              <span className="truncate">Guided Tours with Wally</span>
             </h2>
-            <p className="text-xs text-white/50">
-              Launch step-by-step interactive spotlights where Wally points his stick directly to each feature on your screen.
+            <p className="text-[11px] min-[360px]:text-xs text-white/50">
+              Interactive spotlights where Wally guides you through features on your screen.
             </p>
           </div>
 
           {/* Role Filter Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar custom-scrollbar max-w-full">
             {[
               { id: "All", label: "All Tours" },
               { id: "Owner", label: "👑 Owner Power" },

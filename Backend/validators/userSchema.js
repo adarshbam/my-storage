@@ -45,8 +45,22 @@ export const updatePasswordSchema = {
   }),
 };
 
+const profilePicIdSchema = z
+  .string()
+  .transform((val) => {
+    if (!val) return "";
+    const match = val.match(/[0-9a-fA-F]{24}/);
+    if (match && (val.includes("profilepic") || val.includes("?id="))) {
+      return match[0];
+    }
+    return val;
+  })
+  .pipe(optionalObjectIdSchema);
+
 export const getProfilePicSchema = {
   query: z.object({
-    id: optionalObjectIdSchema.optional(),
+    id: profilePicIdSchema.optional(),
+    userId: profilePicIdSchema.optional(),
+    targetUserId: profilePicIdSchema.optional(),
   }),
 };

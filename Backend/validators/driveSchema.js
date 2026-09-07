@@ -78,6 +78,7 @@ export const transferToVaultSchema = {
       })
     ),
     targetFolderId: objectIdSchema,
+    action: z.enum(["move", "copy"]).optional(),
   }),
   query: z.object({
     ownerId: z.string().optional(),
@@ -96,6 +97,7 @@ export const transferFromVaultSchema = {
       })
     ),
     targetDriveFolderId: z.string(),
+    action: z.enum(["move", "copy"]).optional(),
   }),
   query: z.object({
     ownerId: z.string().optional(),

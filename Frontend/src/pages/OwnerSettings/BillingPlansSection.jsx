@@ -6,6 +6,7 @@ import {
   Key,
   Lock,
   Check,
+  Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 import { supportedCountries } from "../../lib/currency";
@@ -56,14 +57,14 @@ export default function BillingPlansSection({
   };
 
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-amber-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-amber-500/30">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center shadow-lg shadow-amber-500/5 shrink-0">
-            <CreditCard size={22} />
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center shadow-lg shadow-amber-500/5 shrink-0">
+            <CreditCard size={20} className="sm:w-[22px] sm:h-[22px]" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-base min-[360px]:text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
               Billing Plans
             </h2>
             <p className="text-xs text-slate-500 dark:text-white/50 font-medium">
@@ -146,10 +147,80 @@ export default function BillingPlansSection({
                     {plan.period}
                   </span>
                 </div>
+
+                {plan.isPopular && (
+                  <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-500 border border-amber-500/30 uppercase tracking-wider shrink-0">
+                    <Sparkles size={10} className="fill-current" /> Popular
+                  </span>
+                )}
               </div>
 
               {/* Form Controls inside Card */}
               <div className="space-y-4 text-xs">
+                {/* Most Popular Plan Checkbox */}
+                {(() => {
+                  const isFreePlan = Boolean(
+                    plan.slug?.toLowerCase().includes("free") ||
+                    Number(plan.amount) === 0
+                  );
+                  return (
+                    <div
+                      className={`p-2.5 rounded-xl border transition-all duration-200 ${
+                        plan.isPopular
+                          ? "bg-amber-500/10 border-amber-500/40 shadow-sm ring-1 ring-amber-500/20"
+                          : isFreePlan
+                          ? "bg-slate-100/50 dark:bg-white/[0.02] border-slate-200/50 dark:border-white/5 opacity-60 cursor-not-allowed"
+                          : "bg-white/50 dark:bg-white/[0.03] border-slate-200 dark:border-white/10 hover:border-amber-500/30"
+                      }`}
+                    >
+                      <label
+                        className={`flex items-center justify-between gap-2.5 ${
+                          isFreePlan ? "cursor-not-allowed" : "cursor-pointer select-none"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Sparkles
+                            size={14}
+                            className={
+                              plan.isPopular
+                                ? "text-amber-500 fill-amber-500 shrink-0"
+                                : "text-slate-400 dark:text-white/40 shrink-0"
+                            }
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[11px] font-bold text-slate-900 dark:text-white truncate">
+                                Most Popular Plan
+                              </span>
+                              {plan.isPopular && (
+                                <span className="px-1.5 py-0.2 rounded-md text-[8px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 shrink-0">
+                                  Active
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[9px] text-slate-500 dark:text-white/50 block truncate">
+                              {isFreePlan
+                                ? "Free plan cannot be popular"
+                                : plan.isPopular
+                                ? "Highlighted in pricing views"
+                                : "Mark tier as most popular"}
+                            </span>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          disabled={isFreePlan}
+                          checked={Boolean(plan.isPopular)}
+                          onChange={(e) =>
+                            onUpdatePlan(plan._id, "isPopular", e.target.checked)
+                          }
+                          className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500 border-slate-300 dark:border-white/20 accent-amber-500 cursor-pointer disabled:cursor-not-allowed shrink-0"
+                        />
+                      </label>
+                    </div>
+                  );
+                })()}
+
                 {/* Plan Tier selector */}
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50 mb-1 font-mono">

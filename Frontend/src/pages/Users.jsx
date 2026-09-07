@@ -254,7 +254,7 @@ export default function Users() {
               <div className="flex items-center gap-2 text-accent-primary text-xs font-mono font-bold uppercase tracking-widest mb-1">
                 <UsersIcon size={14} /> Vault System Administration
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              <h1 className="text-xl min-[360px]:text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
                 System Users Directory
               </h1>
               <p className="text-slate-500 dark:text-white/50 text-xs sm:text-sm font-medium mt-0.5">
@@ -286,56 +286,56 @@ export default function Users() {
         </div>
 
         {/* ── METRIC STAT CARDS ── */}
-        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div className="rounded-3xl p-4 sm:p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-2">
-            <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-2.5 min-[360px]:gap-3 sm:gap-4">
+          <div className="rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-4 sm:p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-1.5 sm:space-y-2">
+            <div className="flex items-center justify-between text-[11px] min-[360px]:text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
               <span>Total Accounts</span>
-              <UsersIcon size={16} className="text-accent-primary" />
+              <UsersIcon size={15} className="text-accent-primary" />
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            <div className="text-xl min-[360px]:text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
               {totalUsers}
             </div>
-            <div className="text-[11px] text-slate-400 dark:text-white/40 font-mono">
+            <div className="text-[10px] min-[360px]:text-[11px] text-slate-400 dark:text-white/40 font-mono">
               Registered Identities
             </div>
           </div>
 
-          <div className="rounded-3xl p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-2">
-            <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
+          <div className="rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-4 sm:p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-1.5 sm:space-y-2">
+            <div className="flex items-center justify-between text-[11px] min-[360px]:text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
               <span>Active Sessions</span>
-              <Radio size={16} className="text-emerald-500 animate-pulse" />
+              <Radio size={15} className="text-emerald-500 animate-pulse" />
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight flex items-center gap-2">
+            <div className="text-xl min-[360px]:text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight flex items-center gap-2">
               <span>{onlineCount}</span>
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
             </div>
-            <div className="text-[11px] text-slate-400 dark:text-white/40 font-mono">
+            <div className="text-[10px] min-[360px]:text-[11px] text-slate-400 dark:text-white/40 font-mono">
               Live Encrypted Connections
             </div>
           </div>
 
-          <div className="rounded-3xl p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-2">
-            <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
+          <div className="rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-4 sm:p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-1.5 sm:space-y-2">
+            <div className="flex items-center justify-between text-[11px] min-[360px]:text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
               <span>Admin Nodes</span>
-              <Shield size={16} className="text-purple-500" />
+              <Shield size={15} className="text-purple-500" />
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-300 tracking-tight">
+            <div className="text-xl min-[360px]:text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-300 tracking-tight">
               {privilegedCount}
             </div>
-            <div className="text-[11px] text-slate-400 dark:text-white/40 font-mono">
+            <div className="text-[10px] min-[360px]:text-[11px] text-slate-400 dark:text-white/40 font-mono">
               Elevated Security Clearances
             </div>
           </div>
 
-          <div className="rounded-3xl p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-2">
-            <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
+          <div className="rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-4 sm:p-5 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-xl flex flex-col justify-between space-y-1.5 sm:space-y-2">
+            <div className="flex items-center justify-between text-[11px] min-[360px]:text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">
               <span>System Quota</span>
-              <HardDrive size={16} className="text-cyan-500" />
+              <HardDrive size={15} className="text-cyan-500" />
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-cyan-600 dark:text-cyan-400 tracking-tight">
+            <div className="text-xl min-[360px]:text-2xl sm:text-3xl font-black text-cyan-600 dark:text-cyan-400 tracking-tight">
               {formatSize(totalAllocated)}
             </div>
-            <div className="text-[11px] text-slate-400 dark:text-white/40 font-mono">
+            <div className="text-[10px] min-[360px]:text-[11px] text-slate-400 dark:text-white/40 font-mono">
               Cumulative Storage Provisioned
             </div>
           </div>
@@ -343,10 +343,10 @@ export default function Users() {
 
         {/* ── CURRENT USER HERO HIGHLIGHT ── */}
         {currentUser && (
-          <div className="rounded-3xl p-6 sm:p-7 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-accent-border/40 shadow-lg relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 backdrop-blur-2xl">
+          <div className="rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-6 sm:p-7 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-accent-border/40 shadow-lg relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 backdrop-blur-2xl">
             <div className="absolute top-0 right-0 w-80 h-80 bg-accent-soft/25 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="flex items-center gap-5 relative z-10 w-full sm:w-auto">
+            <div className="flex items-center gap-3.5 min-[360px]:gap-5 relative z-10 w-full sm:w-auto min-w-0">
               <UserAvatar
                 user={currentUser}
                 src={profilePicUrl}
@@ -356,17 +356,17 @@ export default function Users() {
                 shape="rounded"
               />
 
-              <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
+              <div className="space-y-0.5 sm:space-y-1 min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg min-[360px]:text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
                     {currentUser.name}
                   </h2>
                   <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border uppercase tracking-wider ${getRoleBadgeStyle(
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] min-[360px]:text-[10px] font-mono font-bold border uppercase tracking-wider ${getRoleBadgeStyle(
                       currentUser.role
                     )}`}
                   >
-                    <Shield size={11} className="mr-1" />
+                    <Shield size={10} className="mr-1" />
                     {currentUser.role?.toUpperCase()}
                   </span>
                 </div>
@@ -376,9 +376,9 @@ export default function Users() {
               </div>
             </div>
 
-            <div className="relative z-10 flex items-center gap-3 w-full sm:w-auto justify-end border-t sm:border-t-0 border-slate-100 dark:border-white/10 pt-4 sm:pt-0">
-              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent-soft border border-accent-border text-accent-primary text-xs font-mono font-bold uppercase tracking-wider shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />
+            <div className="relative z-10 flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end border-t sm:border-t-0 border-slate-100 dark:border-white/10 pt-3 sm:pt-0">
+              <span className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 min-[360px]:px-3.5 py-1 min-[360px]:py-1.5 rounded-full bg-accent-soft border border-accent-border text-accent-primary text-[10px] min-[360px]:text-xs font-mono font-bold uppercase tracking-wider shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse" />
                 Active Administrator Session
               </span>
             </div>
@@ -409,13 +409,13 @@ export default function Users() {
           </div>
 
           {/* Filter Pills */}
-          <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end">
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-black/30 p-1 rounded-2xl border border-slate-200 dark:border-white/10">
+          <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end min-w-0">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-black/30 p-1 rounded-2xl border border-slate-200 dark:border-white/10 max-w-full overflow-x-auto no-scrollbar scrollbar-none shrink-0">
               {["ALL", "OWNER", "ADMIN", "MANAGER", "USER"].map((role) => (
                 <button
                   key={role}
                   onClick={() => setRoleFilter(role)}
-                  className={`px-3 py-1 rounded-xl text-[11px] font-mono font-bold uppercase tracking-wider transition-all ${
+                  className={`px-2.5 min-[360px]:px-3 py-1 rounded-xl text-[10px] min-[360px]:text-[11px] font-mono font-bold uppercase tracking-wider transition-all shrink-0 whitespace-nowrap ${
                     roleFilter === role
                       ? "bg-accent-primary text-accent-foreground shadow-sm"
                       : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
@@ -426,12 +426,12 @@ export default function Users() {
               ))}
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-black/30 p-1 rounded-2xl border border-slate-200 dark:border-white/10 flex-wrap">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-black/30 p-1 rounded-2xl border border-slate-200 dark:border-white/10 max-w-full overflow-x-auto no-scrollbar scrollbar-none shrink-0">
               {["ALL", "ONLINE", "OFFLINE", "DEACTIVATED", "TERMINATED"].map((st) => (
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st)}
-                  className={`px-3 py-1 rounded-xl text-[11px] font-mono font-bold uppercase tracking-wider transition-all ${
+                  className={`px-2.5 min-[360px]:px-3 py-1 rounded-xl text-[10px] min-[360px]:text-[11px] font-mono font-bold uppercase tracking-wider transition-all shrink-0 whitespace-nowrap ${
                     statusFilter === st
                       ? "bg-accent-soft text-accent-primary border border-accent-border shadow-sm"
                       : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
@@ -502,207 +502,207 @@ export default function Users() {
                     user.yourAuthority &&
                     user.yourAuthority.length > 0;
 
-                  return (
-                    <motion.div
-                      key={user._id}
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      className={`rounded-3xl p-6 bg-white dark:bg-vault-surface/85 border transition-all duration-200 flex flex-col justify-between space-y-5 relative overflow-hidden group shadow-sm hover:shadow-xl ${
-                        isPermanentlyTerminated
-                          ? "border-rose-500/40 bg-rose-500/[0.03] opacity-85"
-                          : isDeactivated
-                          ? "border-amber-500/30 bg-amber-500/[0.02] opacity-90"
-                          : "border-slate-200 dark:border-white/10 hover:border-accent-border"
-                      }`}
-                    >
-                      {/* Top Section: Avatar, Name, Email, Badges */}
-                      <div className="space-y-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-center gap-3.5 min-w-0">
-                            <UserAvatar
-                              user={user}
-                              src={user.profilepic}
-                              size="lg"
-                              status={displayStatus}
-                              shape="rounded"
-                            />
+                    return (
+                      <motion.div
+                        key={user._id}
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className={`rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-5 sm:p-6 bg-white dark:bg-vault-surface/85 border transition-all duration-200 flex flex-col justify-between space-y-4 sm:space-y-5 relative overflow-hidden group shadow-sm hover:shadow-xl min-w-0 ${
+                          isPermanentlyTerminated
+                            ? "border-rose-500/40 bg-rose-500/[0.03] opacity-85"
+                            : isDeactivated
+                            ? "border-amber-500/30 bg-amber-500/[0.02] opacity-90"
+                            : "border-slate-200 dark:border-white/10 hover:border-accent-border"
+                        }`}
+                      >
+                        {/* Top Section: Avatar, Name, Email, Badges */}
+                        <div className="space-y-3 sm:space-y-4 min-w-0">
+                          <div className="flex items-start justify-between gap-3 min-w-0">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <UserAvatar
+                                user={user}
+                                src={user.profilepic}
+                                size="lg"
+                                status={displayStatus}
+                                shape="rounded"
+                              />
 
-                            <div className="min-w-0 flex-1">
-                              <h4 className="text-base font-black text-slate-900 dark:text-white tracking-tight truncate">
-                                {user.name || "Operative"}
-                              </h4>
-                              <p className="text-xs font-mono text-slate-500 dark:text-white/40 truncate">
-                                {user.email}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Status Badges Row */}
-                        <div className="flex items-center gap-2 flex-wrap pt-1">
-                          {/* Role Badge */}
-                          <div className="flex items-center gap-1">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-mono font-bold border uppercase tracking-wider ${getRoleBadgeStyle(
-                                user.role
-                              )}`}
-                            >
-                              <Shield size={10} className="mr-1" />
-                              {user.role || "USER"}
-                            </span>
-
-                            {canEditRole && (
-                              <button
-                                onClick={() => openEditRoleModal(user)}
-                                className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 transition-colors"
-                                title="Change Role"
-                              >
-                                <Edit2 size={11} />
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Status Badge */}
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold border uppercase tracking-wider ${
-                              displayStatus === "ONLINE"
-                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30"
-                                : displayStatus === "TERMINATED"
-                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30"
-                                : displayStatus === "DEACTIVATED"
-                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30"
-                                : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/40 border-slate-200 dark:border-white/10"
-                            }`}
-                          >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                displayStatus === "ONLINE"
-                                  ? "bg-emerald-500 animate-pulse"
-                                  : displayStatus === "TERMINATED"
-                                  ? "bg-rose-500"
-                                  : displayStatus === "DEACTIVATED"
-                                  ? "bg-amber-500"
-                                  : "bg-slate-400 dark:bg-white/30"
-                              }`}
-                            />
-                            {displayStatus === "TERMINATED" ? "✕ TERMINATED" : displayStatus}
-                          </span>
-
-                          {/* 2FA Indicator */}
-                          {user.twoFactorEnabled && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-teal-500/10 text-teal-600 dark:text-teal-300 border border-teal-500/30">
-                              <Lock size={9} /> 2FA
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Quota & Device metrics */}
-                        <div className="pt-2 border-t border-slate-100 dark:border-white/5 space-y-1.5 text-xs font-mono text-slate-500 dark:text-white/40">
-                          <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1.5">
-                              <HardDrive size={12} className="text-accent-primary" /> Max Quota:
-                            </span>
-                            <div className="flex items-center gap-1.5">
-                              {user.planSlug && user.status !== "Terminated" && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-accent-soft text-accent-primary border border-accent-border">
-                                  {user.planSlug}
-                                </span>
-                              )}
-                              <span className="font-bold text-slate-700 dark:text-white/70">
-                                {user.status === "Terminated"
-                                  ? "0 B"
-                                  : formatSize(user.maxStorage ?? 5368709120)}
-                              </span>
-                            </div>
-                          </div>
-                          {user.devicesCount !== undefined && (
-                            <div className="flex items-center justify-between">
-                              <span className="flex items-center gap-1.5">
-                                <Monitor size={12} className="text-cyan-500" /> Active Devices:
-                              </span>
-                              <span className="font-bold text-slate-700 dark:text-white/70">
-                                {user.devicesCount}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Bottom Section: Actions */}
-                      <div className="pt-3 border-t border-slate-100 dark:border-white/5">
-                        {isSelf ? (
-                          <div className="w-full py-2.5 rounded-2xl text-center text-xs font-mono font-bold text-accent-primary bg-accent-soft border border-accent-border">
-                            Current Operator Profile
-                          </div>
-                        ) : isPermanentlyTerminated ? (
-                          <div className="w-full py-2.5 rounded-2xl text-center text-xs font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 flex items-center justify-center gap-2">
-                            <X size={14} className="text-rose-500" strokeWidth={3} />
-                            <span>Account Permanently Terminated</span>
-                          </div>
-                        ) : isDeactivated ? (
-                          <div className="flex items-center gap-2">
-                            {currentUser?.role?.toUpperCase() === "OWNER" ? (
-                              <button
-                                onClick={() => handleReactivate(user._id)}
-                                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-                              >
-                                <UserCheck size={14} /> Reactivate
-                              </button>
-                            ) : (
-                              <div className="flex-1 py-2.5 rounded-xl text-xs font-mono text-center bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-white/40">
-                                Deactivated Account
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-sm min-[360px]:text-base font-black text-slate-900 dark:text-white tracking-tight truncate">
+                                  {user.name || "Operative"}
+                                </h4>
+                                <p className="text-[11px] min-[360px]:text-xs font-mono text-slate-500 dark:text-white/40 truncate">
+                                  {user.email}
+                                </p>
                               </div>
-                            )}
-                            <button
-                              onClick={() => openDeleteModal(user)}
-                              className="py-2.5 px-3 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 transition-colors shadow-sm flex items-center gap-1"
-                              title="Permanently Terminate / Purge"
-                            >
-                              <AlertTriangle size={14} /> Purge
-                            </button>
+                            </div>
                           </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            {(currentUser?.role?.toUpperCase() === "OWNER" ||
-                              currentUser?.role?.toUpperCase() === "ADMIN") &&
-                              user.rootDirId && (
+
+                          {/* Status Badges Row */}
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap pt-0.5">
+                            {/* Role Badge */}
+                            <div className="flex items-center gap-1">
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] min-[360px]:text-[10px] font-mono font-bold border uppercase tracking-wider ${getRoleBadgeStyle(
+                                  user.role
+                                )}`}
+                              >
+                                <Shield size={9} className="mr-1" />
+                                {user.role || "USER"}
+                              </span>
+
+                              {canEditRole && (
                                 <button
-                                  onClick={() =>
-                                    navigate(
-                                      `/dashboard/${currentUser?.role?.toLowerCase()}/folder/${user.rootDirId}`
-                                    )
-                                  }
-                                  className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white transition-colors"
-                                  title={`Inspect ${user.name}'s Vault Root`}
+                                  onClick={() => openEditRoleModal(user)}
+                                  className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 transition-colors"
+                                  title="Change Role"
                                 >
-                                  <Eye size={15} />
+                                  <Edit2 size={11} />
                                 </button>
                               )}
+                            </div>
 
-                            <button
-                              onClick={() => handleForceLogout(user._id)}
-                              disabled={!user.isLoggedIn}
-                              className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-colors ${
-                                user.isLoggedIn
-                                  ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-600 dark:text-amber-300 shadow-sm"
-                                  : "bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-400 dark:text-white/20 cursor-not-allowed opacity-50"
+                            {/* Status Badge */}
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] min-[360px]:text-[10px] font-mono font-bold border uppercase tracking-wider ${
+                                displayStatus === "ONLINE"
+                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30"
+                                  : displayStatus === "TERMINATED"
+                                  ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30"
+                                  : displayStatus === "DEACTIVATED"
+                                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30"
+                                  : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/40 border-slate-200 dark:border-white/10"
                               }`}
                             >
-                              Force Logout
-                            </button>
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  displayStatus === "ONLINE"
+                                    ? "bg-emerald-500 animate-pulse"
+                                    : displayStatus === "TERMINATED"
+                                    ? "bg-rose-500"
+                                    : displayStatus === "DEACTIVATED"
+                                    ? "bg-amber-500"
+                                    : "bg-slate-400 dark:bg-white/30"
+                                }`}
+                              />
+                              {displayStatus === "TERMINATED" ? "✕ TERMINATED" : displayStatus}
+                            </span>
 
-                            <button
-                              onClick={() => openDeleteModal(user)}
-                              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 transition-colors shadow-sm"
-                            >
-                              Terminate
-                            </button>
+                            {/* 2FA Indicator */}
+                            {user.twoFactorEnabled && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] min-[360px]:text-[10px] font-mono font-bold bg-teal-500/10 text-teal-600 dark:text-teal-300 border border-teal-500/30">
+                                <Lock size={9} /> 2FA
+                              </span>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  );
+
+                          {/* Quota & Device metrics */}
+                          <div className="pt-2 border-t border-slate-100 dark:border-white/5 space-y-1 text-[11px] min-[360px]:text-xs font-mono text-slate-500 dark:text-white/40">
+                            <div className="flex items-center justify-between">
+                              <span className="flex items-center gap-1.5">
+                                <HardDrive size={11} className="text-accent-primary" /> Max Quota:
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                {user.planSlug && user.status !== "Terminated" && (
+                                  <span className="px-1.5 py-0.5 rounded text-[8px] min-[360px]:text-[9px] font-mono font-bold uppercase tracking-wider bg-accent-soft text-accent-primary border border-accent-border">
+                                    {user.planSlug}
+                                  </span>
+                                )}
+                                <span className="font-bold text-slate-700 dark:text-white/70">
+                                  {user.status === "Terminated"
+                                    ? "0 B"
+                                    : formatSize(user.maxStorage ?? 5368709120)}
+                                </span>
+                              </div>
+                            </div>
+                            {user.devicesCount !== undefined && (
+                              <div className="flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                  <Monitor size={11} className="text-cyan-500" /> Active Devices:
+                                </span>
+                                <span className="font-bold text-slate-700 dark:text-white/70">
+                                  {user.devicesCount}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Bottom Section: Actions */}
+                        <div className="pt-2.5 sm:pt-3 border-t border-slate-100 dark:border-white/5">
+                          {isSelf ? (
+                            <div className="w-full py-2 min-[360px]:py-2.5 rounded-xl sm:rounded-2xl text-center text-[11px] min-[360px]:text-xs font-mono font-bold text-accent-primary bg-accent-soft border border-accent-border">
+                              Current Operator Profile
+                            </div>
+                          ) : isPermanentlyTerminated ? (
+                            <div className="w-full py-2 min-[360px]:py-2.5 rounded-xl sm:rounded-2xl text-center text-[11px] min-[360px]:text-xs font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 flex items-center justify-center gap-1.5">
+                              <X size={13} className="text-rose-500" strokeWidth={3} />
+                              <span>Account Permanently Terminated</span>
+                            </div>
+                          ) : isDeactivated ? (
+                            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-[340px]:flex-nowrap">
+                              {currentUser?.role?.toUpperCase() === "OWNER" ? (
+                                <button
+                                  onClick={() => handleReactivate(user._id)}
+                                  className="flex-1 min-w-[90px] py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                >
+                                  <UserCheck size={13} /> Reactivate
+                                </button>
+                              ) : (
+                                <div className="flex-1 py-2 min-[360px]:py-2.5 rounded-xl text-[11px] min-[360px]:text-xs font-mono text-center bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-white/40">
+                                  Deactivated
+                                </div>
+                              )}
+                              <button
+                                onClick={() => openDeleteModal(user)}
+                                className="py-2 min-[360px]:py-2.5 px-2.5 sm:px-3 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 transition-colors shadow-sm flex items-center justify-center gap-1 shrink-0"
+                                title="Permanently Terminate / Purge"
+                              >
+                                <AlertTriangle size={13} /> Purge
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-[380px]:flex-nowrap">
+                              {(currentUser?.role?.toUpperCase() === "OWNER" ||
+                                currentUser?.role?.toUpperCase() === "ADMIN") &&
+                                user.rootDirId && (
+                                  <button
+                                    onClick={() =>
+                                      navigate(
+                                        `/dashboard/${currentUser?.role?.toLowerCase()}/folder/${user.rootDirId}`
+                                      )
+                                    }
+                                    className="p-2 min-[360px]:p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0"
+                                    title={`Inspect ${user.name}'s Vault Root`}
+                                  >
+                                    <Eye size={14} />
+                                  </button>
+                                )}
+
+                              <button
+                                onClick={() => handleForceLogout(user._id)}
+                                disabled={!user.isLoggedIn}
+                                className={`flex-1 min-w-[85px] py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold border transition-colors ${
+                                  user.isLoggedIn
+                                    ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-600 dark:text-amber-300 shadow-sm"
+                                    : "bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-400 dark:text-white/20 cursor-not-allowed opacity-50"
+                                }`}
+                              >
+                                Logout
+                              </button>
+
+                              <button
+                                onClick={() => openDeleteModal(user)}
+                                className="flex-1 min-w-[75px] py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 transition-colors shadow-sm"
+                              >
+                                Terminate
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
                 })}
               </AnimatePresence>
             </div>

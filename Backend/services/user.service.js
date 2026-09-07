@@ -113,8 +113,13 @@ export const uploadProfilePicLogic = async ({ userId, req }) => {
     throw e;
   }
 
-  const fileName = sanitize(req.headers.filename);
-  const ext = path.extname(fileName);
+  let rawFileName = req.headers.filename || "avatar.png";
+  try {
+    rawFileName = decodeURIComponent(rawFileName);
+  } catch {}
+  const fileName = sanitize(rawFileName);
+  let ext = path.extname(fileName).toLowerCase();
+  if (!ext || ext === ".") ext = ".png";
   const profilePicId = new mongoose.Types.ObjectId();
 
   const newProfilePic = {

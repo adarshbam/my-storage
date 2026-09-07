@@ -1,6 +1,7 @@
 import User from "../models/userModel.js";
 import { generateOtp, hashOtp } from "../utils/crypto.utils.js";
 import sendEmail from "../integrations/email/email.service.js";
+import { buildSecondaryRecoveryOtpEmail } from "../integrations/email/emailTemplates.js";
 import { cacheGet, cacheSet, cacheDel, invalidateUserSessions } from "../databases/redis.js";
 import {
   securityRecoveryEmailAdded,
@@ -68,45 +69,17 @@ export async function sendSecondaryRecoveryEmailOtpLogic({ userId, email }) {
   await cacheSet(redisKey, JSON.stringify(payload), OTP_TTL_SECONDS);
 
   try {
+    const emailContent = buildSecondaryRecoveryOtpEmail({
+      otp,
+      expiryMinutes: 10,
+    });
+
     await sendEmail({
       from: `"Vault Security" <no-reply@vault.com>`,
       to: cleanEmail,
-      subject: "Vault — Secondary Recovery Email Verification Code",
-      text: `Your Vault secondary recovery email verification code is ${otp}. Valid for 10 minutes.`,
-      html: `
-        <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px 20px; color: #333;">
-          <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 40px 30px; border-radius: 16px; border: 1px solid #e5e5e5; text-align: center;">
-            <h1 style="margin-bottom: 8px; font-size: 26px; color: #111827; font-weight: 800;">Vault</h1>
-            <p style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #10b981; margin-bottom: 20px;">
-              Security & Account Recovery
-            </p>
-            <p style="font-size: 15px; line-height: 1.6; color: #4b5563;">
-              You requested to set this address as the <strong>Secondary Recovery Email</strong> for your Vault account.
-            </p>
-            <p style="font-size: 14px; color: #6b7280; margin-top: 10px;">
-              Use the 6-digit verification code below to confirm ownership:
-            </p>
-            <div style="
-              display: inline-block;
-              margin: 24px 0;
-              padding: 16px 36px;
-              font-size: 32px;
-              letter-spacing: 8px;
-              font-weight: 900;
-              color: #111827;
-              background-color: #f3f4f6;
-              border-radius: 12px;
-              border: 1px solid #e5e7eb;
-              user-select: all;
-            ">
-              ${otp}
-            </div>
-            <p style="font-size: 13px; color: #9ca3af; line-height: 1.5;">
-              This code will expire in 10 minutes. If you did not initiate this request, you can safely ignore this email.
-            </p>
-          </div>
-        </div>
-      `,
+      subject: emailContent.subject,
+      text: emailContent.text,
+      html: emailContent.html,
     });
   } catch (emailErr) {
     await cacheDel(redisKey);

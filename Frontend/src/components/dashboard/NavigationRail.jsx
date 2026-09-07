@@ -14,12 +14,20 @@ import {
 } from "../ui/VaultIcons";
 import { useGoogleLogin } from "@react-oauth/google";
 import { usePlan } from "../../context/PlanContext";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Unlink } from "lucide-react";
+import { useChamberTransfer } from "../../context/ChamberTransferContext";
 
 export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
   const location = useLocation();
   const { user, setUser } = useAuth();
   const { hasFeature } = usePlan();
+  const {
+    activeDragSource,
+    transferDriveToVault,
+    transferVaultToDrive,
+    requestMoveToTrash,
+  } = useChamberTransfer();
+  const [dragOverTarget, setDragOverTarget] = useState(null);
 
   const isActive = (path, exact = false) => {
     if (exact) return location.pathname === path;
@@ -183,16 +191,124 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
         w-[72px] md:hover:w-[240px] group transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
         bg-white/95 dark:bg-vault-surface/95 backdrop-blur-3xl border-r border-slate-200 dark:border-white/5
         flex flex-col overflow-hidden shrink-0
-        ${isMobileOpen ? "translate-x-0 !w-[240px]" : "-translate-x-full md:translate-x-0"}
+        ${isMobileOpen ? "translate-x-0 !w-[min(240px,calc(100vw-36px))]" : "-translate-x-full md:translate-x-0"}
       `}
       >
         {/* Main Nav Items */}
         <div className="flex-1 py-6 flex flex-col gap-1.5 px-3 overflow-y-auto overflow-x-hidden custom-scrollbar no-scrollbar">
           {navItems.map((item) => {
             const active = isActive(item.path, item.exact);
+            const isChamberTarget = item.path === "/dashboard" && dragOverTarget === "chamber";
+            const isTrashTarget = item.path === "/dashboard/trash" && dragOverTarget === "trash";
+            const isDropActive = isChamberTarget || isTrashTarget;
             const hovered = hoveredPath === item.path && !active;
-            const lit = active || hovered; // Item is "lit up" — either active or hovered
+            const lit = active || hovered || isDropActive;
             const Icon = item.icon;
+
+            const handleItemDragOver = (e) => {
+              if (item.path === "/dashboard") {
+                // Vault Chamber accepts ONLY Google Drive files
+                const isDrive =
+                  window.__activeVaultDrag?.provider === "google_drive" ||
+                  activeDragSource?.provider === "google_drive" ||
+                  Array.from(e.dataTransfer.types || []).some((t) => t.toLowerCase() === "vault/provider-drive");
+
+                if (!isDrive) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = "move";
+                setDragOverTarget("chamber");
+              } else if (item.path === "/dashboard/trash") {
+                // Trash accepts ONLY local Vault files (never Google Drive or external)
+                const isDrive =
+                  window.__activeVaultDrag?.provider === "google_drive" ||
+                  activeDragSource?.provider === "google_drive" ||
+                  Array.from(e.dataTransfer.types || []).some((t) => t.toLowerCase() === "vault/provider-drive");
+
+                if (isDrive) return;
+
+                const isLocal =
+                  window.__activeVaultDrag?.provider === "local" ||
+                  activeDragSource?.provider === "local" ||
+                  Array.from(e.dataTransfer.types || []).some((t) => t.toLowerCase() === "vault/provider-local");
+
+                if (!isLocal) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = "move";
+                setDragOverTarget("trash");
+              }
+            };
+
+            const handleItemDragLeave = (e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) {
+                if (item.path === "/dashboard" && dragOverTarget === "chamber") {
+                  setDragOverTarget(null);
+                } else if (item.path === "/dashboard/trash" && dragOverTarget === "trash") {
+                  setDragOverTarget(null);
+                }
+              }
+            };
+
+            const handleItemDrop = (e) => {
+              if (item.path === "/dashboard") {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOverTarget(null);
+                const isDrive =
+                  window.__activeVaultDrag?.provider === "google_drive" ||
+                  activeDragSource?.provider === "google_drive" ||
+                  Array.from(e.dataTransfer.types || []).some((t) => t.toLowerCase() === "vault/provider-drive");
+
+                if (!isDrive) return;
+
+                let items = window.__activeVaultDrag?.items || activeDragSource?.items;
+                if (!items || items.length === 0) {
+                  try {
+                    const raw = e.dataTransfer.getData("draggedItems");
+                    if (raw) items = JSON.parse(raw);
+                  } catch (err) {}
+                }
+                if (!items || items.length === 0) {
+                  try {
+                    const singleRaw = e.dataTransfer.getData("draggedItem");
+                    if (singleRaw) items = [JSON.parse(singleRaw)];
+                  } catch (err) {}
+                }
+                if (items && items.length > 0) {
+                  transferDriveToVault(items);
+                }
+              } else if (item.path === "/dashboard/trash") {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOverTarget(null);
+                const isDrive =
+                  window.__activeVaultDrag?.provider === "google_drive" ||
+                  activeDragSource?.provider === "google_drive" ||
+                  Array.from(e.dataTransfer.types || []).some((t) => t.toLowerCase() === "vault/provider-drive");
+
+                if (isDrive) return;
+
+                let items = window.__activeVaultDrag?.items || activeDragSource?.items;
+                if (!items || items.length === 0) {
+                  try {
+                    const raw = e.dataTransfer.getData("draggedItems");
+                    if (raw) items = JSON.parse(raw);
+                  } catch (err) {}
+                }
+                if (!items || items.length === 0) {
+                  try {
+                    const singleRaw = e.dataTransfer.getData("draggedItem");
+                    if (singleRaw) items = [JSON.parse(singleRaw)];
+                  } catch (err) {}
+                }
+                if (items && items.length > 0) {
+                  requestMoveToTrash(items);
+                }
+              }
+            };
 
             return (
               <Link
@@ -202,9 +318,20 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                 onClick={() => setIsMobileOpen(false)}
                 onMouseEnter={() => setHoveredPath(item.path)}
                 onMouseLeave={() => setHoveredPath(null)}
+                onDragOver={handleItemDragOver}
+                onDragLeave={handleItemDragLeave}
+                onDrop={handleItemDrop}
                 className={`
                   relative flex items-center h-12 rounded-xl overflow-hidden transition-all duration-300
-                  ${lit ? `${item.bgClass} ${item.shadowClass}` : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"}
+                  ${
+                    isChamberTarget
+                      ? "ring-2 ring-accent-primary bg-accent-soft scale-[1.02] shadow-accent-glow"
+                      : isTrashTarget
+                      ? "ring-2 ring-rose-500 bg-rose-500/20 scale-[1.02] shadow-[0_0_20px_rgba(255,90,122,0.4)]"
+                      : lit
+                      ? `${item.bgClass} ${item.shadowClass}`
+                      : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
+                  }
                 `}
               >
                 {/* Active Indicator Bar — ONLY when active, not hovered */}
@@ -220,7 +347,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
 
                 {/* Icon */}
                 <div
-                  className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
+                  className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 pointer-events-none ${
                     lit ? item.accentClass : "text-slate-400 dark:text-white/30"
                   }`}
                   style={
@@ -235,7 +362,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
 
                 {/* Label */}
                 <span
-                  className={`whitespace-nowrap font-bold text-sm tracking-wide transition-all duration-300 ${
+                  className={`whitespace-nowrap font-bold text-sm tracking-wide transition-all duration-300 pointer-events-none ${
                     isMobileOpen
                       ? "opacity-100"
                       : "opacity-0 md:group-hover:opacity-100"
@@ -260,16 +387,112 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
             Integrations
           </div>
           {/* Link Drive — Orange identity */}
-          {hasFeature("gdrive_sync") && (
-            <div className="relative flex items-center group/drive">
+          {(hasFeature("gdrive_sync") || driveConnected) && (
+            <div
+              className="relative flex items-center group/drive w-full"
+              onDragOver={(e) => {
+                if (!driveConnected) return;
+                const isDrive =
+                  window.__activeVaultDrag?.provider === "google_drive" ||
+                  activeDragSource?.provider === "google_drive" ||
+                  Array.from(e.dataTransfer.types || []).some((t) => t.toLowerCase() === "vault/provider-drive");
+
+                const isLocal =
+                  !isDrive &&
+                  (window.__activeVaultDrag?.provider === "local" ||
+                   activeDragSource?.provider === "local" ||
+                   Array.from(e.dataTransfer.types || []).some((t) => t.toLowerCase() === "vault/provider-local"));
+
+                if (isLocal) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.dataTransfer.dropEffect = "move";
+                  setDragOverTarget("drive");
+                }
+              }}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget)) {
+                  if (dragOverTarget === "drive") setDragOverTarget(null);
+                }
+              }}
+              onDrop={(e) => {
+                if (!driveConnected) return;
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOverTarget(null);
+                let items = window.__activeVaultDrag?.items || activeDragSource?.items;
+                if (!items || items.length === 0) {
+                  try {
+                    const raw = e.dataTransfer.getData("draggedItems");
+                    if (raw) items = JSON.parse(raw);
+                  } catch (err) {}
+                }
+                if (!items || items.length === 0) {
+                  try {
+                    const singleRaw = e.dataTransfer.getData("draggedItem");
+                    if (singleRaw) items = [JSON.parse(singleRaw)];
+                  } catch (err) {}
+                }
+                if (items && items.length > 0) {
+                  transferVaultToDrive(items);
+                }
+              }}
+            >
               {driveConnected ? (
                 <Link
                   to="/dashboard/google-drive"
                   onClick={() => setIsMobileOpen(false)}
                   onMouseEnter={() => setHoveredPath("drive")}
                   onMouseLeave={() => setHoveredPath(null)}
+                  onDragOver={(e) => {
+                    const isDrive =
+                      window.__activeVaultDrag?.provider === "google_drive" ||
+                      activeDragSource?.provider === "google_drive" ||
+                      Array.from(e.dataTransfer.types || []).some((t) => t.toLowerCase() === "vault/provider-drive");
+
+                    const isLocal =
+                      !isDrive &&
+                      (window.__activeVaultDrag?.provider === "local" ||
+                       activeDragSource?.provider === "local" ||
+                       Array.from(e.dataTransfer.types || []).some((t) => t.toLowerCase() === "vault/provider-local"));
+
+                    if (isLocal) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.dataTransfer.dropEffect = "move";
+                      setDragOverTarget("drive");
+                    }
+                  }}
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget)) {
+                      if (dragOverTarget === "drive") setDragOverTarget(null);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragOverTarget(null);
+                    let items = window.__activeVaultDrag?.items || activeDragSource?.items;
+                    if (!items || items.length === 0) {
+                      try {
+                        const raw = e.dataTransfer.getData("draggedItems");
+                        if (raw) items = JSON.parse(raw);
+                      } catch (err) {}
+                    }
+                    if (!items || items.length === 0) {
+                      try {
+                        const singleRaw = e.dataTransfer.getData("draggedItem");
+                        if (singleRaw) items = [JSON.parse(singleRaw)];
+                      } catch (err) {}
+                    }
+                    if (items && items.length > 0) {
+                      transferVaultToDrive(items);
+                    }
+                  }}
                   className={`relative flex items-center h-12 w-full rounded-xl overflow-hidden text-left transition-all duration-300 ${
-                    isActive("/dashboard/google-drive") || hoveredPath === "drive"
+                    dragOverTarget === "drive"
+                      ? "ring-2 ring-linkdrive-accent bg-linkdrive-accent/20 scale-[1.02] shadow-[0_0_20px_rgba(255,122,61,0.4)]"
+                      : isActive("/dashboard/google-drive") || hoveredPath === "drive"
                       ? "bg-linkdrive-accent/10 shadow-[inset_0_0_20px_rgba(255,122,61,0.2)]"
                       : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
                   }`}
@@ -284,19 +507,34 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                     />
                   )}
                   <div
-                    className="w-12 shrink-0 flex items-center justify-center transition-all duration-300 text-linkdrive-accent"
+                    className="w-12 shrink-0 flex items-center justify-center transition-all duration-300 text-linkdrive-accent pointer-events-none"
                     style={{ filter: "drop-shadow(0 0 6px rgba(255, 122, 61, 0.5))" }}
                   >
                     <VaultDriveIcon size={20} />
                   </div>
                   <span
-                    className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 text-slate-900 dark:text-white/80 ${
+                    className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 text-slate-900 dark:text-white/80 pointer-events-none ${
                       isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"
                     }`}
                   >
                     Google Drive
                   </span>
-                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkdrive-accent shadow-[0_0_6px_rgba(255,122,61,0.6)] opacity-0 md:group-hover:opacity-100 transition-opacity" />
+                  {/* Subtle Disconnect Icon Button (hover-revealed) */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (window.confirm("Disconnect Google Drive from Vault?")) {
+                        disconnectDrive();
+                      }
+                    }}
+                    className="ml-auto mr-2.5 p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-all opacity-0 group-hover/drive:opacity-100"
+                    title="Disconnect Google Drive"
+                  >
+                    <Unlink size={14} />
+                  </button>
+                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkdrive-accent shadow-[0_0_6px_rgba(255,122,61,0.6)] group-hover/drive:opacity-0 opacity-100 transition-opacity" />
                 </Link>
               ) : (
                 <button
@@ -335,44 +573,94 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
             </div>
           )}
           {/* Link GitHub — Purple identity */}
-          {hasFeature("github_backup") && (
-            <button
-              onClick={() =>
-                githubConnected ? disconnectGithub() : connectGithub()
-              }
-              onMouseEnter={() => setHoveredPath("github")}
-              onMouseLeave={() => setHoveredPath(null)}
-              className={`relative flex items-center h-12 rounded-xl overflow-hidden text-left transition-all duration-300 ${
-                hoveredPath === "github"
-                  ? "bg-linkgit-accent/10 shadow-[inset_0_0_20px_rgba(198,92,255,0.2)]"
-                  : ""
-              }`}
-            >
-              <div
-                className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
-                  githubConnected || hoveredPath === "github"
-                    ? "text-linkgit-accent"
-                    : "text-slate-400 dark:text-white/30"
-                }`}
-                style={
-                  githubConnected || hoveredPath === "github"
-                    ? { filter: "drop-shadow(0 0 6px rgba(198, 92, 255, 0.5))" }
-                    : {}
-                }
-              >
-                <VaultGitIcon size={20} />
-              </div>
-              <span
-                className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
-                  githubConnected ? "text-slate-900 dark:text-white/80" : "text-slate-500 dark:text-white/40"
-                }`}
-              >
-                {githubConnected ? "GitHub (Linked)" : "Link GitHub"}
-              </span>
-              {githubConnected && (
-                <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkgit-accent shadow-[0_0_6px_rgba(198,92,255,0.6)] opacity-0 md:group-hover:opacity-100 transition-opacity" />
+          {(hasFeature("github_backup") || githubConnected) && (
+            <div className="relative flex items-center group/git">
+              {githubConnected ? (
+                <Link
+                  to="/dashboard/github"
+                  onClick={() => setIsMobileOpen(false)}
+                  onMouseEnter={() => setHoveredPath("github")}
+                  onMouseLeave={() => setHoveredPath(null)}
+                  className={`relative flex items-center h-12 w-full rounded-xl overflow-hidden text-left transition-all duration-300 ${
+                    isActive("/dashboard/github") || hoveredPath === "github"
+                      ? "bg-linkgit-accent/10 shadow-[inset_0_0_20px_rgba(198,92,255,0.2)]"
+                      : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
+                  }`}
+                >
+                  {isActive("/dashboard/github") && (
+                    <div
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full"
+                      style={{
+                        backgroundColor: "#C65CFF",
+                        boxShadow: "0 0 12px rgba(198, 92, 255, 0.6)",
+                      }}
+                    />
+                  )}
+                  <div
+                    className="w-12 shrink-0 flex items-center justify-center transition-all duration-300 text-linkgit-accent"
+                    style={{ filter: "drop-shadow(0 0 6px rgba(198, 92, 255, 0.5))" }}
+                  >
+                    <VaultGitIcon size={20} />
+                  </div>
+                  <span
+                    className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 text-slate-900 dark:text-white/80 ${
+                      isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"
+                    }`}
+                  >
+                    GitHub
+                  </span>
+                  {/* Subtle Disconnect Icon Button (hover-revealed) */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (window.confirm("Disconnect GitHub from Vault?")) {
+                        disconnectGithub();
+                      }
+                    }}
+                    className="ml-auto mr-2.5 p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-all opacity-0 group-hover/git:opacity-100"
+                    title="Disconnect GitHub"
+                  >
+                    <Unlink size={14} />
+                  </button>
+                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkgit-accent shadow-[0_0_6px_rgba(198,92,255,0.6)] group-hover/git:opacity-0 opacity-100 transition-opacity" />
+                </Link>
+              ) : (
+                <button
+                  onClick={connectGithub}
+                  onMouseEnter={() => setHoveredPath("github")}
+                  onMouseLeave={() => setHoveredPath(null)}
+                  className={`relative flex items-center h-12 w-full rounded-xl overflow-hidden text-left transition-all duration-300 ${
+                    hoveredPath === "github"
+                      ? "bg-linkgit-accent/10 shadow-[inset_0_0_20px_rgba(198,92,255,0.2)]"
+                      : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <div
+                    className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
+                      hoveredPath === "github"
+                        ? "text-linkgit-accent"
+                        : "text-slate-400 dark:text-white/30"
+                    }`}
+                    style={
+                      hoveredPath === "github"
+                        ? { filter: "drop-shadow(0 0 6px rgba(198, 92, 255, 0.5))" }
+                        : {}
+                    }
+                  >
+                    <VaultGitIcon size={20} />
+                  </div>
+                  <span
+                    className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${
+                      isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"
+                    } text-slate-500 dark:text-white/40`}
+                  >
+                    Link GitHub
+                  </span>
+                </button>
               )}
-            </button>
+            </div>
           )}
         </div>
 

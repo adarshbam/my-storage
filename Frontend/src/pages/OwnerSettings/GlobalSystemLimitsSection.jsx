@@ -21,16 +21,16 @@ export default function GlobalSystemLimitsSection({
   );
 
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-8 shadow-xl relative overflow-hidden transition-all duration-300 hover:border-purple-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-5 sm:p-8 shadow-xl relative overflow-hidden transition-all duration-300 hover:border-purple-500/30">
       <div className="absolute top-0 right-0 w-72 h-72 bg-purple-500/5 blur-[90px] rounded-full pointer-events-none" />
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shadow-lg shadow-purple-500/5 shrink-0">
-            <Cpu size={22} />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shadow-lg shadow-purple-500/5 shrink-0">
+            <Cpu size={20} className="sm:w-[22px] sm:h-[22px]" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-base min-[360px]:text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
               Global System Limits & Trial Inheritance
             </h2>
             <p className="text-xs text-slate-500 dark:text-white/50 font-medium">

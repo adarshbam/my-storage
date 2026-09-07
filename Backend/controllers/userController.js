@@ -127,7 +127,13 @@ export async function uploadProfilePic(req, res, next) {
 export async function getProfilePic(req, res, next) {
   try {
     const userId = req.user?._id || req.user?.id || null;
-    const targetUserId = req.query.id || req.query.userId || req.query.targetUserId || userId;
+    let targetUserId = req.query?.id || req.query?.userId || req.query?.targetUserId || userId;
+    if (targetUserId && typeof targetUserId === "string") {
+      const match = targetUserId.match(/[0-9a-fA-F]{24}/);
+      if (match && (targetUserId.includes("profilepic") || targetUserId.includes("?id="))) {
+        targetUserId = match[0];
+      }
+    }
     await userService.getProfilePicLogic({ userId, targetUserId, userRole: req.user?.role, res });
   } catch (error) {
     if (error.status) {

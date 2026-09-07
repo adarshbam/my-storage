@@ -462,13 +462,13 @@ export default function SecureRelayView({ openShareModal }) {
           </div>
 
           {/* Tab Switcher: Your Shared Links vs Shared With Me */}
-          <div className="flex items-center bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl p-1 shrink-0">
+          <div className="flex items-center bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl p-1 max-w-full overflow-x-auto no-scrollbar scrollbar-none shrink-0">
             <button
               onClick={() => {
                 setActiveTab("outgoing");
                 setSearchQuery("");
               }}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap ${
                 activeTab === "outgoing"
                   ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
                   : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
@@ -486,7 +486,7 @@ export default function SecureRelayView({ openShareModal }) {
                 setActiveTab("incoming");
                 setSearchQuery("");
               }}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap ${
                 activeTab === "incoming"
                   ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
                   : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
@@ -538,10 +538,10 @@ export default function SecureRelayView({ openShareModal }) {
       </div>
 
         {/* ── Controls Row: Search + Status/Clearance Filter Pills + Sort + View Switch (Active on BOTH tabs) ── */}
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-3xl p-3 sm:p-4 shadow-sm backdrop-blur-xl">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-3xl p-3 sm:p-4 shadow-sm backdrop-blur-xl w-full min-w-0">
           
           {/* Search Input */}
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <Search
               size={16}
               className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40"
@@ -564,14 +564,14 @@ export default function SecureRelayView({ openShareModal }) {
           </div>
 
           {/* Filter Pills, Sort Dropdown & View Mode */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap w-full lg:w-auto min-w-0">
             
             {/* Filter Pills Group for Outgoing Links */}
             {activeTab === "outgoing" ? (
-              <div className="flex items-center bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl p-1">
+              <div className="flex items-center bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl p-1 max-w-full overflow-x-auto no-scrollbar scrollbar-none">
                 <button
                   onClick={() => setStatusFilter("all")}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-2.5 min-[360px]:px-3.5 py-1.5 rounded-xl text-[11px] min-[360px]:text-xs font-bold transition-all shrink-0 whitespace-nowrap ${
                     statusFilter === "all"
                       ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
                       : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
@@ -581,7 +581,7 @@ export default function SecureRelayView({ openShareModal }) {
                 </button>
                 <button
                   onClick={() => setStatusFilter("active")}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-2.5 min-[360px]:px-3.5 py-1.5 rounded-xl text-[11px] min-[360px]:text-xs font-bold transition-all shrink-0 whitespace-nowrap ${
                     statusFilter === "active"
                       ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
                       : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
@@ -591,7 +591,7 @@ export default function SecureRelayView({ openShareModal }) {
                 </button>
                 <button
                   onClick={() => setStatusFilter("protected")}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-2.5 min-[360px]:px-3.5 py-1.5 rounded-xl text-[11px] min-[360px]:text-xs font-bold transition-all shrink-0 whitespace-nowrap ${
                     statusFilter === "protected"
                       ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
                       : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
@@ -601,7 +601,7 @@ export default function SecureRelayView({ openShareModal }) {
                 </button>
                 <button
                   onClick={() => setStatusFilter("expired")}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-2.5 min-[360px]:px-3.5 py-1.5 rounded-xl text-[11px] min-[360px]:text-xs font-bold transition-all shrink-0 whitespace-nowrap ${
                     statusFilter === "expired"
                       ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
                       : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
@@ -612,10 +612,10 @@ export default function SecureRelayView({ openShareModal }) {
               </div>
             ) : (
               /* Filter Pills Group for Incoming Shared Drives */
-              <div className="flex items-center bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl p-1">
+              <div className="flex items-center bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl p-1 max-w-full overflow-x-auto no-scrollbar scrollbar-none">
                 <button
                   onClick={() => setIncomingFilter("all")}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-2.5 min-[360px]:px-3.5 py-1.5 rounded-xl text-[11px] min-[360px]:text-xs font-bold transition-all shrink-0 whitespace-nowrap ${
                     incomingFilter === "all"
                       ? "bg-accent-primary text-accent-foreground shadow-accent-glow-sm"
                       : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
@@ -625,7 +625,7 @@ export default function SecureRelayView({ openShareModal }) {
                 </button>
                 <button
                   onClick={() => setIncomingFilter("read")}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-2.5 min-[360px]:px-3.5 py-1.5 rounded-xl text-[11px] min-[360px]:text-xs font-bold transition-all shrink-0 whitespace-nowrap ${
                     incomingFilter === "read"
                       ? "bg-document-accent text-black shadow-[0_0_12px_rgba(0,207,255,0.3)]"
                       : "text-white/50 hover:text-white"
@@ -635,7 +635,7 @@ export default function SecureRelayView({ openShareModal }) {
                 </button>
                 <button
                   onClick={() => setIncomingFilter("write")}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-2.5 min-[360px]:px-3.5 py-1.5 rounded-xl text-[11px] min-[360px]:text-xs font-bold transition-all shrink-0 whitespace-nowrap ${
                     incomingFilter === "write"
                       ? "bg-media-accent text-black shadow-[0_0_12px_rgba(255,122,61,0.3)]"
                       : "text-white/50 hover:text-white"
@@ -645,7 +645,7 @@ export default function SecureRelayView({ openShareModal }) {
                 </button>
                 <button
                   onClick={() => setIncomingFilter("owner")}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-2.5 min-[360px]:px-3.5 py-1.5 rounded-xl text-[11px] min-[360px]:text-xs font-bold transition-all shrink-0 whitespace-nowrap ${
                     incomingFilter === "owner"
                       ? "bg-danger-accent text-white shadow-[0_0_12px_rgba(255,90,122,0.3)]"
                       : "text-white/50 hover:text-white"

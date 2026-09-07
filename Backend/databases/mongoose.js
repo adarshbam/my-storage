@@ -13,6 +13,14 @@ export async function connectDB() {
     process.exit(1);
   }
 }
+mongoose.connection.on("error", (err) => {
+  console.error("⚠️ [Mongoose Error]:", err.message);
+});
+
+mongoose.connection.on("disconnected", () => {
+  console.warn("⚠️ [Mongoose Disconnected]");
+});
+
 await connectDB();
 
 export async function disconnectDB() {

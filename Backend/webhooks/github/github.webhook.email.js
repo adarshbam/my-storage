@@ -118,6 +118,7 @@ export async function sendDeploymentFailureEmail({
   try {
     console.log(`📧 [CI/CD Alert] Sending failure notification email to ${recipient}...`);
     await sendEmail({
+      from: `"Vault CI/CD" <no-reply@vault.com>`,
       to: recipient,
       subject: `🚨 [DEPLOY FAILED] Vault Storage: ${commit} - "${commitMessage.slice(0, 40)}"`,
       html,

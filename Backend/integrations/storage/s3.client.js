@@ -10,6 +10,7 @@ import {
   AbortMultipartUploadCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export const s3Client = new S3Client({
@@ -105,6 +106,21 @@ export const uploadToB2 = async ({ key, body, contentType }) => {
     ContentType: contentType || "application/octet-stream",
   });
   return await s3Client.send(command);
+};
+
+export const uploadStreamToB2 = async ({ key, stream, contentType }) => {
+  const upload = new Upload({
+    client: s3Client,
+    params: {
+      Bucket: process.env.BACKBLAZE_BUCKET_NAME,
+      Key: key,
+      Body: stream,
+      ContentType: contentType || "application/octet-stream",
+    },
+    partSize: 10 * 1024 * 1024,
+    queueSize: 4,
+  });
+  return await upload.done();
 };
 
 export const getObjectFromB2 = async ({ key, range }) => {

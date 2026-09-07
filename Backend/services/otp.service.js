@@ -1,6 +1,7 @@
 import OTP from "../models/otpModel.js";
 import User from "../models/userModel.js";
 import sendEmail from "../integrations/email/email.service.js";
+import { buildOtpEmail } from "../integrations/email/emailTemplates.js";
 import { OTPSchema } from "../validators/authSchema.js";
 import { z } from "zod";
 import { withTransaction } from "../utils/transaction.js";
@@ -50,42 +51,17 @@ export const sendOtpLogic = async ({ email }) => {
   });
 
   try {
+    const emailContent = buildOtpEmail({
+      otp: generatedOTP,
+      expiryMinutes: 10,
+    });
+
     await sendEmail({
-      from: `"Storiffy" <no-reply@storiffy.com>`,
+      from: `"Vault" <no-reply@vault.com>`,
       to: cleanEmail,
-      subject: "Your Storiffy OTP Code",
-      text: `Your OTP is ${generatedOTP}. It will expire in 10 minutes.`,
-      html: `
-        <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-        <h2 style="color: #333;">Storiffy Verification</h2>
-        <p style="font-size: 16px; color: #555;">
-            Use the OTP below to complete your verification:
-        </p>
-
-        <div style="
-            display: inline-block;
-            margin: 20px 0;
-            padding: 15px 30px;
-            font-size: 28px;
-            letter-spacing: 5px;
-            font-weight: bold;
-            background-color: #f4f4f4;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            user-select: all;
-        ">
-            ${generatedOTP}
-        </div>
-
-        <p style="color: #888; font-size: 14px;">
-            This OTP is valid for 10 minutes.
-        </p>
-
-        <p style="color: #aaa; font-size: 12px;">
-            If you didn’t request this, you can ignore this email.
-        </p>
-        </div>
-    `,
+      subject: emailContent.subject,
+      text: emailContent.text,
+      html: emailContent.html,
     });
     return {
       message: "OTP sent successfully",

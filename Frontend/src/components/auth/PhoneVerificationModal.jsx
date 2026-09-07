@@ -353,7 +353,7 @@ export default function PhoneVerificationModal({
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2.5 sm:p-6 overflow-y-auto">
           {/* Backdrop */}
           <motion.div
             key="phone-modal-backdrop"
@@ -374,7 +374,7 @@ export default function PhoneVerificationModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="relative w-full max-w-md my-auto bg-white dark:bg-[#0d1614] text-slate-900 dark:text-white border border-slate-200 dark:border-emerald-500/20 rounded-3xl p-5 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.25)] dark:shadow-[0_30px_90px_rgba(0,0,0,0.85),0_0_40px_rgba(16,185,129,0.15)] z-10 max-h-[calc(100dvh-2rem)] flex flex-col overflow-y-auto custom-scrollbar"
+            className="relative w-full max-w-md my-auto bg-white dark:bg-[#0d1614] text-slate-900 dark:text-white border border-slate-200 dark:border-emerald-500/20 rounded-3xl p-4 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.25)] dark:shadow-[0_30px_90px_rgba(0,0,0,0.85),0_0_40px_rgba(16,185,129,0.15)] z-10 max-h-[calc(100dvh-1.5rem)] flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar"
           >
             {/* Top Right Ambient Glow */}
             <div className="absolute -top-12 -right-12 w-44 h-44 bg-emerald-500/15 dark:bg-emerald-500/20 blur-3xl pointer-events-none rounded-full" />
@@ -475,12 +475,12 @@ export default function PhoneVerificationModal({
                     <label className="block text-[11px] font-bold text-slate-500 dark:text-white/60 uppercase tracking-wider mb-2">
                       Mobile Number
                     </label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 min-w-0">
                       <select
                         value={selectedCountry}
                         onChange={(e) => setSelectedCountry(e.target.value)}
                         disabled={sendingOtp}
-                        className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all shrink-0 disabled:opacity-50 cursor-pointer max-w-[130px] font-medium"
+                        className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-2.5 sm:px-3 py-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all shrink-0 disabled:opacity-50 cursor-pointer w-[100px] sm:w-[130px] font-medium truncate"
                       >
                         {countryCodes.map((c, i) => (
                           <option
@@ -501,7 +501,7 @@ export default function PhoneVerificationModal({
                         onChange={(e) => setPhoneNumber(e.target.value)}
                         disabled={sendingOtp}
                         placeholder="98765 43210"
-                        className="flex-1 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all disabled:opacity-50"
+                        className="min-w-0 flex-1 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-3 sm:px-4 py-3 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all disabled:opacity-50"
                       />
                     </div>
                   </div>
@@ -558,7 +558,7 @@ export default function PhoneVerificationModal({
                     </label>
 
                     {/* 6 Digit Inputs */}
-                    <div className="flex gap-1.5 sm:gap-2 justify-center" onPaste={handleOtpPaste}>
+                    <div className="flex gap-1 sm:gap-2 justify-center max-w-full" onPaste={handleOtpPaste}>
                       {otp.map((digit, idx) => (
                         <input
                           key={idx}
@@ -572,7 +572,7 @@ export default function PhoneVerificationModal({
                           onChange={(e) => handleOtpChange(idx, e.target.value)}
                           onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                           disabled={verifyingOtp || verifiedSuccess}
-                          className="w-9 sm:w-11 h-11 sm:h-12 sm:w-12 sm:h-13 text-center text-base sm:text-xl font-mono font-bold rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 transition-all caret-emerald-500 disabled:opacity-50"
+                          className="w-8 min-[360px]:w-9 sm:w-11 h-10 min-[360px]:h-11 sm:h-12 text-center text-sm min-[360px]:text-base sm:text-xl font-mono font-bold rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 transition-all caret-emerald-500 disabled:opacity-50 min-w-0"
                         />
                       ))}
                     </div>

@@ -125,9 +125,16 @@ const PricingSection = () => {
                   plan.period?.toLowerCase() === frontendPlan.period?.toLowerCase(),
               );
               if (!backendPlan) return frontendPlan;
+              const isPopular = backendPlan.isPopular !== undefined
+                ? Boolean(backendPlan.isPopular)
+                : backendPlan.popular !== undefined
+                  ? Boolean(backendPlan.popular)
+                  : frontendPlan.popular;
               return {
                 ...frontendPlan,
                 ...backendPlan,
+                popular: isPopular,
+                isPopular: isPopular,
                 price: backendPlan.amount || frontendPlan.price,
               };
             }),
@@ -239,16 +246,16 @@ const PricingSection = () => {
           <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent-soft border border-accent-border text-accent-primary font-bold tracking-wider text-xs uppercase mb-4">
             <Zap size={13} /> Transparent Pricing
           </span>
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white mb-5 tracking-tight">
+          <h2 className="text-2xl min-[360px]:text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white mb-4 sm:mb-5 tracking-tight break-words">
             Flexible plans for <br />
             <span className="text-accent-primary">your storage scale.</span>
           </h2>
-          <p className="text-slate-600 dark:text-white/60 text-base sm:text-lg font-medium max-w-lg mx-auto">
+          <p className="text-slate-600 dark:text-white/60 text-sm sm:text-lg font-medium max-w-lg mx-auto">
             Upgrade, downgrade, or cancel anytime. All plans include full zero-knowledge encryption.
           </p>
 
           {/* Billing Controls */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mt-10 max-w-full">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mt-8 sm:mt-10 max-w-full">
             {/* Monthly / Yearly Toggle */}
             <div className="flex flex-wrap sm:flex-nowrap items-center justify-center gap-2 sm:gap-3 bg-white/70 dark:bg-vault-surface/70 border border-slate-200 dark:border-white/10 px-3 sm:px-4 py-2 rounded-2xl shadow-sm backdrop-blur-md max-w-full">
               <span
@@ -260,7 +267,7 @@ const PricingSection = () => {
               </span>
               <button
                 onClick={() => setIsYearly(!isYearly)}
-                className="relative w-12 h-6 bg-slate-200 dark:bg-white/10 rounded-full p-1 flex items-center focus:outline-none cursor-pointer"
+                className="relative w-12 h-6 bg-slate-200 dark:bg-white/10 rounded-full p-1 flex items-center focus:outline-none cursor-pointer shrink-0"
               >
                 <motion.div
                   className="w-4 h-4 rounded-full bg-accent-primary shadow-sm"
@@ -282,7 +289,7 @@ const PricingSection = () => {
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
-                    className="bg-accent-soft text-accent-primary px-2.5 py-0.5 rounded-lg text-[10px] font-bold border border-accent-border uppercase tracking-wider ml-1"
+                    className="bg-accent-soft text-accent-primary px-2.5 py-0.5 rounded-lg text-[10px] font-bold border border-accent-border uppercase tracking-wider ml-1 shrink-0"
                   >
                     Save 2 Months
                   </motion.span>
@@ -291,10 +298,10 @@ const PricingSection = () => {
             </div>
 
             {/* Country Selector */}
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2.5 px-4 py-2 bg-white/70 dark:bg-vault-surface/70 hover:bg-white dark:hover:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-2xl text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white/70 shadow-sm backdrop-blur-md min-w-[170px] justify-between cursor-pointer"
+                className="w-full sm:w-auto flex items-center gap-2.5 px-4 py-2 bg-white/70 dark:bg-vault-surface/70 hover:bg-white dark:hover:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-2xl text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white/70 shadow-sm backdrop-blur-md min-w-0 sm:min-w-[170px] justify-between cursor-pointer"
               >
                 <div className="flex items-center gap-2 truncate">
                   <Globe size={14} className="text-accent-primary shrink-0" />

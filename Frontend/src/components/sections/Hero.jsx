@@ -62,30 +62,31 @@ const Hero = () => {
             className="lg:col-span-6 flex flex-col items-center lg:items-start text-center lg:text-left"
           >
             {/* Status Pill */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent-soft border border-accent-border mb-6 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />
-              <span className="text-xs font-bold tracking-wider uppercase text-accent-primary">
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-accent-soft border border-accent-border mb-4 sm:mb-6 shadow-sm max-w-full">
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-accent-primary animate-pulse shrink-0" />
+              <span className="text-[10px] min-[360px]:text-xs font-bold tracking-wider uppercase text-accent-primary truncate sm:whitespace-normal">
                 Built for privacy. Designed for control.
               </span>
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-4xl sm:text-6xl xl:text-7xl font-black tracking-tight text-slate-900 dark:text-white mb-6 leading-[1.08]">
-              Your digital life, <br />
+            <h1 className="text-2xl min-[340px]:text-3xl min-[390px]:text-4xl sm:text-6xl xl:text-7xl font-black tracking-tight text-slate-900 dark:text-white mb-4 sm:mb-6 leading-[1.08] break-words">
+              Your digital life,{" "}
+              <br className="hidden min-[340px]:inline" />
               <span className="text-accent-primary">
                 finally secure.
               </span>
             </h1>
 
             {/* Subtitle */}
-            <p className="text-base sm:text-lg text-slate-600 dark:text-white/60 max-w-xl mb-9 font-medium leading-relaxed">
+            <p className="text-xs min-[360px]:text-sm sm:text-lg text-slate-600 dark:text-white/60 max-w-xl mb-6 sm:mb-9 font-medium leading-relaxed">
               Vault gives you zero-knowledge encryption, lightning-fast sync, and granular control over your files and media across all your devices.
             </p>
 
             {/* Primary & Secondary CTAs */}
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mb-10">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full sm:w-auto mb-8 sm:mb-10">
               <Link to="/register" className="w-full sm:w-auto">
-                <button className="w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-sm tracking-wide bg-accent-primary text-accent-foreground shadow-lg shadow-accent-glow/25 hover:opacity-95 transition-all duration-200 flex items-center justify-center gap-2 group cursor-pointer">
+                <button className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl font-bold text-xs sm:text-sm tracking-wide bg-accent-primary text-accent-foreground shadow-lg shadow-accent-glow/25 hover:opacity-95 transition-all duration-200 flex items-center justify-center gap-2 group cursor-pointer">
                   <Zap size={16} fill="currentColor" />
                   <span>Start Free Trial</span>
                   <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -93,7 +94,7 @@ const Hero = () => {
               </Link>
 
               <a href="#features" className="w-full sm:w-auto">
-                <button className="w-full sm:w-auto px-7 py-4 rounded-2xl font-bold text-sm text-slate-700 dark:text-white/80 bg-slate-100 dark:bg-white/[0.06] hover:bg-slate-200 dark:hover:bg-white/[0.12] border border-slate-200 dark:border-white/10 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer">
+                <button className="w-full sm:w-auto px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl font-bold text-xs sm:text-sm text-slate-700 dark:text-white/80 bg-slate-100 dark:bg-white/[0.06] hover:bg-slate-200 dark:hover:bg-white/[0.12] border border-slate-200 dark:border-white/10 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer">
                   <ShieldCheck size={16} className="text-accent-primary" />
                   <span>Explore Architecture</span>
                 </button>
@@ -101,16 +102,16 @@ const Hero = () => {
             </div>
 
             {/* Trust Micro-Indicators */}
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs font-semibold text-slate-500 dark:text-white/50">
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/5">
-                <ShieldCheck size={14} className="text-accent-primary" />
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-4 text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-white/50">
+              <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/5">
+                <ShieldCheck size={14} className="text-accent-primary shrink-0" />
                 <span>Zero-knowledge AES-256</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/5">
-                <Sparkles size={14} className="text-accent-primary" />
+              <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/5">
+                <Sparkles size={14} className="text-accent-primary shrink-0" />
                 <span>1024 MB Free Vault</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/5">
+              <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/5">
                 <span>No credit card required</span>
               </div>
             </div>
@@ -123,7 +124,7 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="lg:col-span-6 relative flex flex-col items-center justify-center"
           >
-            <div className="relative w-full max-w-[320px] sm:max-w-[540px] aspect-square rounded-3xl p-4 flex items-center justify-center">
+            <div className="relative w-full max-w-[260px] min-[360px]:max-w-[320px] sm:max-w-[540px] aspect-square rounded-3xl p-2 sm:p-4 flex items-center justify-center">
               
               {/* Concentric Orbital Radar System */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

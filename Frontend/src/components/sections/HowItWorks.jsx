@@ -31,10 +31,10 @@ const HowItWorks = () => {
           <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent-soft border border-accent-border text-accent-primary font-bold tracking-wider text-xs uppercase mb-4">
             Pipeline
           </span>
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-5">
+          <h2 className="text-2xl min-[360px]:text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-4 sm:mb-5">
             How Vault works.
           </h2>
-          <p className="text-slate-600 dark:text-white/60 text-base sm:text-lg font-medium">
+          <p className="text-slate-600 dark:text-white/60 text-sm min-[360px]:text-base sm:text-lg font-medium">
             Three simple steps to take full control of your cloud storage.
           </p>
         </div>

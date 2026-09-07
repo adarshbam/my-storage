@@ -103,13 +103,14 @@ const FeatureHighlights = () => {
             <span className="text-[#14b8a6] font-bold tracking-widest text-sm uppercase mb-4 block">
               Architecture
             </span>
-            <h2 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tight leading-tight">
-              Engineered for <br />
+            <h2 className="text-3xl min-[360px]:text-4xl sm:text-5xl md:text-7xl font-black text-white mb-4 sm:mb-6 tracking-tight leading-tight">
+              Engineered for{" "}
+              <br className="hidden sm:inline" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white/40 to-white">
                 the impossible.
               </span>
             </h2>
-            <p className="text-xl text-white/50 font-medium leading-relaxed max-w-2xl">
+            <p className="text-sm min-[360px]:text-base sm:text-lg md:text-xl text-white/50 font-medium leading-relaxed max-w-2xl">
               We threw out the old playbook. Vault uses a decentralized
               object storage graph to deliver speeds and capabilities legacy
               clouds can't touch.

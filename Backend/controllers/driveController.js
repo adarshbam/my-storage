@@ -210,10 +210,12 @@ export const moveDriveItems = async (req, res, next) => {
 };
 
 export const transferToVault = async (req, res, next) => {
+  req.setTimeout(30 * 60 * 1000);
   try {
     const result = await driveService.transferToVaultLogic({
       items: req.body.items,
       targetFolderId: req.body.targetFolderId,
+      action: req.body.action || "move",
       req,
     });
     return res.status(200).json(result);
@@ -223,10 +225,12 @@ export const transferToVault = async (req, res, next) => {
 };
 
 export const transferFromVault = async (req, res, next) => {
+  req.setTimeout(30 * 60 * 1000);
   try {
     const result = await driveService.transferFromVaultLogic({
       items: req.body.items,
       targetFolderId: req.body.targetDriveFolderId || req.body.targetFolderId || "root",
+      action: req.body.action || "move",
       req,
     });
     return res.status(200).json(result);
