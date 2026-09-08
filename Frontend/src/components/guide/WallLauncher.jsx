@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGuide } from "../../context/GuideContext";
 import WallMascot from "./WallMascot";
@@ -21,7 +21,39 @@ import {
   Sliders,
   CreditCard,
   Keyboard,
+  GripVertical,
+  Move,
 } from "lucide-react";
+
+const STORAGE_POS_KEY = "vault_wally_launcher_position_v1";
+const SAFE_MARGIN = 16;
+
+// Calculate default corner position (bottom-right)
+const getDefaultPosition = () => {
+  if (typeof window === "undefined") return { x: 20, y: 20 };
+  const isMobile = window.innerWidth < 480;
+  const width = isMobile ? 56 : 180;
+  const height = 52;
+  const margin = window.innerWidth < 480 ? 10 : SAFE_MARGIN;
+  return {
+    x: Math.max(margin, window.innerWidth - width - margin),
+    y: Math.max(margin, window.innerHeight - height - margin),
+  };
+};
+
+// Retrieve previously saved position or fallback to default
+const getInitialPosition = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_POS_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+        return parsed;
+      }
+    }
+  } catch {}
+  return getDefaultPosition();
+};
 
 export default function WallLauncher() {
   const {
@@ -35,6 +67,152 @@ export default function WallLauncher() {
   } = useGuide();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState(getInitialPosition);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const buttonRef = useRef(null);
+  const currentPosRef = useRef(position);
+  const isDraggingRef = useRef(false);
+  const hasMovedRef = useRef(false);
+  const startPointerRef = useRef({ x: 0, y: 0 });
+  const startPosRef = useRef({ x: 0, y: 0 });
+  const justDraggedRef = useRef(false);
+
+  // Keep ref synchronized with position state
+  useEffect(() => {
+    currentPosRef.current = position;
+  }, [position]);
+
+  // Window resize listener: automatically clamp position so Wally is never cropped or pushed offscreen
+  useEffect(() => {
+    const handleResize = () => {
+      setPosition((prev) => {
+        const rect = buttonRef.current?.getBoundingClientRect() || { width: 180, height: 52 };
+        const margin = window.innerWidth < 480 ? 10 : SAFE_MARGIN;
+        const maxX = Math.max(margin, window.innerWidth - rect.width - margin);
+        const maxY = Math.max(margin, window.innerHeight - rect.height - margin);
+
+        const clampedX = Math.max(margin, Math.min(maxX, prev.x));
+        const clampedY = Math.max(margin, Math.min(maxY, prev.y));
+
+        if (clampedX !== prev.x || clampedY !== prev.y) {
+          const next = { x: clampedX, y: clampedY };
+          currentPosRef.current = next;
+          try {
+            localStorage.setItem(STORAGE_POS_KEY, JSON.stringify(next));
+          } catch {}
+          return next;
+        }
+        return prev;
+      });
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Pointer drag handlers
+  const handlePointerDown = (e) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    startPointerRef.current = { x: e.clientX, y: e.clientY };
+    startPosRef.current = { x: currentPosRef.current.x, y: currentPosRef.current.y };
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDraggingRef.current) return;
+
+    const dx = e.clientX - startPointerRef.current.x;
+    const dy = e.clientY - startPointerRef.current.y;
+
+    if (!hasMovedRef.current) {
+      if (Math.hypot(dx, dy) > 4) {
+        hasMovedRef.current = true;
+        setIsDragging(true);
+      } else {
+        return;
+      }
+    }
+
+    const rect = buttonRef.current?.getBoundingClientRect() || { width: 180, height: 52 };
+    const margin = window.innerWidth < 480 ? 10 : SAFE_MARGIN;
+    const minX = margin;
+    const maxX = Math.max(margin, window.innerWidth - rect.width - margin);
+    const minY = margin;
+    const maxY = Math.max(margin, window.innerHeight - rect.height - margin);
+
+    const rawX = startPosRef.current.x + dx;
+    const rawY = startPosRef.current.y + dy;
+
+    const clampedX = Math.max(minX, Math.min(maxX, rawX));
+    const clampedY = Math.max(minY, Math.min(maxY, rawY));
+
+    const nextPos = { x: clampedX, y: clampedY };
+    currentPosRef.current = nextPos;
+    setPosition(nextPos);
+  };
+
+  const handlePointerUp = (e) => {
+    if (!isDraggingRef.current) return;
+
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+
+    isDraggingRef.current = false;
+
+    if (hasMovedRef.current) {
+      setIsDragging(false);
+      hasMovedRef.current = false;
+      justDraggedRef.current = true;
+      setTimeout(() => {
+        justDraggedRef.current = false;
+      }, 120);
+
+      try {
+        localStorage.setItem(STORAGE_POS_KEY, JSON.stringify(currentPosRef.current));
+      } catch {}
+    } else {
+      setIsDragging(false);
+      setIsOpen(true);
+    }
+  };
+
+  const handlePointerCancel = (e) => {
+    if (!isDraggingRef.current) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+    isDraggingRef.current = false;
+    hasMovedRef.current = false;
+    setIsDragging(false);
+  };
+
+  const handleClick = (e) => {
+    if (justDraggedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    setIsOpen(true);
+  };
+
+  const handleResetPosition = (e) => {
+    e?.stopPropagation?.();
+    const def = getDefaultPosition();
+    setPosition(def);
+    currentPosRef.current = def;
+    try {
+      localStorage.removeItem(STORAGE_POS_KEY);
+    } catch {}
+  };
 
   // Icon mapper
   const getIcon = (iconName) => {
@@ -76,38 +254,67 @@ export default function WallLauncher() {
   if (isTourOpen) return null;
 
   return (
-    <div className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 z-40 font-sans select-none">
+    <>
       {/* ─────────────────────────────────────────────────────────────
-          1. FLOATING WALL MINI-ORB BUTTON
+          1. DRAGGABLE FLOATING WALLY MINI-ORB BUTTON
          ───────────────────────────────────────────────────────────── */}
       {!isOpen && (
-        <motion.button
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          whileHover={{ scale: 1.06 }}
-          whileTap={{ scale: 0.94 }}
-          onClick={() => setIsOpen(true)}
-          className="relative group flex items-center gap-2 p-2 min-[480px]:px-4 min-[480px]:py-2.5 rounded-full bg-slate-900/90 dark:bg-black/90 backdrop-blur-xl border border-white/20 dark:border-accent-border shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(0,207,255,0.25)] text-white transition-all cursor-pointer"
-          title="Open Wall's Guidebook"
+        <div
+          style={{
+            position: "fixed",
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            zIndex: 40,
+          }}
+          className="font-sans select-none touch-none"
         >
-          {/* Subtle glowing animated beacon */}
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-accent-primary to-[#00CFFF] rounded-full blur-md opacity-40 group-hover:opacity-80 transition-opacity" />
+          <motion.button
+            ref={buttonRef}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: isDragging ? 1.05 : 1, opacity: 1 }}
+            whileHover={isDragging ? undefined : { scale: 1.04 }}
+            whileTap={isDragging ? undefined : { scale: 0.96 }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onClick={handleClick}
+            onDoubleClick={handleResetPosition}
+            className={`relative group flex items-center gap-2 p-2 min-[480px]:px-4 min-[480px]:py-2.5 rounded-full bg-slate-900/90 dark:bg-black/90 backdrop-blur-xl border border-white/20 dark:border-accent-border text-white select-none touch-none transition-shadow duration-150 ${
+              isDragging
+                ? "cursor-grabbing shadow-[0_20px_45px_rgba(0,0,0,0.7),0_0_35px_rgba(0,207,255,0.5)] ring-2 ring-[#00CFFF]/60"
+                : "cursor-grab shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(0,207,255,0.25)] hover:shadow-[0_15px_35px_rgba(0,0,0,0.6),0_0_25px_rgba(0,207,255,0.35)]"
+            }`}
+            title="Drag to place Wally anywhere • Click to open Guidebook • Double-click to reset position"
+          >
+            {/* Subtle glowing animated beacon */}
+            <div
+              className={`absolute -inset-0.5 bg-gradient-to-r from-accent-primary to-[#00CFFF] rounded-full blur-md transition-opacity duration-200 ${
+                isDragging ? "opacity-80" : "opacity-40 group-hover:opacity-75"
+              }`}
+            />
 
-          {/* Wall mini icon */}
-          <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
-            <WallMascot gesture="waving" size={32} />
-          </div>
+            {/* Subtle drag grip dots */}
+            <div className="relative text-white/30 group-hover:text-white/60 transition-colors shrink-0 -ml-1">
+              <GripVertical size={13} />
+            </div>
 
-          <div className="relative hidden min-[480px]:flex flex-col text-left pr-1">
-            <span className="text-xs font-black tracking-wider text-white uppercase flex items-center gap-1.5">
-              Wally Guide
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10B981]" />
-            </span>
-            <span className="text-[10px] text-white/50 font-semibold tracking-tight">
-              Tutorials & Help
-            </span>
-          </div>
-        </motion.button>
+            {/* Wall mini icon */}
+            <div className="relative w-8 h-8 flex items-center justify-center shrink-0 pointer-events-none">
+              <WallMascot gesture={isDragging ? "celebrating" : "waving"} size={32} />
+            </div>
+
+            <div className="relative hidden min-[480px]:flex flex-col text-left pr-1 pointer-events-none">
+              <span className="text-xs font-black tracking-wider text-white uppercase flex items-center gap-1.5">
+                Wally Guide
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10B981]" />
+              </span>
+              <span className="text-[10px] text-white/50 font-semibold tracking-tight">
+                Tutorials & Help
+              </span>
+            </div>
+          </motion.button>
+        </div>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
@@ -244,26 +451,38 @@ export default function WallLauncher() {
                 </p>
               </div>
 
-              {/* Footer: Reset Tutorial Progress */}
+              {/* Footer: Reset Tutorial Progress & Reset Position */}
               <div className="flex items-center justify-between pt-3 border-t border-white/10 text-xs shrink-0">
-                <span className="text-[11px] text-white/40 font-mono">
-                  {completedTours.length} / {Object.keys(tours).length} Completed
-                </span>
-
                 <button
                   type="button"
-                  onClick={resetAllTours}
-                  className="text-[11px] font-bold text-white/40 hover:text-white/80 flex items-center gap-1 transition-colors"
-                  title="Reset tutorial progress to replay all"
+                  onClick={handleResetPosition}
+                  className="text-[11px] font-bold text-white/40 hover:text-[#00CFFF] flex items-center gap-1 transition-colors"
+                  title="Reset Wally's floating button to default corner position"
                 >
-                  <RotateCcw size={12} />
-                  <span>Reset All</span>
+                  <Move size={12} />
+                  <span>Reset Position</span>
                 </button>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-white/40 font-mono hidden sm:inline">
+                    {completedTours.length} / {Object.keys(tours).length} Completed
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={resetAllTours}
+                    className="text-[11px] font-bold text-white/40 hover:text-white/80 flex items-center gap-1 transition-colors"
+                    title="Reset tutorial progress to replay all"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Reset All</span>
+                  </button>
+                </div>
               </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
