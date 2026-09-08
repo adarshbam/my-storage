@@ -19,7 +19,7 @@ jobs:
       VITE_SERVER_URL: ${{ secrets.VITE_SERVER_URL || vars.VITE_SERVER_URL || '/api' }}
       VITE_MAX_FILE_SIZE: ${{ vars.VITE_MAX_FILE_SIZE || '104857600' }}
       VITE_GOOGLE_CLIENTID: ${{ secrets.VITE_GOOGLE_CLIENTID || vars.VITE_GOOGLE_CLIENTID || '621477951745-lmj5ogqo7fkmd9sv50t97dj11kdjffpa.apps.googleusercontent.com' }}
-      VITE_GITHUB_CLIENTID: ${{ secrets.VITE_GITHUB_CLIENTID || vars.VITE_GITHUB_CLIENTID || 'Ov23liVpeeDrS9U4F5x8' }}
+      VITE_GITHUB_CLIENTID: ${{ secrets.VITE_GITHUB_CLIENTID || vars.VITE_GITHUB_CLIENTID || 'Ov23lizS9BOqZ4r4jQPZ' }}
       VITE_RAZORPAY_KEY_ID: ${{ secrets.VITE_RAZORPAY_KEY_ID || 'rzp_live_T6hzM3zzz0kYbG' }}
       VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || 'AIzaSyCDDE-n_Ef8GUIIUxuVd4aOZ3Jj3pCDutM' }}
       VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN || 'yourvaultstorage.firebaseapp.com' }}
