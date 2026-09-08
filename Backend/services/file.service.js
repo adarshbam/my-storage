@@ -897,18 +897,39 @@ export const getFileLogic = async ({ fileId, userId, userRole, range, action, if
       ".env",
       ".gitignore",
     ];
-    if (
-      action !== "download" &&
-      file.extension &&
-      textExtensions.includes(file.extension.toLowerCase())
-    ) {
-      res.setHeader("Content-Type", "text/plain");
-    } else if (
-      action !== "download" &&
-      file.extension &&
-      file.extension.toLowerCase() === ".svg"
-    ) {
-      res.setHeader("Content-Type", "image/svg+xml");
+
+    const MIME_MAP = {
+      // Video (critical for GPU hardware decoding & streaming)
+      ".mp4": "video/mp4",
+      ".webm": "video/webm",
+      ".mov": "video/quicktime",
+      ".mkv": "video/x-matroska",
+      ".avi": "video/x-msvideo",
+      ".m4v": "video/mp4",
+      ".3gp": "video/3gpp",
+      ".flv": "video/x-flv",
+      // Audio
+      ".mp3": "audio/mpeg",
+      ".wav": "audio/wav",
+      ".ogg": "audio/ogg",
+      ".m4a": "audio/mp4",
+      ".flac": "audio/flac",
+      ".aac": "audio/aac",
+      // Images & Documents
+      ".svg": "image/svg+xml",
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".gif": "image/gif",
+      ".webp": "image/webp",
+      ".pdf": "application/pdf",
+    };
+
+    const cleanExt = (file.extension || "").toLowerCase();
+    if (action !== "download" && cleanExt && textExtensions.includes(cleanExt)) {
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    } else if (action !== "download" && cleanExt && MIME_MAP[cleanExt]) {
+      res.setHeader("Content-Type", MIME_MAP[cleanExt]);
     } else {
       res.setHeader(
         "Content-Type",
