@@ -16,11 +16,14 @@ import { useGoogleLogin } from "@react-oauth/google";
 import { usePlan } from "../../context/PlanContext";
 import { Sparkles, Unlink } from "lucide-react";
 import { useChamberTransfer } from "../../context/ChamberTransferContext";
+import GoogleDriveConsentModal from "../drive/GoogleDriveConsentModal";
 
 export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
   const location = useLocation();
   const { user, setUser } = useAuth();
   const { hasFeature } = usePlan();
+  const [isDriveConsentOpen, setIsDriveConsentOpen] = useState(false);
+  const [isConnectingDrive, setIsConnectingDrive] = useState(false);
   const {
     activeDragSource,
     transferDriveToVault,
@@ -41,6 +44,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
     scope: "https://www.googleapis.com/auth/drive",
     onSuccess: async (codeResponse) => {
       try {
+        setIsConnectingDrive(true);
         const res = await fetch(`${SERVER_URL}/drive/connect`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -52,10 +56,17 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
           if (!newUser.integrations) newUser.integrations = {};
           newUser.integrations.googleDrive = { connected: true };
           setUser(newUser);
+          setIsDriveConsentOpen(false);
         }
       } catch (error) {
         console.error("Drive connection error:", error);
+      } finally {
+        setIsConnectingDrive(false);
       }
+    },
+    onError: (err) => {
+      console.error("Google Drive connection error:", err);
+      setIsConnectingDrive(false);
     },
   });
 
@@ -538,7 +549,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                 </Link>
               ) : (
                 <button
-                  onClick={connectDrive}
+                  onClick={() => setIsDriveConsentOpen(true)}
                   onMouseEnter={() => setHoveredPath("drive")}
                   onMouseLeave={() => setHoveredPath(null)}
                   className={`relative flex items-center h-12 w-full rounded-xl overflow-hidden text-left transition-all duration-300 ${
@@ -760,6 +771,14 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
           </Link>
         </div>
       </aside>
+
+      {/* Mandatory In-App Google Drive Permissions & Compliance Consent Modal */}
+      <GoogleDriveConsentModal
+        isOpen={isDriveConsentOpen}
+        onClose={() => setIsDriveConsentOpen(false)}
+        onConfirm={connectDrive}
+        isConnecting={isConnectingDrive}
+      />
     </>
   );
 }

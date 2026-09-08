@@ -13,6 +13,7 @@ import FileDetailsModal from "../dashboard/FileDetailsModal";
 import FileBrowserSkeleton from "../drive/FileBrowserSkeleton";
 import EmptyState from "../drive/EmptyState";
 import { VaultDriveIcon } from "../ui/VaultIcons";
+import GoogleDriveConsentModal from "../drive/GoogleDriveConsentModal";
 import {
   ArrowLeft,
   Upload,
@@ -80,6 +81,7 @@ export default function GoogleDriveChamber() {
   const [modalInput, setModalInput] = useState("");
   const [isSubmittingModal, setIsSubmittingModal] = useState(false);
   const [reconnectingDrive, setReconnectingDrive] = useState(false);
+  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
 
   // Upload file ref
   const fileInputRef = useRef(null);
@@ -198,6 +200,7 @@ export default function GoogleDriveChamber() {
         });
         if (res.ok) {
           setError(null);
+          setIsConsentModalOpen(false);
           fetchDriveContents();
         } else {
           const errData = await res.json().catch(() => ({}));
@@ -213,6 +216,7 @@ export default function GoogleDriveChamber() {
     onError: (err) => {
       console.error("Google Drive connection error:", err);
       setReconnectingDrive(false);
+      setIsConsentModalOpen(false);
     },
   });
 
@@ -841,7 +845,7 @@ export default function GoogleDriveChamber() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button
-              onClick={() => reconnectGoogleDrive()}
+              onClick={() => setIsConsentModalOpen(true)}
               disabled={reconnectingDrive}
               className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 flex items-center gap-2 font-medium shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
             >
@@ -1194,6 +1198,14 @@ export default function GoogleDriveChamber() {
           />
         </Suspense>
       )}
+
+      {/* ── MANDATORY GOOGLE DRIVE CONSENT MODAL ── */}
+      <GoogleDriveConsentModal
+        isOpen={isConsentModalOpen}
+        onClose={() => setIsConsentModalOpen(false)}
+        onConfirm={reconnectGoogleDrive}
+        isConnecting={reconnectingDrive}
+      />
     </div>
   );
 }

@@ -24,6 +24,7 @@ export default function Register() {
   const [name, setName] = useState("");
 
   const [password, setPassword] = useState("");
+  const [agreedToPolicies, setAgreedToPolicies] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -388,16 +389,43 @@ export default function Register() {
             />
           </div>
 
+          {/* Mandatory Consent Checkbox */}
+          <div className="pt-2">
+            <label className="flex items-start gap-2.5 cursor-pointer group select-none">
+              <input
+                type="checkbox"
+                required
+                checked={agreedToPolicies}
+                onChange={(e) => setAgreedToPolicies(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded text-accent-primary focus:ring-accent-primary focus:ring-offset-0 border-black/20 dark:border-white/20 bg-white dark:bg-white/5 cursor-pointer"
+              />
+              <span className="text-xs text-slate-600 dark:text-slate-300 leading-normal">
+                I agree to Vault's{" "}
+                <Link to="/terms" target="_blank" className="text-accent-primary underline font-bold">
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link to="/privacy" target="_blank" className="text-accent-primary underline font-bold">
+                  Privacy Policy
+                </Link>
+                , including the Google API Limited Use disclosure.
+              </span>
+            </label>
+          </div>
+
           <div className="w-full relative group pt-1">
             <Button 
               type="submit" 
-              disabled={!otpVerified}
+              disabled={!otpVerified || !agreedToPolicies}
               className="w-full py-3 text-xs uppercase tracking-wider font-bold"
             >
               Create Account
             </Button>
-            {!otpVerified && (
-              <div className="absolute inset-0 z-10 cursor-not-allowed" title="Verify email first" />
+            {(!otpVerified || !agreedToPolicies) && (
+              <div
+                className="absolute inset-0 z-10 cursor-not-allowed"
+                title={!otpVerified ? "Verify email first" : "Please agree to the Terms of Service and Privacy Policy to proceed"}
+              />
             )}
           </div>
         </form>
@@ -410,6 +438,19 @@ export default function Register() {
           </span>
           <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
         </div>
+
+        {/* Policy notice for OAuth */}
+        <p className="text-[11px] text-center text-slate-500 dark:text-slate-400 leading-relaxed mb-3">
+          By signing up with Google or GitHub, you agree to Vault's{" "}
+          <Link to="/terms" target="_blank" className="text-accent-primary underline font-medium">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link to="/privacy" target="_blank" className="text-accent-primary underline font-medium">
+            Privacy Policy
+          </Link>
+          .
+        </p>
 
         {/* Google Sign Up */}
         <div className="flex flex-col gap-2.5">
