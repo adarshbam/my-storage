@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Github, Twitter, Linkedin } from "lucide-react";
 import { VaultLogo } from "../ui/VaultIcons";
 
@@ -69,19 +70,41 @@ const Footer = () => {
 
           <div>
             <h4 className="font-bold text-slate-900 dark:text-white mb-5 tracking-wider text-xs uppercase">
-              Legal
+              Legal & Compliance
             </h4>
             <ul className="space-y-3 text-xs font-medium">
-              {["Privacy Policy", "Terms of Service", "Zero-Knowledge Audit", "GDPR Compliance"].map((item) => (
-                <li key={item}>
-                  <a
-                    href="#"
-                    className="text-slate-500 dark:text-white/50 hover:text-accent-primary dark:hover:text-white transition-colors"
-                  >
-                    {item}
-                  </a>
-                </li>
-              ))}
+              <li>
+                <Link
+                  to="/privacy"
+                  className="text-slate-500 dark:text-white/50 hover:text-accent-primary dark:hover:text-white transition-colors"
+                >
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/terms"
+                  className="text-slate-500 dark:text-white/50 hover:text-accent-primary dark:hover:text-white transition-colors"
+                >
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/security"
+                  className="text-slate-500 dark:text-white/50 hover:text-accent-primary dark:hover:text-white transition-colors"
+                >
+                  Zero-Knowledge Security & Audit
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/privacy#user-rights"
+                  className="text-slate-500 dark:text-white/50 hover:text-accent-primary dark:hover:text-white transition-colors"
+                >
+                  GDPR & CCPA Compliance
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

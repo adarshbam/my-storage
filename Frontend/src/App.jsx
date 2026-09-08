@@ -15,6 +15,9 @@ import Profile from "./pages/Profile";
 import OwnerSettings from "./pages/OwnerSettings/OwnerSettings";
 import SharedAccessClaim from "./pages/SharedAccessClaim";
 import WallyAcademyPage from "./pages/WallyAcademyPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsOfServicePage from "./pages/TermsOfServicePage";
+import SecurityPolicyPage from "./pages/SecurityPolicyPage";
 
 // Landing Page Components
 import Navbar from "./components/sections/Navbar";
@@ -94,6 +97,9 @@ function App() {
                 <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
+                  <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                  <Route path="/terms" element={<TermsOfServicePage />} />
+                  <Route path="/security" element={<SecurityPolicyPage />} />
                   <Route
                     path="/shared-access/:token"
                     element={<SharedAccessClaim />}
