@@ -41,21 +41,25 @@ export const VaultLogo = ({ className = "", size = 24 }) => (
 export const VaultMark = VaultLogo;
 
 /**
- * Authentic Official GitHub Octocat Logo
+ * Authentic Official GitHub Mark (Latest Vector)
+ * Fully compatible with Light & Dark themes via currentColor.
+ * Preserves custom SVG glow / drop-shadow styling.
  */
 export const GitHubLogo = ({ className = "", size = 24 }) => (
   <svg
     width={size}
     height={size}
-    viewBox="0 0 24 24"
+    viewBox="0 0 1024 1024"
     fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
     aria-hidden="true"
     className={className}
   >
     <path
       fillRule="evenodd"
       clipRule="evenodd"
-      d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 100 0 0022 12.017C22 6.484 17.522 2 12 2z"
+      d="M8 0C3.58 0 0 3.58 0 8C0 11.54 2.29 14.53 5.47 15.59C5.87 15.66 6.02 15.42 6.02 15.21C6.02 15.02 6.01 14.39 6.01 13.72C4 14.09 3.48 13.23 3.32 12.78C3.23 12.55 2.84 11.84 2.5 11.65C2.22 11.5 1.82 11.13 2.49 11.12C3.12 11.11 3.57 11.7 3.72 11.94C4.44 13.15 5.59 12.81 6.05 12.6C6.12 12.08 6.33 11.73 6.56 11.53C4.78 11.33 2.92 10.64 2.92 7.58C2.92 6.71 3.23 5.99 3.74 5.43C3.66 5.23 3.38 4.41 3.82 3.31C3.82 3.31 4.49 3.1 6.02 4.13C6.66 3.95 7.34 3.86 8.02 3.86C8.7 3.86 9.38 3.95 10.02 4.13C11.55 3.09 12.22 3.31 12.22 3.31C12.66 4.41 12.38 5.23 12.3 5.43C12.81 5.99 13.12 6.7 13.12 7.58C13.12 10.65 11.25 11.33 9.47 11.53C9.76 11.78 10.01 12.26 10.01 13.01C10.01 14.08 10 14.94 10 15.21C10 15.42 10.15 15.67 10.55 15.59C13.71 14.53 16 11.53 16 8C16 3.58 12.42 0 8 0Z"
+      transform="scale(64)"
     />
   </svg>
 );
@@ -63,21 +67,83 @@ export const GitHubLogo = ({ className = "", size = 24 }) => (
 export const VaultGitIcon = GitHubLogo;
 
 /**
- * Authentic Official Google Drive Logo
+ * Authentic Official Google Drive Logo (Latest 2026 Vector)
+ * Beautiful modern multi-color gradient with alpha mask.
+ * Compatible with Light & Dark themes, preserving glowing drop-shadows.
  */
 export const GoogleDriveLogo = ({ className = "", size = 24 }) => (
   <svg
     width={size}
     height={size}
-    viewBox="0 0 87.3 78"
+    viewBox="0 0 192 192"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
     className={className}
   >
-    <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
-    <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
-    <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 10.15z" fill="#ea4335"/>
-    <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
-    <path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-25.4-44c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#ffba00"/>
-    <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3H27.5l13.75 23.8h25.4c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+    <mask
+      id="vault-gdrive-mask"
+      width="168"
+      height="154"
+      x="12"
+      y="18"
+      maskUnits="userSpaceOnUse"
+      style={{ maskType: "alpha" }}
+    >
+      <path
+        fill="#b43333"
+        d="M63.09 37c14.626-25.333 51.193-25.334 65.819 0l45.033 78c14.626 25.334-3.657 57.001-32.91 57.001H50.967c-29.253 0-47.536-31.667-32.91-57.001z"
+      />
+    </mask>
+    <g mask="url(#vault-gdrive-mask)">
+      <path
+        fill="url(#vault-gdrive-grad-yellow)"
+        d="M206.905 172.02h-91.888l-19.015-32.934 45.944-79.578z"
+      />
+      <path
+        fill="url(#vault-gdrive-grad-blue)"
+        d="M-14.919 172.006 50.04 59.494v.002L31.032 92.422h38.02L115 172.004l-129.918.001z"
+      />
+      <path
+        fill="url(#vault-gdrive-grad-green)"
+        d="M96.007-20.085 141.954 59.5l-19.011 32.928H31.048z"
+      />
+    </g>
+    <defs>
+      <linearGradient
+        id="vault-gdrive-grad-yellow"
+        x1="193.6"
+        x2="103.09"
+        y1="165.6"
+        y2="111.21"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset=".09" stopColor="#ffe921" />
+        <stop offset="1" stopColor="#fec700" />
+      </linearGradient>
+      <linearGradient
+        id="vault-gdrive-grad-blue"
+        x1="114.4"
+        x2="15.53"
+        y1="181.61"
+        y2="121.8"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset=".15" stopColor="#a9a8ff" />
+        <stop offset=".33" stopColor="#6d97ff" />
+        <stop offset=".48" stopColor="#3186ff" />
+      </linearGradient>
+      <linearGradient
+        id="vault-gdrive-grad-green"
+        x1="128.88"
+        x2="28.7"
+        y1="37.88"
+        y2="84.64"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset=".55" stopColor="#0ebc5f" />
+        <stop offset=".85" stopColor="#78c9ff" />
+      </linearGradient>
+    </defs>
   </svg>
 );
 

@@ -342,12 +342,12 @@ export default function AssetCard({
           }`}
         />
 
-        <div className="w-10 h-10 rounded-lg bg-vault-black border border-white/10 flex items-center justify-center shrink-0 mr-4">
+        <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-vault-black border border-slate-200 dark:border-white/10 flex items-center justify-center shrink-0 mr-4">
           {isDirectory ? (
             provider === "google_drive" ? (
-              <VaultDriveIcon size={20} className="text-document-accent" />
+              <VaultDriveIcon size={20} className="drop-shadow-[0_0_8px_rgba(77,166,255,0.4)]" />
             ) : provider === "github" ? (
-              <VaultGitIcon size={20} className="text-slate-800 dark:text-white" />
+              <VaultGitIcon size={20} className="text-slate-800 dark:text-white drop-shadow-[0_0_8px_rgba(198,92,255,0.4)]" />
             ) : (
               <Folder size={20} className="text-vault-emerald" />
             )
@@ -594,7 +594,7 @@ export default function AssetCard({
             provider === "google_drive" ? (
               <VaultDriveIcon
                 size={48}
-                className="text-document-accent drop-shadow-[0_0_15px_rgba(77,166,255,0.4)]"
+                className="drop-shadow-[0_0_15px_rgba(77,166,255,0.4)]"
               />
             ) : provider === "github" ? (
               <VaultGitIcon

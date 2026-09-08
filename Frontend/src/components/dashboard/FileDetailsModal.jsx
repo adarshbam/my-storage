@@ -87,7 +87,7 @@ export default function FileDetailsModal({ item, onClose }) {
               ) : provider === "github" || item.name?.toLowerCase() === "github" ? (
                 <VaultGitIcon
                   size={40}
-                  className="text-white drop-shadow-[0_0_15px_rgba(198,92,255,0.4)]"
+                  className="text-slate-800 dark:text-white drop-shadow-[0_0_15px_rgba(198,92,255,0.4)]"
                 />
               ) : (
                 <div className="text-accent-primary drop-shadow-[0_0_15px_var(--accent-glow)]">
