@@ -19,6 +19,7 @@ import {
   FolderGit2,
   FolderOpen,
   FileCode,
+  FolderInput,
 } from "lucide-react";
 import getFileImage, { renderFileIcon } from "../../lib/FileImages";
 import { formatSize, isSpecialFolder } from "../../lib/utils";
@@ -179,6 +180,7 @@ export default function AssetCard({
   onConfigureBackup = null,
   onCloneToVault = null,
   onEdit = null,
+  onMove = null,
   specialView = null,
 }) {
   const navigate = useNavigate();
@@ -890,7 +892,19 @@ export default function AssetCard({
                 className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors rounded-xl"
               >
                 <Scissors size={14} className="shrink-0 text-slate-500 dark:text-white/60" />
-                Cut
+                Cut / Move
+              </button>
+            )}
+            {onMove && (
+              <button
+                onClick={() => {
+                  closeMenu();
+                  onMove(item);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors rounded-xl"
+              >
+                <FolderInput size={14} className="shrink-0 text-slate-500 dark:text-white/60" />
+                Move to Folder...
               </button>
             )}
             {isGithubRepoRoot && item.vaultWorkspace?.rootDirectoryId && (

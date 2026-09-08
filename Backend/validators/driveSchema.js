@@ -58,8 +58,16 @@ export const updateDriveItemSchema = {
 
 export const moveDriveItemsSchema = {
   body: z.object({
-    items: z.array(z.string()),
-    targetId: z.string(),
+    items: z.array(
+      z.union([
+        z.string(),
+        z.object({
+          _id: z.string().optional(),
+          id: z.string().optional(),
+        }).passthrough(),
+      ])
+    ),
+    targetId: z.string().optional().default("root"),
   }),
   query: z.object({
     ownerId: z.string().optional(),

@@ -211,7 +211,7 @@ export const moveDriveItems = async (req, res, next) => {
   try {
     const result = await driveService.moveDriveItemsLogic({
       items: req.body.items,
-      targetId: req.body.targetId,
+      targetId: req.body?.targetId || "root",
       req,
     });
     return res.status(200).json(result);

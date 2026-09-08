@@ -139,10 +139,8 @@ app.use((req, res, next) => {
     },
     // 6. X-XSS-Protection - Enable legacy browser security
     xssFilter: true,
-    // 7. Cross-Origin Opener Policy (COOP) - Crucial for popup OAuth flows (same-origin-allow-popups)
-    crossOriginOpenerPolicy: {
-      policy: "same-origin-allow-popups",
-    },
+    // 7. Cross-Origin Opener Policy (COOP) - Disabled to allow Google Identity Services / OAuth popups without COOP window.closed blocking
+    crossOriginOpenerPolicy: false,
     // 8. Cross-Origin Resource Policy (CORP) - Allow client app to read static files
     crossOriginResourcePolicy: {
       policy: "cross-origin",

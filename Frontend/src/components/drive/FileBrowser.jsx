@@ -320,6 +320,10 @@ export default function FileBrowser({ specialView }) {
       console.error("Google Drive connection error:", err);
       setReconnectingDrive(false);
     },
+    onNonOAuthError: (err) => {
+      console.error("Google Drive non-OAuth error:", err);
+      setReconnectingDrive(false);
+    },
   });
 
   // --- DRAG SELECTION STATE ---

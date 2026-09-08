@@ -39,6 +39,7 @@ import {
   X,
   ClipboardPaste,
   Share2,
+  FolderInput,
 } from "lucide-react";
 import Editor from "react-simple-code-editor";
 import * as Prism from "prismjs";
@@ -111,11 +112,12 @@ export default function GoogleDriveChamber() {
   const [detailsItem, setDetailsItem] = useState(null);
 
   // Modals state
-  const [modalType, setModalType] = useState(null); // 'create-folder', 'create-file', 'rename', 'delete'
+  const [modalType, setModalType] = useState(null); // 'create-folder', 'create-file', 'rename', 'delete', 'move'
   const [modalItem, setModalItem] = useState(null);
   const [modalInput, setModalInput] = useState("");
   const [newFileContent, setNewFileContent] = useState("");
   const [selectedExt, setSelectedExt] = useState(".txt");
+  const [targetMoveFolderId, setTargetMoveFolderId] = useState("root");
   const [isSubmittingModal, setIsSubmittingModal] = useState(false);
   const [reconnectingDrive, setReconnectingDrive] = useState(false);
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
@@ -236,6 +238,12 @@ export default function GoogleDriveChamber() {
           credentials: "include",
         });
         if (res.ok) {
+          if (user) {
+            const newUser = { ...user };
+            if (!newUser.integrations) newUser.integrations = {};
+            newUser.integrations.googleDrive = { connected: true };
+            setUser(newUser);
+          }
           setError(null);
           setIsConsentModalOpen(false);
           fetchDriveContents();
@@ -252,6 +260,11 @@ export default function GoogleDriveChamber() {
     },
     onError: (err) => {
       console.error("Google Drive connection error:", err);
+      setReconnectingDrive(false);
+      setIsConsentModalOpen(false);
+    },
+    onNonOAuthError: (err) => {
+      console.error("Google Drive non-OAuth error:", err);
       setReconnectingDrive(false);
       setIsConsentModalOpen(false);
     },
@@ -489,15 +502,19 @@ export default function GoogleDriveChamber() {
     if (sourceProviders.has("google_drive")) {
       // Move within Drive
       try {
-        await fetch(`${SERVER_URL}/drive/move`, {
+        const res = await fetch(`${SERVER_URL}/drive/move`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            items: clipboard.items.map((i) => i._id),
+            items: clipboard.items.map((i) => i._id || i.id),
             targetId: destDriveId,
           }),
           credentials: "include",
         });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "Failed to move within Drive");
+        }
         if (clipboard.action === "cut") {
           clearClipboard();
         }
@@ -718,6 +735,8 @@ export default function GoogleDriveChamber() {
     }
     if (!items || items.length === 0) return;
 
+    const destFolderId = targetFolder._id || targetFolder.id || "root";
+
     // Check source provider
     const isDrive = items.every((i) => i.provider === "google_drive");
     const isLocal = items.some((i) => !i.provider || i.provider === "local");
@@ -725,22 +744,58 @@ export default function GoogleDriveChamber() {
     if (isDrive) {
       // Move within Drive
       try {
-        await fetch(`${SERVER_URL}/drive/move`, {
+        const res = await fetch(`${SERVER_URL}/drive/move`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            items: items.map((i) => i._id),
-            targetId: targetFolder._id,
+            items: items.map((i) => i._id || i.id),
+            targetId: destFolderId,
           }),
           credentials: "include",
         });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "Failed to move within Drive");
+        }
         fetchDriveContents(true);
       } catch (err) {
         console.error("Failed to move within Drive", err);
       }
     } else if (isLocal) {
       // Transfer from Vault to this specific folder
-      transferVaultToDrive(items, targetFolder._id);
+      transferVaultToDrive(items, destFolderId);
+    }
+  };
+
+  // Direct move to target folder
+  const handleMove = async (targetId) => {
+    const itemsToMove = modalItem ? [modalItem] : selectedItems;
+    if (!itemsToMove || itemsToMove.length === 0) return;
+
+    try {
+      setIsSubmittingModal(true);
+      const res = await fetch(`${SERVER_URL}/drive/move`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: itemsToMove.map((i) => i._id || i.id),
+          targetId: targetId || "root",
+        }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to move items on Drive");
+      }
+      setModalType(null);
+      setModalItem(null);
+      setSelectedItems([]);
+      fetchDriveContents(true);
+    } catch (err) {
+      console.error("Failed to move items on Drive", err);
+      alert(err.message || "Failed to move items on Drive");
+    } finally {
+      setIsSubmittingModal(false);
     }
   };
 
@@ -763,21 +818,38 @@ export default function GoogleDriveChamber() {
             </button>
           )}
 
-          <Link
-            to="/dashboard/google-drive"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-linkdrive-accent/10 hover:bg-linkdrive-accent/20 border border-linkdrive-accent/20 hover:border-linkdrive-accent/40 text-linkdrive-accent font-bold text-sm transition-all duration-150 cursor-pointer shadow-sm active:scale-95 shrink-0"
-            title="Return to Google Drive root"
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+            }}
+            onDrop={(e) => handleFolderDrop(e, { _id: "root", name: "Google Drive" })}
           >
-            <VaultDriveIcon size={18} />
-            <span>Google Drive</span>
-          </Link>
+            <Link
+              to="/dashboard/google-drive"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-linkdrive-accent/10 hover:bg-linkdrive-accent/20 border border-linkdrive-accent/20 hover:border-linkdrive-accent/40 text-linkdrive-accent font-bold text-sm transition-all duration-150 cursor-pointer shadow-sm active:scale-95 shrink-0"
+              title="Return to Google Drive root (Drop items here to move to root)"
+            >
+              <VaultDriveIcon size={18} />
+              <span>Google Drive</span>
+            </Link>
+          </div>
 
           {breadcrumbs.slice(1).map((b, idx) => (
-            <div key={b.id || idx} className="flex items-center gap-1 text-sm font-medium">
+            <div
+              key={b.id || idx}
+              className="flex items-center gap-1 text-sm font-medium"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+              }}
+              onDrop={(e) => handleFolderDrop(e, { _id: b.id, name: b.name })}
+            >
               <ChevronRight size={14} className="text-slate-400" />
               <Link
                 to={`/dashboard/google-drive/${b.id}`}
                 className="text-slate-600 dark:text-white/70 hover:text-linkdrive-accent transition-colors truncate max-w-[150px]"
+                title={`Navigate or drop to move to ${b.name}`}
               >
                 {b.name}
               </Link>
@@ -1036,6 +1108,11 @@ export default function GoogleDriveChamber() {
                     onDetails={(item) => setDetailsItem(item)}
                     onCopy={(item) => copyItems([item], "google_drive")}
                     onCut={(item) => cutItems([item], "google_drive")}
+                    onMove={(item) => {
+                      setModalItem(item);
+                      setTargetMoveFolderId("root");
+                      setModalType("move");
+                    }}
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
                     onDragOver={(e) => {
@@ -1102,6 +1179,11 @@ export default function GoogleDriveChamber() {
                     onDetails={(item) => setDetailsItem(item)}
                     onCopy={(item) => copyItems([item], "google_drive")}
                     onCut={(item) => cutItems([item], "google_drive")}
+                    onMove={(item) => {
+                      setModalItem(item);
+                      setTargetMoveFolderId("root");
+                      setModalType("move");
+                    }}
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
                     isBeingDragged={activeDragSource?.items?.some((i) => i._id === file._id)}
@@ -1147,9 +1229,20 @@ export default function GoogleDriveChamber() {
           <button
             onClick={() => cutItems(selectedItems, "google_drive")}
             className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-linkdrive-accent transition-colors"
-            title="Move to clipboard"
+            title="Move to clipboard (Cut)"
           >
-            <Scissors size={14} /> Move
+            <Scissors size={14} /> Cut
+          </button>
+          <button
+            onClick={() => {
+              setModalItem(null);
+              setTargetMoveFolderId("root");
+              setModalType("move");
+            }}
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-linkdrive-accent transition-colors"
+            title="Move selected items to another folder"
+          >
+            <FolderInput size={14} /> Move to...
           </button>
           <div className="h-4 w-px bg-slate-300 dark:bg-white/10" />
           <button
@@ -1197,12 +1290,124 @@ export default function GoogleDriveChamber() {
             ? "New Google Drive File"
             : modalType === "rename"
             ? "Rename in Google Drive"
+            : modalType === "move"
+            ? "Move in Google Drive"
             : "Delete from Google Drive"
         }
         className={modalType === "create-file" ? "max-w-2xl" : "max-w-md"}
       >
         <div className="space-y-4 text-slate-900 dark:text-white">
-          {modalType === "delete" ? (
+          {modalType === "move" ? (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10">
+                <div className="text-[10px] font-bold text-slate-500 dark:text-white/60 uppercase tracking-wider mb-1">
+                  Moving
+                </div>
+                <div className="font-semibold text-sm truncate text-slate-900 dark:text-white">
+                  {modalItem ? modalItem.name : `${selectedItems.length} selected items`}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-white/60 uppercase tracking-wider mb-2">
+                  Choose Destination Folder
+                </label>
+                <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+                  {/* Google Drive Root */}
+                  <button
+                    type="button"
+                    onClick={() => setTargetMoveFolderId("root")}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                      targetMoveFolderId === "root"
+                        ? "bg-linkdrive-accent/15 border-linkdrive-accent text-linkdrive-accent font-bold"
+                        : "border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-white/80"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <VaultDriveIcon size={18} />
+                      <span className="text-sm">Google Drive (Root)</span>
+                    </div>
+                    {targetMoveFolderId === "root" && (
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-linkdrive-accent/20 text-linkdrive-accent">
+                        Selected
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Breadcrumb Ancestor Folders */}
+                  {breadcrumbs
+                    .slice(1)
+                    .filter((b) => b.id !== (driveFolderId || "root") && (!modalItem || b.id !== modalItem._id))
+                    .map((b) => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => setTargetMoveFolderId(b.id)}
+                        className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                          targetMoveFolderId === b.id
+                            ? "bg-linkdrive-accent/15 border-linkdrive-accent text-linkdrive-accent font-bold"
+                            : "border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-white/80"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 truncate">
+                          <Folder size={18} className="text-amber-500 shrink-0" />
+                          <span className="text-sm truncate">{b.name} (Parent)</span>
+                        </div>
+                        {targetMoveFolderId === b.id && (
+                          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-linkdrive-accent/20 text-linkdrive-accent shrink-0">
+                            Selected
+                          </span>
+                        )}
+                      </button>
+                    ))}
+
+                  {/* Subfolders in current folder */}
+                  {data.directories
+                    .filter((d) => !modalItem || d._id !== modalItem._id)
+                    .filter((d) => !selectedItems.some((s) => s._id === d._id))
+                    .map((dir) => (
+                      <button
+                        key={dir._id}
+                        type="button"
+                        onClick={() => setTargetMoveFolderId(dir._id)}
+                        className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                          targetMoveFolderId === dir._id
+                            ? "bg-linkdrive-accent/15 border-linkdrive-accent text-linkdrive-accent font-bold"
+                            : "border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-white/80"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 truncate">
+                          <Folder size={18} className="text-amber-500 shrink-0" />
+                          <span className="text-sm truncate">{dir.name}</span>
+                        </div>
+                        {targetMoveFolderId === dir._id && (
+                          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-linkdrive-accent/20 text-linkdrive-accent shrink-0">
+                            Selected
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setModalType(null)}
+                  disabled={isSubmittingModal}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleMove(targetMoveFolderId)}
+                  disabled={isSubmittingModal}
+                  className="bg-linkdrive-accent hover:bg-linkdrive-accent/90 text-white font-bold"
+                >
+                  {isSubmittingModal ? "Moving..." : "Move Here"}
+                </Button>
+              </div>
+            </div>
+          ) : modalType === "delete" ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3.5 p-4 bg-rose-500/10 rounded-2xl border border-rose-500/20">
                 <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">

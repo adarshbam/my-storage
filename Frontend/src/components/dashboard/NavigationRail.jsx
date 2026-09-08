@@ -68,6 +68,11 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
       console.error("Google Drive connection error:", err);
       setIsConnectingDrive(false);
     },
+    onNonOAuthError: (err) => {
+      console.error("Google Drive non-OAuth error:", err);
+      setIsConnectingDrive(false);
+      setIsDriveConsentOpen(false);
+    },
   });
 
   const disconnectDrive = async () => {

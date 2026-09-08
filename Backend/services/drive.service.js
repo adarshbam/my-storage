@@ -628,6 +628,7 @@ export const updateDriveItemLogic = async ({ fileId, data, req }) => {
   const updateParams = {
     fileId,
     fields: "id, name, parents",
+    supportsAllDrives: true,
   };
 
   if (name) {
@@ -636,11 +637,14 @@ export const updateDriveItemLogic = async ({ fileId, data, req }) => {
 
   if (parentId) {
     // To move a file, we need to know its current parents to remove them
-    const file = await drive.files.get({ fileId, fields: "parents" });
-    const previousParents = (file.data.parents || []).join(",");
+    const file = await drive.files.get({ fileId, fields: "parents", supportsAllDrives: true });
+    const currentParents = file.data.parents || [];
+    const previousParents = currentParents.filter((p) => p !== parentId).join(",");
 
     updateParams.addParents = parentId;
-    updateParams.removeParents = previousParents;
+    if (previousParents && previousParents.length > 0) {
+      updateParams.removeParents = previousParents;
+    }
   }
 
   const response = await drive.files.update(updateParams);
@@ -653,31 +657,67 @@ export const updateDriveItemLogic = async ({ fileId, data, req }) => {
 };
 
 export const moveDriveItemsLogic = async ({ items, targetId, req }) => {
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return { msg: "No items to move", results: [] };
+  }
+
   const client = await getAuthenticatedClient(req, true);
   const { drive } = client;
 
+  const destFolderId = targetId || "root";
   const results = [];
-  for (const item of items) {
-    const itemId = item._id || item.id;
-    // To move a file, we need to know its current parents to remove them
-    const file = await drive.files.get({
-      fileId: itemId,
-      fields: "parents",
-    });
-    const previousParents = (file.data.parents || []).join(",");
+  const errors = [];
 
-    const response = await drive.files.update({
-      fileId: itemId,
-      addParents: targetId,
-      removeParents: previousParents,
-      fields: "id, name, parents",
-    });
-    results.push(response.data);
+  for (const item of items) {
+    const itemId = typeof item === "string" ? item : (item?._id || item?.id);
+    if (!itemId || itemId === destFolderId) continue;
+
+    try {
+      // To move a file, we need to know its current parents to remove them
+      const file = await drive.files.get({
+        fileId: itemId,
+        fields: "id, name, parents",
+        supportsAllDrives: true,
+      });
+
+      const currentParents = file.data.parents || [];
+      if (currentParents.includes(destFolderId)) {
+        results.push(file.data);
+        continue;
+      }
+
+      const previousParents = currentParents.filter((p) => p !== destFolderId).join(",");
+
+      const updateParams = {
+        fileId: itemId,
+        addParents: destFolderId,
+        fields: "id, name, parents",
+        supportsAllDrives: true,
+      };
+
+      if (previousParents && previousParents.length > 0) {
+        updateParams.removeParents = previousParents;
+      }
+
+      const response = await drive.files.update(updateParams);
+      results.push(response.data);
+    } catch (itemErr) {
+      console.error(`[Drive Move Error for ${itemId}]:`, itemErr?.response?.data || itemErr?.message);
+      errors.push({ itemId, error: itemErr?.message || "Failed to move item" });
+    }
+  }
+
+  if (results.length === 0 && errors.length > 0) {
+    const firstError = errors[0].error || "Failed to move items on Drive";
+    const error = new Error(firstError);
+    error.statusCode = 400;
+    throw error;
   }
 
   return {
     msg: "Items moved successfully",
     results,
+    errors: errors.length > 0 ? errors : undefined,
   };
 };
 
