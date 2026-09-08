@@ -426,6 +426,10 @@ export const createDriveFolderLogic = async ({ parentFolderId, name, req }) => {
 };
 
 export const uploadFileToDriveLogic = async ({ parentFolderId, req }) => {
+  if (typeof req.setTimeout === "function") {
+    req.setTimeout(30 * 60 * 1000);
+  }
+
   let rawFileName = req.headers.filename;
   if (rawFileName) {
     try {
@@ -440,45 +444,54 @@ export const uploadFileToDriveLogic = async ({ parentFolderId, req }) => {
     throw err;
   }
 
-  const client = await getAuthenticatedClient(req, true);
-  const { drive } = client;
-
-  return new Promise((resolve, reject) => {
+  // Start reading the request stream IMMEDIATELY to prevent missing 'data' or 'end' events during async auth
+  const getBodyBuffer = new Promise((resolve, reject) => {
+    if (req.readableEnded) {
+      return resolve(req.rawBody || Buffer.alloc(0));
+    }
     const chunks = [];
     req.on("data", (chunk) => chunks.push(chunk));
-    req.on("end", async () => {
-      try {
-        const buffer = Buffer.concat(chunks);
-        const stream = Readable.from([buffer]);
-        const mimeType =
-          req.headers["content-type"] || "application/octet-stream";
-
-        const response = await drive.files.create({
-          requestBody: {
-            name: fileName,
-            parents: [parentFolderId || "root"],
-          },
-          media: {
-            mimeType,
-            body: stream,
-          },
-          fields: "id, name, mimeType, size",
-        });
-
-        resolve({
-          msg: "Uploaded!",
-          id: response.data.id,
-          name: response.data.name,
-        });
-      } catch (err) {
-        reject(err);
-      }
-    });
-
-    req.on("error", (err) => {
-      reject(err);
-    });
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", (err) => reject(err));
   });
+
+  // Authenticate client and buffer data concurrently in parallel
+  const [client, buffer] = await Promise.all([
+    getAuthenticatedClient(req, true),
+    getBodyBuffer,
+  ]);
+  const { drive } = client;
+
+  const mimeType = req.headers["content-type"] || "application/octet-stream";
+  const stream = Readable.from([buffer]);
+
+  const response = await drive.files.create(
+    {
+      requestBody: {
+        name: fileName,
+        parents: [parentFolderId || "root"],
+      },
+      media: {
+        mimeType,
+        body: stream,
+      },
+      fields: "id, name, mimeType, size",
+      supportsAllDrives: true,
+    },
+    {
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+      timeout: 30 * 60 * 1000,
+    }
+  );
+
+  return {
+    msg: "Uploaded!",
+    id: response.data.id,
+    name: response.data.name,
+    size: response.data.size,
+    mimeType: response.data.mimeType,
+  };
 };
 
 export const deleteFromDriveLogic = async ({ fileId, req }) => {
@@ -916,17 +929,25 @@ export const transferFromVaultLogic = async ({ items, targetFolderId, action = "
       const s3Key = `${itemId}${ext || ""}`;
       const objectData = await getObjectFromB2({ key: s3Key });
 
-      const response = await drive.files.create({
-        requestBody: {
-          name: name,
-          parents: [driveParentId || "root"],
+      const response = await drive.files.create(
+        {
+          requestBody: {
+            name: name,
+            parents: [driveParentId || "root"],
+          },
+          media: {
+            mimeType: "application/octet-stream",
+            body: objectData.Body,
+          },
+          fields: "id, name, mimeType, size",
+          supportsAllDrives: true,
         },
-        media: {
-          mimeType: "application/octet-stream",
-          body: objectData.Body,
-        },
-        fields: "id, name, mimeType, size",
-      });
+        {
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+          timeout: 30 * 60 * 1000,
+        }
+      );
       return response.data;
     }
   };

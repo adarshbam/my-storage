@@ -125,7 +125,7 @@ export function useUploadManager({
 
       xhr.open("POST", uploadUrl, true);
       xhr.withCredentials = true;
-      xhr.setRequestHeader("filename", file.name);
+      xhr.setRequestHeader("filename", encodeURIComponent(file.name));
       xhr.setRequestHeader("filesize", file.size);
       xhr.setRequestHeader("x-file-id", _id);
       xhr.setRequestHeader("x-start-byte", startByte.toString());

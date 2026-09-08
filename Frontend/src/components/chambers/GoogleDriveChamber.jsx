@@ -40,6 +40,7 @@ import {
   ClipboardPaste,
   Share2,
   FolderInput,
+  Check,
 } from "lucide-react";
 import Editor from "react-simple-code-editor";
 import * as Prism from "prismjs";
@@ -125,6 +126,9 @@ export default function GoogleDriveChamber() {
   // Upload file ref
   const fileInputRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [isDraggingFilesOver, setIsDraggingFilesOver] = useState(false);
+  const dragCounter = useRef(0);
 
   // Drag over state for folders
   const [dragOverFolderId, setDragOverFolderId] = useState(null);
@@ -293,33 +297,141 @@ export default function GoogleDriveChamber() {
     }
   };
 
+  // Upload helper with real-time XMLHttpRequest progress reporting
+  const uploadSingleFileWithProgress = (file, parentId, onProgress) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const startTime = Date.now();
+      let lastLoaded = 0;
+      let lastTime = startTime;
+      let speedStr = "0 KB/s";
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.min(99, Math.round((event.loaded / event.total) * 100));
+          const now = Date.now();
+          const deltaSec = (now - lastTime) / 1000;
+          if (deltaSec >= 0.25) {
+            const deltaBytes = event.loaded - lastLoaded;
+            const bytesPerSec = deltaSec > 0 ? deltaBytes / deltaSec : 0;
+            if (bytesPerSec > 1024 * 1024) {
+              speedStr = `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
+            } else {
+              speedStr = `${Math.round(bytesPerSec / 1024)} KB/s`;
+            }
+            lastLoaded = event.loaded;
+            lastTime = now;
+          }
+          onProgress({
+            loaded: event.loaded,
+            total: event.total,
+            percent,
+            speed: speedStr,
+            phase: "uploading",
+          });
+        }
+      };
+
+      xhr.upload.onload = () => {
+        onProgress({
+          loaded: file.size,
+          total: file.size,
+          percent: 100,
+          speed: "",
+          phase: "processing",
+        });
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const res = JSON.parse(xhr.responseText);
+            resolve(res);
+          } catch {
+            resolve({ success: true });
+          }
+        } else {
+          let errMsg = `Upload failed (${xhr.status})`;
+          try {
+            const res = JSON.parse(xhr.responseText);
+            if (res.error) errMsg = res.error;
+          } catch {}
+          reject(new Error(errMsg));
+        }
+      };
+
+      xhr.onerror = () => {
+        reject(new Error("Network connection error during upload"));
+      };
+
+      xhr.ontimeout = () => {
+        reject(new Error("Upload timed out. Please try again."));
+      };
+
+      xhr.timeout = 30 * 60 * 1000; // 30 minutes
+      xhr.open("POST", `${SERVER_URL}/drive/file/${parentId}/upload`);
+      xhr.withCredentials = true;
+      xhr.setRequestHeader("filename", encodeURIComponent(file.name));
+      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+      xhr.send(file);
+    });
+  };
+
   // Upload file directly to Drive
   const handleFileUpload = async (e) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const rawFiles = e.target?.files || e.dataTransfer?.files || e.files;
+    if (!rawFiles || rawFiles.length === 0) return;
 
+    const fileList = Array.from(rawFiles);
     setIsUploading(true);
     const parentId = driveFolderId || "root";
+
     try {
-      for (const file of Array.from(files)) {
-        const res = await fetch(`${SERVER_URL}/drive/file/${parentId}/upload`, {
-          method: "POST",
-          headers: {
-            filename: encodeURIComponent(file.name),
-            "Content-Type": file.type || "application/octet-stream",
-          },
-          body: file,
-          credentials: "include",
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        setUploadProgress({
+          active: true,
+          phase: "uploading",
+          fileName: file.name,
+          fileSize: file.size,
+          currentIndex: i + 1,
+          totalFiles: fileList.length,
+          percent: 0,
+          loaded: 0,
+          total: file.size,
+          speed: "Starting...",
         });
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || `Failed to upload ${file.name}`);
-        }
+        await uploadSingleFileWithProgress(file, parentId, (progressInfo) => {
+          setUploadProgress((prev) => ({
+            ...prev,
+            phase: progressInfo.phase || prev?.phase,
+            percent: progressInfo.percent,
+            loaded: progressInfo.loaded,
+            total: progressInfo.total,
+            speed: progressInfo.speed || prev?.speed,
+          }));
+        });
       }
+
+      setUploadProgress((prev) => ({
+        ...prev,
+        phase: "complete",
+        percent: 100,
+      }));
+
+      setTimeout(() => {
+        setUploadProgress(null);
+      }, 3500);
+
       fetchDriveContents(true);
     } catch (err) {
       console.error("Drive upload error:", err);
+      setUploadProgress((prev) => ({
+        ...prev,
+        phase: "error",
+        error: err.message || "Failed to upload file to Google Drive",
+      }));
       alert(err.message || "Failed to upload file to Google Drive");
     } finally {
       setIsUploading(false);
@@ -637,6 +749,55 @@ export default function GoogleDriveChamber() {
     }
   };
 
+  // Top-level Chamber Drag-and-Drop handlers for OS file drop
+  const handleRootDragEnter = (e) => {
+    e.preventDefault();
+    dragCounter.current += 1;
+    if (e.dataTransfer.types && Array.from(e.dataTransfer.types).includes("Files")) {
+      setIsDraggingFilesOver(true);
+    }
+  };
+
+  const handleRootDragLeave = (e) => {
+    e.preventDefault();
+    dragCounter.current -= 1;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setIsDraggingFilesOver(false);
+    }
+  };
+
+  const handleRootDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleRootDrop = (e) => {
+    e.preventDefault();
+    dragCounter.current = 0;
+    setIsDraggingFilesOver(false);
+    setDragOverFolderId(null);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileUpload({ files: e.dataTransfer.files });
+      return;
+    }
+
+    let items = activeDragSource?.items;
+    if (!items || items.length === 0) {
+      try {
+        const raw = e.dataTransfer.getData("draggedItems");
+        if (raw) items = JSON.parse(raw);
+      } catch {}
+    }
+    if (!items || items.length === 0) return;
+
+    const isLocal = items.some((i) => !i.provider || i.provider === "local");
+    if (isLocal) {
+      transferVaultToDrive(items, driveFolderId || "root");
+    }
+  };
+
   // Background drop handler: drops directly into current Google Drive folder
   const handleContainerDrop = (e) => {
     e.preventDefault();
@@ -644,7 +805,7 @@ export default function GoogleDriveChamber() {
 
     // If OS files dropped from desktop
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileUpload({ target: { files: e.dataTransfer.files } });
+      handleFileUpload({ files: e.dataTransfer.files });
       return;
     }
 
@@ -802,7 +963,29 @@ export default function GoogleDriveChamber() {
   const allItems = [...data.directories, ...data.files];
 
   return (
-    <div className="flex-1 min-w-0 w-full flex flex-col relative" onClick={handleBackgroundClick}>
+    <div
+      className="flex-1 min-w-0 w-full flex flex-col relative"
+      onClick={handleBackgroundClick}
+      onDragEnter={handleRootDragEnter}
+      onDragOver={handleRootDragOver}
+      onDragLeave={handleRootDragLeave}
+      onDrop={handleRootDrop}
+    >
+      {/* ── DRAG-OVER UPLOAD DROPZONE OVERLAY ── */}
+      {isDraggingFilesOver && (
+        <div className="absolute inset-0 z-50 bg-linkdrive-accent/10 dark:bg-linkdrive-accent/15 backdrop-blur-[2px] border-2 border-dashed border-linkdrive-accent rounded-3xl flex flex-col items-center justify-center p-6 text-center pointer-events-none transition-all duration-200">
+          <div className="w-16 h-16 rounded-2xl bg-linkdrive-accent/20 text-linkdrive-accent flex items-center justify-center mb-3 animate-bounce shadow-lg shadow-linkdrive-accent/20">
+            <Upload size={32} />
+          </div>
+          <h3 className="text-base font-bold text-slate-900 dark:text-white">
+            Drop files here to upload to Google Drive
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Files will be uploaded directly to {dirName || "Google Drive"}
+          </p>
+        </div>
+      )}
+
       {/* ── CHAMBER HEADER TOOLBAR ── */}
       <div className="shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-white/5">
         {/* Breadcrumb Navigation */}
@@ -955,14 +1138,26 @@ export default function GoogleDriveChamber() {
           <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold bg-linkdrive-accent hover:bg-linkdrive-accent/90 text-white shadow-md shadow-linkdrive-accent/20"
+            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold bg-linkdrive-accent hover:bg-linkdrive-accent/90 text-white shadow-md shadow-linkdrive-accent/20 relative overflow-hidden transition-all"
           >
             {isUploading ? (
-              <Loader2 size={15} className="animate-spin" />
+              <Loader2 size={15} className="animate-spin shrink-0" />
             ) : (
-              <Upload size={15} />
+              <Upload size={15} className="shrink-0" />
             )}
-            <span>{isUploading ? "Uploading..." : "Upload to Drive"}</span>
+            <span>
+              {isUploading
+                ? uploadProgress?.phase === "processing"
+                  ? "Processing..."
+                  : `Uploading ${uploadProgress?.percent ?? 0}%`
+                : "Upload to Drive"}
+            </span>
+            {isUploading && typeof uploadProgress?.percent === "number" && (
+              <div
+                className="absolute bottom-0 left-0 h-1 bg-white/50 transition-all duration-200"
+                style={{ width: `${uploadProgress.percent}%` }}
+              />
+            )}
           </Button>
 
           {/* View Mode Toggle */}
@@ -1621,6 +1816,131 @@ export default function GoogleDriveChamber() {
         onConfirm={reconnectGoogleDrive}
         isConnecting={reconnectingDrive}
       />
+
+      {/* ── GOOGLE DRIVE UPLOAD PROGRESS HUD ── */}
+      {uploadProgress && (
+        <div className="fixed bottom-6 right-6 z-[9999] w-96 max-w-[calc(100vw-32px)] animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className="p-4 rounded-3xl bg-slate-900/95 dark:bg-[#0c0c0e]/95 backdrop-blur-2xl text-white border border-slate-700/60 dark:border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.6),0_0_30px_rgba(16,185,129,0.15)] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={cn(
+                    "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
+                    uploadProgress.phase === "complete"
+                      ? "bg-emerald-500/20 text-emerald-400"
+                      : uploadProgress.phase === "error"
+                      ? "bg-rose-500/20 text-rose-400"
+                      : "bg-linkdrive-accent/20 text-linkdrive-accent"
+                  )}
+                >
+                  {uploadProgress.phase === "complete" ? (
+                    <Check size={18} />
+                  ) : uploadProgress.phase === "error" ? (
+                    <AlertTriangle size={18} />
+                  ) : uploadProgress.phase === "processing" ? (
+                    <Loader2 size={18} className="animate-spin text-linkdrive-accent" />
+                  ) : (
+                    <Upload size={18} className="animate-pulse text-linkdrive-accent" />
+                  )}
+                </div>
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-white">
+                    {uploadProgress.phase === "complete"
+                      ? "Upload Complete"
+                      : uploadProgress.phase === "error"
+                      ? "Upload Failed"
+                      : uploadProgress.phase === "processing"
+                      ? "Processing in Drive..."
+                      : "Uploading to Drive"}
+                  </h4>
+                  <span className="text-[10px] font-mono text-linkdrive-accent font-bold">
+                    {uploadProgress.totalFiles > 1
+                      ? `File ${uploadProgress.currentIndex} of ${uploadProgress.totalFiles}`
+                      : "Direct Stream"}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {uploadProgress.phase === "uploading" && uploadProgress.speed && (
+                  <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded-lg bg-white/10 text-white/70">
+                    {uploadProgress.speed}
+                  </span>
+                )}
+                {(uploadProgress.phase === "complete" || uploadProgress.phase === "error") && (
+                  <button
+                    onClick={() => setUploadProgress(null)}
+                    className="p-1 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                    title="Dismiss"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* File Info */}
+            <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/5 mb-3">
+              <div className="font-bold text-xs truncate text-white mb-1" title={uploadProgress.fileName}>
+                {uploadProgress.fileName}
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-white/50 font-mono">
+                <span>
+                  {uploadProgress.loaded > 0
+                    ? `${formatSize(uploadProgress.loaded)} / ${formatSize(uploadProgress.total || uploadProgress.fileSize)}`
+                    : formatSize(uploadProgress.fileSize || 0)}
+                </span>
+                <span
+                  className={cn(
+                    "font-bold font-mono",
+                    uploadProgress.phase === "error"
+                      ? "text-rose-400"
+                      : uploadProgress.phase === "complete"
+                      ? "text-emerald-400"
+                      : "text-linkdrive-accent"
+                  )}
+                >
+                  {uploadProgress.phase === "complete"
+                    ? "100%"
+                    : uploadProgress.phase === "error"
+                    ? "Error"
+                    : uploadProgress.phase === "processing"
+                    ? "Finalizing..."
+                    : `${uploadProgress.percent}%`}
+                </span>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="relative w-full h-2 rounded-full bg-white/10 overflow-hidden mb-1">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-200 ease-out relative overflow-hidden",
+                  uploadProgress.phase === "complete"
+                    ? "bg-emerald-400"
+                    : uploadProgress.phase === "error"
+                    ? "bg-rose-500"
+                    : "bg-gradient-to-r from-linkdrive-accent via-emerald-400 to-cyan-400"
+                )}
+                style={{
+                  width: `${Math.max(3, Math.min(100, uploadProgress.percent || 0))}%`,
+                }}
+              >
+                {(uploadProgress.phase === "uploading" || uploadProgress.phase === "processing") && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse" />
+                )}
+              </div>
+            </div>
+
+            {/* Error message */}
+            {uploadProgress.phase === "error" && uploadProgress.error && (
+              <div className="mt-2 p-2 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[11px] font-medium leading-relaxed">
+                {uploadProgress.error}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
