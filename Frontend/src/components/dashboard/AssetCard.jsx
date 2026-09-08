@@ -18,6 +18,7 @@ import {
   CloudUpload,
   FolderGit2,
   FolderOpen,
+  FileCode,
 } from "lucide-react";
 import getFileImage, { renderFileIcon } from "../../lib/FileImages";
 import { formatSize, isSpecialFolder } from "../../lib/utils";
@@ -30,7 +31,7 @@ import { motion } from "framer-motion";
 import { SERVER_URL } from "../../lib/api";
 import { usePlan } from "../../context/PlanContext";
 import Skeleton from "../ui/Skeleton";
-import { prefetchFileContent } from "../../lib/fileCache";
+import { prefetchFileContent, isTextOrCode } from "../../lib/fileCache";
 import { useThumbnailUrl } from "../../lib/thumbnailCache";
 
 const formatRelativeTime = (dateString) => {
@@ -177,6 +178,7 @@ export default function AssetCard({
   onViewHistory = null,
   onConfigureBackup = null,
   onCloneToVault = null,
+  onEdit = null,
   specialView = null,
 }) {
   const navigate = useNavigate();
@@ -211,6 +213,13 @@ export default function AssetCard({
     (specialView === "github" || (isDirectory && pathParts.length <= 2));
 
   // Determine capabilities
+  const canEdit =
+    !isTrash &&
+    !effectiveReadOnly &&
+    !isDirectory &&
+    isTextOrCode(item.extension, item.name) &&
+    !!onEdit;
+
   const canRename =
     !isTrash &&
     !effectiveReadOnly &&
@@ -456,6 +465,18 @@ export default function AssetCard({
               title="Details"
             >
               <Info size={16} />
+            </button>
+          )}
+          {canEdit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(item);
+              }}
+              className="p-1.5 text-slate-400 hover:text-accent-primary bg-slate-100 dark:bg-black/40 hover:bg-accent-soft rounded-lg transition-all"
+              title="Edit File"
+            >
+              <FileCode size={16} />
             </button>
           )}
           {canRename && (
@@ -808,6 +829,19 @@ export default function AssetCard({
                   className={(item.isStarred || item.starred) ? "text-[#FF7A3D] drop-shadow-[0_0_8px_rgba(255,122,61,0.85)]" : "text-slate-400 dark:text-white/60"}
                 />
                 Priority
+              </button>
+            )}
+
+            {canEdit && (
+              <button
+                onClick={() => {
+                  closeMenu();
+                  onEdit(item);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors rounded-xl"
+              >
+                <FileCode size={14} className="shrink-0 text-accent-primary" />
+                Edit File
               </button>
             )}
 

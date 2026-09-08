@@ -566,8 +566,8 @@ export default function CommandBar({
 
       {/* RIGHT: Quick Actions & Status */}
       <div className="flex items-center gap-3 shrink-0">
-        {/* Quick Create Actions (Vault Only) */}
-        {isVaultRoute && (
+        {/* Quick Create Actions (Vault Only - hidden in Google Drive Chamber) */}
+        {isVaultRoute && !location.pathname.startsWith("/dashboard/google-drive") && (
           <div
             data-tour="quick-actions"
             className="hidden lg:flex items-center gap-1 border-r border-slate-200 dark:border-white/10 pr-3 mr-1"
@@ -668,8 +668,8 @@ export default function CommandBar({
             </span>
           </button>
 
-          {/* Quick Actions (Vault Only) */}
-          {isVaultRoute && (
+          {/* Quick Actions (Vault Only - hidden in Google Drive Chamber) */}
+          {isVaultRoute && !location.pathname.startsWith("/dashboard/google-drive") && (
             <div className="mb-4">
               <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-white/40 px-2 mb-2">
                 Vault Actions

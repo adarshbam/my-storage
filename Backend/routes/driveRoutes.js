@@ -122,9 +122,28 @@ router.post(
   validate(uploadFileToDriveSchema),
   uploadFileToDrive,
 );
+router.post(
+  "/upload",
+  checkAuth,
+  loadPlanContext,
+  requireFeature("gdrive_sync"),
+  mediumWriteLimiter,
+  throttle(300, 8, "drive-upload"),
+  uploadFileToDrive,
+);
 // Update or Move a file/folder
 router.patch(
   "/file/:fileId",
+  checkAuth,
+  loadPlanContext,
+  requireFeature("gdrive_sync"),
+  mediumWriteLimiter,
+  throttle(300, 8, "drive-update"),
+  validate(updateDriveItemSchema),
+  updateDriveItem,
+);
+router.patch(
+  "/file/:fileId/rename",
   checkAuth,
   loadPlanContext,
   requireFeature("gdrive_sync"),
@@ -186,6 +205,15 @@ router.post(
   mediumWriteLimiter,
   throttle(300, 8, "drive-folder-create"),
   validate(uploadFileToDriveSchema), // Same schema: requires parentFolderId in params
+  createDriveFolder,
+);
+router.post(
+  "/folder",
+  checkAuth,
+  loadPlanContext,
+  requireFeature("gdrive_sync"),
+  mediumWriteLimiter,
+  throttle(300, 8, "drive-folder-create"),
   createDriveFolder,
 );
 // Download an entire folder as a .zip

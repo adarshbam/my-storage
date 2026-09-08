@@ -186,6 +186,7 @@ export default function FilePreviewModal({
   ownerId,
   selectedBranch,
   onViewHistory,
+  initialEditMode = false,
 }) {
   const { isNoPlan, rules } = usePlan();
   const allowEdit = !isNoPlan && (rules?.permissions?.allowUpload ?? true);
@@ -216,7 +217,12 @@ export default function FilePreviewModal({
     if (file?.sha) setCurrentSha(file.sha);
     if (file?.name) setTempName(file.name);
     setImgLoaded(false);
-  }, [file]);
+    if (initialEditMode && allowEdit) {
+      setIsEditing(true);
+    } else {
+      setIsEditing(false);
+    }
+  }, [file, initialEditMode, allowEdit, isOpen]);
 
   const handleRenameSubmit = async () => {
     if (!tempName.trim() || tempName === file.name) {
@@ -544,6 +550,7 @@ export default function FilePreviewModal({
       setContent(editedContent);
       setIsEditing(false);
       setSaveSuccess(true);
+      window.dispatchEvent(new CustomEvent("vault:refresh"));
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (err) {
       console.error(err);

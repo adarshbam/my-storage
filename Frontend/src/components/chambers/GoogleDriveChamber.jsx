@@ -18,6 +18,8 @@ import {
   ArrowLeft,
   Upload,
   FolderPlus,
+  FilePlus,
+  FileCode,
   Loader2,
   Trash2,
   Edit2,
@@ -38,10 +40,42 @@ import {
   ClipboardPaste,
   Share2,
 } from "lucide-react";
+import Editor from "react-simple-code-editor";
+import * as Prism from "prismjs";
 import { toggleStar, recordItemOpened } from "../../api/files.api";
 
 // Lazy-load Preview Modal
 const FilePreviewModal = lazy(() => import("../drive/FilePreviewModal"));
+
+const supportedExtensions = [
+  ".txt",
+  ".md",
+  ".js",
+  ".jsx",
+  ".ts",
+  ".tsx",
+  ".py",
+  ".json",
+  ".css",
+  ".html",
+  ".sql",
+];
+
+const getEditorLanguage = (ext) => {
+  const map = {
+    ".js": "javascript",
+    ".jsx": "jsx",
+    ".ts": "typescript",
+    ".tsx": "tsx",
+    ".json": "json",
+    ".css": "css",
+    ".html": "html",
+    ".py": "python",
+    ".md": "markdown",
+    ".sql": "sql",
+  };
+  return map[ext] || "text";
+};
 
 export default function GoogleDriveChamber() {
   const { driveFolderId } = useParams();
@@ -73,12 +107,15 @@ export default function GoogleDriveChamber() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [lastSelectedId, setLastSelectedId] = useState(null);
   const [previewFile, setPreviewFile] = useState(null);
+  const [previewEditMode, setPreviewEditMode] = useState(false);
   const [detailsItem, setDetailsItem] = useState(null);
 
   // Modals state
-  const [modalType, setModalType] = useState(null); // 'create-folder', 'rename', 'delete'
+  const [modalType, setModalType] = useState(null); // 'create-folder', 'create-file', 'rename', 'delete'
   const [modalItem, setModalItem] = useState(null);
   const [modalInput, setModalInput] = useState("");
+  const [newFileContent, setNewFileContent] = useState("");
+  const [selectedExt, setSelectedExt] = useState(".txt");
   const [isSubmittingModal, setIsSubmittingModal] = useState(false);
   const [reconnectingDrive, setReconnectingDrive] = useState(false);
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
@@ -249,17 +286,16 @@ export default function GoogleDriveChamber() {
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
+    const parentId = driveFolderId || "root";
     try {
       for (const file of Array.from(files)) {
-        const formData = new FormData();
-        formData.append("file", file);
-        if (driveFolderId) {
-          formData.append("folderId", driveFolderId);
-        }
-
-        const res = await fetch(`${SERVER_URL}/drive/upload`, {
+        const res = await fetch(`${SERVER_URL}/drive/file/${parentId}/upload`, {
           method: "POST",
-          body: formData,
+          headers: {
+            filename: encodeURIComponent(file.name),
+            "Content-Type": file.type || "application/octet-stream",
+          },
+          body: file,
           credentials: "include",
         });
 
@@ -282,13 +318,13 @@ export default function GoogleDriveChamber() {
   const handleCreateFolder = async () => {
     if (!modalInput.trim()) return;
     setIsSubmittingModal(true);
+    const parentId = driveFolderId || "root";
     try {
-      const res = await fetch(`${SERVER_URL}/drive/folder`, {
+      const res = await fetch(`${SERVER_URL}/drive/folder/${parentId}/create-folder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: modalInput.trim(),
-          parentId: driveFolderId || "root",
         }),
         credentials: "include",
       });
@@ -306,12 +342,45 @@ export default function GoogleDriveChamber() {
     }
   };
 
+  // Create text/code file in Google Drive
+  const handleCreateFile = async () => {
+    const rawName = modalInput.trim();
+    if (!rawName) return;
+    const fullName = rawName.endsWith(selectedExt) ? rawName : `${rawName}${selectedExt}`;
+    const parentId = driveFolderId || "root";
+    setIsSubmittingModal(true);
+    try {
+      const res = await fetch(`${SERVER_URL}/drive/file/${parentId}/upload`, {
+        method: "POST",
+        headers: {
+          filename: encodeURIComponent(fullName),
+          "Content-Type": "text/plain; charset=utf-8",
+        },
+        body: newFileContent,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to create file");
+      }
+      setModalType(null);
+      setModalInput("");
+      setNewFileContent("");
+      fetchDriveContents(true);
+    } catch (err) {
+      console.error("Create file error:", err);
+      alert(err.message || "Failed to create file on Google Drive");
+    } finally {
+      setIsSubmittingModal(false);
+    }
+  };
+
   // Rename item
   const handleRename = async () => {
     if (!modalItem || !modalInput.trim()) return;
     setIsSubmittingModal(true);
     try {
-      const res = await fetch(`${SERVER_URL}/drive/file/${modalItem._id}/rename`, {
+      const res = await fetch(`${SERVER_URL}/drive/file/${modalItem._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: modalInput.trim() }),
@@ -361,6 +430,24 @@ export default function GoogleDriveChamber() {
 
   // Preview file modal trigger
   const handlePreview = (file) => {
+    setPreviewEditMode(false);
+    setPreviewFile(file);
+    if (file) {
+      recordItemOpened({
+        itemId: file._id,
+        provider: "google_drive",
+        name: file.name,
+        type: "file",
+        size: file.size || 0,
+        mimeType: file.mimeType || "",
+        metaUrl: file.webViewLink || file.webContentLink || "",
+      }).catch(() => {});
+    }
+  };
+
+  // Direct edit trigger for text/code files (GitHub-style edit button)
+  const handleEdit = (file) => {
+    setPreviewEditMode(true);
     setPreviewFile(file);
     if (file) {
       recordItemOpened({
@@ -779,6 +866,21 @@ export default function GoogleDriveChamber() {
           </Button>
 
           <Button
+            onClick={() => {
+              setModalInput("");
+              setNewFileContent("");
+              setSelectedExt(".txt");
+              setModalType("create-file");
+            }}
+            variant="outline"
+            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border-linkdrive-accent/30 hover:bg-linkdrive-accent/10 text-slate-700 dark:text-white"
+            title="Create a new text or code file in Google Drive"
+          >
+            <FilePlus size={15} className="text-linkdrive-accent" />
+            <span>New File</span>
+          </Button>
+
+          <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
             className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold bg-linkdrive-accent hover:bg-linkdrive-accent/90 text-white shadow-md shadow-linkdrive-accent/20"
@@ -984,6 +1086,7 @@ export default function GoogleDriveChamber() {
                     onSelect={handleSelect}
                     onNavigate={() => {}}
                     onPreview={handlePreview}
+                    onEdit={handleEdit}
                     onStarred={handleToggleStar}
                     onShare={(item) => (openShareModal ? openShareModal([item]) : null)}
                     onRename={(item) => {
@@ -1078,22 +1181,25 @@ export default function GoogleDriveChamber() {
         </div>
       )}
 
-      {/* ── CREATE FOLDER / RENAME / DELETE MODAL ── */}
+      {/* ── CREATE FOLDER / CREATE FILE / RENAME / DELETE MODAL ── */}
       <Modal
         isOpen={Boolean(modalType)}
         onClose={() => {
           setModalType(null);
           setModalItem(null);
           setModalInput("");
+          setNewFileContent("");
         }}
         title={
           modalType === "create-folder"
             ? "New Google Drive Folder"
+            : modalType === "create-file"
+            ? "New Google Drive File"
             : modalType === "rename"
             ? "Rename in Google Drive"
             : "Delete from Google Drive"
         }
-        className="max-w-md"
+        className={modalType === "create-file" ? "max-w-2xl" : "max-w-md"}
       >
         <div className="space-y-4 text-slate-900 dark:text-white">
           {modalType === "delete" ? (
@@ -1130,6 +1236,106 @@ export default function GoogleDriveChamber() {
                 </Button>
               </div>
             </div>
+          ) : modalType === "create-file" ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleCreateFile();
+              }}
+              className="space-y-4"
+            >
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-slate-100 dark:bg-white/5 p-3 rounded-2xl border border-slate-200 dark:border-white/10">
+                <div className="flex-1">
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-white/60 uppercase tracking-wider mb-1">
+                    Filename
+                  </label>
+                  <input
+                    type="text"
+                    value={modalInput}
+                    onChange={(e) => setModalInput(e.target.value)}
+                    placeholder="e.g. notes or script"
+                    autoFocus
+                    required
+                    className="w-full bg-transparent text-slate-900 dark:text-white font-semibold text-sm outline-none placeholder:text-slate-400 dark:placeholder:text-white/30"
+                  />
+                </div>
+                <div className="hidden sm:block w-px h-8 bg-slate-300 dark:bg-white/10" />
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-white/60 uppercase tracking-wider mb-1">
+                    Extension
+                  </label>
+                  <select
+                    value={selectedExt}
+                    onChange={(e) => setSelectedExt(e.target.value)}
+                    className="bg-white dark:bg-black/60 text-linkdrive-accent font-bold text-xs px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 outline-none cursor-pointer"
+                  >
+                    {supportedExtensions.map((ext) => (
+                      <option key={ext} value={ext} className="bg-white dark:bg-[#111113] text-slate-900 dark:text-white">
+                        {ext}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Code/Text Editor */}
+              <div className="rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden bg-[#1e1e1e]">
+                <div className="px-3 py-2 bg-[#252526] border-b border-white/5 flex items-center justify-between text-xs text-slate-400 font-mono">
+                  <span>Editor ({selectedExt})</span>
+                  <span>{newFileContent.split("\n").length} lines</span>
+                </div>
+                <div className="h-56 overflow-auto custom-scrollbar">
+                  <Editor
+                    value={newFileContent}
+                    onValueChange={(code) => setNewFileContent(code)}
+                    highlight={(code) => {
+                      const lang = getEditorLanguage(selectedExt);
+                      try {
+                        const grammar =
+                          Prism.languages[lang] ||
+                          Prism.languages.javascript ||
+                          Prism.languages.clike;
+                        return Prism.highlight(code, grammar, lang);
+                      } catch {
+                        return code;
+                      }
+                    }}
+                    padding={16}
+                    style={{
+                      fontFamily: '"Fira Code", "Cascadia Code", monospace',
+                      fontSize: 13,
+                      minHeight: "100%",
+                      color: "#e2e8f0",
+                      lineHeight: "1.5",
+                    }}
+                    className="w-full focus:outline-none"
+                    placeholder="// Write or paste file content here..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setModalType(null);
+                    setModalInput("");
+                    setNewFileContent("");
+                  }}
+                  disabled={isSubmittingModal}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmittingModal || !modalInput.trim()}
+                  className="bg-linkdrive-accent hover:bg-linkdrive-accent/90 text-white font-bold"
+                >
+                  {isSubmittingModal ? "Saving..." : "Create File"}
+                </Button>
+              </div>
+            </form>
           ) : (
             <form
               onSubmit={(e) => {
@@ -1194,7 +1400,11 @@ export default function GoogleDriveChamber() {
           <FilePreviewModal
             file={previewFile}
             isOpen={Boolean(previewFile)}
-            onClose={() => setPreviewFile(null)}
+            onClose={() => {
+              setPreviewFile(null);
+              setPreviewEditMode(false);
+            }}
+            initialEditMode={previewEditMode}
           />
         </Suspense>
       )}

@@ -111,9 +111,14 @@ export const getFileFromDrive = async (req, res, next) => {
 
 export const createDriveFolder = async (req, res, next) => {
   try {
+    const parentFolderId =
+      req.params.parentFolderId ||
+      req.body?.parentId ||
+      req.body?.parentFolderId ||
+      "root";
     const result = await driveService.createDriveFolderLogic({
-      parentFolderId: req.params.parentFolderId,
-      name: req.body.name,
+      parentFolderId,
+      name: req.body?.name,
       req,
     });
     return res.status(201).json(result);
@@ -124,8 +129,14 @@ export const createDriveFolder = async (req, res, next) => {
 
 export const uploadFileToDrive = async (req, res, next) => {
   try {
+    const parentFolderId =
+      req.params.parentFolderId ||
+      req.query?.folderId ||
+      req.body?.folderId ||
+      req.body?.parentId ||
+      "root";
     const result = await driveService.uploadFileToDriveLogic({
-      parentFolderId: req.params.parentFolderId,
+      parentFolderId,
       req,
     });
     return res.status(201).json(result);

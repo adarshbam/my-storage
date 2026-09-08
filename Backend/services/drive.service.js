@@ -426,7 +426,13 @@ export const createDriveFolderLogic = async ({ parentFolderId, name, req }) => {
 };
 
 export const uploadFileToDriveLogic = async ({ parentFolderId, req }) => {
-  const fileName = sanitize(req.headers.filename);
+  let rawFileName = req.headers.filename;
+  if (rawFileName) {
+    try {
+      rawFileName = decodeURIComponent(rawFileName);
+    } catch (e) {}
+  }
+  const fileName = sanitize(rawFileName);
 
   if (!fileName) {
     const err = new Error("No filename provided");
