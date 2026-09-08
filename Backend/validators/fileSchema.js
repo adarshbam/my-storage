@@ -55,8 +55,8 @@ export const uploadVaultInitiateSchema = {
   body: z.object({
     name: z.string().min(1, "Name is required"),
     size: z.number().optional(),
-    contentType: z.string().optional(),
-    parentDirId: z.string().nullable().optional(),
+    contentType: z.string().nullable().optional(),
+    parentDirId: z.any().optional(),
   }),
 };
 
@@ -64,8 +64,8 @@ export const uploadVaultMultipartInitiateSchema = {
   body: z.object({
     name: z.string().min(1, "Name is required"),
     size: z.number().min(1, "File size must be greater than 0"),
-    contentType: z.string().optional(),
-    parentDirId: z.string().nullable().optional(),
+    contentType: z.string().nullable().optional(),
+    parentDirId: z.any().optional(),
   }),
 };
 

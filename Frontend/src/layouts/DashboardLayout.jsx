@@ -10,19 +10,26 @@ import NavigationRail from "../components/dashboard/NavigationRail";
 import TransferManager from "../components/drive/TransferManager";
 import FileUploadModal from "../components/drive/FileUploadModal";
 import ShareVaultModal from "../components/dashboard/ShareVaultModal";
-import WallGuideOverlay from "../components/guide/WallGuideOverlay";
-import WallLauncher from "../components/guide/WallLauncher";
+import SubscriptionRequiredModal from "../components/dashboard/SubscriptionRequiredModal";
 import { ChamberTransferProvider } from "../context/ChamberTransferContext";
 
 export default function DashboardLayout() {
   const { user, setUser } = useAuth();
-  const { maxStorage: planMaxStorage } = usePlan();
+  const {
+    maxStorage: planMaxStorage,
+    isNoPlan,
+    isNoSubscription,
+    allowUpload,
+    canUseFreeTrial,
+  } = usePlan();
+  const hasNoActivePlan = isNoPlan || isNoSubscription || allowUpload === false;
   const effectiveMaxStorage = planMaxStorage ?? user?.maxStorage ?? 5368709120;
   const navigate = useNavigate();
   const location = useLocation();
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareItems, setShareItems] = useState([]);
   const [currentFolderId, setCurrentFolderId] = useState(null);
@@ -251,7 +258,17 @@ export default function DashboardLayout() {
     }
   };
 
+  useEffect(() => {
+    const handlePrompt = () => setShowSubscriptionModal(true);
+    window.addEventListener("subscription:prompt", handlePrompt);
+    return () => window.removeEventListener("subscription:prompt", handlePrompt);
+  }, []);
+
   const handleUpload = (files, targetId) => {
+    if (hasNoActivePlan) {
+      setShowSubscriptionModal(true);
+      return;
+    }
     if (user && user.usedStorage >= effectiveMaxStorage) {
       alert("Not enough storage");
       return;
@@ -303,6 +320,10 @@ export default function DashboardLayout() {
 
   const contextValue = {
     openUploadModal: () => {
+      if (hasNoActivePlan) {
+        setShowSubscriptionModal(true);
+        return;
+      }
       if (user && user.usedStorage >= effectiveMaxStorage) {
         alert("Not enough storage");
         return;
@@ -397,11 +418,12 @@ export default function DashboardLayout() {
           }}
         />
 
-        <TransferManager ref={transferRef} onUploadComplete={() => setRefreshTrigger(prev => prev + 1)} />
+        <SubscriptionRequiredModal
+          isOpen={showSubscriptionModal}
+          onClose={() => setShowSubscriptionModal(false)}
+        />
 
-        {/* Wall Interactive Onboarding Guide & Launcher */}
-        <WallGuideOverlay />
-        <WallLauncher />
+        <TransferManager ref={transferRef} onUploadComplete={() => setRefreshTrigger(prev => prev + 1)} />
       </div>
     </ChamberTransferProvider>
   );

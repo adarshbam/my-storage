@@ -1,8 +1,12 @@
 import React from 'react';
-import { Upload, Share2, Clock, Star, Plus } from "lucide-react";
+import { Upload, Share2, Clock, Star, Plus, Sparkles, Zap } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { usePlan } from "../../context/PlanContext";
 
 export default function EmptyState({ specialView, isSearch, openUploadModal, setModalInput, setModalType, setSelectedExt, setNewFileContent, title, description }) {
+  const { isNoPlan, isNoSubscription, canUseFreeTrial, allowUpload } = usePlan();
+  const isPlanRestricted = !specialView && !isSearch && (isNoPlan || isNoSubscription || allowUpload === false);
+
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-12 sm:py-20 px-4 text-center text-slate-400 max-w-full">
       {specialView ? (
@@ -61,6 +65,43 @@ export default function EmptyState({ specialView, isSearch, openUploadModal, set
               Initialize with README.md
             </button>
           )}
+        </>
+      ) : isPlanRestricted ? (
+        <>
+          <div
+            className="bg-accent-soft p-5 sm:p-6 rounded-full mb-4 cursor-pointer hover:opacity-80 transition-all duration-300 shadow-accent-glow-sm border border-accent-border text-accent-primary"
+            onClick={() => window.dispatchEvent(new CustomEvent("subscription:prompt"))}
+          >
+            <Sparkles size={36} className="sm:w-10 sm:h-10 animate-pulse" />
+          </div>
+          <p className="text-base sm:text-lg font-bold mb-1.5 text-slate-800 dark:text-white">
+            {title || "Storage Subscription Required"}
+          </p>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-white/60 max-w-sm text-center leading-relaxed">
+            {description ||
+              (canUseFreeTrial
+                ? "You currently have no active storage subscription. Start your 30-Day Free Trial to enable file uploads and cloud sync."
+                : "Your vault is in read-only mode. An active storage plan is required to upload files.")}
+          </p>
+          <div className="flex items-center gap-2.5 mt-4">
+            {canUseFreeTrial ? (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("subscription:prompt"))}
+                className="px-4 py-2.5 bg-accent-primary text-accent-foreground font-bold text-xs rounded-xl shadow-accent-glow flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-all"
+              >
+                <Sparkles size={14} /> Start 30-Day Free Trial
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("subscription:prompt"))}
+                className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer transition-all"
+              >
+                <Zap size={14} fill="currentColor" /> Choose a Storage Plan
+              </button>
+            )}
+          </div>
         </>
       ) : (
         <>

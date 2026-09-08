@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLocation } from "react-router-dom";
 import { useGuide } from "../../context/GuideContext";
+import { useAuth } from "../../context/AuthContext";
 import WallMascot from "./WallMascot";
 import {
   Sparkles,
@@ -27,6 +29,9 @@ import {
 
 const STORAGE_POS_KEY = "vault_wally_launcher_position_v1";
 const SAFE_MARGIN = 16;
+
+// Module-scoped active singleton tracking to strictly ensure only ONE Wally launcher can ever mount/render
+let activeLauncherInstanceId = null;
 
 // Calculate default corner position (bottom-right)
 const getDefaultPosition = () => {
@@ -56,6 +61,9 @@ const getInitialPosition = () => {
 };
 
 export default function WallLauncher() {
+  const { user } = useAuth();
+  const location = useLocation();
+
   const {
     tours,
     startTour,
@@ -65,6 +73,35 @@ export default function WallLauncher() {
     soundEnabled,
     toggleSound,
   } = useGuide();
+
+  // Strict Singleton Guard: guarantee only one instance of Wally Launcher ever renders
+  const instanceIdRef = useRef(null);
+  if (!instanceIdRef.current) {
+    instanceIdRef.current = Math.random().toString(36).slice(2, 9);
+  }
+
+  const [isPrimaryInstance, setIsPrimaryInstance] = useState(() => {
+    if (!activeLauncherInstanceId) {
+      activeLauncherInstanceId = instanceIdRef.current;
+      return true;
+    }
+    return activeLauncherInstanceId === instanceIdRef.current;
+  });
+
+  useEffect(() => {
+    if (!activeLauncherInstanceId || activeLauncherInstanceId === instanceIdRef.current) {
+      activeLauncherInstanceId = instanceIdRef.current;
+      setIsPrimaryInstance(true);
+    } else {
+      setIsPrimaryInstance(false);
+    }
+
+    return () => {
+      if (activeLauncherInstanceId === instanceIdRef.current) {
+        activeLauncherInstanceId = null;
+      }
+    };
+  }, []);
 
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState(getInitialPosition);
@@ -250,8 +287,23 @@ export default function WallLauncher() {
   ];
   const randomTip = tips[0];
 
-  // If tour is active, hide launcher to prevent UI clutter
-  if (isTourOpen) return null;
+  // Only show Wally on authenticated workspace pages (e.g. /dashboard, /profile, /users, /billing, /tutorials, etc.)
+  // Hide on public landing page, authentication screens, or when logged out
+  const isPublicRoute =
+    !user ||
+    location.pathname === "/" ||
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname === "/reset-password" ||
+    location.pathname.startsWith("/share") ||
+    location.pathname.startsWith("/shared-access") ||
+    location.pathname.startsWith("/s/") ||
+    location.pathname === "/privacy" ||
+    location.pathname === "/terms" ||
+    location.pathname === "/security";
+
+  // If tour is active, secondary duplicate instance, or on a public page, do not render
+  if (isTourOpen || !isPrimaryInstance || isPublicRoute) return null;
 
   return (
     <>

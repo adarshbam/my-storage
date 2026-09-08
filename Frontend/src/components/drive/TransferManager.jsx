@@ -16,6 +16,7 @@ import {
   RotateCcw,
   Gauge,
   Lock,
+  Sparkles,
 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
 import { getFileCdnUrl, abortVaultMultipartUpload, abortVaultUpload } from "../../api/files.api";
@@ -45,6 +46,9 @@ const TransferManager = forwardRef((props, ref) => {
   const {
     maxUploadFileSize,
     allowUpload,
+    isNoPlan,
+    isNoSubscription,
+    canUseFreeTrial,
   } = usePlan();
 
   const {
@@ -138,7 +142,11 @@ const TransferManager = forwardRef((props, ref) => {
       const id = existingId || generateObjectId();
 
       if (!existingId) {
-        if (allowUpload === false) {
+        const isPlanBlocked = isNoPlan || isNoSubscription || allowUpload === false;
+        if (isPlanBlocked) {
+          const subMsg = canUseFreeTrial
+            ? "Subscription required. Start 30-Day Free Trial to upload."
+            : "Active subscription required. Please choose a plan to upload.";
           setTransfers((prev) => [
             ...prev,
             {
@@ -149,14 +157,16 @@ const TransferManager = forwardRef((props, ref) => {
               loaded: 0,
               total: file.size,
               status: "error",
-              errorMessage: "Uploads disabled for your plan",
+              errorMessage: subMsg,
               speed: 0,
               timeRemaining: 0,
               file: file,
               dirId: dirId,
+              requiresSubscription: true,
             },
           ]);
           setMinimized(false);
+          window.dispatchEvent(new CustomEvent("subscription:prompt"));
           return;
         }
 
@@ -202,29 +212,52 @@ const TransferManager = forwardRef((props, ref) => {
         updateTransfer(id, { status: "queued", speed: 0 });
       }
     },
-    [updateTransfer, maxFileSize],
+    [updateTransfer, effectiveMaxFileSize, isNoPlan, isNoSubscription, allowUpload, canUseFreeTrial],
   );
 
   const uploadFiles = useCallback(
     (files, dirId) => {
-      const newTransfers = files.map((file) => ({
-        _id: generateObjectId(),
-        type: "upload",
-        name: file.name,
-        progress: 0,
-        loaded: 0,
-        total: file.size,
-        status: file.size > maxFileSize ? "error" : "queued",
-        errorMessage: file.size > maxFileSize ? "File too large" : undefined,
-        speed: 0,
-        timeRemaining: 0,
-        file: file,
-        dirId: dirId,
-      }));
+      const isPlanBlocked = isNoPlan || isNoSubscription || allowUpload === false;
+      const subMsg = canUseFreeTrial
+        ? "Subscription required. Start 30-Day Free Trial to upload."
+        : "Active subscription required. Please choose a plan to upload.";
+
+      if (isPlanBlocked) {
+        window.dispatchEvent(new CustomEvent("subscription:prompt"));
+      }
+
+      const newTransfers = files.map((file) => {
+        let status = "queued";
+        let errorMessage = undefined;
+
+        if (isPlanBlocked) {
+          status = "error";
+          errorMessage = subMsg;
+        } else if (file.size > effectiveMaxFileSize) {
+          status = "error";
+          errorMessage = "File exceeds upload limit";
+        }
+
+        return {
+          _id: generateObjectId(),
+          type: "upload",
+          name: file.name,
+          progress: 0,
+          loaded: 0,
+          total: file.size,
+          status,
+          errorMessage,
+          speed: 0,
+          timeRemaining: 0,
+          file: file,
+          dirId: dirId,
+          requiresSubscription: isPlanBlocked,
+        };
+      });
       setTransfers((prev) => [...prev, ...newTransfers]);
       setMinimized(false);
     },
-    [maxFileSize],
+    [effectiveMaxFileSize, isNoPlan, isNoSubscription, allowUpload, canUseFreeTrial],
   );
 
   const { startDownload } = useDownloadManager({
@@ -611,7 +644,26 @@ const TransferManager = forwardRef((props, ref) => {
                         {transfer.status === "queued" && "Queued"}
                         {transfer.status === "paused" && "Paused"}
                         {transfer.status === "completed" && "Completed"}
-                        {transfer.status === "error" && (transfer.errorMessage || "Error")}
+                        {transfer.status === "error" && (
+                          <span className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-rose-500 font-medium">
+                              {transfer.errorMessage || "Error"}
+                            </span>
+                            {(transfer.requiresSubscription ||
+                              transfer.errorMessage?.toLowerCase().includes("subscription") ||
+                              transfer.errorMessage?.toLowerCase().includes("trial") ||
+                              transfer.errorMessage?.toLowerCase().includes("plan")) && (
+                              <button
+                                type="button"
+                                onClick={() => window.dispatchEvent(new CustomEvent("subscription:prompt"))}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent-soft text-accent-primary border border-accent-border hover:opacity-80 transition-all cursor-pointer"
+                              >
+                                <Sparkles size={10} />
+                                {canUseFreeTrial ? "Start Free Trial" : "View Plans"}
+                              </button>
+                            )}
+                          </span>
+                        )}
                       </span>
                       <span>
                         {transfer.status === "completed"

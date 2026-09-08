@@ -1,8 +1,6 @@
 import { Outlet } from "react-router-dom";
 import VaultBackground from "../components/dashboard/VaultBackground";
 import StandaloneNavbar from "../components/navigation/StandaloneNavbar";
-import WallGuideOverlay from "../components/guide/WallGuideOverlay";
-import WallLauncher from "../components/guide/WallLauncher";
 
 export default function StandaloneLayout() {
   return (
@@ -15,10 +13,6 @@ export default function StandaloneLayout() {
           <Outlet />
         </div>
       </main>
-
-      {/* Interactive Onboarding Guide & Launcher */}
-      <WallGuideOverlay />
-      <WallLauncher />
     </div>
   );
 }

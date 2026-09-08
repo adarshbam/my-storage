@@ -37,7 +37,8 @@ class ApiClient {
         const text = await response.text().catch(() => "");
         return { message: text || response.statusText };
       });
-      const err = new Error(error.error || error.message || 'Request failed');
+      const errMsg = error.message || error.error || 'Request failed';
+      const err = new Error(errMsg);
       err.status = response.status;
       err.data = error;
       err.response = { data: error, status: response.status };

@@ -4,6 +4,7 @@ import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { cn, formatSize } from "../../lib/utils";
 import { renderFileIcon } from "../../lib/FileImages";
+import { usePlan } from "../../context/PlanContext";
 
 export default function FileUploadModal({
   isOpen,
@@ -49,7 +50,16 @@ export default function FileUploadModal({
     setFiles([]);
   };
 
+  const { isNoPlan, isNoSubscription, allowUpload } = usePlan();
+  const isPlanRestricted = isNoPlan || isNoSubscription || allowUpload === false;
+
   const handleSubmit = () => {
+    if (isPlanRestricted) {
+      setFiles([]);
+      onClose();
+      window.dispatchEvent(new CustomEvent("subscription:prompt"));
+      return;
+    }
     if (files.length > 0) {
       const uploadFn = onFilesSelected || onUpload;
       if (uploadFn) {
@@ -180,6 +190,12 @@ export default function FileUploadModal({
           <ShieldCheck size={16} className="shrink-0 text-emerald-500" />
           <span>Zero-Knowledge AES-256 encryption active for all outgoing transfers.</span>
         </div>
+
+        {isPlanRestricted && (
+          <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-accent-soft border border-accent-border text-accent-primary text-xs font-medium">
+            <span>Storage subscription required. Submitting will guide you to activate your 30-Day Free Trial or choose a plan.</span>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-white/10">

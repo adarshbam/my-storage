@@ -168,8 +168,8 @@ export default function FileBrowser({ specialView }) {
     !!searchQuery ||
     !!searchExt ||
     !!searchSize;
-  const { isNoPlan, rules } = usePlan();
-  const planAllowsMutation = !isNoPlan && (rules?.permissions?.allowUpload ?? true);
+  const { isNoPlan, isNoSubscription, rules } = usePlan();
+  const planAllowsMutation = !(isNoPlan || isNoSubscription) && (rules?.permissions?.allowUpload ?? true);
   const isReadOnly =
     specialView === "shared" ||
     specialView === "admin" ||
@@ -1662,7 +1662,12 @@ export default function FileBrowser({ specialView }) {
     e.stopPropagation();
     setDragOverTargetId(null);
     setActiveDraggedIds([]);
-    if (isReadOnly) return;
+    if (isReadOnly) {
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        window.dispatchEvent(new CustomEvent("subscription:prompt"));
+      }
+      return;
+    }
 
     // Handle internal DnD FIRST
     const draggedItemsStr = e.dataTransfer.getData("draggedItems");
@@ -1947,7 +1952,12 @@ export default function FileBrowser({ specialView }) {
   const handleZoneDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isReadOnly) return;
+    if (isReadOnly) {
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        window.dispatchEvent(new CustomEvent("subscription:prompt"));
+      }
+      return;
+    }
 
     // Check if it's an internal drag landing in the empty zone
     const draggedItemsStr = e.dataTransfer.getData("draggedItems");

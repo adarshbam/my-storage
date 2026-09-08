@@ -16,6 +16,9 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+// Module-scoped active singleton tracking to strictly ensure only ONE Wally guide overlay can ever mount/render
+let activeOverlayInstanceId = null;
+
 export default function WallGuideOverlay() {
   const {
     isTourOpen,
@@ -32,6 +35,35 @@ export default function WallGuideOverlay() {
     soundEnabled,
     toggleSound,
   } = useGuide();
+
+  // Strict Singleton Guard: guarantee only one instance of Wally Guide Overlay ever renders
+  const instanceIdRef = useRef(null);
+  if (!instanceIdRef.current) {
+    instanceIdRef.current = Math.random().toString(36).slice(2, 9);
+  }
+
+  const [isPrimaryInstance, setIsPrimaryInstance] = useState(() => {
+    if (!activeOverlayInstanceId) {
+      activeOverlayInstanceId = instanceIdRef.current;
+      return true;
+    }
+    return activeOverlayInstanceId === instanceIdRef.current;
+  });
+
+  useEffect(() => {
+    if (!activeOverlayInstanceId || activeOverlayInstanceId === instanceIdRef.current) {
+      activeOverlayInstanceId = instanceIdRef.current;
+      setIsPrimaryInstance(true);
+    } else {
+      setIsPrimaryInstance(false);
+    }
+
+    return () => {
+      if (activeOverlayInstanceId === instanceIdRef.current) {
+        activeOverlayInstanceId = null;
+      }
+    };
+  }, []);
 
   const [targetRect, setTargetRect] = useState(null);
   const [windowSize, setWindowSize] = useState({
@@ -254,7 +286,7 @@ export default function WallGuideOverlay() {
     };
   }, [targetRect, windowSize, currentStep]);
 
-  if (!isTourOpen || !currentTour || !currentStep) return null;
+  if (!isPrimaryInstance || !isTourOpen || !currentTour || !currentStep) return null;
 
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;

@@ -37,6 +37,8 @@ import TrashView from "./components/drive/TrashView";
 import BillingPlansPage from "./pages/BillingPlansPage";
 import GoogleDriveChamber from "./components/chambers/GoogleDriveChamber";
 import GitHubChamber from "./components/chambers/GitHubChamber";
+import WallGuideOverlay from "./components/guide/WallGuideOverlay";
+import WallLauncher from "./components/guide/WallLauncher";
 
 function LandingPage() {
   return (
@@ -196,8 +198,12 @@ function App() {
                   />
                 </Routes>
               </Suspense>
-              </ShortcutProvider>
-            </GuideProvider>
+
+              {/* Global Singleton for Wally Interactive Onboarding Guide & Launcher */}
+              <WallGuideOverlay />
+              <WallLauncher />
+            </ShortcutProvider>
+          </GuideProvider>
           </BrowserRouter>
         </PlanProvider>
       </AuthProvider>

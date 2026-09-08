@@ -14,26 +14,33 @@ export const requireRule = (ruleName) => {
       });
     }
 
-    if (planContext.isNoPlan && ruleName !== "allowDownload") {
+    if ((planContext.isNoPlan || planContext.isNoSubscription) && ruleName !== "allowDownload") {
+      const canTrial = !!planContext.canUseFreeTrial;
+      const trialMsg = canTrial
+        ? "No active storage subscription found. Start your 30-Day Free Trial or choose a subscription plan to upload files."
+        : "No active storage subscription found. Please choose a subscription plan to upload files.";
       return res.status(403).json({
         success: false,
         code: "NO_ACTIVE_PLAN",
-        error: `Action forbidden: your current plan does not allow ${ruleName}.`,
-        message: "No active plan found. Please activate your free trial or choose a plan to continue.",
+        error: trialMsg,
+        message: trialMsg,
         isNoPlan: true,
-        canUseFreeTrial: !!planContext.canUseFreeTrial,
+        isNoSubscription: true,
+        canUseFreeTrial: canTrial,
         daysUntilPurge: planContext.daysUntilPurge,
       });
     }
 
     // If permission is explicitly set to false in the plan configuration
     if (permissions[ruleName] === false) {
+      const permMsg = `Action forbidden: your current plan does not allow ${ruleName}.`;
       return res.status(403).json({
         success: false,
         code: "PERMISSION_DENIED",
-        error: `Action forbidden: your current plan does not allow ${ruleName}.`,
+        error: permMsg,
         message: `Your current plan does not include the ${ruleName} permission.`,
         isNoPlan: !!planContext.isNoPlan,
+        isNoSubscription: !!planContext.isNoSubscription,
         canUseFreeTrial: !!planContext.canUseFreeTrial,
         daysUntilPurge: planContext.daysUntilPurge,
       });

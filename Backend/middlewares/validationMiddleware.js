@@ -26,8 +26,13 @@ export const validate = (schema) => (req, res, next) => {
     next();
   } catch (error) {
     if (error instanceof z.ZodError) {
+      const firstIssue = error.issues?.[0];
+      const friendlyMsg = firstIssue
+        ? `${firstIssue.path?.length ? firstIssue.path.join(".") + ": " : ""}${firstIssue.message}`
+        : "Validation failed";
       return res.status(400).json({
-        error: "Validation failed (NoSQL Injection Prevention)",
+        error: friendlyMsg,
+        message: friendlyMsg,
         details: error.flatten().fieldErrors,
       });
     }

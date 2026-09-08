@@ -50,7 +50,7 @@ export default function CommandBar({
 }) {
   const navigate = useNavigate();
   const { user, setUser } = useAuth();
-  const { isNoPlan, rules, hasFeature } = usePlan();
+  const { isNoPlan, isNoSubscription, rules, hasFeature } = usePlan();
   const location = useLocation();
 
   const isVaultRoute =
@@ -66,17 +66,11 @@ export default function CommandBar({
     location.pathname.startsWith("/dashboard/owner/folder") ||
     location.pathname === "/dashboard/search";
 
-  const allowUpload = !isNoPlan && (rules?.permissions?.allowUpload ?? true);
+  const allowUpload = !(isNoPlan || isNoSubscription) && (rules?.permissions?.allowUpload ?? true);
 
   const guardAction = (actionFn, requiresUpload = true) => {
-    if (isNoPlan || (requiresUpload && !allowUpload)) {
-      if (
-        window.confirm(
-          "Your current account is in Read-Only mode (No Active Plan). Would you like to view plans or activate your free trial to unlock this action?",
-        )
-      ) {
-        navigate("/dashboard/billing");
-      }
+    if (isNoPlan || isNoSubscription || (requiresUpload && !allowUpload)) {
+      window.dispatchEvent(new CustomEvent("subscription:prompt"));
       return;
     }
     actionFn();

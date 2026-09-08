@@ -489,10 +489,22 @@ export function useUploadManager({
       } catch (mpErr) {
         if (abortController.signal.aborted) return;
         console.error("Multipart upload failed:", mpErr);
+        const errMsg =
+          mpErr.data?.message ||
+          mpErr.data?.error ||
+          mpErr.message ||
+          "Multipart upload failed";
+        const isPlanError =
+          mpErr.status === 403 ||
+          mpErr.data?.code === "NO_ACTIVE_PLAN" ||
+          mpErr.data?.isNoPlan ||
+          errMsg.toLowerCase().includes("plan") ||
+          errMsg.toLowerCase().includes("subscription");
         updateTransfer(_id, {
           status: "error",
           speed: 0,
-          errorMessage: mpErr.message || "Multipart upload failed",
+          errorMessage: errMsg,
+          requiresSubscription: isPlanError,
         });
       } finally {
         delete abortControllers.current[_id];
@@ -583,7 +595,23 @@ export function useUploadManager({
             updateTransfer(_id, { status: "completed", progress: 100, speed: 0, timeRemaining: 0 });
           } catch (completeErr) {
             console.error("Failed to complete single-part upload in database:", completeErr);
-            updateTransfer(_id, { status: "error", speed: 0, errorMessage: "Failed to complete upload" });
+            const errMsg =
+              completeErr.data?.message ||
+              completeErr.data?.error ||
+              completeErr.message ||
+              "Failed to complete upload";
+            const isPlanError =
+              completeErr.status === 403 ||
+              completeErr.data?.code === "NO_ACTIVE_PLAN" ||
+              completeErr.data?.isNoPlan ||
+              errMsg.toLowerCase().includes("plan") ||
+              errMsg.toLowerCase().includes("subscription");
+            updateTransfer(_id, {
+              status: "error",
+              speed: 0,
+              errorMessage: errMsg,
+              requiresSubscription: isPlanError,
+            });
           }
         } else {
           updateTransfer(_id, { status: "error", speed: 0, errorMessage: "S3 upload failed" });
@@ -599,7 +627,23 @@ export function useUploadManager({
       xhr2.send(startByte > 0 ? file.slice(startByte) : file);
     } catch (err) {
       console.error("Initiation error:", err);
-      updateTransfer(_id, { status: "error", errorMessage: err.message });
+      const errMsg =
+        err.data?.message ||
+        err.data?.error ||
+        err.message ||
+        "Upload initiation failed";
+      const isPlanError =
+        err.status === 403 ||
+        err.data?.code === "NO_ACTIVE_PLAN" ||
+        err.data?.isNoPlan ||
+        errMsg.toLowerCase().includes("plan") ||
+        errMsg.toLowerCase().includes("subscription");
+      updateTransfer(_id, {
+        status: "error",
+        speed: 0,
+        errorMessage: errMsg,
+        requiresSubscription: isPlanError,
+      });
       delete abortControllers.current[_id];
     }
   };

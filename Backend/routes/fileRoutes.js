@@ -180,6 +180,8 @@ router.post(
 router.post(
   "/upload-vault/complete",
   checkAuth,
+  loadPlanContext,
+  requireRule("allowUpload"),
   standardWriteLimiter,
   validate(uploadVaultCompleteSchema),
   uploadVaultComplete,
@@ -208,6 +210,8 @@ router.post(
 router.post(
   "/upload-vault/multipart/part-url",
   checkAuth,
+  loadPlanContext,
+  requireRule("allowUpload"),
   uploadLimiter,
   validate(uploadVaultMultipartPartUrlSchema),
   uploadVaultMultipartPartUrl,
@@ -216,6 +220,8 @@ router.post(
 router.post(
   "/upload-vault/multipart/complete",
   checkAuth,
+  loadPlanContext,
+  requireRule("allowUpload"),
   standardWriteLimiter,
   validate(uploadVaultMultipartCompleteSchema),
   uploadVaultMultipartComplete,
