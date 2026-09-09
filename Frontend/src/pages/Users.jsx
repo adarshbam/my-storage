@@ -208,6 +208,17 @@ export default function Users() {
     }
   };
 
+  const formatPlanName = (slug) => {
+    if (!slug) return "Free Trial";
+    const s = slug.toLowerCase();
+    if (s === "free-trial" || s === "free-trail") return "Free Trial";
+    return slug
+      .replace(/[-_]/g, " ")
+      .split(" ")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+  };
+
   const getDisplayStatus = (u) => {
     if (u.status === "Terminated" || u.status === "TERMINATED")
       return "TERMINATED";
@@ -377,7 +388,7 @@ export default function Users() {
             </div>
 
             <div className="relative z-10 flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end border-t sm:border-t-0 border-slate-100 dark:border-white/10 pt-3 sm:pt-0">
-              <span className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 min-[360px]:px-3.5 py-1 min-[360px]:py-1.5 rounded-full bg-accent-soft border border-accent-border text-accent-primary text-[10px] min-[360px]:text-xs font-mono font-bold uppercase tracking-wider shadow-sm">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-accent-soft border border-accent-border/30 text-accent-primary text-[11px] font-mono font-bold uppercase tracking-wider shadow-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse" />
                 Active Administrator Session
               </span>
@@ -410,15 +421,15 @@ export default function Users() {
 
           {/* Filter Pills */}
           <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end min-w-0">
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-black/30 p-1 rounded-2xl border border-slate-200 dark:border-white/10 max-w-full overflow-x-auto no-scrollbar scrollbar-none shrink-0">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-vault-surface/80 p-1 rounded-xl border border-slate-200/80 dark:border-white/[0.08] max-w-full overflow-x-auto no-scrollbar scrollbar-none shrink-0">
               {["ALL", "OWNER", "ADMIN", "MANAGER", "USER"].map((role) => (
                 <button
                   key={role}
                   onClick={() => setRoleFilter(role)}
-                  className={`px-2.5 min-[360px]:px-3 py-1 rounded-xl text-[10px] min-[360px]:text-[11px] font-mono font-bold uppercase tracking-wider transition-all shrink-0 whitespace-nowrap ${
+                  className={`px-2.5 min-[360px]:px-3 py-1 rounded-lg text-[10px] min-[360px]:text-[11px] font-mono font-bold uppercase tracking-wider transition-all shrink-0 whitespace-nowrap ${
                     roleFilter === role
                       ? "bg-accent-primary text-accent-foreground shadow-sm"
-                      : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
+                      : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
                   }`}
                 >
                   {role}
@@ -426,15 +437,15 @@ export default function Users() {
               ))}
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-black/30 p-1 rounded-2xl border border-slate-200 dark:border-white/10 max-w-full overflow-x-auto no-scrollbar scrollbar-none shrink-0">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-vault-surface/80 p-1 rounded-xl border border-slate-200/80 dark:border-white/[0.08] max-w-full overflow-x-auto no-scrollbar scrollbar-none shrink-0">
               {["ALL", "ONLINE", "OFFLINE", "DEACTIVATED", "TERMINATED"].map((st) => (
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st)}
-                  className={`px-2.5 min-[360px]:px-3 py-1 rounded-xl text-[10px] min-[360px]:text-[11px] font-mono font-bold uppercase tracking-wider transition-all shrink-0 whitespace-nowrap ${
+                  className={`px-2.5 min-[360px]:px-3 py-1 rounded-lg text-[10px] min-[360px]:text-[11px] font-mono font-bold uppercase tracking-wider transition-all shrink-0 whitespace-nowrap ${
                     statusFilter === st
-                      ? "bg-accent-soft text-accent-primary border border-accent-border shadow-sm"
-                      : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
+                      ? "bg-accent-primary text-accent-foreground shadow-sm"
+                      : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
                   }`}
                 >
                   {st}
@@ -605,11 +616,11 @@ export default function Users() {
                               </span>
                               <div className="flex items-center gap-1.5">
                                 {user.planSlug && user.status !== "Terminated" && (
-                                  <span className="px-1.5 py-0.5 rounded text-[8px] min-[360px]:text-[9px] font-mono font-bold uppercase tracking-wider bg-accent-soft text-accent-primary border border-accent-border">
-                                    {user.planSlug}
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] min-[360px]:text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition-colors shadow-xs select-none">
+                                    {formatPlanName(user.planSlug)}
                                   </span>
                                 )}
-                                <span className="font-bold text-slate-700 dark:text-white/70">
+                                <span className="font-semibold text-slate-700 dark:text-slate-300 text-[11px] min-[360px]:text-xs font-mono">
                                   {user.status === "Terminated"
                                     ? "0 B"
                                     : formatSize(user.maxStorage ?? 5368709120)}
@@ -632,11 +643,11 @@ export default function Users() {
                         {/* Bottom Section: Actions */}
                         <div className="pt-2.5 sm:pt-3 border-t border-slate-100 dark:border-white/5">
                           {isSelf ? (
-                            <div className="w-full py-2 min-[360px]:py-2.5 rounded-xl sm:rounded-2xl text-center text-[11px] min-[360px]:text-xs font-mono font-bold text-accent-primary bg-accent-soft border border-accent-border">
+                            <div className="w-full py-2 min-[360px]:py-2.5 rounded-xl text-center text-[11px] min-[360px]:text-xs font-mono font-bold text-accent-primary bg-accent-soft border border-accent-border/30">
                               Current Operator Profile
                             </div>
                           ) : isPermanentlyTerminated ? (
-                            <div className="w-full py-2 min-[360px]:py-2.5 rounded-xl sm:rounded-2xl text-center text-[11px] min-[360px]:text-xs font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 flex items-center justify-center gap-1.5">
+                            <div className="w-full py-2 min-[360px]:py-2.5 rounded-xl text-center text-[11px] min-[360px]:text-xs font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 flex items-center justify-center gap-1.5">
                               <X size={13} className="text-rose-500" strokeWidth={3} />
                               <span>Account Permanently Terminated</span>
                             </div>
@@ -645,7 +656,7 @@ export default function Users() {
                               {currentUser?.role?.toUpperCase() === "OWNER" ? (
                                 <button
                                   onClick={() => handleReactivate(user._id)}
-                                  className="flex-1 min-w-[90px] py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                  className="flex-1 min-w-[90px] py-2 min-[360px]:py-2.5 px-3 rounded-xl text-[11px] min-[360px]:text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
                                 >
                                   <UserCheck size={13} /> Reactivate
                                 </button>
@@ -656,7 +667,7 @@ export default function Users() {
                               )}
                               <button
                                 onClick={() => openDeleteModal(user)}
-                                className="py-2 min-[360px]:py-2.5 px-2.5 sm:px-3 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 transition-colors shadow-sm flex items-center justify-center gap-1 shrink-0"
+                                className="py-2 min-[360px]:py-2.5 px-3 rounded-xl text-[11px] min-[360px]:text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 transition-all shadow-sm flex items-center justify-center gap-1 shrink-0 cursor-pointer active:scale-95"
                                 title="Permanently Terminate / Purge"
                               >
                                 <AlertTriangle size={13} /> Purge
@@ -673,7 +684,7 @@ export default function Users() {
                                         `/dashboard/${currentUser?.role?.toLowerCase()}/folder/${user.rootDirId}`
                                       )
                                     }
-                                    className="p-2 min-[360px]:p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0"
+                                    className="p-2 min-[360px]:p-2.5 rounded-xl text-slate-500 hover:text-accent-primary hover:bg-accent-soft dark:text-slate-400 dark:hover:text-accent-primary border border-slate-200/80 dark:border-white/[0.08] hover:border-accent-border/30 transition-all active:scale-95 shadow-sm shrink-0 cursor-pointer"
                                     title={`Inspect ${user.name}'s Vault Root`}
                                   >
                                     <Eye size={14} />
@@ -683,10 +694,10 @@ export default function Users() {
                               <button
                                 onClick={() => handleForceLogout(user._id)}
                                 disabled={!user.isLoggedIn}
-                                className={`flex-1 min-w-[85px] py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold border transition-colors ${
+                                className={`flex-1 min-w-[85px] py-2 min-[360px]:py-2.5 px-3 rounded-xl text-[11px] min-[360px]:text-xs font-semibold transition-all shadow-sm ${
                                   user.isLoggedIn
-                                    ? "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-600 dark:text-amber-300 shadow-sm"
-                                    : "bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-400 dark:text-white/20 cursor-not-allowed opacity-50"
+                                    ? "bg-slate-100 hover:bg-amber-500/10 hover:text-amber-600 dark:bg-white/[0.03] dark:hover:bg-amber-500/15 border border-slate-200/80 dark:border-white/[0.08] hover:border-amber-500/40 text-slate-700 dark:text-slate-200 dark:hover:text-amber-300 cursor-pointer active:scale-95"
+                                    : "bg-transparent border border-transparent text-slate-400/40 dark:text-white/20 cursor-not-allowed select-none"
                                 }`}
                               >
                                 Logout
@@ -694,7 +705,7 @@ export default function Users() {
 
                               <button
                                 onClick={() => openDeleteModal(user)}
-                                className="flex-1 min-w-[75px] py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 transition-colors shadow-sm"
+                                className="flex-1 min-w-[75px] py-2 min-[360px]:py-2.5 px-3 rounded-xl text-[11px] min-[360px]:text-xs font-semibold bg-slate-100 hover:bg-rose-500/10 hover:text-rose-600 dark:bg-white/[0.03] dark:hover:bg-rose-500/15 border border-slate-200/80 dark:border-white/[0.08] hover:border-rose-500/40 text-slate-700 dark:text-slate-200 dark:hover:text-rose-400 transition-all active:scale-95 shadow-sm cursor-pointer"
                               >
                                 Terminate
                               </button>

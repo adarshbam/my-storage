@@ -230,7 +230,7 @@ export default function WallyAcademyPage() {
   };
 
   return (
-    <div className="min-h-full pb-24 text-white space-y-8 font-sans">
+    <div className="min-h-full pb-24 text-slate-900 dark:text-white space-y-8 font-sans">
       {/* ─────────────────────────────────────────────────────────────
           1. HEADER BANNER WITH WALLY MASCOT
          ───────────────────────────────────────────────────────────── */}
@@ -282,21 +282,21 @@ export default function WallyAcademyPage() {
       {/* ─────────────────────────────────────────────────────────────
           2. LIVE INTERACTIVE PRACTICE ARENA / SANDBOX
          ───────────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl sm:rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-4 min-[360px]:p-5 sm:p-7 space-y-4 sm:space-y-5 shadow-xl min-w-0 w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+      <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 p-4 min-[360px]:p-5 sm:p-7 space-y-4 sm:space-y-5 shadow-xl min-w-0 w-full transition-all duration-300 hover:border-accent-border">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/60 dark:border-white/10 pb-4">
           <div className="space-y-1 min-w-0">
-            <h2 className="text-base min-[360px]:text-lg font-black text-white flex items-center gap-2">
+            <h2 className="text-base min-[360px]:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
               <Zap size={18} className="text-accent-primary shrink-0" />
               <span className="truncate">Live Practice Sandbox</span>
             </h2>
-            <p className="text-[11px] min-[360px]:text-xs text-white/50">
+            <p className="text-[11px] min-[360px]:text-xs text-slate-500 dark:text-white/50">
               Practice navigating, selecting, and previewing files using only your keyboard in real-time.
             </p>
           </div>
 
           {/* Real-time Keystroke Display */}
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[11px] min-[360px]:text-xs text-white/40 font-mono">Last Key:</span>
+            <span className="text-[11px] min-[360px]:text-xs text-slate-400 dark:text-white/40 font-mono">Last Key:</span>
             <div className="px-2.5 sm:px-3 py-1 rounded-xl bg-accent-soft border border-accent-border text-accent-primary font-mono font-black text-[11px] min-[360px]:text-xs min-w-[65px] text-center shadow-sm">
               {lastKeyPressed || "Press key..."}
             </div>
@@ -315,25 +315,25 @@ export default function WallyAcademyPage() {
               key={quest.id}
               className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border transition-all duration-300 flex items-center justify-between gap-2 ${
                 quest.done
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-                  : "bg-white/[0.03] border-white/10 text-white/60"
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                  : "bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/60"
               }`}
             >
               <div className="min-w-0">
                 <p className="text-[11px] min-[360px]:text-xs font-bold truncate">{quest.label}</p>
-                <p className="text-[9px] min-[360px]:text-[10px] font-mono text-white/40">{quest.hint}</p>
+                <p className="text-[9px] min-[360px]:text-[10px] font-mono text-slate-400 dark:text-white/40">{quest.hint}</p>
               </div>
               {quest.done ? (
-                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+                <CheckCircle2 size={15} className="text-emerald-500 dark:text-emerald-400 shrink-0" />
               ) : (
-                <div className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0" />
+                <div className="w-3.5 h-3.5 rounded-full border border-slate-300 dark:border-white/20 shrink-0" />
               )}
             </div>
           ))}
         </div>
 
         {/* Sandbox Grid View */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 min-[360px]:gap-3.5 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-black/40 border border-white/5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 min-[360px]:gap-3.5 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5">
           {SANDBOX_ITEMS.map((item, idx) => {
             const isFocused = sandboxFocusedIndex === idx;
             const isSelected = sandboxSelectedIds.includes(item.id);
@@ -349,16 +349,16 @@ export default function WallyAcademyPage() {
                 }}
                 className={`group relative p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all duration-200 cursor-pointer flex items-center gap-2.5 sm:gap-3 select-none min-w-0 ${
                   isSelected
-                    ? "bg-accent-soft/80 border-accent-primary shadow-[0_0_15px_rgba(0,207,255,0.25)]"
+                    ? "bg-accent-soft/80 border-accent-primary shadow-[0_0_15px_rgba(0,207,255,0.25)] dark:shadow-[0_0_15px_rgba(0,207,255,0.25)]"
                     : isFocused
-                    ? "bg-white/10 border-white/30"
-                    : "bg-white/[0.04] border-white/5 hover:bg-white/[0.08]"
+                    ? "bg-slate-100 dark:bg-white/10 border-slate-300 dark:border-white/30"
+                    : "bg-white dark:bg-white/[0.04] border-slate-200 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/[0.08]"
                 }`}
               >
                 <div
                   className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${
                     item.type === "directory"
-                      ? "bg-purple-500/20 text-purple-400"
+                      ? "bg-purple-500/15 dark:bg-purple-500/20 text-purple-500 dark:text-purple-400"
                       : "bg-accent-soft text-accent-primary"
                   }`}
                 >
@@ -366,8 +366,8 @@ export default function WallyAcademyPage() {
                 </div>
 
                 <div className="overflow-hidden flex-1 min-w-0">
-                  <p className="text-xs font-bold text-white truncate">{item.name}</p>
-                  <p className="text-[10px] font-mono text-white/40 mt-0.5">{item.size}</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{item.name}</p>
+                  <p className="text-[10px] font-mono text-slate-400 dark:text-white/40 mt-0.5">{item.size}</p>
                 </div>
 
                 {isSelected && (
@@ -390,14 +390,14 @@ export default function WallyAcademyPage() {
       {/* ─────────────────────────────────────────────────────────────
           3. ALL SHORTCUTS CATALOG & CUSTOMIZATION MANAGER
          ───────────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl sm:rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-4 min-[360px]:p-5 sm:p-7 space-y-5 sm:space-y-6 shadow-xl min-w-0 w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-white/10 pb-4 sm:pb-5">
+      <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 p-4 min-[360px]:p-5 sm:p-7 space-y-5 sm:space-y-6 shadow-xl min-w-0 w-full transition-all duration-300 hover:border-accent-border">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200/60 dark:border-white/10 pb-4 sm:pb-5">
           <div className="min-w-0">
-            <h2 className="text-base min-[360px]:text-lg font-black text-white flex items-center gap-2">
+            <h2 className="text-base min-[360px]:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
               <Sliders size={18} className="text-accent-primary shrink-0" />
               <span className="truncate">Custom Keybindings</span>
             </h2>
-            <p className="text-[11px] min-[360px]:text-xs text-white/50">
+            <p className="text-[11px] min-[360px]:text-xs text-slate-500 dark:text-white/50">
               Customize any keybinding with conflict prevention.
             </p>
           </div>
@@ -405,7 +405,7 @@ export default function WallyAcademyPage() {
           <Button
             variant="secondary"
             onClick={resetAllShortcuts}
-            className="text-[11px] min-[360px]:text-xs font-bold text-white/70 hover:text-white flex items-center gap-1.5 self-start sm:self-auto py-1.5 px-3 rounded-xl"
+            className="text-[11px] min-[360px]:text-xs font-bold text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5 self-start sm:self-auto py-1.5 px-3 rounded-xl"
           >
             <RotateCcw size={13} />
             <span>Reset All</span>
@@ -416,13 +416,13 @@ export default function WallyAcademyPage() {
         <div className="flex flex-col sm:flex-row items-center gap-3">
           {/* Search Box */}
           <div className="relative flex-1 w-full">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40" />
             <input
               type="text"
               placeholder="Search shortcuts by action name or key (e.g. F2, Shift, Enter, Upload)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white/[0.05] border border-white/10 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-accent-primary transition-all font-medium"
+              className="w-full bg-slate-50 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none focus:border-accent-primary transition-all font-medium"
             />
           </div>
 
@@ -435,7 +435,7 @@ export default function WallyAcademyPage() {
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                   selectedCategory === cat
                     ? "bg-accent-primary text-accent-foreground shadow-accent-glow"
-                    : "bg-white/[0.04] text-white/60 hover:text-white hover:bg-white/[0.08]"
+                    : "bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/[0.08]"
                 }`}
               >
                 {cat}
@@ -453,33 +453,33 @@ export default function WallyAcademyPage() {
             return (
               <div
                 key={item.id}
-                className="group flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-all duration-200 gap-3 sm:gap-4"
+                className="group flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/[0.06] border border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15 transition-all duration-200 gap-3 sm:gap-4"
               >
                 <div className="space-y-1 pr-0 sm:pr-4 min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="text-sm font-bold text-white">{item.name}</h4>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/60 font-medium">
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">{item.name}</h4>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white/60 font-medium">
                       {item.category}
                     </span>
                     {isCustom && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-semibold">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 font-semibold">
                         Customized
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-white/50 leading-relaxed">{item.description}</p>
+                  <p className="text-xs text-slate-500 dark:text-white/50 leading-relaxed">{item.description}</p>
                 </div>
 
                 <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-end sm:self-auto">
                   {/* Keyboard Badge */}
-                  <kbd className="px-3 py-1.5 rounded-xl bg-black/60 border border-white/20 text-xs font-mono font-black text-accent-primary shadow-sm tracking-wider">
+                  <kbd className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-black/60 border border-slate-300 dark:border-white/20 text-xs font-mono font-black text-accent-primary shadow-sm tracking-wider">
                     {activeKey}
                   </kbd>
 
                   {/* Edit Button */}
                   <button
                     onClick={() => startEditing(item.id)}
-                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-accent-primary hover:text-accent-foreground text-xs font-bold text-white transition-all active:scale-95"
+                    className="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-white/10 hover:bg-accent-primary hover:text-accent-foreground text-xs font-bold text-slate-700 dark:text-white transition-all active:scale-95"
                   >
                     Edit
                   </button>
@@ -488,7 +488,7 @@ export default function WallyAcademyPage() {
                   {isCustom && (
                     <button
                       onClick={() => resetShortcut(item.id)}
-                      className="p-1.5 text-white/40 hover:text-rose-400 transition-colors"
+                      className="p-1.5 text-slate-400 dark:text-white/40 hover:text-rose-500 dark:hover:text-rose-400 transition-colors"
                       title="Reset this shortcut to default"
                     >
                       <RotateCcw size={14} />
@@ -504,14 +504,14 @@ export default function WallyAcademyPage() {
       {/* ─────────────────────────────────────────────────────────────
           4. INTERACTIVE TUTORIAL WALKTROUGHS WITH WALLY
          ───────────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl sm:rounded-3xl bg-slate-900/60 dark:bg-vault-panel/60 border border-slate-200/10 backdrop-blur-2xl p-4 min-[360px]:p-5 sm:p-7 space-y-4 sm:space-y-5 shadow-xl min-w-0 w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+      <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 p-4 min-[360px]:p-5 sm:p-7 space-y-4 sm:space-y-5 shadow-xl min-w-0 w-full transition-all duration-300 hover:border-accent-border">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/60 dark:border-white/10 pb-4">
           <div className="space-y-1 min-w-0">
-            <h2 className="text-base min-[360px]:text-lg font-black text-white flex items-center gap-2">
+            <h2 className="text-base min-[360px]:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
               <Sparkles size={18} className="text-accent-primary shrink-0" />
               <span className="truncate">Guided Tours with Wally</span>
             </h2>
-            <p className="text-[11px] min-[360px]:text-xs text-white/50">
+            <p className="text-[11px] min-[360px]:text-xs text-slate-500 dark:text-white/50">
               Interactive spotlights where Wally guides you through features on your screen.
             </p>
           </div>
@@ -530,7 +530,7 @@ export default function WallyAcademyPage() {
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                   selectedTourFilter === tab.id
                     ? "bg-accent-primary text-accent-foreground shadow-accent-glow"
-                    : "bg-white/[0.04] text-white/60 hover:text-white hover:bg-white/[0.08]"
+                    : "bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/[0.08]"
                 }`}
               >
                 {tab.label}
@@ -545,27 +545,27 @@ export default function WallyAcademyPage() {
             return (
               <div
                 key={tour.id}
-                className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-accent-border/50 transition-all duration-200"
+                className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/[0.06] border border-slate-200 dark:border-white/10 hover:border-accent-border/50 transition-all duration-200"
               >
                 <div className="space-y-1.5 pr-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="text-xs sm:text-sm font-bold text-white">{tour.title}</h4>
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{tour.title}</h4>
                     {tour.badge && (
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                           tour.role === "owner"
-                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                            ? "bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30"
                             : tour.role === "manager"
-                            ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                            : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+                            ? "bg-purple-500/15 dark:bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30"
+                            : "bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30"
                         }`}
                       >
                         {tour.badge}
                       </span>
                     )}
-                    {isCompleted && <CheckCircle2 size={14} className="text-emerald-400" />}
+                    {isCompleted && <CheckCircle2 size={14} className="text-emerald-500 dark:text-emerald-400" />}
                   </div>
-                  <p className="text-xs text-white/50 line-clamp-2 leading-relaxed">{tour.description}</p>
+                  <p className="text-xs text-slate-500 dark:text-white/50 line-clamp-2 leading-relaxed">{tour.description}</p>
                 </div>
 
                 <Button
@@ -592,8 +592,8 @@ export default function WallyAcademyPage() {
           title={`Remap Shortcut: ${shortcuts[editingActionId].name}`}
           className="max-w-lg"
         >
-          <div className="space-y-5 text-white">
-            <p className="text-xs text-white/70">
+          <div className="space-y-5 text-slate-900 dark:text-white">
+            <p className="text-xs text-slate-500 dark:text-white/70">
               Press the desired key combination on your keyboard. Modifiers like Ctrl, Alt, and Shift can be combined.
             </p>
 
@@ -604,10 +604,10 @@ export default function WallyAcademyPage() {
               className="relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-accent-primary bg-accent-soft/30 outline-none focus:ring-4 focus:ring-accent-primary/20 transition-all cursor-pointer select-none"
             >
               <Keyboard size={32} className="text-accent-primary mb-3 animate-pulse" />
-              <p className="text-sm font-bold text-white mb-1">
+              <p className="text-sm font-bold text-slate-900 dark:text-white mb-1">
                 {recordedKeys ? recordedKeys : "Press key combination on your keyboard..."}
               </p>
-              <p className="text-[11px] text-white/40">
+              <p className="text-[11px] text-slate-400 dark:text-white/40">
                 (Click here and type your new shortcut)
               </p>
             </div>
@@ -628,7 +628,7 @@ export default function WallyAcademyPage() {
             )}
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-white/10">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-white/10">
               <Button variant="secondary" onClick={() => setEditingActionId(null)}>
                 Cancel
               </Button>
@@ -653,12 +653,12 @@ export default function WallyAcademyPage() {
           title={`Quick Look: ${sandboxPreviewItem.name}`}
           className="max-w-md"
         >
-          <div className="space-y-4 text-white text-center py-6">
+          <div className="space-y-4 text-slate-900 dark:text-white text-center py-6">
             <div className="w-16 h-16 rounded-2xl bg-accent-soft border border-accent-border text-accent-primary mx-auto flex items-center justify-center">
               <FileText size={32} />
             </div>
-            <h3 className="text-base font-bold text-white">{sandboxPreviewItem.name}</h3>
-            <p className="text-xs text-white/50">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">{sandboxPreviewItem.name}</h3>
+            <p className="text-xs text-slate-500 dark:text-white/50">
               Zero-knowledge decrypted asset preview test. Size: {sandboxPreviewItem.size}
             </p>
             <Button variant="primary" onClick={() => setSandboxPreviewItem(null)} className="w-full">

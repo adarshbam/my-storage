@@ -175,7 +175,7 @@ export default function EditLinkModal({ isOpen, onClose, link, onUpdated }) {
                 onClick={() => setAccessType("restricted")}
                 className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
                   accessType === "restricted"
-                    ? "bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.15)]"
+                    ? "bg-accent-soft text-accent-primary border-accent-border/40 shadow-sm"
                     : "bg-slate-100 dark:bg-black/40 text-slate-600 dark:text-white/40 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
                 }`}
               >

@@ -444,7 +444,7 @@ export default function SecureRelayView({ openShareModal }) {
             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold tracking-widest uppercase mb-2 shadow-sm ${
               activeTab === "outgoing"
                 ? "bg-relay-accent/10 border border-relay-accent/20 text-relay-accent"
-                : "bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400"
+                : "bg-accent-soft border border-accent-border/30 text-accent-primary"
             }`}>
               <Share2 size={13} />
               <span>{activeTab === "outgoing" ? "Link Management" : "Incoming Relays"}</span>
@@ -813,16 +813,16 @@ export default function SecureRelayView({ openShareModal }) {
         <div>
           {/* Demo Notice Banner if using demo drives */}
           {incomingDrives.length === 0 && showDemoIncoming && (
-            <div className="mb-5 p-3.5 bg-purple-500/10 border border-purple-500/20 rounded-2xl flex items-center justify-between gap-3 text-xs text-purple-300">
+            <div className="mb-5 p-3.5 bg-accent-soft/50 border border-accent-border/30 rounded-2xl flex items-center justify-between gap-3 text-xs text-slate-700 dark:text-white/80 shadow-sm">
               <div className="flex items-center gap-2.5">
-                <Sparkles size={16} className="text-purple-400 shrink-0" />
+                <Sparkles size={16} className="text-accent-primary shrink-0" />
                 <span>
-                  <strong>Demo Incoming Relays Active:</strong> Sample shared vaults are displayed below to let you preview and test search, filters, permissions, and browsing.
+                  <strong className="text-accent-primary">Demo Incoming Relays Active:</strong> Sample shared vaults are displayed below to let you preview and test search, filters, permissions, and browsing.
                 </span>
               </div>
               <button
                 onClick={() => setShowDemoIncoming(false)}
-                className="text-white/40 hover:text-white text-[11px] underline shrink-0"
+                className="text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white text-[11px] underline shrink-0 transition-colors"
               >
                 Hide Demos
               </button>
@@ -844,7 +844,7 @@ export default function SecureRelayView({ openShareModal }) {
             </div>
           ) : filteredIncomingDrives.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center p-12 bg-vault-surface/40 border border-dashed border-white/10 rounded-3xl space-y-4">
-              <div className="w-16 h-16 rounded-3xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.15)]">
+              <div className="w-16 h-16 rounded-3xl bg-accent-soft text-accent-primary border border-accent-border/30 flex items-center justify-center shadow-accent-glow-sm">
                 <FolderOpen size={28} />
               </div>
               <div>
@@ -890,18 +890,18 @@ export default function SecureRelayView({ openShareModal }) {
                 return (
                   <div
                     key={access._id}
-                    className="bg-vault-surface/90 hover:bg-vault-surface border border-white/5 hover:border-purple-500/30 rounded-3xl p-5 transition-all duration-300 shadow-[0_4px_24px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_rgba(168,85,247,0.12)] flex flex-col justify-between group"
+                    className="bg-vault-surface/90 hover:bg-vault-surface border border-white/5 hover:border-accent-border/40 rounded-3xl p-5 transition-all duration-300 shadow-[0_4px_24px_rgba(0,0,0,0.3)] hover:shadow-accent-glow-sm flex flex-col justify-between group"
                   >
                     <div>
                       {/* Top Row: Icon & Clearance Badge */}
                       <div className="flex items-start justify-between gap-3 mb-3.5">
-                        <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+                        <div className="w-12 h-12 rounded-2xl bg-accent-soft text-accent-primary border border-accent-border/30 flex items-center justify-center shrink-0 shadow-accent-glow-sm">
                           {isFullVault ? <Layers size={22} /> : <FolderOpen size={22} />}
                         </div>
                         
                         <div className="flex items-center gap-1.5">
                           {access.isDemo && (
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/5 text-purple-300 border border-purple-500/20">
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/5 text-accent-primary border border-accent-border/30">
                               DEMO
                             </span>
                           )}
@@ -963,7 +963,7 @@ export default function SecureRelayView({ openShareModal }) {
 
                       {/* Owner Details Card */}
                       <div className="bg-black/30 border border-white/5 rounded-2xl p-2.5 mb-4 flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shrink-0 overflow-hidden">
+                        <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent-primary border border-accent-border/30 flex items-center justify-center shrink-0 overflow-hidden">
                           {owner.profilepic ? (
                             <img
                               src={getProfilePicUrl(owner.profilepic)}
@@ -972,13 +972,13 @@ export default function SecureRelayView({ openShareModal }) {
                               onError={(e) => {
                                 e.currentTarget.style.display = "none";
                                 if (e.currentTarget.nextSibling) {
-                                  e.currentTarget.nextSibling.style.display = "block";
+                                   e.currentTarget.nextSibling.style.display = "block";
                                 }
                               }}
                             />
                           ) : null}
                           <span
-                            className="font-black text-xs uppercase text-purple-400 select-none"
+                            className="font-black text-xs uppercase text-accent-primary select-none"
                             style={{ display: owner.profilepic ? "none" : "block" }}
                           >
                             {getInitials(owner.name, owner.email)}
@@ -1015,7 +1015,7 @@ export default function SecureRelayView({ openShareModal }) {
                             className={`flex-1 py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                               isAccessBlocked
                                 ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25 hover:border-amber-500/40 shadow-sm"
-                                : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/25 hover:border-purple-500/40"
+                                : "bg-accent-soft hover:bg-accent-primary/20 text-accent-primary border border-accent-border/30 hover:border-accent-border/50"
                             }`}
                           >
                             {isAccessBlocked ? <Lock size={14} /> : <FolderOpen size={14} />}
@@ -1067,11 +1067,11 @@ export default function SecureRelayView({ openShareModal }) {
                 return (
                   <div
                     key={access._id}
-                    className="group px-4 py-3.5 rounded-2xl bg-vault-surface/70 hover:bg-vault-surface border border-white/5 hover:border-purple-500/25 transition-all duration-200 flex items-center justify-between gap-4"
+                    className="group px-4 py-3.5 rounded-2xl bg-vault-surface/70 hover:bg-vault-surface border border-white/5 hover:border-accent-border/30 transition-all duration-200 flex items-center justify-between gap-4"
                   >
                     {/* Left: Icon, Name & Owner */}
                     <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-accent-soft text-accent-primary border border-accent-border/30 flex items-center justify-center shrink-0">
                         {isFullVault ? <Layers size={18} /> : <FolderOpen size={18} />}
                       </div>
 
@@ -1081,13 +1081,13 @@ export default function SecureRelayView({ openShareModal }) {
                             {displayName}
                           </span>
                           {access.isDemo && (
-                            <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-white/5 text-purple-300 border border-purple-500/20">
+                            <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-white/5 text-accent-primary border border-accent-border/30">
                               DEMO
                             </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-xs text-white/40 font-medium mt-0.5">
-                          <span className="text-purple-300/70 font-semibold">{owner.name || "Vault Member"}</span>
+                          <span className="text-accent-primary/80 font-semibold">{owner.name || "Vault Member"}</span>
                           <span>•</span>
                           <span>{owner.email}</span>
                           <span>•</span>
@@ -1128,7 +1128,7 @@ export default function SecureRelayView({ openShareModal }) {
                         className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                           isAccessBlocked
                             ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25"
-                            : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/25"
+                            : "bg-accent-soft hover:bg-accent-primary/20 text-accent-primary border border-accent-border/30"
                         }`}
                       >
                         {isAccessBlocked ? <Lock size={13} /> : <FolderOpen size={13} />}
@@ -1159,7 +1159,7 @@ export default function SecureRelayView({ openShareModal }) {
             className="fixed inset-0 bg-black/80 backdrop-blur-md"
             onClick={() => setActiveDrivePreview(null)}
           />
-          <div className="relative z-10 w-full max-w-xl bg-white dark:bg-vault-surface border border-slate-200 dark:border-purple-500/30 rounded-3xl p-6 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.8)] text-slate-900 dark:text-white space-y-4">
+          <div className="relative z-10 w-full max-w-xl bg-white dark:bg-vault-surface border border-slate-200 dark:border-accent-border/30 rounded-3xl p-6 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.8)] text-slate-900 dark:text-white space-y-4">
             <button
               onClick={() => setActiveDrivePreview(null)}
               className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl transition-all"
@@ -1168,14 +1168,14 @@ export default function SecureRelayView({ openShareModal }) {
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-accent-soft text-accent-primary border border-accent-border/30 flex items-center justify-center shrink-0 shadow-sm">
                 <FolderOpen size={22} />
               </div>
               <div className="overflow-hidden">
                 <h3 className="font-bold text-base sm:text-lg truncate">
                   {activeDrivePreview.name || `${activeDrivePreview.userId?.name || "Member"}'s Shared Relay`}
                 </h3>
-                <p className="text-xs text-purple-600 dark:text-purple-300/80 truncate">
+                <p className="text-xs text-accent-primary truncate font-medium">
                   Shared by {activeDrivePreview.userId?.name || "Vault User"} ({activeDrivePreview.userId?.email || ""})
                 </p>
               </div>
@@ -1184,7 +1184,7 @@ export default function SecureRelayView({ openShareModal }) {
             <div className="p-3 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-2xl space-y-2 text-xs">
               <div className="flex items-center justify-between text-slate-600 dark:text-white/60">
                 <span>Security Clearance:</span>
-                <span className="font-bold uppercase text-purple-600 dark:text-purple-300">
+                <span className="font-bold uppercase text-accent-primary">
                   {activeDrivePreview.permission?.[0] || "read"}
                 </span>
               </div>
@@ -1212,7 +1212,7 @@ export default function SecureRelayView({ openShareModal }) {
                         {isDir ? (
                           <FolderOpen size={16} className="text-accent-primary shrink-0" />
                         ) : (
-                          <FileText size={16} className="text-purple-500 dark:text-purple-400 shrink-0" />
+                          <FileText size={16} className="text-accent-primary shrink-0" />
                         )}
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-slate-900 dark:text-white truncate" title={item.name}>
@@ -1267,7 +1267,7 @@ export default function SecureRelayView({ openShareModal }) {
                                 link.click();
                                 document.body.removeChild(link);
                               }}
-                              className="p-1.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 font-medium text-[11px]"
+                              className="p-1.5 rounded-xl bg-accent-soft text-accent-primary hover:bg-accent-soft/80 font-medium text-[11px]"
                               title="Download file"
                             >
                               <Download size={13} />

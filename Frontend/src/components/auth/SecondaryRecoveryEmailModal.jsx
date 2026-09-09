@@ -274,7 +274,7 @@ export default function SecondaryRecoveryEmailModal({
                   <button
                     type="submit"
                     disabled={sendingOtp || !email}
-                    className="px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:opacity-95 text-white text-xs font-bold transition-all shadow-lg shadow-teal-500/20 disabled:opacity-40 shrink-0 flex items-center gap-1.5 cursor-pointer"
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm active:scale-98 disabled:opacity-40 shrink-0 flex items-center gap-1.5 cursor-pointer"
                   >
                     {sendingOtp ? (
                       <Loader2 className="animate-spin" size={16} />
@@ -376,7 +376,7 @@ export default function SecondaryRecoveryEmailModal({
                     <button
                       type="submit"
                       disabled={verifyingOtp || otp.join("").length !== 6}
-                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:opacity-95 text-white font-bold text-xs shadow-lg shadow-teal-500/25 transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                     >
                       {verifyingOtp ? (
                         <>

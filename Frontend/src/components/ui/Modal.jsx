@@ -32,7 +32,11 @@ export default function Modal({
           className,
         )}
       >
-        <div className="flex items-center justify-between px-5 sm:px-6 py-4 sm:py-4.5 border-b border-slate-100 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.03] shrink-0">
+        {/* Subtle Ambient Top Theme Aura (matches Homepage atmosphere) */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[180px] bg-[radial-gradient(ellipse_at_top,rgba(var(--accent-primary-rgb),0.14)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(var(--accent-primary-rgb),0.10)_0%,transparent_70%)] pointer-events-none rounded-t-3xl z-0" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[70%] h-[100px] bg-accent-soft rounded-full blur-[60px] opacity-60 pointer-events-none z-0" />
+
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 sm:py-4.5 border-b border-slate-100 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.03] shrink-0 relative z-10">
           <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight truncate pr-2">
             {title}
           </h2>
@@ -40,14 +44,14 @@ export default function Modal({
             {headerActions}
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl text-slate-400 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-xl text-slate-400 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors cursor-pointer"
               title="Close modal"
             >
               <X size={18} />
             </button>
           </div>
         </div>
-        <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 relative z-10">{children}</div>
       </div>
     </div>,
     document.body,

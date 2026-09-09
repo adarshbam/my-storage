@@ -12,20 +12,20 @@ import {
   SystemCoreIcon,
   VaultDriveIcon,
   VaultGitIcon,
+  VaultShareIcon,
+  VaultUploadIcon,
+  VaultNewFolderIcon,
+  VaultNewFileIcon,
 } from "../ui/VaultIcons";
 import ProfileMenu from "../ui/ProfileMenu";
 import NotificationBell from "../notifications/NotificationBell";
 import {
   Search,
   Bell,
-  Upload,
-  FolderPlus,
-  FilePlus,
   Plus,
   Menu,
   PanelLeft,
   MoreVertical,
-  Share2,
   X,
   HardDrive,
   User,
@@ -151,7 +151,7 @@ export default function CommandBar({
   const quickActions = [
     {
       label: "Share Vault",
-      icon: Share2,
+      icon: VaultShareIcon,
       onClick: () => guardAction(openShareModal, false),
       color: "var(--accent-primary)",
       hoverBg: "hover:bg-accent-soft",
@@ -161,7 +161,7 @@ export default function CommandBar({
     },
     {
       label: "Upload Asset",
-      icon: Upload,
+      icon: VaultUploadIcon,
       onClick: () => guardAction(openUploadModal, true),
       color: "var(--accent-primary)",
       hoverBg: "hover:bg-accent-soft",
@@ -171,7 +171,7 @@ export default function CommandBar({
     },
     {
       label: "New Directory",
-      icon: FolderPlus,
+      icon: VaultNewFolderIcon,
       onClick: () => guardAction(handleCreateClick, true),
       color: "var(--accent-primary)",
       hoverBg: "hover:bg-accent-soft",
@@ -181,7 +181,7 @@ export default function CommandBar({
     },
     {
       label: "New File",
-      icon: FilePlus,
+      icon: VaultNewFileIcon,
       onClick: () => guardAction(handleCreateFileClick, true),
       color: "var(--accent-primary)",
       hoverBg: "hover:bg-accent-soft",
@@ -585,7 +585,7 @@ export default function CommandBar({
                   onClick={() => {
                     action.onClick();
                   }}
-                  className={`p-2 text-slate-500 dark:text-white/50 ${action.hoverText} ${action.hoverBg} ${action.glowHover} rounded-xl transition-all duration-200`}
+                  className="p-2 text-slate-600 dark:text-slate-300 hover:text-accent-primary hover:bg-accent-soft/70 rounded-xl transition-all duration-200"
                   title={action.label}
                 >
                   <action.icon size={18} />
@@ -614,18 +614,20 @@ export default function CommandBar({
         <div className="hidden md:flex items-center gap-2 border-r border-slate-200 dark:border-white/10 pr-3 mr-1">
           {user?.integrations?.googleDrive?.connected && (
             <div
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-soft border border-accent-border/40"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/70 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.08] transition-all"
               title="Google Drive Connected"
             >
-              <VaultDriveIcon size={14} className="text-accent-primary" />
+              <VaultDriveIcon size={14} className="text-slate-700 dark:text-white" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
             </div>
           )}
           {user?.integrations?.github?.connected && (
             <div
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-soft border border-accent-border/40"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/70 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.08] transition-all"
               title="GitHub Connected"
             >
-              <VaultGitIcon size={14} className="text-accent-primary" />
+              <VaultGitIcon size={14} className="text-slate-700 dark:text-white" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
             </div>
           )}
         </div>

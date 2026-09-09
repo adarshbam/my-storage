@@ -657,13 +657,13 @@ export default function GitHubChamber() {
           )}
 
           {/* View Mode Toggle */}
-          <div className="flex items-center bg-black/40 backdrop-blur-sm rounded-xl p-1 border border-white/5">
+          <div className="flex items-center bg-slate-100 dark:bg-white/[0.06] rounded-xl p-1 border border-slate-200 dark:border-white/10">
             <button
               onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-md transition-colors ${
+              className={`p-1.5 rounded-lg transition-all ${
                 viewMode === "grid"
-                  ? "bg-white/10 shadow-sm text-accent-primary"
-                  : "text-white/40 hover:text-white/80"
+                  ? "bg-white dark:bg-white/15 shadow-sm text-slate-900 dark:text-white font-medium"
+                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
               }`}
               title="Grid view"
             >
@@ -671,10 +671,10 @@ export default function GitHubChamber() {
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded-md transition-colors ${
+              className={`p-1.5 rounded-lg transition-all ${
                 viewMode === "list"
-                  ? "bg-white/10 shadow-sm text-accent-primary"
-                  : "text-white/40 hover:text-white/80"
+                  ? "bg-white dark:bg-white/15 shadow-sm text-slate-900 dark:text-white font-medium"
+                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
               }`}
               title="List view"
             >

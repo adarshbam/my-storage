@@ -548,6 +548,153 @@ export const VaultUploadCloudIcon = ({ className = "", size = 24 }) => (
 );
 
 /**
+ * Modern Bespoke Action Icons (Precision 1.75px geometric stroke with subtle alpha fill)
+ */
+export const VaultShareIcon = ({ className = "", size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <circle
+      cx="18"
+      cy="5"
+      r="2.75"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      fill="currentColor"
+      fillOpacity="0.1"
+    />
+    <circle
+      cx="6"
+      cy="12"
+      r="2.75"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      fill="currentColor"
+      fillOpacity="0.1"
+    />
+    <circle
+      cx="18"
+      cy="19"
+      r="2.75"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      fill="currentColor"
+      fillOpacity="0.1"
+    />
+    <path
+      d="M8.5 10.75L15.5 6.75M8.5 13.25L15.5 17.25"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const VaultUploadIcon = ({ className = "", size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path
+      d="M4 16V18.5C4 19.6046 4.89543 20.5 6 20.5H18C19.1046 20.5 20 19.6046 20 18.5V16"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M12 3.5V14.5M12 3.5L7.5 8M12 3.5L16.5 8"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <rect
+      x="5.5"
+      y="17"
+      width="13"
+      height="2.5"
+      rx="1.25"
+      fill="currentColor"
+      fillOpacity="0.08"
+    />
+  </svg>
+);
+
+export const VaultNewFolderIcon = ({ className = "", size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path
+      d="M3 7V18C3 19.1046 3.89543 20 5 20H19C20.1046 20 21 19.1046 21 18V9.5C21 8.39543 20.1046 7.5 19 7.5H12.5L10.5 5H5C3.89543 5 3 5.89543 3 7Z"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="currentColor"
+      fillOpacity="0.08"
+    />
+    <path
+      d="M12 11V16.5M9.25 13.75H14.75"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const VaultNewFileIcon = ({ className = "", size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path
+      d="M14 3H6C4.89543 3 4 3.89543 4 5V19C4 20.1046 4.89543 21 6 21H18C19.1046 21 20 20.1046 20 19V9L14 3Z"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="currentColor"
+      fillOpacity="0.08"
+    />
+    <path
+      d="M14 3V8.5C14 8.77614 14.2239 9 14.5 9H20"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M12 12V17M9.5 14.5H14.5"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+/**
  * Legacy Icons & Aliases Export Support
  */
 export const VaultFilesIcon = VaultGenericFileIcon;

@@ -205,12 +205,15 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
         className="fixed inset-0 bg-black/85 backdrop-blur-md"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-3xl bg-white dark:bg-vault-surface text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl max-h-[90dvh] sm:max-h-[88vh] overflow-y-auto custom-scrollbar">
+      <div className="relative z-10 w-full max-w-3xl bg-white dark:bg-vault-surface text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl max-h-[90dvh] sm:max-h-[88vh] overflow-y-auto custom-scrollbar overflow-hidden">
+        {/* Subtle Ambient Top Theme Aura (matches Homepage atmosphere) */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[180px] bg-[radial-gradient(ellipse_at_top,rgba(var(--accent-primary-rgb),0.14)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(var(--accent-primary-rgb),0.10)_0%,transparent_70%)] pointer-events-none rounded-t-3xl z-0" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[70%] h-[100px] bg-accent-soft rounded-full blur-[70px] opacity-60 pointer-events-none z-0" />
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl transition-all z-20"
+          className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl transition-all z-20 cursor-pointer"
         >
           <X size={18} />
         </button>
@@ -412,7 +415,7 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
                   onClick={() => setAccessType("restricted")}
                   className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 ${
                     accessType === "restricted"
-                      ? "bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/40"
+                      ? "bg-accent-soft text-accent-primary border-accent-border/40 shadow-sm"
                       : "bg-slate-100 dark:bg-black/30 text-slate-600 dark:text-white/40 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
                   }`}
                 >
@@ -482,7 +485,7 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
                   Link Expiration
                 </label>
                 {!hasFeature("expiring_links") && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase font-mono">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase font-mono">
                     Upgrade Required
                   </span>
                 )}

@@ -332,20 +332,13 @@ export default function WallLauncher() {
             onPointerCancel={handlePointerCancel}
             onClick={handleClick}
             onDoubleClick={handleResetPosition}
-            className={`relative group flex items-center gap-2 p-2 min-[480px]:px-4 min-[480px]:py-2.5 rounded-full bg-slate-900/90 dark:bg-black/90 backdrop-blur-xl border border-white/20 dark:border-accent-border text-white select-none touch-none transition-shadow duration-150 ${
+            className={`relative group flex items-center gap-2 p-2 min-[480px]:px-4 min-[480px]:py-2.5 rounded-full bg-slate-900/90 dark:bg-black/90 backdrop-blur-xl border border-slate-700/60 dark:border-accent-border/60 text-white select-none touch-none transition-all duration-150 ${
               isDragging
-                ? "cursor-grabbing shadow-[0_20px_45px_rgba(0,0,0,0.7),0_0_35px_var(--accent-glow)] ring-2 ring-accent-primary/60"
-                : "cursor-grab shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_20px_var(--accent-glow-sm)] hover:shadow-[0_15px_35px_rgba(0,0,0,0.6),0_0_25px_var(--accent-glow)]"
+                ? "cursor-grabbing shadow-2xl ring-2 ring-accent-primary/60 scale-105"
+                : "cursor-grab shadow-xl shadow-black/50 hover:border-accent-primary/80 hover:shadow-2xl"
             }`}
             title="Drag to place Wally anywhere • Click to open Guidebook • Double-click to reset position"
           >
-            {/* Subtle glowing animated beacon */}
-            <div
-              className={`absolute -inset-0.5 bg-gradient-to-r from-accent-primary to-accent-primary/70 rounded-full blur-md transition-opacity duration-200 ${
-                isDragging ? "opacity-80" : "opacity-40 group-hover:opacity-75"
-              }`}
-            />
-
             {/* Subtle drag grip dots */}
             <div className="relative text-white/30 group-hover:text-white/60 transition-colors shrink-0 -ml-1">
               <GripVertical size={13} />
@@ -390,7 +383,7 @@ export default function WallLauncher() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: "spring", stiffness: 350, damping: 26 }}
-              className="fixed bottom-3 inset-x-2.5 min-[480px]:inset-x-4 sm:inset-auto sm:bottom-8 sm:right-8 z-50 w-auto sm:w-[92vw] sm:max-w-md rounded-2xl sm:rounded-3xl bg-slate-900/95 dark:bg-vault-surface/95 backdrop-blur-3xl border border-white/20 dark:border-white/15 p-4 sm:p-6 text-white shadow-[0_30px_80px_rgba(0,0,0,0.85),0_0_40px_var(--accent-glow-sm)] overflow-hidden max-h-[85vh] flex flex-col"
+              className="fixed bottom-3 inset-x-2.5 min-[480px]:inset-x-4 sm:inset-auto sm:bottom-8 sm:right-8 z-50 w-auto sm:w-[92vw] sm:max-w-md rounded-2xl sm:rounded-3xl bg-slate-900/95 dark:bg-vault-surface/95 backdrop-blur-3xl border border-slate-200/50 dark:border-white/[0.1] p-4 sm:p-6 text-white shadow-[0_30px_80px_rgba(0,0,0,0.85),0_0_40px_var(--accent-glow-sm)] overflow-hidden max-h-[85vh] flex flex-col"
             >
               {/* Top Neon Accent Line */}
               <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-accent-primary via-accent-primary/80 to-accent-primary/60" />
@@ -439,28 +432,31 @@ export default function WallLauncher() {
                   return (
                     <div
                       key={tour.id}
-                      className="group/item flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-accent-border/60 transition-all duration-200"
+                      className="group/item flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-slate-200/50 dark:border-white/[0.06] hover:border-accent-border/40 transition-all duration-200"
                     >
-                      <div className="flex items-center gap-3.5 overflow-hidden">
-                        <div className="w-10 h-10 rounded-xl bg-accent-soft text-accent-primary border border-accent-border/40 flex items-center justify-center shrink-0 group-hover/item:scale-105 transition-transform">
-                          <Icon size={18} />
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-xl bg-accent-soft text-accent-primary border border-accent-border/30 flex items-center justify-center shrink-0 transition-all duration-200 group-hover/item:bg-accent-soft/80 shadow-sm">
+                          <Icon size={18} className="transition-transform duration-200 group-hover/item:scale-110" />
                         </div>
-                        <div className="overflow-hidden">
+                        <div className="overflow-hidden flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="text-xs font-bold text-white truncate">
                               {tour.title}
                             </h4>
                             {tour.badge && (
                               <span
-                                className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
+                                className={`inline-flex items-center gap-1 text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm ${
                                   tour.role === "owner"
-                                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                                    : tour.role === "manager"
-                                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                                    : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+                                    ? "bg-amber-500/20 text-amber-200 border border-amber-500/30"
+                                    : "bg-accent-primary/20 text-white border border-accent-primary/35 backdrop-blur-sm"
                                 }`}
                               >
-                                {tour.badge}
+                                <span
+                                  className={`w-1 h-1 rounded-full ${
+                                    tour.role === "owner" ? "bg-amber-400" : "bg-accent-primary"
+                                  }`}
+                                />
+                                <span>{tour.badge}</span>
                               </span>
                             )}
                             {isCompleted && (
@@ -482,7 +478,7 @@ export default function WallLauncher() {
                           setIsOpen(false);
                           startTour(tour.id);
                         }}
-                        className="px-3.5 py-1.5 rounded-xl bg-accent-primary text-accent-foreground font-black text-[11px] uppercase tracking-wider flex items-center gap-1 shadow-accent-glow hover:opacity-90 active:scale-95 transition-all shrink-0 cursor-pointer"
+                        className="px-3.5 py-1.5 rounded-xl bg-accent-primary hover:bg-accent-hover text-white font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all shrink-0 cursor-pointer shadow-sm"
                       >
                         <Play size={11} className="fill-current" />
                         <span>{isCompleted ? "Replay" : "Start"}</span>

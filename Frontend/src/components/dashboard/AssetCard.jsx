@@ -439,7 +439,7 @@ export default function AssetCard({
                 e.stopPropagation();
                 onShare(item);
               }}
-              className="p-1.5 text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 bg-slate-100 dark:bg-black/40 hover:bg-purple-500/10 rounded-lg transition-all"
+              className="p-1.5 text-slate-400 hover:text-accent-primary bg-slate-100 dark:bg-black/40 hover:bg-accent-soft rounded-lg transition-all"
               title="Share"
             >
               <Share2 size={16} />
@@ -539,8 +539,10 @@ export default function AssetCard({
       onDragOver={(e) => onDragOver && onDragOver(e)}
       onDragLeave={(e) => onDragLeave && onDragLeave(e)}
       onDrop={(e) => onDrop && onDrop(e, item)}
+      style={{ zIndex: showMenu ? 60 : 1 }}
       className={`
         vault-card-interactive group relative flex flex-col rounded-2xl transition-all duration-150 select-none
+        ${showMenu ? "!z-50" : "z-0"}
         ${
           isDragOver
             ? "bg-accent-soft border-2 border-accent-primary ring-4 ring-accent-primary/40 shadow-[0_0_50px_var(--accent-glow)] scale-[1.06] -translate-y-2 z-30"
@@ -740,7 +742,7 @@ export default function AssetCard({
       {/* ── ⋮ Menu — OUTSIDE overflow:hidden so dropdown never clips ── */}
       <div
         ref={menuRef}
-        className="absolute top-2 right-2 z-30"
+        className="absolute top-2 right-2 z-50"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -760,7 +762,7 @@ export default function AssetCard({
 
         {/* Dropdown — unrestricted, renders from card root level */}
         {showMenu && (
-          <div className="absolute right-0 top-full mt-1.5 w-48 bg-white dark:bg-[#111113] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1.5 overflow-hidden text-slate-900 dark:text-white backdrop-blur-xl animate-fade-in">
+          <div className="absolute right-0 top-full mt-1.5 w-48 bg-white dark:bg-[#111113] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl z-[70] p-1.5 overflow-hidden text-slate-900 dark:text-white backdrop-blur-xl animate-fade-in">
             {/* Open / Preview */}
             {!isTrash && (
               <button
@@ -810,8 +812,8 @@ export default function AssetCard({
               >
                 <Star
                   size={15}
-                  fill={(item.isStarred || item.starred) ? "#FF7A3D" : "none"}
-                  className={(item.isStarred || item.starred) ? "text-[#FF7A3D] drop-shadow-[0_0_8px_rgba(255,122,61,0.85)]" : "text-slate-400 dark:text-white/60"}
+                  fill={(item.isStarred || item.starred) ? "#F59E0B" : "none"}
+                  className={(item.isStarred || item.starred) ? "text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" : "text-slate-400 dark:text-white/60"}
                 />
                 Priority
               </button>
@@ -850,7 +852,7 @@ export default function AssetCard({
                 }}
                 className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors rounded-xl"
               >
-                <Share2 size={14} className="shrink-0 text-purple-600 dark:text-purple-400" />
+                <Share2 size={14} className="shrink-0 text-accent-primary" />
                 Share
               </button>
             )}

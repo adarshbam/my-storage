@@ -243,19 +243,13 @@ export default function AppearanceSection() {
                       <div
                         className="rounded-md h-full transition-all border border-white/5"
                         style={{
-                          backgroundColor:
-                            p.id === "veo-onyx"
-                              ? "rgba(148, 163, 184, 0.28)"
-                              : `${accentColor}33`,
+                          backgroundColor: `${accentColor}33`,
                         }}
                       />
                       <div
                         className="rounded-md h-full transition-all border border-white/5"
                         style={{
-                          backgroundColor:
-                            p.id === "veo-onyx"
-                              ? "rgba(148, 163, 184, 0.28)"
-                              : `${accentColor}33`,
+                          backgroundColor: `${accentColor}33`,
                         }}
                       />
                     </div>

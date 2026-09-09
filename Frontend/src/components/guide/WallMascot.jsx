@@ -36,13 +36,13 @@ export default function WallMascot({
       >
         {/* Ambient Glow Aura */}
         <div
-          className="absolute inset-0 rounded-full blur-xl opacity-60 bg-[radial-gradient(circle,rgba(0,207,255,0.4)_0%,rgba(16,185,129,0.2)_60%,transparent_80%)]"
+          className="absolute inset-0 rounded-full blur-xl opacity-50 bg-[radial-gradient(circle,var(--accent-glow)_0%,transparent_75%)]"
         />
 
         {/* Mascot SVG */}
         <svg
           viewBox="0 0 160 160"
-          className="w-full h-full drop-shadow-[0_8px_20px_rgba(0,207,255,0.35)]"
+          className="w-full h-full drop-shadow-[0_8px_20px_var(--accent-glow)]"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -65,23 +65,23 @@ export default function WallMascot({
             </linearGradient>
 
             <linearGradient id="wall-cyan-accent" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#00F0FF" />
-              <stop offset="100%" stopColor="#00A3FF" />
+              <stop offset="0%" stopColor="var(--accent-primary, #00F0FF)" />
+              <stop offset="100%" stopColor="var(--accent-hover, #00A3FF)" />
             </linearGradient>
 
             <linearGradient id="wall-emerald-accent" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#10B981" />
-              <stop offset="100%" stopColor="#059669" />
+              <stop offset="0%" stopColor="var(--accent-primary, #10B981)" />
+              <stop offset="100%" stopColor="var(--accent-active, #059669)" />
             </linearGradient>
 
             <linearGradient id="stick-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#FFFFFF" />
-              <stop offset="50%" stopColor="#00F0FF" />
-              <stop offset="100%" stopColor="#3B82F6" />
+              <stop offset="50%" stopColor="var(--accent-primary, #00F0FF)" />
+              <stop offset="100%" stopColor="var(--accent-hover, #3B82F6)" />
             </linearGradient>
 
             <filter id="laser-glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
@@ -119,7 +119,7 @@ export default function WallMascot({
             height="34"
             rx="12"
             fill="url(#wall-visor)"
-            stroke="#00F0FF"
+            stroke="var(--accent-primary, #00F0FF)"
             strokeWidth="1.2"
             strokeOpacity="0.6"
           />
@@ -127,7 +127,8 @@ export default function WallMascot({
           {/* Visor Scanline shimmer */}
           <path
             d="M54 52 Q80 48 106 52"
-            stroke="rgba(0, 240, 255, 0.25)"
+            stroke="var(--accent-primary, #00F0FF)"
+            strokeOpacity="0.25"
             strokeWidth="1"
             fill="none"
           />
@@ -136,30 +137,30 @@ export default function WallMascot({
           {gesture === "celebrating" ? (
             /* Joyful ^ ^ eyes */
             <g filter="url(#laser-glow)">
-              <path d="M60 60 L68 53 L76 60" stroke="#00F0FF" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              <path d="M84 60 L92 53 L100 60" stroke="#00F0FF" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+              <path d="M60 60 L68 53 L76 60" stroke="var(--accent-primary, #00F0FF)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+              <path d="M84 60 L92 53 L100 60" stroke="var(--accent-primary, #00F0FF)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
             </g>
           ) : gesture === "waving" ? (
             /* Friendly wide eyes with blink */
             <g filter="url(#laser-glow)">
-              <circle cx="68" cy="58" r="6" fill="#00F0FF" />
+              <circle cx="68" cy="58" r="6" fill="var(--accent-primary, #00F0FF)" />
               <circle cx="70" cy="56" r="2" fill="#FFFFFF" />
-              <circle cx="92" cy="58" r="6" fill="#00F0FF" />
+              <circle cx="92" cy="58" r="6" fill="var(--accent-primary, #00F0FF)" />
               <circle cx="94" cy="56" r="2" fill="#FFFFFF" />
               {/* Smile curve */}
-              <path d="M75 67 Q80 70 85 67" stroke="#00F0FF" strokeWidth="2" strokeLinecap="round" fill="none" />
+              <path d="M75 67 Q80 70 85 67" stroke="var(--accent-primary, #00F0FF)" strokeWidth="2" strokeLinecap="round" fill="none" />
             </g>
           ) : (
             /* Focused Guide Eyes */
             <g filter="url(#laser-glow)">
               {/* Left Eye */}
-              <rect x="62" y="52" width="12" height="11" rx="4" fill="#00F0FF" />
+              <rect x="62" y="52" width="12" height="11" rx="4" fill="var(--accent-primary, #00F0FF)" />
               <circle cx="65" cy="55" r="2" fill="#FFFFFF" />
               {/* Right Eye */}
-              <rect x="86" y="52" width="12" height="11" rx="4" fill="#00F0FF" />
+              <rect x="86" y="52" width="12" height="11" rx="4" fill="var(--accent-primary, #00F0FF)" />
               <circle cx="89" cy="55" r="2" fill="#FFFFFF" />
               {/* Subtle smile */}
-              <path d="M76 68 Q80 71 84 68" stroke="#00F0FF" strokeWidth="2" strokeLinecap="round" fill="none" />
+              <path d="M76 68 Q80 71 84 68" stroke="var(--accent-primary, #00F0FF)" strokeWidth="2" strokeLinecap="round" fill="none" />
             </g>
           )}
 
@@ -179,7 +180,7 @@ export default function WallMascot({
           />
 
           {/* Cyber Reactor Core */}
-          <circle cx="80" cy="106" r="8" fill="#09161E" stroke="#00F0FF" strokeWidth="1.5" />
+          <circle cx="80" cy="106" r="8" fill="#09161E" stroke="var(--accent-primary, #00F0FF)" strokeWidth="1.5" />
           <circle cx="80" cy="106" r="4.5" fill="url(#wall-cyan-accent)" filter="url(#laser-glow)" />
 
           {/* Left Arm / Stabilizer */}
@@ -260,22 +261,22 @@ export default function WallMascot({
 
             {/* Stick Gold/Cyber Rings */}
             <circle cx="132" cy="82" r="2.5" fill="#FFD166" />
-            <circle cx="148" cy="72" r="2.5" fill="#00F0FF" />
+            <circle cx="148" cy="72" r="2.5" fill="var(--accent-primary, #00F0FF)" />
 
             {/* Pulsing Beacon Crystal at Tip of Stick */}
             <g transform="translate(168, 60)">
               {/* Outer pulsing ring */}
-              <circle cx="0" cy="0" r="8" fill="none" stroke="#00F0FF" strokeWidth="1.5" opacity="0.6" />
+              <circle cx="0" cy="0" r="8" fill="none" stroke="var(--accent-primary, #00F0FF)" strokeWidth="1.5" opacity="0.6" />
               {/* Inner glowing core */}
               <polygon
                 points="0,-6 5,0 0,6 -5,0"
                 fill="#FFFFFF"
-                stroke="#00F0FF"
+                stroke="var(--accent-primary, #00F0FF)"
                 strokeWidth="1.5"
                 filter="url(#laser-glow)"
               />
               {/* Radiating pointer spark */}
-              <circle cx="0" cy="0" r="3" fill="#00F0FF" filter="url(#laser-glow)" />
+              <circle cx="0" cy="0" r="3" fill="var(--accent-primary, #00F0FF)" filter="url(#laser-glow)" />
             </g>
           </motion.g>
         </svg>

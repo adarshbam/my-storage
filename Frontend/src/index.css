@@ -43,17 +43,38 @@
     --accent-active-rgb: 6 95 70;
     --accent-primary: #059669;
     --accent-hover: #047857;
-    --accent-active: #065f46;
+    --accent-active: #065F46;
     --accent-foreground: #ffffff;
-    --accent-soft: rgba(5, 150, 105, 0.1);
-    --accent-border: rgba(5, 150, 105, 0.25);
-    --accent-glow: rgba(5, 150, 105, 0.2);
+    --accent-soft: rgba(16, 185, 129, 0.1);
+    --accent-border: rgba(16, 185, 129, 0.25);
+    --accent-glow: rgba(16, 185, 129, 0.18);
 
     --radius-sm: 0.5rem;
     --radius-md: 0.75rem;
     --radius-lg: 1rem;
     --radius-xl: 1.5rem;
     --radius-2xl: 2rem;
+
+    /* Semantic Status Tokens (Light) */
+    --status-success: #059669;
+    --status-success-muted: #10b981;
+    --status-success-surface: rgba(5, 150, 105, 0.08);
+    --status-success-border: rgba(5, 150, 105, 0.2);
+
+    --status-warning: #d97706;
+    --status-warning-muted: #f59e0b;
+    --status-warning-surface: rgba(217, 119, 6, 0.08);
+    --status-warning-border: rgba(217, 119, 6, 0.2);
+
+    --status-error: #e11d48;
+    --status-error-muted: #f43f5e;
+    --status-error-surface: rgba(225, 29, 72, 0.08);
+    --status-error-border: rgba(225, 29, 72, 0.2);
+
+    --status-info: #0284c7;
+    --status-info-muted: #38bdf8;
+    --status-info-surface: rgba(2, 132, 199, 0.08);
+    --status-info-border: rgba(2, 132, 199, 0.2);
   }
 
   /* Dark Mode Tokens - Clean Neutral Obsidian / Slate (Zero Green Tint) */
@@ -92,270 +113,228 @@
     --accent-primary-rgb: 16 185 129;
     --accent-hover-rgb: 52 211 153;
     --accent-active-rgb: 5 150 105;
-    --accent-primary: #10b981;
-    --accent-hover: #34d399;
+    --accent-primary: #10B981;
+    --accent-hover: #34D399;
     --accent-active: #059669;
     --accent-foreground: #ffffff;
     --accent-soft: rgba(16, 185, 129, 0.14);
     --accent-border: rgba(16, 185, 129, 0.35);
-    --accent-glow: rgba(16, 185, 129, 0.38);
+    --accent-glow: rgba(16, 185, 129, 0.16);
+
+    /* Semantic Status Tokens (Dark) */
+    --status-success: #10b981;
+    --status-success-muted: #34d399;
+    --status-success-surface: rgba(16, 185, 129, 0.08);
+    --status-success-border: rgba(16, 185, 129, 0.22);
+
+    --status-warning: #f59e0b;
+    --status-warning-muted: #fbbf24;
+    --status-warning-surface: rgba(245, 158, 11, 0.08);
+    --status-warning-border: rgba(245, 158, 11, 0.22);
+
+    --status-error: #f43f5e;
+    --status-error-muted: #fb7185;
+    --status-error-surface: rgba(244, 63, 94, 0.08);
+    --status-error-border: rgba(244, 63, 94, 0.22);
+
+    --status-info: #38bdf8;
+    --status-info-muted: #7dd3fc;
+    --status-info-surface: rgba(56, 189, 248, 0.08);
+    --status-info-border: rgba(56, 189, 248, 0.22);
   }
 
   /* ─────────────────────────────────────────────────────────────
-     11 COLOR ACCENT THEMES (Dark & Light)
+     8 PERFECTED COLOR ACCENT THEMES (Dark & Light)
      ───────────────────────────────────────────────────────────── */
 
-  /* 1. Veo Onyx (Monochrome / Slate / Charcoal) */
-  [data-accent="veo-onyx"] {
-    --accent-primary-rgb: 30 41 59;
-    --accent-primary: #1e293b;
-    --accent-hover: #0f172a;
-    --accent-active: #020617;
-    --accent-foreground: #ffffff;
-    --accent-soft: rgba(30, 41, 59, 0.1);
-    --accent-border: rgba(30, 41, 59, 0.25);
-    --accent-glow: rgba(30, 41, 59, 0.15);
-  }
-  .dark[data-accent="veo-onyx"],
-  [data-accent="veo-onyx"] .dark {
-    --accent-primary-rgb: 248 250 252;
-    --accent-primary: #f8fafc;
-    --accent-hover: #ffffff;
-    --accent-active: #e2e8f0;
-    --accent-foreground: #090d0c;
-    --accent-soft: rgba(248, 250, 252, 0.12);
-    --accent-border: rgba(248, 250, 252, 0.25);
-    --accent-glow: rgba(248, 250, 252, 0.2);
-  }
-
-  /* 2. Grove Green (Emerald Green) */
+  /* 1. Emerald Green (#10B981 — Vivid Cryptographic Emerald) */
   [data-accent="grove-green"] {
     --accent-primary-rgb: 5 150 105;
     --accent-primary: #059669;
     --accent-hover: #047857;
-    --accent-active: #065f46;
+    --accent-active: #065F46;
     --accent-foreground: #ffffff;
-    --accent-soft: rgba(5, 150, 105, 0.1);
-    --accent-border: rgba(5, 150, 105, 0.25);
-    --accent-glow: rgba(5, 150, 105, 0.2);
+    --accent-soft: rgba(16, 185, 129, 0.1);
+    --accent-border: rgba(16, 185, 129, 0.25);
+    --accent-glow: rgba(16, 185, 129, 0.18);
   }
   .dark[data-accent="grove-green"],
   [data-accent="grove-green"] .dark {
     --accent-primary-rgb: 16 185 129;
-    --accent-primary: #10b981;
-    --accent-hover: #34d399;
+    --accent-primary: #10B981;
+    --accent-hover: #34D399;
     --accent-active: #059669;
     --accent-foreground: #ffffff;
     --accent-soft: rgba(16, 185, 129, 0.14);
     --accent-border: rgba(16, 185, 129, 0.35);
-    --accent-glow: rgba(16, 185, 129, 0.38);
+    --accent-glow: rgba(16, 185, 129, 0.16);
   }
 
-  /* 3. Ocean Blue (Cobalt Blue) */
+  /* 2. Electric Cyan (#22D3EE — Bright Cyber Teal / Cyan) */
+  [data-accent="electric-cyan"] {
+    --accent-primary-rgb: 8 145 178;
+    --accent-primary: #0891B2;
+    --accent-hover: #0E7490;
+    --accent-active: #155E75;
+    --accent-foreground: #ffffff;
+    --accent-soft: rgba(34, 211, 238, 0.1);
+    --accent-border: rgba(34, 211, 238, 0.25);
+    --accent-glow: rgba(34, 211, 238, 0.18);
+  }
+  .dark[data-accent="electric-cyan"],
+  [data-accent="electric-cyan"] .dark {
+    --accent-primary-rgb: 34 211 238;
+    --accent-primary: #22D3EE;
+    --accent-hover: #67E8F9;
+    --accent-active: #06B6D4;
+    --accent-foreground: #ffffff;
+    --accent-soft: rgba(34, 211, 238, 0.14);
+    --accent-border: rgba(34, 211, 238, 0.35);
+    --accent-glow: rgba(34, 211, 238, 0.16);
+  }
+
+  /* 3. Cobalt Blue (#3B82F6 — Electric Signature Cobalt) */
   [data-accent="ocean-blue"] {
     --accent-primary-rgb: 37 99 235;
-    --accent-primary: #2563eb;
-    --accent-hover: #1d4ed8;
-    --accent-active: #1e40af;
+    --accent-primary: #2563EB;
+    --accent-hover: #1D4ED8;
+    --accent-active: #1E40AF;
     --accent-foreground: #ffffff;
-    --accent-soft: rgba(37, 99, 235, 0.1);
-    --accent-border: rgba(37, 99, 235, 0.25);
-    --accent-glow: rgba(37, 99, 235, 0.2);
+    --accent-soft: rgba(59, 130, 246, 0.1);
+    --accent-border: rgba(59, 130, 246, 0.25);
+    --accent-glow: rgba(59, 130, 246, 0.18);
   }
   .dark[data-accent="ocean-blue"],
   [data-accent="ocean-blue"] .dark {
     --accent-primary-rgb: 59 130 246;
-    --accent-primary: #3b82f6;
-    --accent-hover: #60a5fa;
-    --accent-active: #2563eb;
+    --accent-primary: #3B82F6;
+    --accent-hover: #60A5FA;
+    --accent-active: #2563EB;
     --accent-foreground: #ffffff;
     --accent-soft: rgba(59, 130, 246, 0.14);
     --accent-border: rgba(59, 130, 246, 0.35);
-    --accent-glow: rgba(59, 130, 246, 0.38);
+    --accent-glow: rgba(59, 130, 246, 0.16);
   }
 
-  /* 4. Midnight Azure (Deep Indigo) */
+  /* 4. Deep Indigo (#6366F1 — Midnight Ultramarine) */
   [data-accent="midnight-azure"] {
-    --accent-primary-rgb: 67 56 202;
-    --accent-primary: #4338ca;
-    --accent-hover: #3730a3;
-    --accent-active: #312e81;
+    --accent-primary-rgb: 79 70 229;
+    --accent-primary: #4F46E5;
+    --accent-hover: #4338CA;
+    --accent-active: #3730A3;
     --accent-foreground: #ffffff;
-    --accent-soft: rgba(67, 56, 202, 0.1);
-    --accent-border: rgba(67, 56, 202, 0.25);
-    --accent-glow: rgba(67, 56, 202, 0.2);
+    --accent-soft: rgba(99, 102, 241, 0.1);
+    --accent-border: rgba(99, 102, 241, 0.25);
+    --accent-glow: rgba(99, 102, 241, 0.18);
   }
   .dark[data-accent="midnight-azure"],
   [data-accent="midnight-azure"] .dark {
     --accent-primary-rgb: 99 102 241;
-    --accent-primary: #6366f1;
-    --accent-hover: #818cf8;
-    --accent-active: #4f46e5;
+    --accent-primary: #6366F1;
+    --accent-hover: #818CF8;
+    --accent-active: #4F46E5;
     --accent-foreground: #ffffff;
     --accent-soft: rgba(99, 102, 241, 0.14);
     --accent-border: rgba(99, 102, 241, 0.35);
-    --accent-glow: rgba(99, 102, 241, 0.38);
+    --accent-glow: rgba(99, 102, 241, 0.16);
   }
 
-  /* 5. Graphite Studio (Royal Amethyst) */
+  /* 5. Royal Amethyst (#8B5CF6 — Imperial Violet / Purple) */
   [data-accent="graphite-studio"] {
     --accent-primary-rgb: 124 58 237;
-    --accent-primary: #7c3aed;
-    --accent-hover: #6d28d9;
-    --accent-active: #5b21b6;
+    --accent-primary: #7C3AED;
+    --accent-hover: #6D28D9;
+    --accent-active: #5B21B6;
     --accent-foreground: #ffffff;
-    --accent-soft: rgba(124, 58, 237, 0.1);
-    --accent-border: rgba(124, 58, 237, 0.25);
-    --accent-glow: rgba(124, 58, 237, 0.2);
+    --accent-soft: rgba(139, 92, 246, 0.1);
+    --accent-border: rgba(139, 92, 246, 0.25);
+    --accent-glow: rgba(139, 92, 246, 0.18);
   }
   .dark[data-accent="graphite-studio"],
   [data-accent="graphite-studio"] .dark {
     --accent-primary-rgb: 139 92 246;
-    --accent-primary: #8b5cf6;
-    --accent-hover: #a78bfa;
-    --accent-active: #7c3aed;
+    --accent-primary: #8B5CF6;
+    --accent-hover: #A78BFA;
+    --accent-active: #7C3AED;
     --accent-foreground: #ffffff;
     --accent-soft: rgba(139, 92, 246, 0.14);
     --accent-border: rgba(139, 92, 246, 0.35);
-    --accent-glow: rgba(139, 92, 246, 0.38);
+    --accent-glow: rgba(139, 92, 246, 0.16);
   }
 
-  /* 6. Copper Slate (Tuscan Bronze) */
-  [data-accent="copper-slate"] {
-    --accent-primary-rgb: 180 83 9;
-    --accent-primary: #b45309;
-    --accent-hover: #92400e;
-    --accent-active: #78350f;
-    --accent-foreground: #ffffff;
-    --accent-soft: rgba(180, 83, 9, 0.1);
-    --accent-border: rgba(180, 83, 9, 0.25);
-    --accent-glow: rgba(180, 83, 9, 0.2);
-  }
-  .dark[data-accent="copper-slate"],
-  [data-accent="copper-slate"] .dark {
-    --accent-primary-rgb: 217 119 6;
-    --accent-primary: #d97706;
-    --accent-hover: #f59e0b;
-    --accent-active: #b45309;
-    --accent-foreground: #ffffff;
-    --accent-soft: rgba(217, 119, 6, 0.14);
-    --accent-border: rgba(217, 119, 6, 0.35);
-    --accent-glow: rgba(217, 119, 6, 0.38);
-  }
-
-  /* 7. Ember Orange (Sunset Orange) */
-  [data-accent="ember-orange"] {
-    --accent-primary-rgb: 234 88 12;
-    --accent-primary: #ea580c;
-    --accent-hover: #c2410c;
-    --accent-active: #9a3412;
-    --accent-foreground: #ffffff;
-    --accent-soft: rgba(234, 88, 12, 0.1);
-    --accent-border: rgba(234, 88, 12, 0.25);
-    --accent-glow: rgba(234, 88, 12, 0.2);
-  }
-  .dark[data-accent="ember-orange"],
-  [data-accent="ember-orange"] .dark {
-    --accent-primary-rgb: 249 115 22;
-    --accent-primary: #f97316;
-    --accent-hover: #fb923c;
-    --accent-active: #ea580c;
-    --accent-foreground: #ffffff;
-    --accent-soft: rgba(249, 115, 22, 0.14);
-    --accent-border: rgba(249, 115, 22, 0.35);
-    --accent-glow: rgba(249, 115, 22, 0.38);
-  }
-
-  /* 8. Sunlit Yellow (Goldenrod Amber) */
-  [data-accent="sunlit-yellow"] {
-    --accent-primary-rgb: 202 138 4;
-    --accent-primary: #ca8a04;
-    --accent-hover: #a16207;
-    --accent-active: #854d0e;
-    --accent-foreground: #ffffff;
-    --accent-soft: rgba(202, 138, 4, 0.1);
-    --accent-border: rgba(202, 138, 4, 0.25);
-    --accent-glow: rgba(202, 138, 4, 0.2);
-  }
-  .dark[data-accent="sunlit-yellow"],
-  [data-accent="sunlit-yellow"] .dark {
-    --accent-primary-rgb: 234 179 8;
-    --accent-primary: #eab308;
-    --accent-hover: #facc15;
-    --accent-active: #ca8a04;
-    --accent-foreground: #140f00;
-    --accent-soft: rgba(234, 179, 8, 0.14);
-    --accent-border: rgba(234, 179, 8, 0.35);
-    --accent-glow: rgba(234, 179, 8, 0.38);
-  }
-
-  /* 9. Studio Rose (Ruby Rose) */
-  [data-accent="studio-rose"] {
-    --accent-primary-rgb: 225 29 72;
-    --accent-primary: #e11d48;
-    --accent-hover: #be123c;
-    --accent-active: #9f1239;
-    --accent-foreground: #ffffff;
-    --accent-soft: rgba(225, 29, 72, 0.1);
-    --accent-border: rgba(225, 29, 72, 0.25);
-    --accent-glow: rgba(225, 29, 72, 0.2);
-  }
-  .dark[data-accent="studio-rose"],
-  [data-accent="studio-rose"] .dark {
-    --accent-primary-rgb: 251 113 133;
-    --accent-primary: #fb7185;
-    --accent-hover: #fda4af;
-    --accent-active: #f43f5e;
-    --accent-foreground: #ffffff;
-    --accent-soft: rgba(251, 113, 133, 0.14);
-    --accent-border: rgba(251, 113, 133, 0.35);
-    --accent-glow: rgba(251, 113, 133, 0.38);
-  }
-
-  /* 10. Signal Red (Scarlet Red) */
-  [data-accent="signal-red"] {
-    --accent-primary-rgb: 220 38 38;
-    --accent-primary: #dc2626;
-    --accent-hover: #b91c1c;
-    --accent-active: #991b1b;
-    --accent-foreground: #ffffff;
-    --accent-soft: rgba(220, 38, 38, 0.1);
-    --accent-border: rgba(220, 38, 38, 0.25);
-    --accent-glow: rgba(220, 38, 38, 0.2);
-  }
-  .dark[data-accent="signal-red"],
-  [data-accent="signal-red"] .dark {
-    --accent-primary-rgb: 239 68 68;
-    --accent-primary: #ef4444;
-    --accent-hover: #f87171;
-    --accent-active: #dc2626;
-    --accent-foreground: #ffffff;
-    --accent-soft: rgba(239, 68, 68, 0.14);
-    --accent-border: rgba(239, 68, 68, 0.35);
-    --accent-glow: rgba(239, 68, 68, 0.38);
-  }
-
-  /* 11. Barbie Pink (Fuchsia Magenta) */
+  /* 6. Barbie Pink (#EC4899 — Saturated Hot Pink / Fuchsia) */
   [data-accent="barbie-pink"] {
     --accent-primary-rgb: 219 39 119;
-    --accent-primary: #db2777;
-    --accent-hover: #be185d;
-    --accent-active: #9d174d;
+    --accent-primary: #DB2777;
+    --accent-hover: #BE185D;
+    --accent-active: #9D174D;
     --accent-foreground: #ffffff;
-    --accent-soft: rgba(219, 39, 119, 0.1);
-    --accent-border: rgba(219, 39, 119, 0.25);
-    --accent-glow: rgba(219, 39, 119, 0.2);
+    --accent-soft: rgba(236, 72, 153, 0.1);
+    --accent-border: rgba(236, 72, 153, 0.25);
+    --accent-glow: rgba(236, 72, 153, 0.18);
   }
   .dark[data-accent="barbie-pink"],
   [data-accent="barbie-pink"] .dark {
     --accent-primary-rgb: 236 72 153;
-    --accent-primary: #ec4899;
-    --accent-hover: #f472b6;
-    --accent-active: #db2777;
+    --accent-primary: #EC4899;
+    --accent-hover: #F472B6;
+    --accent-active: #DB2777;
     --accent-foreground: #ffffff;
     --accent-soft: rgba(236, 72, 153, 0.14);
     --accent-border: rgba(236, 72, 153, 0.35);
-    --accent-glow: rgba(236, 72, 153, 0.38);
+    --accent-glow: rgba(236, 72, 153, 0.16);
+  }
+
+  /* 7. Coral Ember (#F43F5E — Media Engine Pink-Coral) */
+  [data-accent="coral-ember"] {
+    --accent-primary-rgb: 225 29 72;
+    --accent-primary: #E11D48;
+    --accent-hover: #BE123C;
+    --accent-active: #9F1239;
+    --accent-foreground: #ffffff;
+    --accent-soft: rgba(244, 63, 94, 0.1);
+    --accent-border: rgba(244, 63, 94, 0.25);
+    --accent-glow: rgba(244, 63, 94, 0.18);
+  }
+  .dark[data-accent="coral-ember"],
+  [data-accent="coral-ember"] .dark {
+    --accent-primary-rgb: 244 63 94;
+    --accent-primary: #F43F5E;
+    --accent-hover: #FB7185;
+    --accent-active: #E11D48;
+    --accent-foreground: #ffffff;
+    --accent-soft: rgba(244, 63, 94, 0.14);
+    --accent-border: rgba(244, 63, 94, 0.35);
+    --accent-glow: rgba(244, 63, 94, 0.16);
+  }
+
+  /* 8. Sunset Orange (#F97316 — Glowing Warm Amber / Orange) */
+  [data-accent="sunset-orange"],
+  [data-accent="signal-red"],
+  [data-accent="ember-orange"] {
+    --accent-primary-rgb: 234 88 12;
+    --accent-primary: #EA580C;
+    --accent-hover: #C2410C;
+    --accent-active: #9A3412;
+    --accent-foreground: #ffffff;
+    --accent-soft: rgba(249, 115, 22, 0.1);
+    --accent-border: rgba(249, 115, 22, 0.25);
+    --accent-glow: rgba(249, 115, 22, 0.18);
+  }
+  .dark[data-accent="sunset-orange"],
+  .dark[data-accent="signal-red"],
+  .dark[data-accent="ember-orange"],
+  [data-accent="sunset-orange"] .dark,
+  [data-accent="signal-red"] .dark,
+  [data-accent="ember-orange"] .dark {
+    --accent-primary-rgb: 249 115 22;
+    --accent-primary: #F97316;
+    --accent-hover: #FB923C;
+    --accent-active: #EA580C;
+    --accent-foreground: #ffffff;
+    --accent-soft: rgba(249, 115, 22, 0.14);
+    --accent-border: rgba(249, 115, 22, 0.35);
+    --accent-glow: rgba(249, 115, 22, 0.16);
   }
 
   html {
@@ -381,8 +360,8 @@
   .border-accent-soft { border-color: var(--accent-soft); }
   
   .ring-accent-primary { --tw-ring-color: var(--accent-primary); }
-  .shadow-accent-glow { box-shadow: 0 0 25px var(--accent-glow); }
-  .shadow-accent-glow-sm { box-shadow: 0 0 12px var(--accent-glow); }
+  .shadow-accent-glow { box-shadow: 0 8px 25px -4px var(--accent-glow); }
+  .shadow-accent-glow-sm { box-shadow: 0 4px 12px -2px var(--accent-glow); }
 
   /* Premium Depth & Surface Hierarchy */
   .glass-card {
@@ -410,7 +389,7 @@
     transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
   }
   .hover-glow-accent:hover {
-    box-shadow: 0 12px 35px -5px var(--accent-glow), 0 0 25px var(--accent-glow);
+    box-shadow: 0 8px 24px -4px var(--accent-glow);
     border-color: var(--accent-border);
     transform: translateY(-2px);
   }
@@ -436,8 +415,8 @@
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
   }
   .vault-card-interactive:hover {
-    transform: translateY(-2.5px);
-    box-shadow: var(--card-shadow-hover), 0 0 20px -2px var(--accent-glow);
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow-hover), 0 4px 16px -2px var(--accent-glow);
     border-color: var(--accent-border);
   }
 
@@ -485,8 +464,7 @@
 .status-dot-gold { background-color: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
 .status-dot-crimson { background-color: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.6); }
 .status-dot-blue { background-color: #3b82f6; box-shadow: 0 0 8px rgba(59, 130, 246, 0.6); }
-.status-dot-orange { background-color: #f97316; box-shadow: 0 0 8px rgba(249, 115, 22, 0.6); }
-.status-dot-accent { background-color: var(--accent-primary); box-shadow: 0 0 8px var(--accent-glow); }
+.status-dot-accent { background-color: var(--accent-primary); box-shadow: 0 0 6px var(--accent-glow); }
 
-.env-glow-accent { box-shadow: 0 0 25px var(--accent-glow); }
+.env-glow-accent { box-shadow: 0 6px 20px -4px var(--accent-glow); }
 

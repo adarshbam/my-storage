@@ -337,10 +337,10 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
 
             const effectiveShadowClass = isTrashItem
               ? (active || hovered ? item.shadowClass : "")
-              : (active || hovered ? "shadow-accent-glow-sm" : "");
+              : "";
 
             const effectiveBarColor = isTrashItem ? item.barColor : "var(--accent-primary)";
-            const effectiveBarGlow = isTrashItem ? item.barGlow : "0 0 12px var(--accent-glow)";
+            const effectiveBarGlow = isTrashItem ? item.barGlow : "0 0 6px var(--accent-glow)";
 
             return (
               <Link
@@ -382,9 +382,6 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                 {/* Icon */}
                 <div
                   className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 pointer-events-none ${effectiveAccentClass}`}
-                  style={
-                    lit ? { filter: `drop-shadow(0 0 8px currentColor)` } : {}
-                  }
                 >
                   <Icon
                     size={22}
@@ -708,8 +705,8 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
           )}
         </div>
 
-        {/* Bottom Actions — System Core with Electric Blue */}
-        <div className="p-3 border-t border-white/5 mt-auto bg-vault-black/50 backdrop-blur-xl shrink-0">
+        {/* Bottom Actions — System Core & Wally's Academy */}
+        <div className="p-3 border-t border-slate-200/60 dark:border-white/5 mt-auto bg-slate-50/70 dark:bg-vault-black/50 backdrop-blur-xl shrink-0">
           <Link
             to="/profile"
             data-tour="system-core"
@@ -735,21 +732,16 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
               className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
                 isActive("/profile") || hoveredPath === "/profile"
                   ? "text-accent-primary"
-                  : "text-white/30 group-hover:text-white/60"
+                  : "text-slate-400 dark:text-white/30 group-hover:text-slate-600 dark:group-hover:text-white/60"
               }`}
-              style={
-                isActive("/profile") || hoveredPath === "/profile"
-                  ? { filter: "drop-shadow(0 0 8px var(--accent-glow))" }
-                  : {}
-              }
             >
               <SystemCoreIcon size={20} />
             </div>
             <span
               className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
                 isActive("/profile")
-                  ? "text-white"
-                  : "text-white/40 group-hover:text-white/80"
+                  ? "text-slate-900 dark:text-white font-semibold"
+                  : "text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80"
               }`}
             >
               System Core
@@ -782,21 +774,16 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
               className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
                 isActive("/dashboard/tutorials") || hoveredPath === "/dashboard/tutorials"
                   ? "text-accent-primary"
-                  : "text-white/30 group-hover:text-white/60"
+                  : "text-slate-400 dark:text-white/30 group-hover:text-slate-600 dark:group-hover:text-white/60"
               }`}
-              style={
-                isActive("/dashboard/tutorials") || hoveredPath === "/dashboard/tutorials"
-                  ? { filter: "drop-shadow(0 0 8px var(--accent-glow))" }
-                  : {}
-              }
             >
               <Sparkles size={20} />
             </div>
             <span
               className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 md:group-hover:opacity-100"} ${
                 isActive("/dashboard/tutorials")
-                  ? "text-white font-bold"
-                  : "text-white/40 group-hover:text-white/80"
+                  ? "text-slate-900 dark:text-white font-bold"
+                  : "text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80"
               }`}
             >
               Wally's Academy

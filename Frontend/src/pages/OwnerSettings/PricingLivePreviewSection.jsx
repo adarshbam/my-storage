@@ -106,7 +106,7 @@ export default function PricingLivePreviewSection({
       </div>
 
       {/* Embedded Live Preview Canvas */}
-      <div className="w-full bg-slate-900/60 dark:bg-vault-base/90 p-6 md:p-8 rounded-[2.5rem] border border-slate-800 dark:border-white/10 relative overflow-hidden shadow-2xl space-y-6">
+      <div className="w-full bg-slate-100 dark:bg-vault-base/90 p-6 md:p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/10 relative overflow-hidden shadow-2xl space-y-6">
         {(() => {
           const period = isYearly ? "Yearly" : "Monthly";
           const freeTrialTier = planTiers.find(

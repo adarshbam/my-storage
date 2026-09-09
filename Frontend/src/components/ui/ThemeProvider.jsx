@@ -2,81 +2,60 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 export const THEME_PALETTES = [
   {
-    id: "veo-onyx",
-    name: "Slate Onyx",
-    desc: "Minimalist charcoal & crisp white",
-    swatch: "#E2E8F0",
-    colorHex: "#F8FAFC",
-  },
-  {
     id: "grove-green",
     name: "Emerald Green",
-    desc: "Vibrant deep emerald (Default)",
+    desc: "Vivid cryptographic vault emerald (Default)",
     swatch: "#10B981",
     colorHex: "#10B981",
   },
   {
+    id: "electric-cyan",
+    name: "Electric Cyan",
+    desc: "Bright cyber teal & electric cyan",
+    swatch: "#22D3EE",
+    colorHex: "#22D3EE",
+  },
+  {
     id: "ocean-blue",
     name: "Cobalt Blue",
-    desc: "Vivid oceanic azure",
+    desc: "Clean electric signature cobalt",
     swatch: "#3B82F6",
     colorHex: "#3B82F6",
   },
   {
     id: "midnight-azure",
     name: "Deep Indigo",
-    desc: "Luminous midnight indigo",
+    desc: "Midnight ultramarine & deep electric indigo",
     swatch: "#6366F1",
     colorHex: "#6366F1",
   },
   {
     id: "graphite-studio",
     name: "Royal Amethyst",
-    desc: "Rich violet & imperial purple",
+    desc: "Imperial violet & royal amethyst",
     swatch: "#8B5CF6",
     colorHex: "#8B5CF6",
   },
   {
-    id: "copper-slate",
-    name: "Tuscan Bronze",
-    desc: "Warm earthy copper & amber bronze",
-    swatch: "#D48858",
-    colorHex: "#D97706",
-  },
-  {
-    id: "ember-orange",
-    name: "Sunset Orange",
-    desc: "Vivid tangerine orange",
-    swatch: "#F97316",
-    colorHex: "#F97316",
-  },
-  {
-    id: "sunlit-yellow",
-    name: "Goldenrod Amber",
-    desc: "Luminous warm gold & amber",
-    swatch: "#EAB308",
-    colorHex: "#EAB308",
-  },
-  {
-    id: "studio-rose",
-    name: "Ruby Rose",
-    desc: "Deep expressive crimson rose",
-    swatch: "#FB7185",
-    colorHex: "#FB7185",
-  },
-  {
-    id: "signal-red",
-    name: "Scarlet Red",
-    desc: "High-impact crisp scarlet red",
-    swatch: "#EF4444",
-    colorHex: "#EF4444",
-  },
-  {
     id: "barbie-pink",
-    name: "Fuchsia Magenta",
-    desc: "Vivid radiant magenta pink",
+    name: "Barbie Pink",
+    desc: "Vibrant saturated hot pink & fuchsia",
     swatch: "#EC4899",
     colorHex: "#EC4899",
+  },
+  {
+    id: "coral-ember",
+    name: "Coral Ember",
+    desc: "Signature pink-coral Media Engine accent",
+    swatch: "#F43F5E",
+    colorHex: "#F43F5E",
+  },
+  {
+    id: "sunset-orange",
+    name: "Sunset Orange",
+    desc: "Warm radiant ember & glowing amber",
+    swatch: "#F97316",
+    colorHex: "#F97316",
   },
 ];
 
@@ -100,7 +79,10 @@ export function ThemeProvider({
   });
 
   const [accent, setAccentState] = useState(() => {
-    return localStorage.getItem(accentStorageKey) || defaultAccent;
+    const stored = localStorage.getItem(accentStorageKey);
+    if (stored === "signal-red" || stored === "ember-orange") return "sunset-orange";
+    if (stored && THEME_PALETTES.some((p) => p.id === stored)) return stored;
+    return defaultAccent;
   });
 
   useEffect(() => {

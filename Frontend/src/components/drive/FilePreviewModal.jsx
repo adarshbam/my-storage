@@ -912,9 +912,17 @@ export default function FilePreviewModal({
             : undefined
         }
       >
+        {/* Subtle Ambient Top Theme Aura (matches Homepage atmosphere) */}
+        {!isVideoFile && (
+          <>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[180px] bg-[radial-gradient(ellipse_at_top,rgba(var(--accent-primary-rgb),0.14)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(var(--accent-primary-rgb),0.10)_0%,transparent_70%)] pointer-events-none rounded-t-3xl z-0" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[70%] h-[100px] bg-accent-soft rounded-full blur-[70px] opacity-60 pointer-events-none z-0" />
+          </>
+        )}
+
         {/* Header */}
         <div
-          className={`flex items-center justify-between px-3 sm:px-6 py-3 sm:py-3.5 shrink-0 gap-2 ${
+          className={`flex items-center justify-between px-3 sm:px-6 py-3 sm:py-3.5 shrink-0 gap-2 relative z-10 ${
             isVideoFile
               ? "bg-[#0d0d10] border-b border-white/10 text-white"
               : "border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.03]"

@@ -12,10 +12,11 @@ const features = [
 export default function AuthLayout({ children }) {
   return (
     <div className="min-h-[100dvh] w-full flex items-center justify-center relative overflow-hidden bg-vault-bg p-2.5 min-[360px]:p-3 sm:p-6 lg:p-8 transition-colors duration-300">
-      {/* Ambient glows */}
+      {/* Ambient glows matching Homepage formula */}
       <div className="fixed inset-0 z-[0] pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[-15%] w-[50vw] h-[50vw] bg-accent-soft rounded-full blur-[140px] opacity-70" />
-        <div className="absolute bottom-[-20%] right-[-15%] w-[40vw] h-[40vw] bg-accent-glow rounded-full blur-[140px] opacity-30" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[85vw] h-[55vh] bg-[radial-gradient(ellipse_at_top,rgba(var(--accent-primary-rgb),0.13)_0%,rgba(var(--accent-primary-rgb),0.035)_45%,transparent_75%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(var(--accent-primary-rgb),0.10)_0%,rgba(var(--accent-primary-rgb),0.025)_45%,transparent_75%)]" />
+        <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[70vw] h-[45vh] bg-accent-soft rounded-full blur-[140px] opacity-70" />
+        <div className="absolute bottom-[-5%] right-[10%] w-[35vw] h-[35vw] bg-accent-glow rounded-full blur-[130px] opacity-25" />
       </div>
 
       {/* Frame */}

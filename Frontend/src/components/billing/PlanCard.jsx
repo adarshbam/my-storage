@@ -133,24 +133,24 @@ export default function PlanCard({
         {/* Top Badges */}
         <div className="flex items-center justify-between mb-3 sm:mb-4 min-h-[28px] gap-2 flex-wrap">
           {isPopular && !isCurrent && !isPrevious && !isPaused ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-accent-primary text-accent-foreground font-black text-[10px] min-[360px]:text-[11px] shadow-accent-glow-sm uppercase tracking-wider shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg bg-accent-primary text-accent-foreground font-black text-[10px] min-[360px]:text-[11px] shadow-sm uppercase tracking-wider shrink-0">
               <Sparkles size={11} /> Most Popular
             </span>
           ) : (
             <span />
           )}
           {isCurrent && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-accent-soft border border-accent-border text-accent-primary font-bold text-[10px] min-[360px]:text-[11px] uppercase tracking-wider shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg bg-accent-soft border border-accent-border/30 text-accent-primary font-bold text-[10px] min-[360px]:text-[11px] uppercase tracking-wider shrink-0">
               <ShieldCheck size={11} /> Active Plan
             </span>
           )}
           {isPaused && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold text-[10px] min-[360px]:text-[11px] uppercase tracking-wider shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold text-[10px] min-[360px]:text-[11px] uppercase tracking-wider shrink-0">
               <PauseCircle size={11} /> Paused
             </span>
           )}
           {!isCurrent && !isPaused && isPrevious && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold text-[10px] min-[360px]:text-[11px] uppercase tracking-wider shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold text-[10px] min-[360px]:text-[11px] uppercase tracking-wider shrink-0">
               <RotateCcw size={11} /> Previously Active
             </span>
           )}
@@ -269,16 +269,16 @@ export default function PlanCard({
           disabled={isCurrent || isStorageExceeded || loading}
           className={`w-full py-2.5 min-[360px]:py-3 sm:py-3.5 px-3 rounded-xl sm:rounded-2xl font-bold text-[11px] min-[360px]:text-xs tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
             isCurrent
-              ? "bg-accent-soft border border-accent-border text-accent-primary cursor-default opacity-90"
+              ? "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-white/40 cursor-default font-semibold"
               : isStorageExceeded
                 ? "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/30 cursor-not-allowed"
                 : isPaused
-                  ? "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-lg shadow-accent-glow/20 font-black hover:scale-[1.02] active:scale-[0.98]"
+                  ? "bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm font-black active:scale-[0.98]"
                   : isPrevious
-                    ? "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-lg shadow-accent-glow/20 font-black hover:scale-[1.02] active:scale-[0.98]"
+                    ? "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-sm font-black active:scale-[0.98]"
                     : isPopular
-                      ? "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-lg shadow-accent-glow/25 hover:scale-[1.02] active:scale-[0.98]"
-                      : "bg-slate-900 dark:bg-white hover:opacity-90 text-white dark:text-slate-900 shadow-md hover:scale-[1.02] active:scale-[0.98]"
+                      ? "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-sm font-black active:scale-[0.98]"
+                      : "bg-slate-900 dark:bg-white hover:opacity-90 text-white dark:text-slate-900 shadow-sm font-bold active:scale-[0.98]"
           }`}
         >
           {isPaused && !loading && <PlayCircle size={13} className="shrink-0 fill-current" />}

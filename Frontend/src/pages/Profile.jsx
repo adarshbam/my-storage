@@ -192,9 +192,9 @@ export default function Profile() {
           <div className="flex items-center gap-3 self-start sm:self-auto shrink-0">
             <Link
               to="/dashboard/billing"
-              className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-accent-soft hover:bg-accent-soft/80 border border-accent-border text-accent-primary text-xs font-mono font-bold tracking-wider transition-all shadow-sm hover:shadow-accent-glow"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent-primary hover:opacity-90 text-accent-foreground text-xs font-bold transition-all shadow-md shadow-accent-glow/20"
             >
-              <Zap size={14} />
+              <Zap size={14} className="fill-current" />
               <span>Storage Plans</span>
             </Link>
           </div>
@@ -318,16 +318,16 @@ export default function Profile() {
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
+                        <div className="p-1.5 rounded-lg bg-accent-soft text-accent-primary">
                           <ShieldCheck size={15} />
                         </div>
                         <span className="text-xs font-bold text-slate-900 dark:text-white">Two-Factor Auth</span>
                       </div>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[9px] min-[360px]:text-[10px] font-mono font-bold uppercase tracking-wider ${
+                        className={`px-2.5 py-0.5 rounded-md text-[10px] font-mono font-semibold uppercase tracking-wider whitespace-nowrap shrink-0 ${
                           user?.twoFactorEnabled
-                            ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
-                            : "bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white/50 border border-slate-300 dark:border-white/10"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                            : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10"
                         }`}
                       >
                         {user?.twoFactorEnabled ? "Active" : "Disabled"}
@@ -341,14 +341,14 @@ export default function Profile() {
                   {user?.twoFactorEnabled ? (
                     <button
                       onClick={() => setTwoFactorManageOpen(true)}
-                      className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                      className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
                     >
                       <Key size={13} /> Manage 2FA
                     </button>
                   ) : (
                     <button
                       onClick={() => setTwoFactorSetupOpen(true)}
-                      className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-accent-primary hover:opacity-95 text-accent-foreground shadow-lg shadow-accent-glow/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-accent-primary hover:opacity-90 text-accent-foreground shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
                     >
                       <ShieldCheck size={13} /> Enable 2FA
                     </button>
@@ -360,16 +360,16 @@ export default function Profile() {
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
+                        <div className="p-1.5 rounded-lg bg-accent-soft text-accent-primary">
                           <Mail size={15} />
                         </div>
                         <span className="text-xs font-bold text-slate-900 dark:text-white">Recovery Email</span>
                       </div>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[9px] min-[360px]:text-[10px] font-mono font-bold uppercase tracking-wider ${
+                        className={`px-2.5 py-0.5 rounded-md text-[10px] font-mono font-semibold uppercase tracking-wider whitespace-nowrap shrink-0 ${
                           user?.secondaryRecoveryEmailVerified
-                            ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
-                            : "bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white/50 border border-slate-300 dark:border-white/10"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                            : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10"
                         }`}
                       >
                         {user?.secondaryRecoveryEmailVerified ? "Verified" : "Not Set"}
@@ -389,7 +389,7 @@ export default function Profile() {
 
                   <button
                     onClick={() => setRecoveryEmailOpen(true)}
-                    className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                    className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
                   >
                     <Mail size={13} /> {user?.secondaryRecoveryEmailVerified ? "Update Email" : "Set Email"}
                   </button>
@@ -411,7 +411,7 @@ export default function Profile() {
 
                   <button
                     onClick={() => setPasswordOpen(true)}
-                    className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                    className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
                   >
                     <Lock size={13} /> Update Password
                   </button>
@@ -566,13 +566,13 @@ export default function Profile() {
                   <button
                     type="button"
                     onClick={() => setEditNameOpen(false)}
-                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 transition-colors"
+                    className="px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] border border-slate-200 dark:border-white/10 transition-all cursor-pointer active:scale-98"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-xl text-xs font-bold bg-accent-primary text-accent-foreground shadow-lg shadow-accent-glow hover:opacity-95 transition-opacity"
+                    className="px-6 py-2.5 rounded-xl text-xs font-bold bg-accent-primary text-accent-foreground shadow-sm hover:opacity-90 transition-all cursor-pointer active:scale-98"
                   >
                     Save Changes
                   </button>
@@ -663,13 +663,13 @@ export default function Profile() {
                   <button
                     type="button"
                     onClick={() => setPasswordOpen(false)}
-                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 transition-colors"
+                    className="px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] border border-slate-200 dark:border-white/10 transition-all cursor-pointer active:scale-98"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-xl text-xs font-bold bg-accent-primary text-accent-foreground shadow-lg shadow-accent-glow hover:opacity-95 transition-opacity"
+                    className="px-6 py-2.5 rounded-xl text-xs font-bold bg-accent-primary text-accent-foreground shadow-sm hover:opacity-90 transition-all cursor-pointer active:scale-98"
                   >
                     Save Password
                   </button>

@@ -150,27 +150,31 @@ export default function TwoFactorManageModal({
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-lg bg-vault-surface border border-white/10 rounded-3xl p-5 sm:p-8 shadow-2xl z-10 max-h-[calc(100dvh-2rem)] flex flex-col overflow-y-auto custom-scrollbar text-white"
+          className="relative w-full max-w-lg bg-vault-surface border border-white/10 rounded-3xl p-5 sm:p-8 shadow-2xl z-10 max-h-[calc(100dvh-2rem)] flex flex-col overflow-y-auto custom-scrollbar text-white overflow-hidden"
         >
+          {/* Subtle Ambient Top Theme Aura (matches Homepage atmosphere) */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[180px] bg-[radial-gradient(ellipse_at_top,rgba(var(--accent-primary-rgb),0.14)_0%,transparent_70%)] pointer-events-none rounded-t-3xl z-0" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[70%] h-[100px] bg-accent-soft rounded-full blur-[70px] opacity-60 pointer-events-none z-0" />
+
           {/* Close button */}
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors p-1 cursor-pointer"
+            className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors p-1 cursor-pointer z-10"
           >
             <X size={20} />
           </button>
 
           {/* Header */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-              <ShieldAlert className="text-emerald-400" size={24} />
+          <div className="flex items-center gap-4 mb-6 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-accent-soft border border-accent-border flex items-center justify-center shrink-0 shadow-sm text-accent-primary">
+              <ShieldAlert size={24} />
             </div>
             <div>
               <h3 className="text-xl font-bold text-white tracking-tight">
                 Manage Two-Factor Authentication
               </h3>
-              <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wider mt-0.5">
+              <p className="text-xs text-accent-primary font-semibold uppercase tracking-wider mt-0.5">
                 Security & Recovery Settings
               </p>
             </div>
@@ -259,7 +263,7 @@ export default function TwoFactorManageModal({
                 <button
                   type="button"
                   onClick={handleCopyNewCodes}
-                  className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                 >
                   {copiedCodes ? (
                     <>
@@ -275,7 +279,7 @@ export default function TwoFactorManageModal({
                 <button
                   type="button"
                   onClick={handleDownloadNewCodes}
-                  className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                 >
                   <Download size={14} /> Download .txt
                 </button>
@@ -285,7 +289,7 @@ export default function TwoFactorManageModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-xs shadow-lg shadow-teal-500/25 hover:opacity-95 transition-opacity cursor-pointer"
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-98"
                 >
                   Done
                 </button>
@@ -345,7 +349,7 @@ export default function TwoFactorManageModal({
                   <button
                     type="submit"
                     disabled={loading || (!password && !totpCode)}
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:opacity-95 text-white font-bold text-xs shadow-lg shadow-teal-500/25 transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                   >
                     {loading ? (
                       <>
@@ -361,7 +365,7 @@ export default function TwoFactorManageModal({
                   <button
                     type="submit"
                     disabled={loading || (!password && !totpCode)}
-                    className="w-full py-3.5 rounded-2xl bg-rose-500/90 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-500/25 transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                   >
                     {loading ? (
                       <Loader2 className="animate-spin" size={16} />

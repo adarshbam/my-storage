@@ -199,12 +199,12 @@ export default function VerifyOtp() {
                   disabled={sendingOtp || !email}
                   whileTap={{ scale: 0.95 }}
                   className={`
-                    flex items-center gap-1.5 px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition-all duration-300
+                    flex items-center gap-1.5 px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition-all duration-200
                     ${otpSent
-                      ? "bg-emerald-500/15 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 dark:hover:bg-emerald-500/20"
-                      : "bg-gradient-to-r from-[#14b8a6] to-[#3b82f6] text-white shadow-[0_0_15px_rgba(20,184,166,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] border border-white/20"
+                      ? "bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 shadow-sm"
+                      : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm font-semibold"
                     }
-                    disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none
+                    disabled:opacity-40 disabled:cursor-not-allowed
                   `}
                 >
                   {sendingOtp ? (
@@ -251,7 +251,7 @@ export default function VerifyOtp() {
                   <Button
                     id="verify-otp-btn"
                     type="submit"
-                    variant="masterclass"
+                    variant="primary"
                     className="w-full py-3.5 text-[15px] mt-5"
                     disabled={verifying || !otpComplete}
                   >

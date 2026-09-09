@@ -215,7 +215,7 @@ export default function SharedLinkRow({
             Public
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-accent-soft text-accent-primary border border-accent-border/30">
             Restricted
           </span>
         )}
