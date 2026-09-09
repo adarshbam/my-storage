@@ -973,8 +973,8 @@ export default function GoogleDriveChamber() {
     >
       {/* ── DRAG-OVER UPLOAD DROPZONE OVERLAY ── */}
       {isDraggingFilesOver && (
-        <div className="absolute inset-0 z-50 bg-linkdrive-accent/10 dark:bg-linkdrive-accent/15 backdrop-blur-[2px] border-2 border-dashed border-linkdrive-accent rounded-3xl flex flex-col items-center justify-center p-6 text-center pointer-events-none transition-all duration-200">
-          <div className="w-16 h-16 rounded-2xl bg-linkdrive-accent/20 text-linkdrive-accent flex items-center justify-center mb-3 animate-bounce shadow-lg shadow-linkdrive-accent/20">
+        <div className="absolute inset-0 z-50 bg-accent-soft/20 dark:bg-accent-soft/20 backdrop-blur-[2px] border-2 border-dashed border-accent-primary rounded-3xl flex flex-col items-center justify-center p-6 text-center pointer-events-none transition-all duration-200">
+          <div className="w-16 h-16 rounded-2xl bg-accent-soft text-accent-primary flex items-center justify-center mb-3 animate-bounce shadow-lg shadow-accent-glow">
             <Upload size={32} />
           </div>
           <h3 className="text-base font-bold text-slate-900 dark:text-white">
@@ -1010,7 +1010,7 @@ export default function GoogleDriveChamber() {
           >
             <Link
               to="/dashboard/google-drive"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-linkdrive-accent/10 hover:bg-linkdrive-accent/20 border border-linkdrive-accent/20 hover:border-linkdrive-accent/40 text-linkdrive-accent font-bold text-sm transition-all duration-150 cursor-pointer shadow-sm active:scale-95 shrink-0"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-accent-soft hover:bg-accent-soft/80 border border-accent-border text-accent-primary font-bold text-sm transition-all duration-150 cursor-pointer shadow-sm active:scale-95 shrink-0"
               title="Return to Google Drive root (Drop items here to move to root)"
             >
               <VaultDriveIcon size={18} />
@@ -1031,7 +1031,7 @@ export default function GoogleDriveChamber() {
               <ChevronRight size={14} className="text-slate-400" />
               <Link
                 to={`/dashboard/google-drive/${b.id}`}
-                className="text-slate-600 dark:text-white/70 hover:text-linkdrive-accent transition-colors truncate max-w-[150px]"
+                className="text-slate-600 dark:text-white/70 hover:text-accent-primary transition-colors truncate max-w-[150px]"
                 title={`Navigate or drop to move to ${b.name}`}
               >
                 {b.name}
@@ -1053,20 +1053,11 @@ export default function GoogleDriveChamber() {
             onClick={() => {
               if (selectedItems.length > 0) {
                 openShareModal?.(selectedItems);
-              } else if (driveFolderId) {
-                openShareModal?.([
-                  {
-                    _id: driveFolderId,
-                    name: dirName,
-                    type: "directory",
-                    provider: "google_drive",
-                  },
-                ]);
               } else {
                 openShareModal?.([
                   {
-                    _id: "google-drive-chamber",
-                    name: "Google Drive Chamber",
+                    _id: driveFolderId || "root",
+                    name: dirName || "Google Drive",
                     type: "chamber",
                     provider: "google_drive",
                   },
@@ -1074,7 +1065,7 @@ export default function GoogleDriveChamber() {
               }
             }}
             variant="outline"
-            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border-linkdrive-accent/30 text-linkdrive-accent hover:bg-linkdrive-accent/10 transition-all"
+            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border-accent-border/40 text-accent-primary hover:bg-accent-soft transition-all"
             title="Share via Secure Relay"
           >
             <Share2 size={15} />
@@ -1100,7 +1091,7 @@ export default function GoogleDriveChamber() {
               onClick={handlePaste}
               disabled={isTransferring}
               variant="outline"
-              className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border-linkdrive-accent/40 bg-linkdrive-accent/10 hover:bg-linkdrive-accent/20 text-linkdrive-accent shadow-sm"
+              className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border-accent-border bg-accent-soft hover:bg-accent-soft/80 text-accent-primary shadow-sm"
               title="Paste items into current Google Drive folder (Ctrl+V)"
             >
               <ClipboardPaste size={15} />
@@ -1114,9 +1105,9 @@ export default function GoogleDriveChamber() {
               setModalType("create-folder");
             }}
             variant="outline"
-            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border-linkdrive-accent/30 hover:bg-linkdrive-accent/10 text-slate-700 dark:text-white"
+            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border-accent-border/40 hover:bg-accent-soft text-slate-700 dark:text-white"
           >
-            <FolderPlus size={15} className="text-linkdrive-accent" />
+            <FolderPlus size={15} className="text-accent-primary" />
             <span>New Folder</span>
           </Button>
 
@@ -1128,17 +1119,17 @@ export default function GoogleDriveChamber() {
               setModalType("create-file");
             }}
             variant="outline"
-            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border-linkdrive-accent/30 hover:bg-linkdrive-accent/10 text-slate-700 dark:text-white"
+            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border-accent-border/40 hover:bg-accent-soft text-slate-700 dark:text-white"
             title="Create a new text or code file in Google Drive"
           >
-            <FilePlus size={15} className="text-linkdrive-accent" />
+            <FilePlus size={15} className="text-accent-primary" />
             <span>New File</span>
           </Button>
 
           <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold bg-linkdrive-accent hover:bg-linkdrive-accent/90 text-white shadow-md shadow-linkdrive-accent/20 relative overflow-hidden transition-all"
+            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold bg-accent-primary hover:opacity-90 text-accent-foreground shadow-lg shadow-accent-glow/25 relative overflow-hidden transition-all"
           >
             {isUploading ? (
               <Loader2 size={15} className="animate-spin shrink-0" />
@@ -1166,7 +1157,7 @@ export default function GoogleDriveChamber() {
               onClick={() => setViewMode("grid")}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === "grid"
-                  ? "bg-white/10 shadow-sm text-linkdrive-accent"
+                  ? "bg-white/10 shadow-sm text-accent-primary"
                   : "text-white/40 hover:text-white/80"
               }`}
               title="Grid view"
@@ -1177,7 +1168,7 @@ export default function GoogleDriveChamber() {
               onClick={() => setViewMode("list")}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === "list"
-                  ? "bg-white/10 shadow-sm text-linkdrive-accent"
+                  ? "bg-white/10 shadow-sm text-accent-primary"
                   : "text-white/40 hover:text-white/80"
               }`}
               title="List view"
@@ -1406,7 +1397,7 @@ export default function GoogleDriveChamber() {
               <div className="h-4 w-px bg-slate-300 dark:bg-white/10" />
               <button
                 onClick={() => handlePreview(selectedItems[0])}
-                className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-linkdrive-accent transition-colors"
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-accent-primary transition-colors"
                 title="Preview file"
               >
                 <Eye size={14} /> Preview
@@ -1416,14 +1407,14 @@ export default function GoogleDriveChamber() {
           <div className="h-4 w-px bg-slate-300 dark:bg-white/10" />
           <button
             onClick={() => copyItems(selectedItems, "google_drive")}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-linkdrive-accent transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-accent-primary transition-colors"
             title="Copy to clipboard"
           >
             <Copy size={14} /> Copy
           </button>
           <button
             onClick={() => cutItems(selectedItems, "google_drive")}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-linkdrive-accent transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-accent-primary transition-colors"
             title="Move to clipboard (Cut)"
           >
             <Scissors size={14} /> Cut
@@ -1434,7 +1425,7 @@ export default function GoogleDriveChamber() {
               setTargetMoveFolderId("root");
               setModalType("move");
             }}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-linkdrive-accent transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-accent-primary transition-colors"
             title="Move selected items to another folder"
           >
             <FolderInput size={14} /> Move to...
@@ -1442,7 +1433,7 @@ export default function GoogleDriveChamber() {
           <div className="h-4 w-px bg-slate-300 dark:bg-white/10" />
           <button
             onClick={() => selectedItems.forEach(handleDownload)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-linkdrive-accent transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-accent-primary transition-colors"
             title="Download selected"
           >
             <Download size={14} /> Download
@@ -1514,7 +1505,7 @@ export default function GoogleDriveChamber() {
                     onClick={() => setTargetMoveFolderId("root")}
                     className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
                       targetMoveFolderId === "root"
-                        ? "bg-linkdrive-accent/15 border-linkdrive-accent text-linkdrive-accent font-bold"
+                        ? "bg-accent-soft border-accent-border text-accent-primary font-bold shadow-sm"
                         : "border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-white/80"
                     }`}
                   >
@@ -1523,7 +1514,7 @@ export default function GoogleDriveChamber() {
                       <span className="text-sm">Google Drive (Root)</span>
                     </div>
                     {targetMoveFolderId === "root" && (
-                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-linkdrive-accent/20 text-linkdrive-accent">
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-accent-soft text-accent-primary border border-accent-border/50">
                         Selected
                       </span>
                     )}
@@ -1540,16 +1531,16 @@ export default function GoogleDriveChamber() {
                         onClick={() => setTargetMoveFolderId(b.id)}
                         className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
                           targetMoveFolderId === b.id
-                            ? "bg-linkdrive-accent/15 border-linkdrive-accent text-linkdrive-accent font-bold"
+                            ? "bg-accent-soft border-accent-border text-accent-primary font-bold shadow-sm"
                             : "border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-white/80"
                         }`}
                       >
                         <div className="flex items-center gap-2.5 truncate">
-                          <Folder size={18} className="text-amber-500 shrink-0" />
+                          <Folder size={18} className="text-accent-primary shrink-0" />
                           <span className="text-sm truncate">{b.name} (Parent)</span>
                         </div>
                         {targetMoveFolderId === b.id && (
-                          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-linkdrive-accent/20 text-linkdrive-accent shrink-0">
+                          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-accent-soft text-accent-primary border border-accent-border/50 shrink-0">
                             Selected
                           </span>
                         )}
@@ -1567,16 +1558,16 @@ export default function GoogleDriveChamber() {
                         onClick={() => setTargetMoveFolderId(dir._id)}
                         className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
                           targetMoveFolderId === dir._id
-                            ? "bg-linkdrive-accent/15 border-linkdrive-accent text-linkdrive-accent font-bold"
+                            ? "bg-accent-soft border-accent-border text-accent-primary font-bold shadow-sm"
                             : "border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-white/80"
                         }`}
                       >
                         <div className="flex items-center gap-2.5 truncate">
-                          <Folder size={18} className="text-amber-500 shrink-0" />
+                          <Folder size={18} className="text-accent-primary shrink-0" />
                           <span className="text-sm truncate">{dir.name}</span>
                         </div>
                         {targetMoveFolderId === dir._id && (
-                          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-linkdrive-accent/20 text-linkdrive-accent shrink-0">
+                          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-accent-soft text-accent-primary border border-accent-border/50 shrink-0">
                             Selected
                           </span>
                         )}
@@ -1596,7 +1587,7 @@ export default function GoogleDriveChamber() {
                 <Button
                   onClick={() => handleMove(targetMoveFolderId)}
                   disabled={isSubmittingModal}
-                  className="bg-linkdrive-accent hover:bg-linkdrive-accent/90 text-white font-bold"
+                  className="bg-accent-primary hover:opacity-90 text-accent-foreground shadow-md shadow-accent-glow font-bold"
                 >
                   {isSubmittingModal ? "Moving..." : "Move Here"}
                 </Button>
@@ -1667,7 +1658,7 @@ export default function GoogleDriveChamber() {
                   <select
                     value={selectedExt}
                     onChange={(e) => setSelectedExt(e.target.value)}
-                    className="bg-white dark:bg-black/60 text-linkdrive-accent font-bold text-xs px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 outline-none cursor-pointer"
+                    className="bg-white dark:bg-black/60 text-accent-primary font-bold text-xs px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 outline-none cursor-pointer"
                   >
                     {supportedExtensions.map((ext) => (
                       <option key={ext} value={ext} className="bg-white dark:bg-[#111113] text-slate-900 dark:text-white">
@@ -1730,7 +1721,7 @@ export default function GoogleDriveChamber() {
                 <Button
                   type="submit"
                   disabled={isSubmittingModal || !modalInput.trim()}
-                  className="bg-linkdrive-accent hover:bg-linkdrive-accent/90 text-white font-bold"
+                  className="bg-accent-primary hover:opacity-90 text-accent-foreground shadow-md shadow-accent-glow font-bold"
                 >
                   {isSubmittingModal ? "Saving..." : "Create File"}
                 </Button>
@@ -1756,7 +1747,7 @@ export default function GoogleDriveChamber() {
                   placeholder={modalType === "create-folder" ? "e.g. Invoices" : "Name"}
                   autoFocus
                   required
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-linkdrive-accent"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-primary"
                 />
               </div>
               <div className="flex justify-end gap-2 pt-2">
@@ -1771,7 +1762,7 @@ export default function GoogleDriveChamber() {
                 <Button
                   type="submit"
                   disabled={isSubmittingModal || !modalInput.trim()}
-                  className="bg-linkdrive-accent hover:bg-linkdrive-accent/90 text-white font-bold"
+                  className="bg-accent-primary hover:opacity-90 text-accent-foreground shadow-md shadow-accent-glow font-bold"
                 >
                   {isSubmittingModal
                     ? "Saving..."
@@ -1831,7 +1822,7 @@ export default function GoogleDriveChamber() {
                       ? "bg-emerald-500/20 text-emerald-400"
                       : uploadProgress.phase === "error"
                       ? "bg-rose-500/20 text-rose-400"
-                      : "bg-linkdrive-accent/20 text-linkdrive-accent"
+                      : "bg-accent-soft text-accent-primary"
                   )}
                 >
                   {uploadProgress.phase === "complete" ? (
@@ -1839,9 +1830,9 @@ export default function GoogleDriveChamber() {
                   ) : uploadProgress.phase === "error" ? (
                     <AlertTriangle size={18} />
                   ) : uploadProgress.phase === "processing" ? (
-                    <Loader2 size={18} className="animate-spin text-linkdrive-accent" />
+                    <Loader2 size={18} className="animate-spin text-accent-primary" />
                   ) : (
-                    <Upload size={18} className="animate-pulse text-linkdrive-accent" />
+                    <Upload size={18} className="animate-pulse text-accent-primary" />
                   )}
                 </div>
                 <div>
@@ -1854,7 +1845,7 @@ export default function GoogleDriveChamber() {
                       ? "Processing in Drive..."
                       : "Uploading to Drive"}
                   </h4>
-                  <span className="text-[10px] font-mono text-linkdrive-accent font-bold">
+                  <span className="text-[10px] font-mono text-accent-primary font-bold">
                     {uploadProgress.totalFiles > 1
                       ? `File ${uploadProgress.currentIndex} of ${uploadProgress.totalFiles}`
                       : "Direct Stream"}
@@ -1897,7 +1888,7 @@ export default function GoogleDriveChamber() {
                       ? "text-rose-400"
                       : uploadProgress.phase === "complete"
                       ? "text-emerald-400"
-                      : "text-linkdrive-accent"
+                      : "text-accent-primary"
                   )}
                 >
                   {uploadProgress.phase === "complete"
@@ -1920,7 +1911,7 @@ export default function GoogleDriveChamber() {
                     ? "bg-emerald-400"
                     : uploadProgress.phase === "error"
                     ? "bg-rose-500"
-                    : "bg-gradient-to-r from-linkdrive-accent via-emerald-400 to-cyan-400"
+                    : "bg-accent-primary"
                 )}
                 style={{
                   width: `${Math.max(3, Math.min(100, uploadProgress.percent || 0))}%`,

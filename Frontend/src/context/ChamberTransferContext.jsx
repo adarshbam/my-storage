@@ -435,11 +435,11 @@ export function ChamberTransferProvider({ children, user, effectiveMaxStorage })
             {/* Header */}
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-linkdrive-accent/20 text-linkdrive-accent flex items-center justify-center shrink-0 shadow-sm">
+                <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent-primary flex items-center justify-center shrink-0 shadow-sm border border-accent-border/30">
                   {transferStatus.phase === "complete" ? (
                     <Check size={18} className="text-emerald-400" />
                   ) : (
-                    <Loader2 size={18} className="animate-spin text-linkdrive-accent" />
+                    <Loader2 size={18} className="animate-spin text-accent-primary" />
                   )}
                 </div>
                 <div>
@@ -450,7 +450,7 @@ export function ChamberTransferProvider({ children, user, effectiveMaxStorage })
                       ? "Transfer Failed"
                       : "Cloud Transfer Active"}
                   </h4>
-                  <span className="text-[10px] font-mono text-linkdrive-accent font-bold">
+                  <span className="text-[10px] font-mono text-accent-primary font-bold">
                     {transferStatus.direction}
                   </span>
                 </div>
@@ -473,7 +473,7 @@ export function ChamberTransferProvider({ children, user, effectiveMaxStorage })
                       ? "text-rose-400 font-bold"
                       : transferStatus.phase === "complete"
                       ? "text-emerald-400 font-bold"
-                      : "text-linkdrive-accent font-bold"
+                      : "text-accent-primary font-bold"
                   }
                 >
                   {transferStatus.phase === "complete"
@@ -493,7 +493,7 @@ export function ChamberTransferProvider({ children, user, effectiveMaxStorage })
                     ? "bg-emerald-400"
                     : transferStatus.phase === "error"
                     ? "bg-rose-500"
-                    : "bg-gradient-to-r from-linkdrive-accent via-emerald-400 to-cyan-400"
+                    : "bg-accent-primary shadow-[0_0_10px_var(--accent-glow)]"
                 }`}
                 style={{
                   width: `${Math.max(4, Math.min(100, transferStatus.progress || 0))}%`,

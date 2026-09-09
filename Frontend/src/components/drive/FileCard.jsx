@@ -94,24 +94,17 @@ export default function FileCard({
   const category = getFileCategory(ext);
 
   const renderFileVectorIcon = (size = 28) => {
-    if (category === "code") return <VectorCodeIcon size={size} className="text-cyan-500" />;
-    if (category === "image") return <VectorImageIcon size={size} className="text-purple-500" />;
-    if (category === "video") return <VectorVideoIcon size={size} className="text-rose-500" />;
-    if (category === "audio") return <VectorAudioIcon size={size} className="text-amber-500" />;
-    if (category === "archive") return <VectorArchiveIcon size={size} className="text-orange-500" />;
-    if (category === "document") return <VectorDocIcon size={size} className="text-blue-500" />;
-    return <VectorFileIcon size={size} ext={ext} className="text-slate-400" />;
+    if (category === "code") return <VectorCodeIcon size={size} className="text-accent-primary" />;
+    if (category === "image") return <VectorImageIcon size={size} className="text-accent-primary" />;
+    if (category === "video") return <VectorVideoIcon size={size} className="text-accent-primary" />;
+    if (category === "audio") return <VectorAudioIcon size={size} className="text-accent-primary" />;
+    if (category === "archive") return <VectorArchiveIcon size={size} className="text-accent-primary" />;
+    if (category === "document") return <VectorDocIcon size={size} className="text-accent-primary" />;
+    return <VectorFileIcon size={size} ext={ext} className="text-accent-primary" />;
   };
 
   const getIconBackground = () => {
-    if (type === "directory") return "bg-accent-soft text-accent-primary";
-    if (category === "code") return "bg-cyan-500/10 text-cyan-500";
-    if (category === "image") return "bg-purple-500/10 text-purple-500";
-    if (category === "video") return "bg-rose-500/10 text-rose-500";
-    if (category === "audio") return "bg-amber-500/10 text-amber-500";
-    if (category === "archive") return "bg-orange-500/10 text-orange-500";
-    if (category === "document") return "bg-blue-500/10 text-blue-500";
-    return "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400";
+    return "bg-accent-soft text-accent-primary";
   };
 
   return (

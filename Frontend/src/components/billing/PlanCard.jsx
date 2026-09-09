@@ -119,7 +119,7 @@ export default function PlanCard({
       transition={{ duration: 0.2 }}
       className={`glass-card-pro relative flex flex-col h-full justify-between rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-5 sm:p-7 transition-all duration-300 min-w-0 w-full ${
         isCurrent
-          ? "border-emerald-500/60 shadow-lg ring-1 ring-emerald-500/30"
+          ? "border-accent-border shadow-lg ring-1 ring-accent-border/50 bg-accent-soft/10"
           : isPaused
             ? "border-amber-500/60 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/30"
             : isPrevious
@@ -140,7 +140,7 @@ export default function PlanCard({
             <span />
           )}
           {isCurrent && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] min-[360px]:text-[11px] uppercase tracking-wider shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-accent-soft border border-accent-border text-accent-primary font-bold text-[10px] min-[360px]:text-[11px] uppercase tracking-wider shrink-0">
               <ShieldCheck size={11} /> Active Plan
             </span>
           )}
@@ -269,13 +269,13 @@ export default function PlanCard({
           disabled={isCurrent || isStorageExceeded || loading}
           className={`w-full py-2.5 min-[360px]:py-3 sm:py-3.5 px-3 rounded-xl sm:rounded-2xl font-bold text-[11px] min-[360px]:text-xs tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
             isCurrent
-              ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 cursor-default opacity-80"
+              ? "bg-accent-soft border border-accent-border text-accent-primary cursor-default opacity-90"
               : isStorageExceeded
                 ? "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/30 cursor-not-allowed"
                 : isPaused
-                  ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20 font-black hover:scale-[1.02] active:scale-[0.98]"
+                  ? "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-lg shadow-accent-glow/20 font-black hover:scale-[1.02] active:scale-[0.98]"
                   : isPrevious
-                    ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20 font-black hover:scale-[1.02] active:scale-[0.98]"
+                    ? "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-lg shadow-accent-glow/20 font-black hover:scale-[1.02] active:scale-[0.98]"
                     : isPopular
                       ? "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-lg shadow-accent-glow/25 hover:scale-[1.02] active:scale-[0.98]"
                       : "bg-slate-900 dark:bg-white hover:opacity-90 text-white dark:text-slate-900 shadow-md hover:scale-[1.02] active:scale-[0.98]"

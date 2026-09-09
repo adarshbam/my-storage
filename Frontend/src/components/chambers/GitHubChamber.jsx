@@ -531,7 +531,7 @@ export default function GitHubChamber() {
 
           <Link
             to="/dashboard/github"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-linkgit-accent/10 hover:bg-linkgit-accent/20 border border-linkgit-accent/20 hover:border-linkgit-accent/40 text-linkgit-accent font-bold text-sm transition-all duration-150 cursor-pointer shadow-sm active:scale-95 shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-soft hover:bg-accent-soft/80 border border-accent-border hover:border-accent-border/60 text-accent-primary font-bold text-sm transition-all duration-150 cursor-pointer shadow-sm active:scale-95 shrink-0"
             title="Return to GitHub Repositories"
           >
             <VaultGitIcon size={18} />
@@ -543,7 +543,7 @@ export default function GitHubChamber() {
               <ChevronRight size={14} className="text-slate-400" />
               <Link
                 to={b.path}
-                className="text-slate-600 dark:text-white/70 hover:text-linkgit-accent transition-colors truncate max-w-[160px]"
+                className="text-slate-600 dark:text-white/70 hover:text-accent-primary transition-colors truncate max-w-[160px]"
               >
                 {b.name}
               </Link>
@@ -599,7 +599,7 @@ export default function GitHubChamber() {
               }
             }}
             variant="outline"
-            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border-linkgit-accent/30 text-linkgit-accent hover:bg-linkgit-accent/10 transition-all"
+            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border-accent-border/40 text-accent-primary hover:bg-accent-soft transition-all"
             title="Share via Secure Relay"
           >
             <Share2 size={15} />
@@ -633,7 +633,7 @@ export default function GitHubChamber() {
                   setIsPrivate(false);
                   setModalType("create-repo");
                 }}
-                className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold bg-linkgit-accent hover:bg-linkgit-accent/90 text-white shadow-md shadow-linkgit-accent/20"
+                className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold bg-accent-primary hover:opacity-90 text-accent-foreground shadow-md shadow-accent-glow/20"
               >
                 <Plus size={15} />
                 <span>New Repository</span>
@@ -662,7 +662,7 @@ export default function GitHubChamber() {
               onClick={() => setViewMode("grid")}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === "grid"
-                  ? "bg-white/10 shadow-sm text-linkgit-accent"
+                  ? "bg-white/10 shadow-sm text-accent-primary"
                   : "text-white/40 hover:text-white/80"
               }`}
               title="Grid view"
@@ -673,7 +673,7 @@ export default function GitHubChamber() {
               onClick={() => setViewMode("list")}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === "list"
-                  ? "bg-white/10 shadow-sm text-linkgit-accent"
+                  ? "bg-white/10 shadow-sm text-accent-primary"
                   : "text-white/40 hover:text-white/80"
               }`}
               title="List view"
@@ -714,17 +714,17 @@ export default function GitHubChamber() {
                 onClick={() => handleGitTabChange(t.id)}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 shrink-0 ${
                   isActive
-                    ? "bg-linkgit-accent/15 text-linkgit-accent border border-linkgit-accent/30 shadow-sm"
+                    ? "bg-accent-soft text-accent-primary border border-accent-border shadow-accent-glow-sm"
                     : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5"
                 }`}
               >
-                <Icon size={14} className={isActive ? "text-linkgit-accent" : "text-slate-400"} />
+                <Icon size={14} className={isActive ? "text-accent-primary" : "text-slate-400"} />
                 <span>{t.label}</span>
                 {t.count !== undefined && t.count > 0 && (
                   <span
                     className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                       isActive
-                        ? "bg-linkgit-accent text-white"
+                        ? "bg-accent-primary text-accent-foreground shadow-[0_0_8px_var(--accent-glow)]"
                         : "bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-white/70"
                     }`}
                   >
@@ -809,7 +809,7 @@ export default function GitHubChamber() {
         </div>
       ) : allItems.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-          <div className="w-16 h-16 bg-linkgit-accent/10 border border-linkgit-accent/20 rounded-2xl flex items-center justify-center text-linkgit-accent mb-4 shadow-lg shadow-linkgit-accent/5">
+          <div className="w-16 h-16 bg-accent-soft border border-accent-border rounded-2xl flex items-center justify-center text-accent-primary mb-4 shadow-lg shadow-accent-glow/20">
             <VaultGitIcon size={32} />
           </div>
           <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1.5">
@@ -828,7 +828,7 @@ export default function GitHubChamber() {
                   setIsPrivate(false);
                   setModalType("create-repo");
                 }}
-                className="px-4 py-2 text-xs font-bold bg-linkgit-accent hover:bg-linkgit-accent/90 text-white shadow-md shadow-linkgit-accent/20 flex items-center gap-2"
+                className="px-4 py-2 text-xs font-bold bg-accent-primary hover:opacity-90 text-accent-foreground shadow-md shadow-accent-glow flex items-center gap-2"
               >
                 <Plus size={15} />
                 <span>New Repository</span>
@@ -841,7 +841,7 @@ export default function GitHubChamber() {
                 variant="outline"
                 className="px-4 py-2 text-xs font-bold border-slate-200 dark:border-white/10 hover:bg-white/5 text-slate-700 dark:text-white flex items-center gap-2"
               >
-                <FolderGit2 size={15} className="text-linkgit-accent" />
+                <FolderGit2 size={15} className="text-accent-primary" />
                 <span>Clone to Vault</span>
               </Button>
             </div>
@@ -955,7 +955,7 @@ export default function GitHubChamber() {
               placeholder="e.g. awesome-project"
               autoFocus
               required
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-linkgit-accent"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-primary"
             />
           </div>
 
@@ -965,7 +965,7 @@ export default function GitHubChamber() {
               id="isPrivate"
               checked={isPrivate}
               onChange={(e) => setIsPrivate(e.target.checked)}
-              className="rounded border-slate-300 text-linkgit-accent focus:ring-linkgit-accent"
+              className="rounded border-slate-300 text-accent-primary focus:ring-accent-primary"
             />
             <label htmlFor="isPrivate" className="text-sm font-medium flex items-center gap-1.5 cursor-pointer">
               {isPrivate ? <Lock size={14} className="text-amber-400" /> : <Globe size={14} className="text-emerald-400" />}
@@ -985,7 +985,7 @@ export default function GitHubChamber() {
             <Button
               type="submit"
               disabled={isSubmitting || !modalInput.trim()}
-              className="bg-linkgit-accent hover:bg-linkgit-accent/90 text-white font-bold"
+              className="bg-accent-primary hover:opacity-90 text-accent-foreground font-bold shadow-md shadow-accent-glow"
             >
               {isSubmitting ? "Creating..." : "Create Repository"}
             </Button>
@@ -1037,7 +1037,7 @@ export default function GitHubChamber() {
 
       {/* ── FLOATING CLIPBOARD BAR (PASTE SUPPORT) ── */}
       {clipboard && isRepoView && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar bg-[#111113]/95 border border-linkgit-accent/30 shadow-[0_8px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(198,92,255,0.2)] rounded-full text-xs sm:text-sm backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar bg-[#111113]/95 border border-accent-border/40 shadow-[0_8px_30px_rgba(0,0,0,0.8),0_0_15px_var(--accent-glow)] rounded-full text-xs sm:text-sm backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
           <span className="text-white/60 font-medium whitespace-nowrap">
             {clipboard.action === "cut" ? "Cut" : "Copied"}{" "}
             <strong className="text-white">{clipboard.items.length}</strong>{" "}
@@ -1046,7 +1046,7 @@ export default function GitHubChamber() {
           <div className="h-4 w-[1px] bg-white/10" />
           <button
             onClick={handlePasteIntoRepo}
-            className="text-linkgit-accent hover:text-linkgit-accent/80 font-bold transition-all px-2.5 py-1 rounded-lg hover:bg-linkgit-accent/10 flex items-center gap-1.5"
+            className="text-accent-primary hover:opacity-80 font-bold transition-all px-2.5 py-1 rounded-lg hover:bg-accent-soft flex items-center gap-1.5"
           >
             <Clipboard size={14} /> Paste into Repo
           </button>

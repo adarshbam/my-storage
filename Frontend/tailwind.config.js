@@ -32,14 +32,14 @@ export default {
           border: "var(--accent-border)",
           glow: "var(--accent-glow)",
         },
-        // Feature Module Identities (kept intentional and distinct)
-        relay: { accent: "#8B5CF6", glow: "#7C3AED" },
-        pulse: { accent: "#06B6D4", glow: "#0891B2" },
-        beacon: { accent: "#F59E0B", glow: "#D97706" },
+        // Feature Module Identities mapped strictly to active theme tokens (Trash remains red exception)
+        relay: { accent: "rgb(var(--accent-primary-rgb) / <alpha-value>)", glow: "var(--accent-glow)" },
+        pulse: { accent: "rgb(var(--accent-primary-rgb) / <alpha-value>)", glow: "var(--accent-glow)" },
+        beacon: { accent: "rgb(var(--accent-primary-rgb) / <alpha-value>)", glow: "var(--accent-glow)" },
         recycle: { accent: "#EF4444", glow: "#DC2626" },
-        core: { accent: "#3B82F6", glow: "#2563EB" },
-        linkdrive: { accent: "#F97316", glow: "#EA580C" },
-        linkgit: { accent: "#8B5CF6", glow: "#7C3AED" },
+        core: { accent: "rgb(var(--accent-primary-rgb) / <alpha-value>)", glow: "var(--accent-glow)" },
+        linkdrive: { accent: "rgb(var(--accent-primary-rgb) / <alpha-value>)", glow: "var(--accent-glow)" },
+        linkgit: { accent: "rgb(var(--accent-primary-rgb) / <alpha-value>)", glow: "var(--accent-glow)" },
         danger: { accent: "#EF4444" },
       },
       borderRadius: {

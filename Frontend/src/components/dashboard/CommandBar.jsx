@@ -163,30 +163,30 @@ export default function CommandBar({
       label: "Upload Asset",
       icon: Upload,
       onClick: () => guardAction(openUploadModal, true),
-      color: "#00CFFF", // Cyan
-      hoverBg: "hover:bg-[rgba(0,207,255,0.1)]",
-      hoverText: "hover:text-pulse-accent",
-      glowHover: "hover:shadow-[0_0_15px_rgba(0,207,255,0.2)]",
+      color: "var(--accent-primary)",
+      hoverBg: "hover:bg-accent-soft",
+      hoverText: "hover:text-accent-primary",
+      glowHover: "hover:shadow-accent-glow-sm",
       tourId: "upload-btn",
     },
     {
       label: "New Directory",
       icon: FolderPlus,
       onClick: () => guardAction(handleCreateClick, true),
-      color: "#C65CFF", // Purple
-      hoverBg: "hover:bg-[rgba(198,92,255,0.1)]",
-      hoverText: "hover:text-relay-accent",
-      glowHover: "hover:shadow-[0_0_15px_rgba(198,92,255,0.2)]",
+      color: "var(--accent-primary)",
+      hoverBg: "hover:bg-accent-soft",
+      hoverText: "hover:text-accent-primary",
+      glowHover: "hover:shadow-accent-glow-sm",
       tourId: "new-dir-btn",
     },
     {
       label: "New File",
       icon: FilePlus,
       onClick: () => guardAction(handleCreateFileClick, true),
-      color: "#FF7A3D", // Orange
-      hoverBg: "hover:bg-[rgba(255,122,61,0.1)]",
-      hoverText: "hover:text-linkdrive-accent",
-      glowHover: "hover:shadow-[0_0_15px_rgba(255,122,61,0.2)]",
+      color: "var(--accent-primary)",
+      hoverBg: "hover:bg-accent-soft",
+      hoverText: "hover:text-accent-primary",
+      glowHover: "hover:shadow-accent-glow-sm",
       tourId: "new-file-btn",
     },
   ];
@@ -614,18 +614,18 @@ export default function CommandBar({
         <div className="hidden md:flex items-center gap-2 border-r border-slate-200 dark:border-white/10 pr-3 mr-1">
           {user?.integrations?.googleDrive?.connected && (
             <div
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-linkdrive-accent/10 border border-linkdrive-accent/20"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-soft border border-accent-border/40"
               title="Google Drive Connected"
             >
-              <VaultDriveIcon size={14} className="text-linkdrive-accent" />
+              <VaultDriveIcon size={14} className="text-accent-primary" />
             </div>
           )}
           {user?.integrations?.github?.connected && (
             <div
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-linkgit-accent/10 border border-linkgit-accent/20"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-soft border border-accent-border/40"
               title="GitHub Connected"
             >
-              <VaultGitIcon size={14} className="text-linkgit-accent" />
+              <VaultGitIcon size={14} className="text-accent-primary" />
             </div>
           )}
         </div>

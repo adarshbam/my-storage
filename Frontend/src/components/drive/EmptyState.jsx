@@ -12,12 +12,7 @@ export default function EmptyState({ specialView, isSearch, openUploadModal, set
       {specialView ? (
         <>
           <div
-            className={cn(
-              "p-5 sm:p-6 rounded-full mb-4 shadow-lg text-white/40 border border-white/5 bg-white/[0.02]",
-              specialView === "shared" && "shadow-[0_0_30px_rgba(155,77,255,0.15)] text-relay-accent/80 border-relay-accent/20",
-              specialView === "recent" && "shadow-[0_0_30px_rgba(0,207,255,0.15)] text-pulse-accent/80 border-pulse-accent/20",
-              specialView === "starred" && "shadow-[0_0_30px_rgba(255,209,102,0.15)] text-beacon-accent/80 border-beacon-accent/20",
-            )}
+            className="p-5 sm:p-6 rounded-full mb-4 text-accent-primary border border-accent-border/40 bg-accent-soft shadow-[0_0_30px_var(--accent-glow)]"
           >
             {specialView === "shared" ? (
               <Share2 size={36} className="sm:w-10 sm:h-10" />
@@ -96,7 +91,7 @@ export default function EmptyState({ specialView, isSearch, openUploadModal, set
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent("subscription:prompt"))}
-                className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer transition-all"
+                className="px-4 py-2.5 bg-accent-primary text-accent-foreground font-bold text-xs rounded-xl shadow-md shadow-accent-glow/20 flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-all"
               >
                 <Zap size={14} fill="currentColor" /> Choose a Storage Plan
               </button>
@@ -106,7 +101,7 @@ export default function EmptyState({ specialView, isSearch, openUploadModal, set
       ) : (
         <>
           <div
-            className="bg-white/40 dark:bg-white/[0.03] p-5 sm:p-6 rounded-full mb-4 cursor-pointer hover:bg-white/60 dark:hover:bg-white/[0.06] transition-all duration-300 shadow-[0_0_30px_rgba(20,184,166,0.06)] dark:shadow-[0_0_30px_rgba(20,184,166,0.1)]"
+            className="bg-accent-soft p-5 sm:p-6 rounded-full mb-4 cursor-pointer hover:opacity-90 transition-all duration-300 border border-accent-border/40 shadow-[0_0_30px_var(--accent-glow)]"
             onClick={openUploadModal}
           >
             <Upload size={36} className="sm:w-10 sm:h-10 text-accent-primary" />

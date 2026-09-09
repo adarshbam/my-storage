@@ -40,16 +40,9 @@ export default function FileDetailsModal({ item, onClose }) {
   };
 
   // Environment styling
-  let envClass =
-    "text-accent-primary bg-accent-soft border-accent-border";
-  if (item.isTrash)
-    envClass = "text-danger-accent bg-danger-accent/10 border-danger-accent/30";
-  else if (provider === "google_drive" || provider === "shared_drive" || item.name?.toLowerCase() === "google drive")
-    envClass =
-      "text-pulse-accent bg-pulse-accent/10 border-pulse-accent/30";
-  else if (provider === "github" || item.name?.toLowerCase() === "github")
-    envClass =
-      "text-linkgit-accent bg-linkgit-accent/10 border-linkgit-accent/30";
+  const envClass = item.isTrash
+    ? "text-danger-accent bg-danger-accent/10 border-danger-accent/30"
+    : "text-accent-primary bg-accent-soft border-accent-border";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">

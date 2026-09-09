@@ -138,11 +138,11 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
       path: "/dashboard/shared",
       exact: false,
       icon: SecureRelayIcon,
-      accentClass: "text-relay-accent",
-      bgClass: "bg-relay-accent/10",
-      shadowClass: "shadow-[inset_0_0_20px_rgba(155,77,255,0.2)]",
-      barColor: "#C65CFF",
-      barGlow: "0 0 12px rgba(155, 77, 255, 0.6)",
+      accentClass: "text-accent-primary",
+      bgClass: "bg-accent-soft",
+      shadowClass: "shadow-accent-glow-sm",
+      barColor: "var(--accent-primary)",
+      barGlow: "0 0 12px var(--accent-glow)",
       tourId: "nav-relay",
     },
     {
@@ -150,11 +150,11 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
       path: "/dashboard/recent",
       exact: false,
       icon: ActivityPulseIcon,
-      accentClass: "text-pulse-accent",
-      bgClass: "bg-pulse-accent/10",
-      shadowClass: "shadow-[inset_0_0_20px_rgba(0,207,255,0.2)]",
-      barColor: "#00CFFF",
-      barGlow: "0 0 12px rgba(0, 207, 255, 0.6)",
+      accentClass: "text-accent-primary",
+      bgClass: "bg-accent-soft",
+      shadowClass: "shadow-accent-glow-sm",
+      barColor: "var(--accent-primary)",
+      barGlow: "0 0 12px var(--accent-glow)",
       tourId: "nav-pulse",
     },
     {
@@ -162,11 +162,11 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
       path: "/dashboard/starred",
       exact: false,
       icon: PriorityBeaconIcon,
-      accentClass: "text-beacon-accent",
-      bgClass: "bg-beacon-accent/10",
-      shadowClass: "shadow-[inset_0_0_20px_rgba(255,209,102,0.2)]",
-      barColor: "#FFD166",
-      barGlow: "0 0 12px rgba(255, 209, 102, 0.6)",
+      accentClass: "text-accent-primary",
+      bgClass: "bg-accent-soft",
+      shadowClass: "shadow-accent-glow-sm",
+      barColor: "var(--accent-primary)",
+      barGlow: "0 0 12px var(--accent-glow)",
       tourId: "nav-starred",
     },
     {
@@ -327,17 +327,17 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
             };
 
             const isTrashItem = item.path === "/dashboard/trash";
-            const effectiveAccentClass = active
-              ? (isTrashItem ? "text-recycle-accent" : "text-accent-primary")
-              : (hovered ? item.accentClass : "text-slate-400 dark:text-white/30");
+            const effectiveAccentClass = isTrashItem
+              ? (active || hovered ? "text-recycle-accent" : "text-slate-400 dark:text-white/30")
+              : (active || hovered ? "text-accent-primary" : "text-slate-400 dark:text-white/30");
             
-            const effectiveBgClass = active
-              ? (isTrashItem ? "bg-recycle-accent/10" : "bg-accent-soft")
-              : (hovered ? item.bgClass : "");
+            const effectiveBgClass = isTrashItem
+              ? (active || hovered ? "bg-recycle-accent/10" : "")
+              : (active || hovered ? "bg-accent-soft" : "");
 
-            const effectiveShadowClass = active
-              ? (isTrashItem ? item.shadowClass : "shadow-accent-glow-sm")
-              : (hovered ? item.shadowClass : "");
+            const effectiveShadowClass = isTrashItem
+              ? (active || hovered ? item.shadowClass : "")
+              : (active || hovered ? "shadow-accent-glow-sm" : "");
 
             const effectiveBarColor = isTrashItem ? item.barColor : "var(--accent-primary)";
             const effectiveBarGlow = isTrashItem ? item.barGlow : "0 0 12px var(--accent-glow)";
@@ -523,11 +523,11 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                   }}
                   className={`relative flex items-center h-12 w-full rounded-xl overflow-hidden text-left transition-all duration-300 ${
                     dragOverTarget === "drive"
-                      ? "ring-2 ring-linkdrive-accent bg-linkdrive-accent/20 scale-[1.02] shadow-[0_0_20px_rgba(255,122,61,0.4)]"
+                      ? "ring-2 ring-accent-primary bg-accent-soft scale-[1.02] shadow-[0_0_20px_var(--accent-glow)]"
                       : isActive("/dashboard/google-drive")
                       ? "bg-accent-soft shadow-accent-glow-sm"
                       : hoveredPath === "drive"
-                      ? "bg-linkdrive-accent/10 shadow-[inset_0_0_20px_rgba(255,122,61,0.2)]"
+                      ? "bg-accent-soft shadow-accent-glow-sm"
                       : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
                   }`}
                 >
@@ -541,8 +541,12 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                     />
                   )}
                   <div
-                    className="w-12 shrink-0 flex items-center justify-center transition-all duration-300 text-linkdrive-accent pointer-events-none"
-                    style={{ filter: "drop-shadow(0 0 6px rgba(255, 122, 61, 0.5))" }}
+                    className="w-12 shrink-0 flex items-center justify-center transition-all duration-300 pointer-events-none"
+                    style={
+                      isActive("/dashboard/google-drive") || hoveredPath === "drive"
+                        ? { filter: "drop-shadow(0 0 8px var(--accent-glow))" }
+                        : {}
+                    }
                   >
                     <VaultDriveIcon size={20} />
                   </div>
@@ -568,7 +572,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                   >
                     <Unlink size={14} />
                   </button>
-                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkdrive-accent shadow-[0_0_6px_rgba(255,122,61,0.6)] group-hover/drive:opacity-0 opacity-100 transition-opacity" />
+                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-accent-primary shadow-[0_0_8px_var(--accent-glow)] group-hover/drive:opacity-0 opacity-100 transition-opacity" />
                 </Link>
               ) : (
                 <button
@@ -577,19 +581,19 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                   onMouseLeave={() => setHoveredPath(null)}
                   className={`relative flex items-center h-12 w-full rounded-xl overflow-hidden text-left transition-all duration-300 ${
                     hoveredPath === "drive"
-                      ? "bg-linkdrive-accent/10 shadow-[inset_0_0_20px_rgba(255,122,61,0.2)]"
+                      ? "bg-accent-soft shadow-accent-glow-sm"
                       : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
                   }`}
                 >
                   <div
                     className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
                       hoveredPath === "drive"
-                        ? "text-linkdrive-accent"
+                        ? "text-accent-primary"
                         : "text-slate-400 dark:text-white/30"
                     }`}
                     style={
                       hoveredPath === "drive"
-                        ? { filter: "drop-shadow(0 0 6px rgba(255, 122, 61, 0.5))" }
+                        ? { filter: "drop-shadow(0 0 8px var(--accent-glow))" }
                         : {}
                     }
                   >
@@ -606,7 +610,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
               )}
             </div>
           )}
-          {/* Link GitHub — Purple identity */}
+          {/* Link GitHub */}
           {(hasFeature("github_backup") || githubConnected) && (
             <div className="relative flex items-center group/git">
               {githubConnected ? (
@@ -619,7 +623,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                     isActive("/dashboard/github")
                       ? "bg-accent-soft shadow-accent-glow-sm"
                       : hoveredPath === "github"
-                      ? "bg-linkgit-accent/10 shadow-[inset_0_0_20px_rgba(198,92,255,0.2)]"
+                      ? "bg-accent-soft shadow-accent-glow-sm"
                       : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
                   }`}
                 >
@@ -633,8 +637,12 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                     />
                   )}
                   <div
-                    className="w-12 shrink-0 flex items-center justify-center transition-all duration-300 text-linkgit-accent"
-                    style={{ filter: "drop-shadow(0 0 6px rgba(198, 92, 255, 0.5))" }}
+                    className="w-12 shrink-0 flex items-center justify-center transition-all duration-300 text-slate-800 dark:text-white"
+                    style={
+                      isActive("/dashboard/github") || hoveredPath === "github"
+                        ? { filter: "drop-shadow(0 0 8px var(--accent-glow))" }
+                        : {}
+                    }
                   >
                     <VaultGitIcon size={20} />
                   </div>
@@ -660,7 +668,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                   >
                     <Unlink size={14} />
                   </button>
-                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-linkgit-accent shadow-[0_0_6px_rgba(198,92,255,0.6)] group-hover/git:opacity-0 opacity-100 transition-opacity" />
+                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-accent-primary shadow-[0_0_8px_var(--accent-glow)] group-hover/git:opacity-0 opacity-100 transition-opacity" />
                 </Link>
               ) : (
                 <button
@@ -669,19 +677,19 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                   onMouseLeave={() => setHoveredPath(null)}
                   className={`relative flex items-center h-12 w-full rounded-xl overflow-hidden text-left transition-all duration-300 ${
                     hoveredPath === "github"
-                      ? "bg-linkgit-accent/10 shadow-[inset_0_0_20px_rgba(198,92,255,0.2)]"
+                      ? "bg-accent-soft shadow-accent-glow-sm"
                       : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
                   }`}
                 >
                   <div
                     className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
                       hoveredPath === "github"
-                        ? "text-linkgit-accent"
+                        ? "text-accent-primary"
                         : "text-slate-400 dark:text-white/30"
                     }`}
                     style={
                       hoveredPath === "github"
-                        ? { filter: "drop-shadow(0 0 6px rgba(198, 92, 255, 0.5))" }
+                        ? { filter: "drop-shadow(0 0 8px var(--accent-glow))" }
                         : {}
                     }
                   >
@@ -709,10 +717,8 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
             onMouseEnter={() => setHoveredPath("/profile")}
             onMouseLeave={() => setHoveredPath(null)}
             className={`relative flex items-center h-12 rounded-xl overflow-hidden transition-all duration-300 ${
-              isActive("/profile")
+              isActive("/profile") || hoveredPath === "/profile"
                 ? "bg-accent-soft shadow-accent-glow-sm"
-                : hoveredPath === "/profile"
-                ? "bg-core-accent/10 shadow-[inset_0_0_20px_rgba(77,166,255,0.15)]"
                 : ""
             }`}
           >
@@ -727,15 +733,13 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
             )}
             <div
               className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
-                isActive("/profile")
+                isActive("/profile") || hoveredPath === "/profile"
                   ? "text-accent-primary"
-                  : hoveredPath === "/profile"
-                  ? "text-core-accent"
                   : "text-white/30 group-hover:text-white/60"
               }`}
               style={
                 isActive("/profile") || hoveredPath === "/profile"
-                  ? { filter: "drop-shadow(0 0 8px currentColor)" }
+                  ? { filter: "drop-shadow(0 0 8px var(--accent-glow))" }
                   : {}
               }
             >
@@ -761,7 +765,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
             onMouseLeave={() => setHoveredPath(null)}
             className={`relative flex items-center h-12 rounded-xl overflow-hidden transition-all duration-300 mt-1 ${
               isActive("/dashboard/tutorials") || hoveredPath === "/dashboard/tutorials"
-                ? "bg-accent-soft shadow-[inset_0_0_20px_rgba(0,207,255,0.2)]"
+                ? "bg-accent-soft shadow-accent-glow-sm"
                 : ""
             }`}
           >
@@ -782,7 +786,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
               }`}
               style={
                 isActive("/dashboard/tutorials") || hoveredPath === "/dashboard/tutorials"
-                  ? { filter: "drop-shadow(0 0 8px currentColor)" }
+                  ? { filter: "drop-shadow(0 0 8px var(--accent-glow))" }
                   : {}
               }
             >

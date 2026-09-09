@@ -320,9 +320,9 @@ export default function BillingPlansPage() {
     },
     ACTIVE: {
       label: "Active Subscription",
-      badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+      badgeClass: "bg-accent-soft text-accent-primary border-accent-border",
       icon: CheckCircle2,
-      bannerClass: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300",
+      bannerClass: "bg-accent-soft border-accent-border/40 text-accent-primary",
       message: "Your subscription is active and all vault storage features are fully enabled.",
     },
     CANCEL_SCHEDULED: {
@@ -540,7 +540,7 @@ export default function BillingPlansPage() {
                         .getElementById("available-vault-plans")
                         ?.scrollIntoView({ behavior: "smooth" });
                     }}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-black shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="px-5 py-2.5 rounded-xl bg-accent-primary hover:opacity-90 text-accent-foreground text-xs font-black shadow-lg shadow-accent-glow/20 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                   >
                     <Zap size={14} className="fill-current" />
                     Get a Subscription
@@ -567,7 +567,7 @@ export default function BillingPlansPage() {
                           setModalOpen(true);
                         }}
                         disabled={actionLoading}
-                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-black shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                        className="px-5 py-2.5 rounded-xl bg-accent-primary hover:opacity-90 text-accent-foreground text-xs font-black shadow-lg shadow-accent-glow/20 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                       >
                         <PlayCircle size={14} className="fill-current" />
                         Resume Subscription
@@ -596,7 +596,7 @@ export default function BillingPlansPage() {
           <div className="rounded-3xl p-5 sm:p-8 bg-white dark:bg-vault-surface/80 border border-slate-200 dark:border-white/10 backdrop-blur-xl flex flex-col justify-between space-y-6 shadow-sm">
             <div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <CreditCard size={18} className="text-emerald-500" /> Billing Summary
+                <CreditCard size={18} className="text-accent-primary" /> Billing Summary
               </h3>
 
               <div className="space-y-4 text-xs font-mono">
@@ -616,7 +616,7 @@ export default function BillingPlansPage() {
                 </div>
                 <div className="flex justify-between py-2 border-b border-slate-100 dark:border-white/5">
                   <span className="text-slate-500 dark:text-white/50">Status</span>
-                  <span className={`font-bold ${isNoSubscription ? "text-amber-500 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                  <span className={`font-bold ${isNoSubscription ? "text-amber-500 dark:text-amber-400" : "text-accent-primary"}`}>
                     {status}
                   </span>
                 </div>

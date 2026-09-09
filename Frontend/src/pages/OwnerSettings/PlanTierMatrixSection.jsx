@@ -3,10 +3,10 @@ import { Grid, Check, X, ShieldCheck } from "lucide-react";
 const tierList = ["Free", "Novice", "Professional", "Ultimate"];
 
 export const tierBadgeColors = {
-  Free: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  Novice: "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20",
-  Professional: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-  Ultimate: "bg-sky-500/10 text-sky-400 border-sky-500/20",
+  Free: "bg-accent-soft text-accent-primary border-accent-border/40 font-bold",
+  Novice: "bg-accent-soft text-accent-primary border-accent-border/40 font-bold",
+  Professional: "bg-accent-soft text-accent-primary border-accent-border/40 font-bold",
+  Ultimate: "bg-accent-soft text-accent-primary border-accent-border/40 font-bold shadow-accent-glow-sm",
 };
 
 export default function PlanTierMatrixSection({
@@ -15,10 +15,10 @@ export default function PlanTierMatrixSection({
   onToggleTierFeature,
 }) {
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-emerald-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 hover:border-accent-border/40">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/5">
+          <div className="w-12 h-12 rounded-2xl bg-accent-soft text-accent-primary border border-accent-border/40 flex items-center justify-center shadow-lg shadow-accent-glow/10">
             <Grid size={22} />
           </div>
           <div>
@@ -31,7 +31,7 @@ export default function PlanTierMatrixSection({
           </div>
         </div>
 
-        <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+        <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-accent-soft border border-accent-border/40 text-accent-primary">
           4 Tiers • {features.length} Capability Rules
         </span>
       </div>
@@ -82,7 +82,7 @@ export default function PlanTierMatrixSection({
                         onClick={() => onToggleTierFeature(tier, feature.key)}
                         className={`w-9 h-9 rounded-xl inline-flex items-center justify-center transition-all duration-200 active:scale-95 border ${
                           isEnabled
-                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]"
+                            ? "bg-accent-primary text-accent-foreground border-accent-primary shadow-[0_0_12px_var(--accent-glow)]"
                             : "bg-slate-200/50 dark:bg-white/5 text-slate-400 dark:text-white/20 border-slate-300 dark:border-white/10 hover:border-slate-400 dark:hover:border-white/30"
                         }`}
                         title={`${isEnabled ? "Revoke" : "Grant"} ${feature.title} for ${tier}`}
