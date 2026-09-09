@@ -21,12 +21,12 @@ export default function GlobalSystemLimitsSection({
   );
 
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-5 sm:p-8 shadow-xl relative overflow-hidden transition-all duration-300 hover:border-purple-500/30">
-      <div className="absolute top-0 right-0 w-72 h-72 bg-purple-500/5 blur-[90px] rounded-full pointer-events-none" />
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-5 sm:p-8 shadow-xl relative overflow-hidden transition-all duration-300 hover:border-accent-border">
+      <div className="absolute top-0 right-0 w-72 h-72 bg-accent-soft/20 blur-[90px] rounded-full pointer-events-none" />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shadow-lg shadow-purple-500/5 shrink-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-accent-soft text-accent-primary border border-accent-border flex items-center justify-center shadow-lg shadow-accent-glow-sm shrink-0">
             <Cpu size={20} className="sm:w-[22px] sm:h-[22px]" />
           </div>
           <div>
@@ -64,7 +64,7 @@ export default function GlobalSystemLimitsSection({
               onChange={(e) =>
                 onChange("maxDevicesLimit", Number(e.target.value))
               }
-              className="w-full bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-sm shadow-sm"
+              className="w-full bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 transition-colors text-sm shadow-sm"
             />
           </div>
           <p className="text-[11px] text-slate-500 dark:text-white/40">
@@ -85,12 +85,12 @@ export default function GlobalSystemLimitsSection({
               onChange={(e) =>
                 onChange("maxFileSizeValue", Number(e.target.value))
               }
-              className="w-2/5 min-w-0 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-sm shadow-sm"
+              className="w-2/5 min-w-0 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 transition-colors text-sm shadow-sm"
             />
             <select
               value={limits.maxFileSizeUnit ?? "MB"}
               onChange={(e) => onChange("maxFileSizeUnit", e.target.value)}
-              className="w-3/5 min-w-0 truncate bg-slate-50 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-xs shadow-sm"
+              className="w-3/5 min-w-0 truncate bg-slate-50 dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 transition-colors text-xs shadow-sm"
             >
               <option value="B">Bytes (B)</option>
               <option value="KB">KB (Kilobytes)</option>
@@ -117,12 +117,12 @@ export default function GlobalSystemLimitsSection({
               onChange={(e) =>
                 onChange("sessionTimeoutValue", Number(e.target.value))
               }
-              className="w-2/5 min-w-0 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-sm shadow-sm"
+              className="w-2/5 min-w-0 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 transition-colors text-sm shadow-sm"
             />
             <select
               value={limits.sessionTimeoutUnit ?? "Hours"}
               onChange={(e) => onChange("sessionTimeoutUnit", e.target.value)}
-              className="w-3/5 min-w-0 truncate bg-slate-50 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-xs shadow-sm"
+              className="w-3/5 min-w-0 truncate bg-slate-50 dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 transition-colors text-xs shadow-sm"
             >
               <option value="Mins">Minutes</option>
               <option value="Hours">Hours</option>
@@ -142,7 +142,7 @@ export default function GlobalSystemLimitsSection({
           <select
             value={limits.defaultStorageUnit ?? "GB"}
             onChange={(e) => onChange("defaultStorageUnit", e.target.value)}
-            className="w-full min-w-0 bg-slate-50 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-xs shadow-sm"
+            className="w-full min-w-0 bg-slate-50 dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 transition-colors text-xs shadow-sm"
           >
             <option value="MB">MB (Megabytes)</option>
             <option value="GB">GB (Gigabytes)</option>
@@ -161,7 +161,7 @@ export default function GlobalSystemLimitsSection({
           <select
             value={limits.freeTrialInheritedTier ?? "ultimate"}
             onChange={(e) => onChange("freeTrialInheritedTier", e.target.value)}
-            className="w-full min-w-0 bg-slate-50 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-purple-500 transition-colors text-xs shadow-sm"
+            className="w-full min-w-0 bg-slate-50 dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 transition-colors text-xs shadow-sm"
           >
             {eligibleTiers.length > 0 ? (
               eligibleTiers.map((t) => (
@@ -185,9 +185,10 @@ export default function GlobalSystemLimitsSection({
         <div className="sm:col-span-2 lg:col-span-3 xl:col-span-5 flex justify-end pt-4 border-t border-slate-200/60 dark:border-white/5">
           <button
             type="submit"
-            className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm transition-all duration-300 shadow-lg shadow-purple-500/25 active:scale-95"
+            className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-accent-primary text-accent-foreground font-bold text-sm transition-all duration-200 shadow-lg shadow-accent-glow/25 hover:opacity-95 active:scale-95 cursor-pointer flex items-center justify-center gap-2"
           >
-            Save System Limits
+            <Check size={16} strokeWidth={2.5} />
+            <span>Save System Limits</span>
           </button>
         </div>
       </form>

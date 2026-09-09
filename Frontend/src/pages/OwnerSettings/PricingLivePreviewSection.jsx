@@ -50,10 +50,10 @@ export default function PricingLivePreviewSection({
   };
 
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-sky-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-accent-border">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center shadow-lg shadow-sky-500/5 shrink-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-accent-soft text-accent-primary border border-accent-border flex items-center justify-center shadow-lg shadow-accent-glow-sm shrink-0">
             <Eye size={20} className="sm:w-[22px] sm:h-[22px]" />
           </div>
           <div>
@@ -83,11 +83,12 @@ export default function PricingLivePreviewSection({
             Monthly
           </span>
           <button
+            type="button"
             onClick={() => setIsYearly(!isYearly)}
-            className="relative w-12 h-6 bg-slate-300 dark:bg-white/10 rounded-full p-1 flex items-center shadow-inner"
+            className="relative w-12 h-6 bg-slate-300 dark:bg-white/10 rounded-full p-1 flex items-center shadow-inner cursor-pointer"
           >
             <motion.div
-              className="w-4 h-4 rounded-full bg-gradient-to-r from-[#14b8a6] to-[#0ea5e9]"
+              className="w-4 h-4 rounded-full bg-accent-primary shadow-sm shadow-accent-glow"
               animate={{ x: isYearly ? 24 : 0 }}
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             />
@@ -105,7 +106,7 @@ export default function PricingLivePreviewSection({
       </div>
 
       {/* Embedded Live Preview Canvas */}
-      <div className="w-full bg-slate-950/80 dark:bg-[#020705] p-6 md:p-8 rounded-[2.5rem] border border-slate-800 dark:border-white/10 relative overflow-hidden shadow-2xl space-y-6">
+      <div className="w-full bg-slate-900/60 dark:bg-vault-base/90 p-6 md:p-8 rounded-[2.5rem] border border-slate-800 dark:border-white/10 relative overflow-hidden shadow-2xl space-y-6">
         {(() => {
           const period = isYearly ? "Yearly" : "Monthly";
           const freeTrialTier = planTiers.find(

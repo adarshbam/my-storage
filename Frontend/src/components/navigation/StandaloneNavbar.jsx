@@ -99,20 +99,17 @@ export default function StandaloneNavbar() {
       path: "/dashboard/billing",
       aliases: ["/billing"],
       icon: HardDrive,
-      accentColor: "#10B981",
     },
     {
       name: "Account Settings",
       path: "/profile",
       icon: User,
-      accentColor: "#4DA6FF",
     },
     {
       name: "Wally's Academy",
       path: "/dashboard/tutorials",
       aliases: ["/tutorials"],
       icon: Sparkles,
-      accentColor: "#00CFFF",
     },
     ...(isManagerOrAdmin
       ? [
@@ -120,7 +117,6 @@ export default function StandaloneNavbar() {
             name: "User Management",
             path: "/users",
             icon: Shield,
-            accentColor: "#F43F5E",
           },
         ]
       : []),
@@ -130,7 +126,6 @@ export default function StandaloneNavbar() {
             name: "Owner Settings",
             path: "/owner/settings",
             icon: Sliders,
-            accentColor: "#A855F7",
           },
         ]
       : []),

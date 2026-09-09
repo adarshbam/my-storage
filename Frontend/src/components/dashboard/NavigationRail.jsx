@@ -326,6 +326,22 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
               }
             };
 
+            const isTrashItem = item.path === "/dashboard/trash";
+            const effectiveAccentClass = active
+              ? (isTrashItem ? "text-recycle-accent" : "text-accent-primary")
+              : (hovered ? item.accentClass : "text-slate-400 dark:text-white/30");
+            
+            const effectiveBgClass = active
+              ? (isTrashItem ? "bg-recycle-accent/10" : "bg-accent-soft")
+              : (hovered ? item.bgClass : "");
+
+            const effectiveShadowClass = active
+              ? (isTrashItem ? item.shadowClass : "shadow-accent-glow-sm")
+              : (hovered ? item.shadowClass : "");
+
+            const effectiveBarColor = isTrashItem ? item.barColor : "var(--accent-primary)";
+            const effectiveBarGlow = isTrashItem ? item.barGlow : "0 0 12px var(--accent-glow)";
+
             return (
               <Link
                 key={item.path}
@@ -344,8 +360,10 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                       ? "ring-2 ring-accent-primary bg-accent-soft scale-[1.02] shadow-accent-glow"
                       : isTrashTarget
                       ? "ring-2 ring-rose-500 bg-rose-500/20 scale-[1.02] shadow-[0_0_20px_rgba(255,90,122,0.4)]"
-                      : lit
-                      ? `${item.bgClass} ${item.shadowClass}`
+                      : active
+                      ? `${effectiveBgClass} ${effectiveShadowClass}`
+                      : hovered
+                      ? `${effectiveBgClass} ${effectiveShadowClass}`
                       : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
                   }
                 `}
@@ -355,17 +373,15 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                   <div
                     className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full"
                     style={{
-                      backgroundColor: item.barColor,
-                      boxShadow: item.barGlow,
+                      backgroundColor: effectiveBarColor,
+                      boxShadow: effectiveBarGlow,
                     }}
                   />
                 )}
 
                 {/* Icon */}
                 <div
-                  className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 pointer-events-none ${
-                    lit ? item.accentClass : "text-slate-400 dark:text-white/30"
-                  }`}
+                  className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 pointer-events-none ${effectiveAccentClass}`}
                   style={
                     lit ? { filter: `drop-shadow(0 0 8px currentColor)` } : {}
                   }
@@ -384,7 +400,7 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                       : "opacity-0 md:group-hover:opacity-100"
                   } ${
                     active
-                      ? `${item.accentClass}`
+                      ? `${effectiveAccentClass}`
                       : lit
                         ? "text-slate-900 dark:text-white"
                         : "text-slate-500 dark:text-white/40 group-hover:text-slate-800 dark:group-hover:text-white/80"
@@ -508,7 +524,9 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                   className={`relative flex items-center h-12 w-full rounded-xl overflow-hidden text-left transition-all duration-300 ${
                     dragOverTarget === "drive"
                       ? "ring-2 ring-linkdrive-accent bg-linkdrive-accent/20 scale-[1.02] shadow-[0_0_20px_rgba(255,122,61,0.4)]"
-                      : isActive("/dashboard/google-drive") || hoveredPath === "drive"
+                      : isActive("/dashboard/google-drive")
+                      ? "bg-accent-soft shadow-accent-glow-sm"
+                      : hoveredPath === "drive"
                       ? "bg-linkdrive-accent/10 shadow-[inset_0_0_20px_rgba(255,122,61,0.2)]"
                       : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
                   }`}
@@ -517,8 +535,8 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                     <div
                       className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full"
                       style={{
-                        backgroundColor: "#FF7A3D",
-                        boxShadow: "0 0 12px rgba(255, 122, 61, 0.6)",
+                        backgroundColor: "var(--accent-primary)",
+                        boxShadow: "0 0 12px var(--accent-glow)",
                       }}
                     />
                   )}
@@ -598,7 +616,9 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                   onMouseEnter={() => setHoveredPath("github")}
                   onMouseLeave={() => setHoveredPath(null)}
                   className={`relative flex items-center h-12 w-full rounded-xl overflow-hidden text-left transition-all duration-300 ${
-                    isActive("/dashboard/github") || hoveredPath === "github"
+                    isActive("/dashboard/github")
+                      ? "bg-accent-soft shadow-accent-glow-sm"
+                      : hoveredPath === "github"
                       ? "bg-linkgit-accent/10 shadow-[inset_0_0_20px_rgba(198,92,255,0.2)]"
                       : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
                   }`}
@@ -607,8 +627,8 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                     <div
                       className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full"
                       style={{
-                        backgroundColor: "#C65CFF",
-                        boxShadow: "0 0 12px rgba(198, 92, 255, 0.6)",
+                        backgroundColor: "var(--accent-primary)",
+                        boxShadow: "0 0 12px var(--accent-glow)",
                       }}
                     />
                   )}
@@ -689,7 +709,9 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
             onMouseEnter={() => setHoveredPath("/profile")}
             onMouseLeave={() => setHoveredPath(null)}
             className={`relative flex items-center h-12 rounded-xl overflow-hidden transition-all duration-300 ${
-              isActive("/profile") || hoveredPath === "/profile"
+              isActive("/profile")
+                ? "bg-accent-soft shadow-accent-glow-sm"
+                : hoveredPath === "/profile"
                 ? "bg-core-accent/10 shadow-[inset_0_0_20px_rgba(77,166,255,0.15)]"
                 : ""
             }`}
@@ -698,14 +720,16 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
               <div
                 className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full"
                 style={{
-                  backgroundColor: "#4DA6FF",
-                  boxShadow: "0 0 12px rgba(77, 166, 255, 0.6)",
+                  backgroundColor: "var(--accent-primary)",
+                  boxShadow: "0 0 12px var(--accent-glow)",
                 }}
               />
             )}
             <div
               className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
-                isActive("/profile") || hoveredPath === "/profile"
+                isActive("/profile")
+                  ? "text-accent-primary"
+                  : hoveredPath === "/profile"
                   ? "text-core-accent"
                   : "text-white/30 group-hover:text-white/60"
               }`}

@@ -11,16 +11,6 @@ const categoryIcons = {
   AI: Sparkles,
 };
 
-const categoryBadgeColors = {
-  Storage: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  Sharing: "bg-teal-500/10 text-teal-400 border-teal-500/20",
-  Integrations: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  Security: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-  Performance: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  Support: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
-  AI: "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20",
-};
-
 export default function FeatureCatalogueSection({
   features,
   onToggleFeatureEnabled,
@@ -43,10 +33,10 @@ export default function FeatureCatalogueSection({
       : features.filter((f) => f.category === selectedCategoryFilter);
 
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-blue-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-accent-border">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sm:mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center shadow-lg shadow-blue-500/5 shrink-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-accent-soft text-accent-primary border border-accent-border flex items-center justify-center shadow-lg shadow-accent-glow-sm shrink-0">
             <Layers size={20} className="sm:w-[22px] sm:h-[22px]" />
           </div>
           <div>
@@ -71,11 +61,12 @@ export default function FeatureCatalogueSection({
             {categories.map((cat) => (
               <button
                 key={cat}
+                type="button"
                 onClick={() => setSelectedCategoryFilter(cat)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                   selectedCategoryFilter === cat
-                    ? "bg-blue-500 text-white shadow-md shadow-blue-500/25"
-                    : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/60 hover:bg-slate-200 dark:hover:bg-white/10"
+                    ? "bg-accent-primary text-accent-foreground shadow-md shadow-accent-glow/25"
+                    : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/60 hover:bg-slate-200 dark:hover:bg-white/10 border border-transparent"
                 }`}
               >
                 {cat}
@@ -86,7 +77,7 @@ export default function FeatureCatalogueSection({
           <button
             type="button"
             onClick={handleSave}
-            className="flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:opacity-95 active:scale-95 transition-all w-full xs:w-auto"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-accent-primary text-accent-foreground text-xs font-bold shadow-lg shadow-accent-glow/25 hover:opacity-95 active:scale-95 transition-all w-full xs:w-auto cursor-pointer"
           >
             <Check size={14} /> Save Features
           </button>
@@ -96,21 +87,20 @@ export default function FeatureCatalogueSection({
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         {filteredFeatures.map((feature) => {
           const IconComp = categoryIcons[feature.category] || Layers;
-          const badgeClass = categoryBadgeColors[feature.category] || "bg-slate-500/10 text-slate-400 border-slate-500/20";
 
           return (
             <div
               key={feature._id || feature.key || feature.id}
               className={`rounded-2xl p-5 border transition-all duration-300 flex flex-col justify-between ${
                 feature.enabled
-                  ? "bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 hover:border-blue-500/40 shadow-sm"
+                  ? "bg-slate-50/70 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 hover:border-accent-border shadow-sm"
                   : "bg-slate-100/50 dark:bg-white/[0.01] border-slate-200 dark:border-white/5 opacity-60 hover:opacity-90"
               }`}
             >
               <div>
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-accent-soft text-accent-primary border border-accent-border flex items-center justify-center shrink-0">
                       <IconComp size={18} />
                     </div>
                     <div>
@@ -127,8 +117,8 @@ export default function FeatureCatalogueSection({
                   <button
                     type="button"
                     onClick={() => onToggleFeatureEnabled(feature._id)}
-                    className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 flex items-center shrink-0 ${
-                      feature.enabled ? "bg-blue-500" : "bg-slate-700"
+                    className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 flex items-center shrink-0 cursor-pointer ${
+                      feature.enabled ? "bg-accent-primary" : "bg-slate-300 dark:bg-slate-700"
                     }`}
                     title={feature.enabled ? "Disable Feature" : "Enable Feature"}
                   >
@@ -146,7 +136,7 @@ export default function FeatureCatalogueSection({
               </div>
 
               <div className="pt-3 border-t border-slate-200/50 dark:border-white/5 flex items-center justify-between">
-                <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md border uppercase tracking-wider ${badgeClass}`}>
+                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-md border uppercase tracking-wider bg-accent-soft/70 text-accent-primary border-accent-border/50">
                   {feature.category}
                 </span>
 

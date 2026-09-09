@@ -334,14 +334,14 @@ export default function WallLauncher() {
             onDoubleClick={handleResetPosition}
             className={`relative group flex items-center gap-2 p-2 min-[480px]:px-4 min-[480px]:py-2.5 rounded-full bg-slate-900/90 dark:bg-black/90 backdrop-blur-xl border border-white/20 dark:border-accent-border text-white select-none touch-none transition-shadow duration-150 ${
               isDragging
-                ? "cursor-grabbing shadow-[0_20px_45px_rgba(0,0,0,0.7),0_0_35px_rgba(0,207,255,0.5)] ring-2 ring-[#00CFFF]/60"
-                : "cursor-grab shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(0,207,255,0.25)] hover:shadow-[0_15px_35px_rgba(0,0,0,0.6),0_0_25px_rgba(0,207,255,0.35)]"
+                ? "cursor-grabbing shadow-[0_20px_45px_rgba(0,0,0,0.7),0_0_35px_var(--accent-glow)] ring-2 ring-accent-primary/60"
+                : "cursor-grab shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_20px_var(--accent-glow-sm)] hover:shadow-[0_15px_35px_rgba(0,0,0,0.6),0_0_25px_var(--accent-glow)]"
             }`}
             title="Drag to place Wally anywhere • Click to open Guidebook • Double-click to reset position"
           >
             {/* Subtle glowing animated beacon */}
             <div
-              className={`absolute -inset-0.5 bg-gradient-to-r from-accent-primary to-[#00CFFF] rounded-full blur-md transition-opacity duration-200 ${
+              className={`absolute -inset-0.5 bg-gradient-to-r from-accent-primary to-accent-primary/70 rounded-full blur-md transition-opacity duration-200 ${
                 isDragging ? "opacity-80" : "opacity-40 group-hover:opacity-75"
               }`}
             />
@@ -390,10 +390,10 @@ export default function WallLauncher() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: "spring", stiffness: 350, damping: 26 }}
-              className="fixed bottom-3 inset-x-2.5 min-[480px]:inset-x-4 sm:inset-auto sm:bottom-8 sm:right-8 z-50 w-auto sm:w-[92vw] sm:max-w-md rounded-2xl sm:rounded-3xl bg-[#071613]/95 dark:bg-[#030A08]/95 backdrop-blur-3xl border border-white/20 dark:border-white/15 p-4 sm:p-6 text-white shadow-[0_30px_80px_rgba(0,0,0,0.85),0_0_40px_rgba(0,207,255,0.15)] overflow-hidden max-h-[85vh] flex flex-col"
+              className="fixed bottom-3 inset-x-2.5 min-[480px]:inset-x-4 sm:inset-auto sm:bottom-8 sm:right-8 z-50 w-auto sm:w-[92vw] sm:max-w-md rounded-2xl sm:rounded-3xl bg-slate-900/95 dark:bg-vault-surface/95 backdrop-blur-3xl border border-white/20 dark:border-white/15 p-4 sm:p-6 text-white shadow-[0_30px_80px_rgba(0,0,0,0.85),0_0_40px_var(--accent-glow-sm)] overflow-hidden max-h-[85vh] flex flex-col"
             >
               {/* Top Neon Accent Line */}
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#00CFFF] via-[#10B981] to-[#8B5CF6]" />
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-accent-primary via-accent-primary/80 to-accent-primary/60" />
 
               {/* Header */}
               <div className="flex items-center justify-between gap-3 mb-5 shrink-0">
@@ -508,7 +508,7 @@ export default function WallLauncher() {
                 <button
                   type="button"
                   onClick={handleResetPosition}
-                  className="text-[11px] font-bold text-white/40 hover:text-[#00CFFF] flex items-center gap-1 transition-colors"
+                  className="text-[11px] font-bold text-white/40 hover:text-accent-primary flex items-center gap-1 transition-colors cursor-pointer"
                   title="Reset Wally's floating button to default corner position"
                 >
                   <Move size={12} />

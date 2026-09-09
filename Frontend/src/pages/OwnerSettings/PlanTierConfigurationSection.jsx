@@ -189,10 +189,10 @@ export default function PlanTierConfigurationSection({
   };
 
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-emerald-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-accent-border">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/5 shrink-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-accent-soft text-accent-primary border border-accent-border flex items-center justify-center shadow-lg shadow-accent-glow-sm shrink-0">
             <Grid size={20} className="sm:w-[22px] sm:h-[22px]" />
           </div>
           <div>
@@ -218,10 +218,10 @@ export default function PlanTierConfigurationSection({
             <button
               type="button"
               onClick={() => setActiveTab("features")}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === "features"
-                  ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
-                  : "text-slate-600 dark:text-white/60 hover:text-white"
+                  ? "bg-accent-primary text-accent-foreground shadow-md shadow-accent-glow/20"
+                  : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Layers size={14} /> Features Matrix
@@ -229,10 +229,10 @@ export default function PlanTierConfigurationSection({
             <button
               type="button"
               onClick={() => setActiveTab("rules")}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === "rules"
-                  ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
-                  : "text-slate-600 dark:text-white/60 hover:text-white"
+                  ? "bg-accent-primary text-accent-foreground shadow-md shadow-accent-glow/20"
+                  : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Sliders size={14} /> Operational Rules
@@ -242,7 +242,7 @@ export default function PlanTierConfigurationSection({
           <button
             type="button"
             onClick={handleSave}
-            className="flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 hover:opacity-95 active:scale-95 transition-all w-full xs:w-auto"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-accent-primary text-accent-foreground text-xs font-bold shadow-lg shadow-accent-glow/25 hover:opacity-95 active:scale-95 transition-all w-full xs:w-auto cursor-pointer"
           >
             <Check size={14} /> Save Configurations
           </button>
@@ -304,9 +304,9 @@ export default function PlanTierConfigurationSection({
                         <button
                           type="button"
                           onClick={() => onToggleTierFeature(tier, feature.key)}
-                          className={`w-9 h-9 rounded-xl inline-flex items-center justify-center transition-all duration-200 active:scale-95 border ${
+                          className={`w-9 h-9 rounded-xl inline-flex items-center justify-center transition-all duration-200 active:scale-95 border cursor-pointer ${
                             isEnabled
-                              ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]"
+                              ? "bg-accent-soft text-accent-primary border-accent-border shadow-sm shadow-accent-glow-sm"
                               : "bg-slate-200/50 dark:bg-white/5 text-slate-400 dark:text-white/20 border-slate-300 dark:border-white/10 hover:border-slate-400 dark:hover:border-white/30"
                           }`}
                           title={`${isEnabled ? "Revoke" : "Grant"} ${feature.title} for ${tier}`}
@@ -387,8 +387,8 @@ export default function PlanTierConfigurationSection({
                             onClick={() =>
                               onUpdateTierRule(tier, rule.key, !currentRuleVal)
                             }
-                            className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 inline-flex items-center ${
-                              currentRuleVal ? "bg-emerald-500" : "bg-slate-700"
+                            className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 inline-flex items-center cursor-pointer ${
+                              currentRuleVal ? "bg-accent-primary" : "bg-slate-300 dark:bg-slate-700"
                             }`}
                           >
                             <div
@@ -414,7 +414,7 @@ export default function PlanTierConfigurationSection({
                                 Number(e.target.value),
                               )
                             }
-                            className="w-20 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-center text-slate-900 dark:text-white font-bold focus:outline-none focus:border-emerald-500/50"
+                            className="w-20 bg-slate-100 dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-center text-slate-900 dark:text-white font-bold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20"
                           />
                         )}
 
@@ -436,7 +436,7 @@ export default function PlanTierConfigurationSection({
                                     Number(e.target.value),
                                   )
                                 }
-                                className="w-14 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-center text-slate-900 dark:text-white font-bold focus:outline-none focus:border-emerald-500/50"
+                                className="w-14 bg-slate-100 dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-center text-slate-900 dark:text-white font-bold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20"
                               />
                               <select
                                 value={sizeObj.unit}
@@ -447,7 +447,7 @@ export default function PlanTierConfigurationSection({
                                     e.target.value,
                                   )
                                 }
-                                className="bg-slate-100 dark:bg-[#0c1613] border border-slate-200 dark:border-white/10 rounded-xl px-1.5 py-1.5 text-slate-900 dark:text-white font-bold text-[11px] focus:outline-none focus:border-emerald-500/50"
+                                className="bg-slate-100 dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-xl px-1.5 py-1.5 text-slate-900 dark:text-white font-bold text-[11px] focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20"
                               >
                                 <option value="MB">MB</option>
                                 <option value="GB">GB</option>
@@ -465,7 +465,7 @@ export default function PlanTierConfigurationSection({
                             onChange={(e) =>
                               onUpdateTierRule(tier, rule.key, e.target.value)
                             }
-                            className="w-24 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-center text-slate-900 dark:text-white font-bold text-xs focus:outline-none focus:border-emerald-500/50"
+                            className="w-24 bg-slate-100 dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-center text-slate-900 dark:text-white font-bold text-xs focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20"
                           />
                         )}
                       </td>

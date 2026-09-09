@@ -4,15 +4,15 @@
 
 @layer base {
   :root {
-    /* Base Light Mode RGB Triplet Channels */
-    --bg-base-rgb: 246 248 251;
+    /* Base Light Mode RGB Triplet Channels - Crisp Luminous Glass */
+    --bg-base-rgb: 248 250 252;
     --bg-surface-rgb: 255 255 255;
     --bg-elevated-rgb: 255 255 255;
     --bg-panel-rgb: 241 245 249;
     --bg-subtle-rgb: 243 246 250;
 
     /* Base Hex Fallbacks */
-    --bg-base: #f6f8fb;
+    --bg-base: #f8fafc;
     --bg-surface: #ffffff;
     --bg-elevated: #ffffff;
     --bg-panel: #f1f5f9;
@@ -23,20 +23,21 @@
     --text-muted: #64748b;
     --text-subtle: #94a3b8;
 
-    --border-subtle: rgba(15, 23, 42, 0.08);
-    --border-default: rgba(15, 23, 42, 0.12);
-    --border-hover: rgba(15, 23, 42, 0.22);
+    --border-subtle: rgba(15, 23, 42, 0.06);
+    --border-default: rgba(15, 23, 42, 0.1);
+    --border-hover: rgba(15, 23, 42, 0.2);
     --border-focus: var(--accent-primary);
 
-    --card-bg: rgba(255, 255, 255, 0.95);
-    --card-border: rgba(15, 23, 42, 0.09);
-    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(15, 23, 42, 0.04);
-    --card-shadow-hover: 0 8px 24px -4px rgba(15, 23, 42, 0.09), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+    /* Watery Windshield Glass (Light Mode) */
+    --card-bg: rgba(255, 255, 255, 0.84);
+    --card-border: rgba(15, 23, 42, 0.08);
+    --card-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+    --card-shadow-hover: 0 12px 32px -4px rgba(15, 23, 42, 0.09), 0 4px 8px -2px rgba(15, 23, 42, 0.04);
 
-    --glass-bg: rgba(255, 255, 255, 0.88);
+    --glass-bg: rgba(255, 255, 255, 0.82);
     --glass-border: rgba(15, 23, 42, 0.08);
 
-    /* Default Grove Green accent in Light Mode */
+    /* Default Emerald Green accent in Light Mode */
     --accent-primary-rgb: 5 150 105;
     --accent-hover-rgb: 4 120 87;
     --accent-active-rgb: 6 95 70;
@@ -55,19 +56,19 @@
     --radius-2xl: 2rem;
   }
 
-  /* Dark Mode Tokens */
+  /* Dark Mode Tokens - Clean Neutral Obsidian / Slate (Zero Green Tint) */
   .dark {
-    --bg-base-rgb: 3 7 6;
-    --bg-surface-rgb: 7 17 14;
-    --bg-elevated-rgb: 13 26 22;
-    --bg-panel-rgb: 9 22 19;
-    --bg-subtle-rgb: 4 10 8;
+    --bg-base-rgb: 6 8 13;
+    --bg-surface-rgb: 10 14 20;
+    --bg-elevated-rgb: 16 22 34;
+    --bg-panel-rgb: 13 18 28;
+    --bg-subtle-rgb: 8 11 16;
 
-    --bg-base: #030706;
-    --bg-surface: #07110e;
-    --bg-elevated: #0d1a16;
-    --bg-panel: #091613;
-    --bg-subtle: #040a08;
+    --bg-base: #06080d;
+    --bg-surface: #0a0e14;
+    --bg-elevated: #101622;
+    --bg-panel: #0d121c;
+    --bg-subtle: #080b10;
 
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
@@ -79,22 +80,22 @@
     --border-hover: rgba(255, 255, 255, 0.22);
     --border-focus: var(--accent-primary);
 
-    --card-bg: rgba(7, 17, 14, 0.88);
+    --card-bg: rgba(10, 14, 20, 0.88);
     --card-border: rgba(255, 255, 255, 0.09);
     --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
     --card-shadow-hover: 0 16px 40px -8px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 
-    --glass-bg: rgba(7, 17, 14, 0.88);
+    --glass-bg: rgba(10, 14, 20, 0.85);
     --glass-border: rgba(255, 255, 255, 0.09);
 
-    /* Default Grove Green accent in Dark Mode */
+    /* Default Emerald Green accent in Dark Mode */
     --accent-primary-rgb: 16 185 129;
     --accent-hover-rgb: 52 211 153;
     --accent-active-rgb: 5 150 105;
     --accent-primary: #10b981;
     --accent-hover: #34d399;
     --accent-active: #059669;
-    --accent-foreground: #021a12;
+    --accent-foreground: #ffffff;
     --accent-soft: rgba(16, 185, 129, 0.14);
     --accent-border: rgba(16, 185, 129, 0.35);
     --accent-glow: rgba(16, 185, 129, 0.38);
@@ -127,7 +128,7 @@
     --accent-glow: rgba(248, 250, 252, 0.2);
   }
 
-  /* 2. Grove Green (Signature Vault Emerald) */
+  /* 2. Grove Green (Emerald Green) */
   [data-accent="grove-green"] {
     --accent-primary-rgb: 5 150 105;
     --accent-primary: #059669;
@@ -144,13 +145,13 @@
     --accent-primary: #10b981;
     --accent-hover: #34d399;
     --accent-active: #059669;
-    --accent-foreground: #021a12;
+    --accent-foreground: #ffffff;
     --accent-soft: rgba(16, 185, 129, 0.14);
     --accent-border: rgba(16, 185, 129, 0.35);
     --accent-glow: rgba(16, 185, 129, 0.38);
   }
 
-  /* 3. Ocean Blue */
+  /* 3. Ocean Blue (Cobalt Blue) */
   [data-accent="ocean-blue"] {
     --accent-primary-rgb: 37 99 235;
     --accent-primary: #2563eb;
@@ -167,13 +168,13 @@
     --accent-primary: #3b82f6;
     --accent-hover: #60a5fa;
     --accent-active: #2563eb;
-    --accent-foreground: #030816;
+    --accent-foreground: #ffffff;
     --accent-soft: rgba(59, 130, 246, 0.14);
     --accent-border: rgba(59, 130, 246, 0.35);
     --accent-glow: rgba(59, 130, 246, 0.38);
   }
 
-  /* 4. Midnight Azure */
+  /* 4. Midnight Azure (Deep Indigo) */
   [data-accent="midnight-azure"] {
     --accent-primary-rgb: 67 56 202;
     --accent-primary: #4338ca;
@@ -190,13 +191,13 @@
     --accent-primary: #6366f1;
     --accent-hover: #818cf8;
     --accent-active: #4f46e5;
-    --accent-foreground: #050518;
+    --accent-foreground: #ffffff;
     --accent-soft: rgba(99, 102, 241, 0.14);
     --accent-border: rgba(99, 102, 241, 0.35);
     --accent-glow: rgba(99, 102, 241, 0.38);
   }
 
-  /* 5. Graphite Studio (Purple / Violet) */
+  /* 5. Graphite Studio (Royal Amethyst) */
   [data-accent="graphite-studio"] {
     --accent-primary-rgb: 124 58 237;
     --accent-primary: #7c3aed;
@@ -213,13 +214,13 @@
     --accent-primary: #8b5cf6;
     --accent-hover: #a78bfa;
     --accent-active: #7c3aed;
-    --accent-foreground: #0e051a;
+    --accent-foreground: #ffffff;
     --accent-soft: rgba(139, 92, 246, 0.14);
     --accent-border: rgba(139, 92, 246, 0.35);
     --accent-glow: rgba(139, 92, 246, 0.38);
   }
 
-  /* 6. Copper Slate */
+  /* 6. Copper Slate (Tuscan Bronze) */
   [data-accent="copper-slate"] {
     --accent-primary-rgb: 180 83 9;
     --accent-primary: #b45309;
@@ -236,13 +237,13 @@
     --accent-primary: #d97706;
     --accent-hover: #f59e0b;
     --accent-active: #b45309;
-    --accent-foreground: #180a01;
+    --accent-foreground: #ffffff;
     --accent-soft: rgba(217, 119, 6, 0.14);
     --accent-border: rgba(217, 119, 6, 0.35);
     --accent-glow: rgba(217, 119, 6, 0.38);
   }
 
-  /* 7. Ember Orange */
+  /* 7. Ember Orange (Sunset Orange) */
   [data-accent="ember-orange"] {
     --accent-primary-rgb: 234 88 12;
     --accent-primary: #ea580c;
@@ -259,13 +260,13 @@
     --accent-primary: #f97316;
     --accent-hover: #fb923c;
     --accent-active: #ea580c;
-    --accent-foreground: #180801;
+    --accent-foreground: #ffffff;
     --accent-soft: rgba(249, 115, 22, 0.14);
     --accent-border: rgba(249, 115, 22, 0.35);
     --accent-glow: rgba(249, 115, 22, 0.38);
   }
 
-  /* 8. Sunlit Yellow */
+  /* 8. Sunlit Yellow (Goldenrod Amber) */
   [data-accent="sunlit-yellow"] {
     --accent-primary-rgb: 202 138 4;
     --accent-primary: #ca8a04;
@@ -288,7 +289,7 @@
     --accent-glow: rgba(234, 179, 8, 0.38);
   }
 
-  /* 9. Studio Rose */
+  /* 9. Studio Rose (Ruby Rose) */
   [data-accent="studio-rose"] {
     --accent-primary-rgb: 225 29 72;
     --accent-primary: #e11d48;
@@ -305,13 +306,13 @@
     --accent-primary: #fb7185;
     --accent-hover: #fda4af;
     --accent-active: #f43f5e;
-    --accent-foreground: #1a0208;
+    --accent-foreground: #ffffff;
     --accent-soft: rgba(251, 113, 133, 0.14);
     --accent-border: rgba(251, 113, 133, 0.35);
     --accent-glow: rgba(251, 113, 133, 0.38);
   }
 
-  /* 10. Signal Red */
+  /* 10. Signal Red (Scarlet Red) */
   [data-accent="signal-red"] {
     --accent-primary-rgb: 220 38 38;
     --accent-primary: #dc2626;
@@ -328,13 +329,13 @@
     --accent-primary: #ef4444;
     --accent-hover: #f87171;
     --accent-active: #dc2626;
-    --accent-foreground: #1a0303;
+    --accent-foreground: #ffffff;
     --accent-soft: rgba(239, 68, 68, 0.14);
     --accent-border: rgba(239, 68, 68, 0.35);
     --accent-glow: rgba(239, 68, 68, 0.38);
   }
 
-  /* 11. Barbie Pink */
+  /* 11. Barbie Pink (Fuchsia Magenta) */
   [data-accent="barbie-pink"] {
     --accent-primary-rgb: 219 39 119;
     --accent-primary: #db2777;
@@ -351,7 +352,7 @@
     --accent-primary: #ec4899;
     --accent-hover: #f472b6;
     --accent-active: #db2777;
-    --accent-foreground: #1c0310;
+    --accent-foreground: #ffffff;
     --accent-soft: rgba(236, 72, 153, 0.14);
     --accent-border: rgba(236, 72, 153, 0.35);
     --accent-glow: rgba(236, 72, 153, 0.38);

@@ -353,7 +353,7 @@ export default function DashboardLayout() {
   return (
     <ChamberTransferProvider user={user} effectiveMaxStorage={effectiveMaxStorage}>
       <div
-        className="h-[100dvh] flex flex-col bg-vault-bg text-white overflow-hidden relative font-sans"
+        className="h-[100dvh] flex flex-col bg-vault-bg text-slate-900 dark:text-white overflow-hidden relative font-sans transition-colors duration-200"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEndHandler}

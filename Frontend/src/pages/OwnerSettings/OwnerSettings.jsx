@@ -530,7 +530,7 @@ export default function OwnerSettings() {
 
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-[9px] min-[360px]:text-[10px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-400 border border-purple-500/25">
+                <span className="text-[9px] min-[360px]:text-[10px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-md bg-accent-soft text-accent-primary border border-accent-border">
                   Owner Dashboard
                 </span>
                 <span className="text-slate-400 text-xs font-semibold">/</span>
@@ -554,7 +554,7 @@ export default function OwnerSettings() {
 
             <button
               onClick={handleSaveAll}
-              className="flex-1 xs:flex-none flex items-center justify-center gap-1.5 px-3.5 min-[360px]:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-[11px] min-[360px]:text-xs font-black shadow-lg shadow-teal-500/20 hover:opacity-95 transition-opacity"
+              className="flex-1 xs:flex-none flex items-center justify-center gap-1.5 px-3.5 min-[360px]:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-accent-primary text-accent-foreground text-[11px] min-[360px]:text-xs font-black shadow-lg shadow-accent-glow/25 hover:opacity-95 transition-all cursor-pointer"
             >
               <Check size={13} strokeWidth={3} /> Save Configurations
             </button>
@@ -566,7 +566,7 @@ export default function OwnerSettings() {
           <div className="fixed top-6 right-6 z-[100] bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-2.5 rounded-xl font-bold text-xs shadow-2xl border border-white/10 flex items-center gap-2 animate-bounce">
             <Sparkles
               size={14}
-              className="text-emerald-400 dark:text-emerald-600"
+              className="text-accent-primary"
             />
             {toastMessage}
           </div>
@@ -591,7 +591,7 @@ export default function OwnerSettings() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-1.5 px-3 min-[360px]:px-4 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-[11px] min-[360px]:text-xs font-bold whitespace-nowrap transition-all duration-200 shrink-0 ${
                   isActive
-                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md"
+                    ? "bg-accent-primary text-accent-foreground shadow-md shadow-accent-glow/25"
                     : "bg-white dark:bg-white/5 text-slate-600 dark:text-white/60 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/60 dark:border-white/5"
                 }`}
               >

@@ -85,17 +85,7 @@ export default function Profile() {
   };
 
   const getRoleBadgeStyle = (role) => {
-    switch (role?.toUpperCase()) {
-      case "OWNER":
-        return "bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]";
-      case "ADMIN":
-        return "bg-rose-500/10 text-rose-600 dark:text-rose-300 border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.15)]";
-      case "MANAGER":
-        return "bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]";
-      case "USER":
-      default:
-        return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.15)]";
-    }
+    return "bg-accent-soft text-accent-primary border-accent-border shadow-sm shadow-accent-glow-sm";
   };
 
   const userRole = user?.role?.toUpperCase() || "USER";
@@ -254,7 +244,7 @@ export default function Profile() {
                     >
                       <Shield size={11} /> {userRole} CLEARANCE
                     </span>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] min-[360px]:text-[11px] font-mono font-bold bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/60">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] min-[360px]:text-[11px] font-mono font-bold bg-accent-soft border border-accent-border text-accent-primary shadow-sm shadow-accent-glow-sm">
                       <Cpu size={11} className="text-accent-primary" /> AES-256 GCM
                     </span>
                   </div>
@@ -285,7 +275,7 @@ export default function Profile() {
                     initial={{ width: 0 }}
                     animate={{ width: `${usedPercent}%` }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
-                    className="h-full bg-gradient-to-r from-teal-400 via-emerald-500 to-accent-primary rounded-full shadow-[0_0_15px_var(--accent-glow)]"
+                    className="h-full bg-gradient-to-r from-accent-primary/80 to-accent-primary rounded-full shadow-[0_0_15px_var(--accent-glow)]"
                   />
                 </div>
 
@@ -351,14 +341,14 @@ export default function Profile() {
                   {user?.twoFactorEnabled ? (
                     <button
                       onClick={() => setTwoFactorManageOpen(true)}
-                      className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                      className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                     >
                       <Key size={13} /> Manage 2FA
                     </button>
                   ) : (
                     <button
                       onClick={() => setTwoFactorSetupOpen(true)}
-                      className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-white shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5"
+                      className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-accent-primary hover:opacity-95 text-accent-foreground shadow-lg shadow-accent-glow/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <ShieldCheck size={13} /> Enable 2FA
                     </button>
@@ -370,7 +360,7 @@ export default function Profile() {
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-teal-500/10 text-teal-500">
+                        <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
                           <Mail size={15} />
                         </div>
                         <span className="text-xs font-bold text-slate-900 dark:text-white">Recovery Email</span>
@@ -378,7 +368,7 @@ export default function Profile() {
                       <span
                         className={`px-2 py-0.5 rounded-full text-[9px] min-[360px]:text-[10px] font-mono font-bold uppercase tracking-wider ${
                           user?.secondaryRecoveryEmailVerified
-                            ? "bg-teal-500/20 text-teal-600 dark:text-teal-300 border border-teal-500/30"
+                            ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
                             : "bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white/50 border border-slate-300 dark:border-white/10"
                         }`}
                       >
@@ -388,7 +378,7 @@ export default function Profile() {
                     {user?.secondaryRecoveryEmailVerified ? (
                       <div className="flex items-center justify-between text-[11px] text-slate-800 dark:text-white/90 font-mono bg-white dark:bg-black/30 p-2 rounded-xl border border-slate-200 dark:border-white/5">
                         <span className="truncate">{user.secondaryRecoveryEmail}</span>
-                        <CheckCircle2 size={13} className="text-teal-500 shrink-0 ml-1.5" />
+                        <CheckCircle2 size={13} className="text-emerald-500 shrink-0 ml-1.5" />
                       </div>
                     ) : (
                       <p className="text-[10px] min-[360px]:text-[11px] text-slate-600 dark:text-white/50 leading-relaxed">
@@ -399,7 +389,7 @@ export default function Profile() {
 
                   <button
                     onClick={() => setRecoveryEmailOpen(true)}
-                    className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                    className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                   >
                     <Mail size={13} /> {user?.secondaryRecoveryEmailVerified ? "Update Email" : "Set Email"}
                   </button>
@@ -421,7 +411,7 @@ export default function Profile() {
 
                   <button
                     onClick={() => setPasswordOpen(true)}
-                    className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                    className="w-full py-2 min-[360px]:py-2.5 px-2 rounded-xl text-[11px] min-[360px]:text-xs font-bold bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                   >
                     <Lock size={13} /> Update Password
                   </button>
@@ -437,7 +427,7 @@ export default function Profile() {
             {/* Clearance Privileges */}
             <div className="rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-6 sm:p-8 bg-white dark:bg-vault-surface/90 border border-slate-200 dark:border-white/10 backdrop-blur-2xl shadow-xl space-y-4 sm:space-y-6">
               <div className="flex items-center gap-2.5 sm:gap-3 border-b border-slate-100 dark:border-white/10 pb-3 sm:pb-4">
-                <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-600 dark:text-purple-300 shrink-0">
+                <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-accent-soft border border-accent-border text-accent-primary shrink-0 shadow-sm shadow-accent-glow-sm">
                   <Shield size={18} />
                 </div>
                 <div className="min-w-0">

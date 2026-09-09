@@ -324,7 +324,7 @@ export default function WallGuideOverlay() {
         <rect
           width="100%"
           height="100%"
-          fill="rgba(3, 10, 8, 0.76)"
+          fill="rgba(5, 7, 12, 0.82)"
           mask="url(#vault-spotlight-mask)"
         />
       </svg>
@@ -342,7 +342,7 @@ export default function WallGuideOverlay() {
             width: targetRect.width,
             height: targetRect.height,
             boxShadow:
-              "0 0 0 2px rgba(0, 207, 255, 0.9), 0 0 25px rgba(0, 207, 255, 0.4), inset 0 0 15px rgba(0, 207, 255, 0.2)",
+              "0 0 0 2px var(--accent-primary), 0 0 25px var(--accent-glow), inset 0 0 15px var(--accent-glow-sm)",
             zIndex: 1,
           }}
         >
@@ -384,7 +384,7 @@ export default function WallGuideOverlay() {
         >
           <div className="relative group">
             {/* Background Ambient Glow */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-[#00CFFF]/25 via-[#10B981]/20 to-[#8B5CF6]/25 rounded-[2rem] blur-xl opacity-80" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-accent-primary/25 via-accent-primary/20 to-accent-primary/30 rounded-[2rem] blur-xl opacity-80" />
 
             {/* ── WALL MASCOT (Positioned beside card or on top) ── */}
             <div
@@ -406,10 +406,10 @@ export default function WallGuideOverlay() {
             </div>
 
             {/* ── MAIN TRANSPARENT GLASS DIALOG CARD ── */}
-            <div className="relative rounded-2xl sm:rounded-[2rem] bg-[#071512]/90 dark:bg-[#030A08]/95 backdrop-blur-2xl border border-white/20 dark:border-white/15 p-4 sm:p-6 text-white shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.2)] overflow-hidden">
+            <div className="relative rounded-2xl sm:rounded-[2rem] bg-slate-900/90 dark:bg-vault-surface/95 backdrop-blur-2xl border border-white/20 dark:border-white/15 p-4 sm:p-6 text-white shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.2)] overflow-hidden">
               
               {/* Subtle Animated Top Scanline Bar */}
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#00CFFF] via-[#10B981] to-[#8B5CF6]" />
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-accent-primary via-accent-primary/80 to-accent-primary/60" />
 
               {/* Header: Wall Badge, Step Pill, Controls */}
               <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4">
@@ -456,7 +456,7 @@ export default function WallGuideOverlay() {
               {/* Progress Line */}
               <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden mb-3 sm:mb-4">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-accent-primary to-[#00CFFF] rounded-full"
+                  className="h-full bg-gradient-to-r from-accent-primary/80 to-accent-primary rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${progressPercent}%` }}
                   transition={{ duration: 0.35, ease: "easeOut" }}

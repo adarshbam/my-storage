@@ -4,7 +4,7 @@ import StandaloneNavbar from "../components/navigation/StandaloneNavbar";
 
 export default function StandaloneLayout() {
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-vault-bg text-white overflow-x-hidden relative font-sans">
+    <div className="min-h-[100dvh] flex flex-col bg-vault-bg text-slate-900 dark:text-white overflow-x-hidden relative font-sans transition-colors duration-200">
       <VaultBackground />
       <StandaloneNavbar />
 

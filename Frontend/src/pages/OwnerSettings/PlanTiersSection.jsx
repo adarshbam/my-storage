@@ -48,10 +48,10 @@ export default function PlanTiersSection({
   };
 
   return (
-    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-rose-500/30">
+    <section className="bg-white dark:bg-vault-surface/85 backdrop-blur-2xl border border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 min-[360px]:p-5 sm:p-8 shadow-xl transition-all duration-300 hover:border-accent-border">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-6 border-b border-slate-200/60 dark:border-white/10">
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center shadow-lg shadow-rose-500/5 shrink-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-accent-soft text-accent-primary border border-accent-border flex items-center justify-center shadow-lg shadow-accent-glow-sm shrink-0">
             <Sparkles size={20} className="sm:w-[22px] sm:h-[22px]" />
           </div>
           <div>
@@ -71,22 +71,22 @@ export default function PlanTiersSection({
             </span>
           )}
 
-          <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400">
+          <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-accent-soft border border-accent-border text-accent-primary">
             {planTiers.length} Defined Tiers
           </span>
 
           <button
             type="button"
             onClick={() => setShowAddForm(!showAddForm)}
-            className="flex-1 xs:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-500/25 hover:bg-rose-600 transition-colors"
+            className="flex-1 xs:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-800 dark:text-white font-bold text-xs border border-slate-200 dark:border-white/10 transition-colors cursor-pointer"
           >
-            <Plus size={16} /> Add New Tier
+            <Plus size={16} className="text-accent-primary" /> Add New Tier
           </button>
 
           <button
             type="button"
             onClick={handleSave}
-            className="flex-1 xs:flex-none flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-bold shadow-lg shadow-rose-500/20 hover:opacity-95 active:scale-95 transition-all"
+            className="flex-1 xs:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-accent-primary text-accent-foreground text-xs font-bold shadow-lg shadow-accent-glow/25 hover:opacity-95 active:scale-95 transition-all cursor-pointer"
           >
             <Check size={14} /> Save Tiers
           </button>
@@ -97,16 +97,16 @@ export default function PlanTiersSection({
       {showAddForm && (
         <form
           onSubmit={handleCreateSubmit}
-          className="mb-8 p-6 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-rose-500/30 space-y-4 animate-fade-in shadow-sm"
+          className="mb-8 p-6 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-accent-border space-y-4 animate-fade-in shadow-sm"
         >
           <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/10">
             <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <Plus size={16} className="text-rose-500" /> Create New Plan Tier
+              <Plus size={16} className="text-accent-primary" /> Create New Plan Tier
             </h3>
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              className="text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -125,7 +125,7 @@ export default function PlanTiersSection({
                 onChange={(e) =>
                   setNewTierData({ ...newTierData, type: e.target.value })
                 }
-                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
+                className="w-full bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 text-xs shadow-sm"
               />
             </div>
 
@@ -141,7 +141,7 @@ export default function PlanTiersSection({
                 onChange={(e) =>
                   setNewTierData({ ...newTierData, title: e.target.value })
                 }
-                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
+                className="w-full bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 text-xs shadow-sm"
               />
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function PlanTiersSection({
                 onChange={(e) =>
                   setNewTierData({ ...newTierData, badge: e.target.value })
                 }
-                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
+                className="w-full bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 text-xs shadow-sm"
               />
             </div>
 
@@ -176,7 +176,7 @@ export default function PlanTiersSection({
                     description: e.target.value,
                   })
                 }
-                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-medium text-xs focus:outline-none focus:border-rose-500 shadow-sm"
+                className="w-full bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-medium text-xs focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 shadow-sm"
               />
             </div>
           </div>
@@ -220,13 +220,13 @@ export default function PlanTiersSection({
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-white/5 text-slate-700 dark:text-white/70 hover:bg-slate-300 dark:hover:bg-white/10 font-bold text-xs transition-colors"
+              className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-white/5 text-slate-700 dark:text-white/70 hover:bg-slate-300 dark:hover:bg-white/10 font-bold text-xs transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs shadow-md shadow-rose-500/20 transition-all"
+              className="px-5 py-2 rounded-xl bg-accent-primary hover:opacity-90 text-accent-foreground font-bold text-xs shadow-md shadow-accent-glow/20 transition-all cursor-pointer"
             >
               Create Tier
             </button>
@@ -250,15 +250,15 @@ export default function PlanTiersSection({
                 tier.isPopular
                   ? "border-amber-500/50 bg-slate-50 dark:bg-white/[0.02] shadow-md shadow-amber-500/5 ring-1 ring-amber-500/20"
                   : tier.active !== false
-                  ? "border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02] hover:border-rose-500/40"
+                  ? "border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] hover:border-accent-border"
                   : "border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-white/[0.01] opacity-60"
               }`}
             >
               <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/5 gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <span
-                    className={`w-3 h-3 rounded-full shrink-0 ${
-                      tier.active !== false ? "bg-rose-500" : "bg-slate-400"
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                      tier.active !== false ? "bg-emerald-500 shadow-sm shadow-emerald-500/50" : "bg-slate-400"
                     }`}
                   />
                   <h3 className="text-base font-black text-slate-900 dark:text-white truncate font-mono" title={tier.slug}>
@@ -278,8 +278,8 @@ export default function PlanTiersSection({
                     onClick={() =>
                       onUpdateTierDetail(tier.slug, "active", !(tier.active !== false))
                     }
-                    className={`w-11 h-6 shrink-0 rounded-full p-1 transition-colors duration-200 flex items-center ${
-                      tier.active !== false ? "bg-rose-500" : "bg-slate-300 dark:bg-slate-700"
+                    className={`w-11 h-6 shrink-0 rounded-full p-1 transition-colors duration-200 flex items-center cursor-pointer ${
+                      tier.active !== false ? "bg-accent-primary" : "bg-slate-300 dark:bg-slate-700"
                     }`}
                     title={tier.active !== false ? "Disable Tier" : "Enable Tier"}
                   >
@@ -303,7 +303,7 @@ export default function PlanTiersSection({
                   onChange={(e) =>
                     onUpdateTierDetail(tier.slug, "slug", e.target.value)
                   }
-                  className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-rose-500 shadow-sm"
+                  className="w-full bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 shadow-sm"
                 />
               </div>
 
@@ -318,7 +318,7 @@ export default function PlanTiersSection({
                   onChange={(e) =>
                     onUpdateTierDetail(tier.slug, "title", e.target.value)
                   }
-                  className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
+                  className="w-full bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 text-xs shadow-sm"
                 />
               </div>
 
@@ -391,7 +391,7 @@ export default function PlanTiersSection({
                 onChange={(e) =>
                   onUpdateTierDetail(tier.slug, "badge", e.target.value)
                 }
-                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-rose-500 text-xs shadow-sm"
+                className="w-full bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 text-xs shadow-sm"
                 placeholder="e.g. Most Popular"
               />
             </div>
@@ -407,7 +407,7 @@ export default function PlanTiersSection({
                 onChange={(e) =>
                   onUpdateTierDetail(tier.slug, "description", e.target.value)
                 }
-                className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-900 dark:text-white font-medium text-xs resize-none focus:outline-none focus:border-rose-500 shadow-sm"
+                className="w-full bg-white dark:bg-vault-surface border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-900 dark:text-white font-medium text-xs resize-none focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 shadow-sm"
               />
             </div>
           </div>
