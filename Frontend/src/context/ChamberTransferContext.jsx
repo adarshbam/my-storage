@@ -533,7 +533,6 @@ export function ChamberTransferProvider({ children, user, effectiveMaxStorage })
           </div>
         </div>
       )}
-      {children}
 
       {/* ── TRASH CONFIRMATION MODAL (Drop to Sidebar Trash) ── */}
       <Modal
