@@ -347,10 +347,10 @@ export default function WallGuideOverlay() {
           }}
         >
           {/* Animated corner accents */}
-          <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-white rounded-tl-sm" />
-          <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-white rounded-tr-sm" />
-          <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-white rounded-bl-sm" />
-          <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-white rounded-br-sm" />
+          <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-accent-primary dark:border-white rounded-tl-sm" />
+          <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-accent-primary dark:border-white rounded-tr-sm" />
+          <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-accent-primary dark:border-white rounded-bl-sm" />
+          <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-accent-primary dark:border-white rounded-br-sm" />
         </motion.div>
       )}
 
@@ -406,7 +406,7 @@ export default function WallGuideOverlay() {
             </div>
 
             {/* ── MAIN TRANSPARENT GLASS DIALOG CARD ── */}
-            <div className="relative rounded-2xl sm:rounded-[2rem] bg-slate-900/90 dark:bg-vault-surface/95 backdrop-blur-2xl border border-white/20 dark:border-white/15 p-4 sm:p-6 text-white shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.2)] overflow-hidden">
+            <div className="relative rounded-2xl sm:rounded-[2rem] bg-white/98 dark:bg-vault-surface/95 backdrop-blur-2xl border border-slate-200 dark:border-white/15 p-4 sm:p-6 text-slate-900 dark:text-white shadow-[0_20px_50px_rgba(0,0,0,0.25)] dark:shadow-[0_25px_60px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.2)] overflow-hidden">
               
               {/* Subtle Animated Top Scanline Bar */}
               <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-accent-primary via-accent-primary/80 to-accent-primary/60" />
@@ -429,14 +429,14 @@ export default function WallGuideOverlay() {
                 {/* Right Header Actions */}
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   {/* Step Progress Pill */}
-                  <div className="px-2 py-0.5 rounded-full bg-white/10 dark:bg-white/5 border border-white/10 text-[10px] font-mono font-bold text-white/80 tracking-wider">
+                  <div className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[10px] font-mono font-bold text-slate-700 dark:text-white/80 tracking-wider">
                     {currentStepIndex + 1} / {totalSteps}
                   </div>
 
                   {/* Sound Toggle */}
                   <button
                     onClick={toggleSound}
-                    className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10 transition-colors"
                     title={soundEnabled ? "Mute Guide Sounds" : "Enable Guide Sounds"}
                   >
                     {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
@@ -445,7 +445,7 @@ export default function WallGuideOverlay() {
                   {/* Close / Skip Button */}
                   <button
                     onClick={skipTour}
-                    className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10 transition-colors"
                     title="Skip Tutorial"
                   >
                     <X size={16} />
@@ -454,7 +454,7 @@ export default function WallGuideOverlay() {
               </div>
 
               {/* Progress Line */}
-              <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden mb-3 sm:mb-4">
+              <div className="w-full bg-slate-200 dark:bg-white/10 h-1.5 rounded-full overflow-hidden mb-3 sm:mb-4">
                 <motion.div
                   className="h-full bg-gradient-to-r from-accent-primary/80 to-accent-primary rounded-full"
                   initial={{ width: 0 }}
@@ -465,29 +465,29 @@ export default function WallGuideOverlay() {
 
               {/* Step Content */}
               <div className="space-y-1.5 sm:space-y-2 mb-4 sm:mb-5">
-                <h3 className="text-sm sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
+                <h3 className="text-sm sm:text-lg font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                   {currentStep.title}
                 </h3>
-                <p className="text-xs sm:text-sm text-white/80 leading-relaxed font-medium">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-white/80 leading-relaxed font-medium">
                   {currentStep.description}
                 </p>
 
                 {/* Action Tip Pill */}
                 {currentStep.actionTip && (
-                  <div className="flex items-start gap-2 p-2 sm:p-2.5 mt-2.5 sm:mt-3 rounded-xl bg-accent-soft/60 border border-accent-border/40 text-accent-primary text-[11px] sm:text-xs font-semibold">
+                  <div className="flex items-start gap-2 p-2 sm:p-2.5 mt-2.5 sm:mt-3 rounded-xl bg-accent-soft border border-accent-border text-accent-primary text-[11px] sm:text-xs font-semibold">
                     <Info size={13} className="shrink-0 mt-0.5 text-accent-primary" />
-                    <span className="leading-snug text-white/90">{currentStep.actionTip}</span>
+                    <span className="leading-snug text-slate-800 dark:text-white/90">{currentStep.actionTip}</span>
                   </div>
                 )}
               </div>
 
               {/* Footer Controls */}
-              <div className="flex items-center justify-between gap-2 pt-3 border-t border-white/10">
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200 dark:border-white/10">
                 {/* Left: Skip Tour Link */}
                 <button
                   type="button"
                   onClick={skipTour}
-                  className="text-xs font-bold text-white/40 hover:text-white/80 transition-colors tracking-wide shrink-0"
+                  className="text-xs font-bold text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white/80 transition-colors tracking-wide shrink-0"
                 >
                   Skip Tour
                 </button>
@@ -498,7 +498,7 @@ export default function WallGuideOverlay() {
                     <button
                       type="button"
                       onClick={prevStep}
-                      className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all border border-white/10"
+                      className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all border border-slate-200 dark:border-white/10"
                     >
                       <ChevronLeft size={14} />
                       <span>Back</span>

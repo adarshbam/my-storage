@@ -234,10 +234,10 @@ export default function WallyAcademyPage() {
       {/* ─────────────────────────────────────────────────────────────
           1. HEADER BANNER WITH WALLY MASCOT
          ───────────────────────────────────────────────────────────── */}
-      <div className="relative rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#071B16]/90 via-[#04100D]/90 to-[#0B1528]/90 border border-white/15 p-4 min-[360px]:p-5 sm:p-8 backdrop-blur-3xl overflow-hidden shadow-2xl min-w-0 w-full">
+      <div className="relative rounded-2xl sm:rounded-3xl bg-gradient-to-br from-white via-slate-50 to-slate-100/70 dark:from-[#071B16]/90 dark:via-[#04100D]/90 dark:to-[#0B1528]/90 border border-slate-200 dark:border-white/15 p-4 min-[360px]:p-5 sm:p-8 backdrop-blur-3xl overflow-hidden shadow-xl dark:shadow-2xl min-w-0 w-full">
         {/* Glow ambient background */}
-        <div className="absolute top-0 right-1/4 w-96 h-96 rounded-full bg-[radial-gradient(ellipse,rgba(0,207,255,0.15)_0%,transparent_70%)] pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-[radial-gradient(ellipse,rgba(16,185,129,0.15)_0%,transparent_70%)] pointer-events-none" />
+        <div className="absolute top-0 right-1/4 w-96 h-96 rounded-full bg-[radial-gradient(ellipse,rgba(16,185,129,0.08)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse,rgba(0,207,255,0.15)_0%,transparent_70%)] pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-[radial-gradient(ellipse,rgba(59,130,246,0.06)_0%,transparent_70%)] dark:bg-[radial-gradient(ellipse,rgba(16,185,129,0.15)_0%,transparent_70%)] pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex-1 space-y-2.5 sm:space-y-3 min-w-0 w-full">
@@ -246,21 +246,21 @@ export default function WallyAcademyPage() {
               <span>Wally's Academy & Shortcut Config</span>
             </div>
 
-            <h1 className="text-xl min-[360px]:text-2xl sm:text-4xl font-black tracking-tight text-white">
+            <h1 className="text-xl min-[360px]:text-2xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
               VS Code Level Keyboard Shortcuts
             </h1>
 
-            <p className="text-xs sm:text-sm md:text-base text-white/70 max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm md:text-base text-slate-600 dark:text-white/70 max-w-2xl leading-relaxed">
               Command Vault OS with zero mouse latency. Navigate files with Arrow keys, multi-select with Shift, trigger client-side encryption, and customize every hotkey to match your muscle memory.
             </p>
 
             {/* Quick stats pills */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-xs font-mono">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-700 dark:text-white">
                 <Keyboard size={14} className="text-accent-primary" />
                 <span>{Object.keys(shortcuts).length} Shortcuts Registered</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
                 <Shield size={14} />
                 <span>Browser Protection Active</span>
               </div>
@@ -289,14 +289,14 @@ export default function WallyAcademyPage() {
               <Zap size={18} className="text-accent-primary shrink-0" />
               <span className="truncate">Live Practice Sandbox</span>
             </h2>
-            <p className="text-[11px] min-[360px]:text-xs text-slate-500 dark:text-white/50">
+            <p className="text-[11px] min-[360px]:text-xs text-slate-600 dark:text-white/60">
               Practice navigating, selecting, and previewing files using only your keyboard in real-time.
             </p>
           </div>
 
           {/* Real-time Keystroke Display */}
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[11px] min-[360px]:text-xs text-slate-400 dark:text-white/40 font-mono">Last Key:</span>
+            <span className="text-[11px] min-[360px]:text-xs text-slate-500 dark:text-white/50 font-mono">Last Key:</span>
             <div className="px-2.5 sm:px-3 py-1 rounded-xl bg-accent-soft border border-accent-border text-accent-primary font-mono font-black text-[11px] min-[360px]:text-xs min-w-[65px] text-center shadow-sm">
               {lastKeyPressed || "Press key..."}
             </div>
@@ -315,16 +315,16 @@ export default function WallyAcademyPage() {
               key={quest.id}
               className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border transition-all duration-300 flex items-center justify-between gap-2 ${
                 quest.done
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
-                  : "bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/60"
+                  ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                  : "bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/70"
               }`}
             >
               <div className="min-w-0">
-                <p className="text-[11px] min-[360px]:text-xs font-bold truncate">{quest.label}</p>
-                <p className="text-[9px] min-[360px]:text-[10px] font-mono text-slate-400 dark:text-white/40">{quest.hint}</p>
+                <p className="text-[11px] min-[360px]:text-xs font-bold truncate text-slate-900 dark:text-white">{quest.label}</p>
+                <p className="text-[9px] min-[360px]:text-[10px] font-mono text-slate-500 dark:text-white/50">{quest.hint}</p>
               </div>
               {quest.done ? (
-                <CheckCircle2 size={15} className="text-emerald-500 dark:text-emerald-400 shrink-0" />
+                <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
               ) : (
                 <div className="w-3.5 h-3.5 rounded-full border border-slate-300 dark:border-white/20 shrink-0" />
               )}
@@ -349,7 +349,7 @@ export default function WallyAcademyPage() {
                 }}
                 className={`group relative p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all duration-200 cursor-pointer flex items-center gap-2.5 sm:gap-3 select-none min-w-0 ${
                   isSelected
-                    ? "bg-accent-soft/80 border-accent-primary shadow-[0_0_15px_rgba(0,207,255,0.25)] dark:shadow-[0_0_15px_rgba(0,207,255,0.25)]"
+                    ? "bg-accent-soft border-2 border-accent-primary shadow-sm shadow-accent-glow"
                     : isFocused
                     ? "bg-slate-100 dark:bg-white/10 border-slate-300 dark:border-white/30"
                     : "bg-white dark:bg-white/[0.04] border-slate-200 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/[0.08]"
@@ -358,8 +358,8 @@ export default function WallyAcademyPage() {
                 <div
                   className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${
                     item.type === "directory"
-                      ? "bg-purple-500/15 dark:bg-purple-500/20 text-purple-500 dark:text-purple-400"
-                      : "bg-accent-soft text-accent-primary"
+                      ? "bg-purple-50 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-200/80 dark:border-purple-500/30"
+                      : "bg-accent-soft text-accent-primary border border-accent-border"
                   }`}
                 >
                   <Icon size={18} />
@@ -367,7 +367,7 @@ export default function WallyAcademyPage() {
 
                 <div className="overflow-hidden flex-1 min-w-0">
                   <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{item.name}</p>
-                  <p className="text-[10px] font-mono text-slate-400 dark:text-white/40 mt-0.5">{item.size}</p>
+                  <p className="text-[10px] font-mono text-slate-500 dark:text-white/50 mt-0.5">{item.size}</p>
                 </div>
 
                 {isSelected && (
@@ -380,7 +380,7 @@ export default function WallyAcademyPage() {
 
         {/* Live Feedback Status */}
         {sandboxActionMessage && (
-          <div className="flex items-center gap-2 text-xs font-semibold text-accent-primary px-3 py-2 rounded-xl bg-accent-soft/50 border border-accent-border/30 animate-fade-in">
+          <div className="flex items-center gap-2 text-xs font-semibold text-accent-primary px-3 py-2 rounded-xl bg-accent-soft border border-accent-border animate-fade-in">
             <Info size={14} className="shrink-0" />
             <span className="truncate">{sandboxActionMessage}</span>
           </div>
@@ -397,7 +397,7 @@ export default function WallyAcademyPage() {
               <Sliders size={18} className="text-accent-primary shrink-0" />
               <span className="truncate">Custom Keybindings</span>
             </h2>
-            <p className="text-[11px] min-[360px]:text-xs text-slate-500 dark:text-white/50">
+            <p className="text-[11px] min-[360px]:text-xs text-slate-600 dark:text-white/50">
               Customize any keybinding with conflict prevention.
             </p>
           </div>
@@ -405,7 +405,7 @@ export default function WallyAcademyPage() {
           <Button
             variant="secondary"
             onClick={resetAllShortcuts}
-            className="text-[11px] min-[360px]:text-xs font-bold text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5 self-start sm:self-auto py-1.5 px-3 rounded-xl"
+            className="text-[11px] min-[360px]:text-xs font-bold text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5 self-start sm:self-auto py-1.5 px-3 rounded-xl"
           >
             <RotateCcw size={13} />
             <span>Reset All</span>
@@ -422,7 +422,7 @@ export default function WallyAcademyPage() {
               placeholder="Search shortcuts by action name or key (e.g. F2, Shift, Enter, Upload)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none focus:border-accent-primary transition-all font-medium"
+              className="w-full bg-slate-50 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 outline-none focus:border-accent-primary transition-all font-medium"
             />
           </div>
 
@@ -453,33 +453,33 @@ export default function WallyAcademyPage() {
             return (
               <div
                 key={item.id}
-                className="group flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/[0.06] border border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15 transition-all duration-200 gap-3 sm:gap-4"
+                className="group flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] hover:bg-slate-100/80 dark:hover:bg-white/[0.06] border border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15 transition-all duration-200 gap-3 sm:gap-4"
               >
                 <div className="space-y-1 pr-0 sm:pr-4 min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h4 className="text-sm font-bold text-slate-900 dark:text-white">{item.name}</h4>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white/60 font-medium">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-white/70 font-semibold">
                       {item.category}
                     </span>
                     {isCustom && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 font-semibold">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent-soft text-accent-primary border border-accent-border font-semibold">
                         Customized
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-white/50 leading-relaxed">{item.description}</p>
+                  <p className="text-xs text-slate-600 dark:text-white/60 leading-relaxed">{item.description}</p>
                 </div>
 
                 <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-end sm:self-auto">
                   {/* Keyboard Badge */}
-                  <kbd className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-black/60 border border-slate-300 dark:border-white/20 text-xs font-mono font-black text-accent-primary shadow-sm tracking-wider">
+                  <kbd className="px-3 py-1.5 rounded-xl bg-white dark:bg-black/60 border border-slate-300 dark:border-white/20 text-xs font-mono font-black text-accent-primary shadow-sm tracking-wider">
                     {activeKey}
                   </kbd>
 
                   {/* Edit Button */}
                   <button
                     onClick={() => startEditing(item.id)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-white/10 hover:bg-accent-primary hover:text-accent-foreground text-xs font-bold text-slate-700 dark:text-white transition-all active:scale-95"
+                    className="px-3 py-1.5 rounded-xl bg-slate-200/80 dark:bg-white/10 hover:bg-accent-primary hover:text-accent-foreground text-xs font-bold text-slate-700 dark:text-white transition-all active:scale-95"
                   >
                     Edit
                   </button>
@@ -488,7 +488,7 @@ export default function WallyAcademyPage() {
                   {isCustom && (
                     <button
                       onClick={() => resetShortcut(item.id)}
-                      className="p-1.5 text-slate-400 dark:text-white/40 hover:text-rose-500 dark:hover:text-rose-400 transition-colors"
+                      className="p-1.5 text-slate-400 dark:text-white/40 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
                       title="Reset this shortcut to default"
                     >
                       <RotateCcw size={14} />
@@ -511,7 +511,7 @@ export default function WallyAcademyPage() {
               <Sparkles size={18} className="text-accent-primary shrink-0" />
               <span className="truncate">Guided Tours with Wally</span>
             </h2>
-            <p className="text-[11px] min-[360px]:text-xs text-slate-500 dark:text-white/50">
+            <p className="text-[11px] min-[360px]:text-xs text-slate-600 dark:text-white/50">
               Interactive spotlights where Wally guides you through features on your screen.
             </p>
           </div>
@@ -545,7 +545,7 @@ export default function WallyAcademyPage() {
             return (
               <div
                 key={tour.id}
-                className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/[0.06] border border-slate-200 dark:border-white/10 hover:border-accent-border/50 transition-all duration-200"
+                className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] hover:bg-slate-100/80 dark:hover:bg-white/[0.06] border border-slate-200 dark:border-white/10 hover:border-accent-border/50 transition-all duration-200"
               >
                 <div className="space-y-1.5 pr-2">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -554,18 +554,18 @@ export default function WallyAcademyPage() {
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                           tour.role === "owner"
-                            ? "bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30"
+                            ? "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30"
                             : tour.role === "manager"
-                            ? "bg-purple-500/15 dark:bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30"
-                            : "bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30"
+                            ? "bg-purple-500/10 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-500/30"
+                            : "bg-accent-soft text-accent-primary border border-accent-border"
                         }`}
                       >
                         {tour.badge}
                       </span>
                     )}
-                    {isCompleted && <CheckCircle2 size={14} className="text-emerald-500 dark:text-emerald-400" />}
+                    {isCompleted && <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />}
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-white/50 line-clamp-2 leading-relaxed">{tour.description}</p>
+                  <p className="text-xs text-slate-600 dark:text-white/60 line-clamp-2 leading-relaxed">{tour.description}</p>
                 </div>
 
                 <Button
@@ -593,7 +593,7 @@ export default function WallyAcademyPage() {
           className="max-w-lg"
         >
           <div className="space-y-5 text-slate-900 dark:text-white">
-            <p className="text-xs text-slate-500 dark:text-white/70">
+            <p className="text-xs text-slate-600 dark:text-white/70">
               Press the desired key combination on your keyboard. Modifiers like Ctrl, Alt, and Shift can be combined.
             </p>
 
@@ -601,28 +601,28 @@ export default function WallyAcademyPage() {
             <div
               tabIndex={0}
               onKeyDown={handleRecordKeyDown}
-              className="relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-accent-primary bg-accent-soft/30 outline-none focus:ring-4 focus:ring-accent-primary/20 transition-all cursor-pointer select-none"
+              className="relative flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-accent-primary bg-accent-soft outline-none focus:ring-4 focus:ring-accent-primary/20 transition-all cursor-pointer select-none"
             >
               <Keyboard size={32} className="text-accent-primary mb-3 animate-pulse" />
               <p className="text-sm font-bold text-slate-900 dark:text-white mb-1">
                 {recordedKeys ? recordedKeys : "Press key combination on your keyboard..."}
               </p>
-              <p className="text-[11px] text-slate-400 dark:text-white/40">
+              <p className="text-[11px] text-slate-500 dark:text-white/50">
                 (Click here and type your new shortcut)
               </p>
             </div>
 
             {/* Validation Feedback */}
             {validationError && (
-              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-start gap-2">
-                <AlertTriangle size={16} className="shrink-0 mt-0.5 text-rose-400" />
+              <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-start gap-2">
+                <AlertTriangle size={16} className="shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
                 <span className="leading-snug">{validationError}</span>
               </div>
             )}
 
             {validationSuccess && (
-              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2">
-                <Check size={16} className="text-emerald-400 shrink-0" />
+              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+                <Check size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>Valid shortcut! No conflicts detected and browser safe.</span>
               </div>
             )}
@@ -658,7 +658,7 @@ export default function WallyAcademyPage() {
               <FileText size={32} />
             </div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white">{sandboxPreviewItem.name}</h3>
-            <p className="text-xs text-slate-500 dark:text-white/50">
+            <p className="text-xs text-slate-600 dark:text-white/60">
               Zero-knowledge decrypted asset preview test. Size: {sandboxPreviewItem.size}
             </p>
             <Button variant="primary" onClick={() => setSandboxPreviewItem(null)} className="w-full">
