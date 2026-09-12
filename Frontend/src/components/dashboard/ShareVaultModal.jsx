@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { SERVER_URL } from "../../lib/api";
 import Button from "../ui/Button";
+import Checkbox from "../ui/Checkbox";
 import { usePlan } from "../../context/PlanContext";
 
 export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
@@ -378,17 +379,17 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
                   <ShieldAlert size={16} className="shrink-0 mt-0.5" />
                   <span>Full control + shared Google Drive & GitHub credentials.</span>
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer select-none bg-black/30 p-2 rounded-lg border border-danger-accent/20">
-                  <input
-                    type="checkbox"
+                <div className="bg-black/30 p-2 rounded-lg border border-danger-accent/20">
+                  <Checkbox
+                    id="owner-agreed"
                     checked={ownerAgreed}
                     onChange={(e) => setOwnerAgreed(e.target.checked)}
-                    className="rounded border-danger-accent text-danger-accent"
+                    variant="danger"
+                    size="sm"
+                    label="I understand the risk"
+                    labelClassName="text-[10px] font-bold uppercase tracking-wider text-danger-accent"
                   />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">
-                    I understand the risk
-                  </span>
-                </label>
+                </div>
               </div>
             )}
 
@@ -437,12 +438,13 @@ export default function ShareVaultModal({ isOpen, onClose, items = [] }) {
                     </span>
                   )}
                 </label>
-                <input
-                  type="checkbox"
+                <Checkbox
+                  id="has-password"
                   disabled={!hasFeature("password_links")}
                   checked={hasPassword && hasFeature("password_links")}
                   onChange={(e) => setHasPassword(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 dark:border-white/20 bg-white dark:bg-black/50 text-amber-500 disabled:opacity-40"
+                  variant="warning"
+                  size="sm"
                 />
               </div>
 

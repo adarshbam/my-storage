@@ -4,6 +4,7 @@ import { SERVER_URL } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { handleGoogleAuth } from "../lib/googleAuth";
 import Button from "../components/ui/Button";
+import Checkbox from "../components/ui/Checkbox";
 import GoogleSignInButton from "../components/ui/GoogleSignInButton";
 import AuthLayout from "../layouts/AuthLayout";
 import {
@@ -391,14 +392,14 @@ export default function Register() {
 
           {/* Mandatory Consent Checkbox */}
           <div className="pt-2">
-            <label className="flex items-start gap-2.5 cursor-pointer group select-none">
-              <input
-                type="checkbox"
-                required
-                checked={agreedToPolicies}
-                onChange={(e) => setAgreedToPolicies(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded text-accent-primary focus:ring-accent-primary focus:ring-offset-0 border-black/20 dark:border-white/20 bg-white dark:bg-white/5 cursor-pointer"
-              />
+            <Checkbox
+              id="consent-policies"
+              required
+              checked={agreedToPolicies}
+              onChange={(e) => setAgreedToPolicies(e.target.checked)}
+              variant="accent"
+              size="md"
+            >
               <span className="text-xs text-slate-600 dark:text-slate-300 leading-normal">
                 I agree to Vault's{" "}
                 <Link to="/terms" target="_blank" className="text-accent-primary underline font-bold">
@@ -410,7 +411,7 @@ export default function Register() {
                 </Link>
                 , including the Google API Limited Use disclosure.
               </span>
-            </label>
+            </Checkbox>
           </div>
 
           <div className="w-full relative group pt-1">

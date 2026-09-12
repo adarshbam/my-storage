@@ -567,16 +567,18 @@ export default function CommandBar({
             className="hidden lg:flex items-center gap-1 border-r border-slate-200 dark:border-white/10 pr-3 mr-1"
           >
             {location.pathname === "/dashboard/github" ? (
-              <button
-                onClick={() =>
-                  document.dispatchEvent(new CustomEvent("createRepoTrigger"))
-                }
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-soft text-accent-primary border border-accent-border hover:bg-accent-primary hover:text-accent-foreground text-xs font-bold transition-all shadow-sm active:scale-95"
-                title="Create New GitHub Repository"
-              >
-                <Plus size={14} />
-                <span>New Repository</span>
-              </button>
+              user?.integrations?.github?.connected ? (
+                <button
+                  onClick={() =>
+                    document.dispatchEvent(new CustomEvent("createRepoTrigger"))
+                  }
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-soft text-accent-primary border border-accent-border hover:bg-accent-primary hover:text-accent-foreground text-xs font-bold transition-all shadow-sm active:scale-95"
+                  title="Create New GitHub Repository"
+                >
+                  <Plus size={14} />
+                  <span>New Repository</span>
+                </button>
+              ) : null
             ) : (
               quickActions.map((action) => (
                 <button
@@ -671,18 +673,20 @@ export default function CommandBar({
                 Vault Actions
               </div>
               {location.pathname === "/dashboard/github" ? (
-                <button
-                  onClick={() => {
-                    setShowMobileMenu(false);
-                    document.dispatchEvent(
-                      new CustomEvent("createRepoTrigger"),
-                    );
-                  }}
-                  className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-accent-primary text-accent-foreground font-bold text-xs shadow-accent-glow active:scale-95 transition-transform"
-                >
-                  <Plus size={16} />
-                  <span>Create New Repository</span>
-                </button>
+                user?.integrations?.github?.connected ? (
+                  <button
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      document.dispatchEvent(
+                        new CustomEvent("createRepoTrigger"),
+                      );
+                    }}
+                    className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-accent-primary text-accent-foreground font-bold text-xs shadow-accent-glow active:scale-95 transition-transform"
+                  >
+                    <Plus size={16} />
+                    <span>Create New Repository</span>
+                  </button>
+                ) : null
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   {quickActions.map((action) => (

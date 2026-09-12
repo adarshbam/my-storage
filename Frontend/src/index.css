@@ -468,3 +468,8 @@
 
 .env-glow-accent { box-shadow: 0 6px 20px -4px var(--accent-glow); }
 
+/* Custom Vault Checkbox Fallback */
+input[type="checkbox"] {
+  accent-color: var(--accent-primary);
+}
+

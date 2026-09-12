@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { supportedCountries } from "../../lib/currency";
+import Checkbox from "../../components/ui/Checkbox";
 
 export default function BillingPlansSection({
   billingPlans,
@@ -207,14 +208,14 @@ export default function BillingPlansSection({
                             </span>
                           </div>
                         </div>
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           disabled={isFreePlan}
                           checked={Boolean(plan.isPopular)}
                           onChange={(e) =>
                             onUpdatePlan(plan._id, "isPopular", e.target.checked)
                           }
-                          className="w-4 h-4 rounded text-accent-primary focus:ring-accent-primary border-slate-300 dark:border-white/20 accent-accent-primary cursor-pointer disabled:cursor-not-allowed shrink-0"
+                          variant="accent"
+                          size="md"
                         />
                       </label>
                     </div>

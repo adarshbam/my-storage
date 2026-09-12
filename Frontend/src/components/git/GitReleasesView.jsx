@@ -22,6 +22,7 @@ import {
 } from "../../api/github.api";
 import { getDirectoryContents } from "../../api/files.api";
 import Button from "../ui/Button";
+import Checkbox from "../ui/Checkbox";
 import { formatSize } from "../../lib/utils";
 
 export default function GitReleasesView({
@@ -363,25 +364,25 @@ export default function GitReleasesView({
                 />
               </div>
 
-              <div className="flex items-center gap-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isPrerelease}
-                    onChange={(e) => setIsPrerelease(e.target.checked)}
-                    className="rounded text-purple-500"
-                  />
-                  <span>Pre-release</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isDraft}
-                    onChange={(e) => setIsDraft(e.target.checked)}
-                    className="rounded text-purple-500"
-                  />
-                  <span>Save as Draft</span>
-                </label>
+              <div className="flex items-center gap-5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <Checkbox
+                  id="release-prerelease"
+                  checked={isPrerelease}
+                  onChange={(e) => setIsPrerelease(e.target.checked)}
+                  variant="purple"
+                  size="sm"
+                  label="Pre-release"
+                  labelClassName="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                />
+                <Checkbox
+                  id="release-draft"
+                  checked={isDraft}
+                  onChange={(e) => setIsDraft(e.target.checked)}
+                  variant="purple"
+                  size="sm"
+                  label="Save as Draft"
+                  labelClassName="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                />
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-white/10">

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
+import Checkbox from "../ui/Checkbox";
 import {
   ShieldCheck,
   Lock,
@@ -115,13 +116,13 @@ export default function GoogleDriveConsentModal({
 
         {/* Required User Consent Checkbox */}
         <div className="pt-2 border-t border-slate-200 dark:border-white/10">
-          <label className="flex items-start gap-3 cursor-pointer group select-none">
-            <input
-              type="checkbox"
-              checked={hasAgreed}
-              onChange={(e) => setHasAgreed(e.target.checked)}
-              className="mt-0.5 w-4 h-4 rounded text-accent-primary focus:ring-accent-primary focus:ring-offset-0 border-slate-300 dark:border-white/20 bg-white dark:bg-white/5 cursor-pointer"
-            />
+          <Checkbox
+            id="gdrive-consent"
+            checked={hasAgreed}
+            onChange={(e) => setHasAgreed(e.target.checked)}
+            variant="accent"
+            size="md"
+          >
             <span className="text-xs text-slate-700 dark:text-white/90 leading-normal font-medium">
               I have read, understood, and agree to the{" "}
               <Link to="/privacy" target="_blank" className="text-accent-primary underline font-bold">
@@ -133,7 +134,7 @@ export default function GoogleDriveConsentModal({
               </Link>
               , and Google Limited Use disclosure. I authorize Vault to link with my Google Drive account.
             </span>
-          </label>
+          </Checkbox>
         </div>
 
         {/* Action Buttons */}

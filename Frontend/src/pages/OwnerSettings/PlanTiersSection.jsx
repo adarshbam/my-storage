@@ -1,5 +1,6 @@
 import { Sliders, Sparkles, Plus, Check, X, ShieldAlert } from "lucide-react";
 import { useState } from "react";
+import Checkbox from "../../components/ui/Checkbox";
 
 export default function PlanTiersSection({
   planTiers,
@@ -201,8 +202,7 @@ export default function PlanTiersSection({
                   </span>
                 </div>
               </div>
-              <input
-                type="checkbox"
+              <Checkbox
                 disabled={Boolean(
                   newTierData.type?.toLowerCase().includes("free") ||
                   newTierData.slug?.toLowerCase().includes("free")
@@ -211,7 +211,8 @@ export default function PlanTiersSection({
                 onChange={(e) =>
                   setNewTierData({ ...newTierData, isPopular: e.target.checked })
                 }
-                className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500 border-slate-300 dark:border-white/20 accent-amber-500 cursor-pointer disabled:cursor-not-allowed shrink-0"
+                variant="warning"
+                size="md"
               />
             </label>
           </div>
@@ -368,14 +369,14 @@ export default function PlanTiersSection({
                     </div>
                   </div>
 
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     disabled={isFreeTier}
                     checked={Boolean(tier.isPopular)}
                     onChange={(e) =>
                       onUpdateTierDetail(tier.slug, "isPopular", e.target.checked)
                     }
-                    className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500 border-slate-300 dark:border-white/20 accent-amber-500 cursor-pointer disabled:cursor-not-allowed shrink-0"
+                    variant="warning"
+                    size="md"
                   />
                 </label>
               </div>

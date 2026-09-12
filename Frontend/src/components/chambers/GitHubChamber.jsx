@@ -7,6 +7,7 @@ import { useChamberTransfer } from "../../context/ChamberTransferContext";
 import { cn, formatSize } from "../../lib/utils";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
+import Checkbox from "../ui/Checkbox";
 import AssetCard from "../dashboard/AssetCard";
 import FileDetailsModal from "../dashboard/FileDetailsModal";
 import FileBrowserSkeleton from "../drive/FileBrowserSkeleton";
@@ -49,6 +50,7 @@ import { toggleStar, recordItemOpened } from "../../api/files.api";
 
 // Lazy-load Preview Modal
 const FilePreviewModal = lazy(() => import("../drive/FilePreviewModal"));
+import GitHubConnectView from "./GitHubConnectView";
 
 export default function GitHubChamber() {
   const params = useParams();
@@ -59,8 +61,10 @@ export default function GitHubChamber() {
   const urlBranch = searchParams.get("ref");
   const searchQuery = searchParams.get("q") || "";
 
-  const { user, setUser } = useAuth();
+  const { user, setUser, loading: authLoading } = useAuth();
   const { hasFeature } = usePlan();
+  const githubConnected = Boolean(user?.integrations?.github?.connected);
+
   const {
     clipboard,
     copyItems,
@@ -83,6 +87,18 @@ export default function GitHubChamber() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [previewFile, setPreviewFile] = useState(null);
   const [fileForHistory, setFileForHistory] = useState(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [disconnectedNotice, setDisconnectedNotice] = useState(false);
+
+  // Initiate GitHub OAuth Flow
+  const connectGithub = () => {
+    setIsConnecting(true);
+    const clientId = import.meta.env.VITE_GITHUB_CLIENTID;
+    const redirectUri = SERVER_URL.startsWith("http")
+      ? `${SERVER_URL}/user/auth/github`
+      : `${window.location.origin}${SERVER_URL}/user/auth/github`;
+    window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email,repo&state=${encodeURIComponent(`connect|${window.location.origin}`)}`;
+  };
 
   // Modals
   const [showCloneModal, setShowCloneModal] = useState(false);
@@ -255,7 +271,13 @@ export default function GitHubChamber() {
           newUser.integrations.github.connected = false;
           setUser(newUser);
         }
-        navigate("/dashboard");
+        setData({ directories: [], files: [] });
+        setError(null);
+        setSelectedItems([]);
+        setDisconnectedNotice(true);
+        if (githubPath) {
+          navigate("/dashboard/github");
+        }
       }
     } catch (err) {
       console.error("Github disconnect error:", err);
@@ -318,6 +340,15 @@ export default function GitHubChamber() {
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
+        if (res.status === 403 && (errData.error?.toLowerCase().includes("not connected") || errData.message?.toLowerCase().includes("not connected"))) {
+          if (user?.integrations?.github?.connected) {
+            const newUser = { ...user };
+            if (newUser.integrations?.github) {
+              newUser.integrations.github.connected = false;
+              setUser(newUser);
+            }
+          }
+        }
         throw new Error(errData.error || errData.message || "Failed to load GitHub contents");
       }
 
@@ -403,22 +434,31 @@ export default function GitHubChamber() {
   };
 
   useEffect(() => {
+    if (!githubConnected || authLoading) {
+      setLoading(false);
+      return;
+    }
     if (isRepoView) {
       fetchBranches();
     }
-  }, [githubOwner, githubRepo]);
+  }, [githubOwner, githubRepo, githubConnected, authLoading]);
 
   useEffect(() => {
+    if (!githubConnected || authLoading) {
+      setLoading(false);
+      return;
+    }
     fetchContents();
     setSelectedItems([]);
-  }, [githubPath, selectedBranch, searchQuery]);
+  }, [githubPath, selectedBranch, searchQuery, githubConnected, authLoading]);
 
   // Listen for global refresh
   useEffect(() => {
+    if (!githubConnected || authLoading) return;
     const handleRefresh = () => fetchContents(true);
     window.addEventListener("vault:refresh", handleRefresh);
     return () => window.removeEventListener("vault:refresh", handleRefresh);
-  }, [githubPath, selectedBranch, searchQuery]);
+  }, [githubPath, selectedBranch, searchQuery, githubConnected, authLoading]);
 
   // Create repository
   const handleCreateRepo = async () => {
@@ -519,7 +559,7 @@ export default function GitHubChamber() {
         {/* Breadcrumb Navigation & Branch Dropdown */}
         <div className="flex items-center gap-2 flex-wrap min-w-0">
           {/* Smart Back Button: hidden on GitHub chamber root, navigates up to parent or chamber */}
-          {isRepoView && (
+          {githubConnected && isRepoView && (
             <button
               onClick={handleGoBack}
               className="p-2 text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all border border-slate-200 dark:border-white/10 mr-1 shadow-sm shrink-0 active:scale-95 cursor-pointer"
@@ -538,20 +578,27 @@ export default function GitHubChamber() {
             <span>GitHub</span>
           </Link>
 
-          {breadcrumbList.slice(1).map((b, idx) => (
-            <div key={b.path} className="flex items-center gap-1 text-sm font-medium">
-              <ChevronRight size={14} className="text-slate-400" />
-              <Link
-                to={b.path}
-                className="text-slate-600 dark:text-white/70 hover:text-accent-primary transition-colors truncate max-w-[160px]"
-              >
-                {b.name}
-              </Link>
-            </div>
-          ))}
+          {!githubConnected && (
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              Chamber Offline
+            </span>
+          )}
+
+          {githubConnected &&
+            breadcrumbList.slice(1).map((b, idx) => (
+              <div key={b.path} className="flex items-center gap-1 text-sm font-medium">
+                <ChevronRight size={14} className="text-slate-400" />
+                <Link
+                  to={b.path}
+                  className="text-slate-600 dark:text-white/70 hover:text-accent-primary transition-colors truncate max-w-[160px]"
+                >
+                  {b.name}
+                </Link>
+              </div>
+            ))}
 
           {/* Branch Dropdown inside repo */}
-          {isRepoView && branches.length > 0 && (
+          {githubConnected && isRepoView && branches.length > 0 && (
             <div className="ml-2">
               <GitBranchDropdown
                 branches={branches}
@@ -561,7 +608,7 @@ export default function GitHubChamber() {
             </div>
           )}
 
-          {searchQuery && (
+          {githubConnected && searchQuery && (
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-xs font-mono text-slate-300">
               <Search size={12} />
               <span>"{searchQuery}"</span>
@@ -570,6 +617,7 @@ export default function GitHubChamber() {
         </div>
 
         {/* Header Action Buttons */}
+        {githubConnected && (
         <div className="flex items-center gap-2 flex-wrap shrink-0">
           <Button
             onClick={() => {
@@ -692,10 +740,11 @@ export default function GitHubChamber() {
             <span className="hidden md:inline">Disconnect</span>
           </button>
         </div>
+        )}
       </div>
 
-      {/* ── GIT REPO WORKSPACE TABS (WHEN INSIDE REPO) ── */}
-      {isRepoView && (
+      {/* ── GIT REPO WORKSPACE TABS (WHEN INSIDE REPO AND CONNECTED) ── */}
+      {githubConnected && isRepoView && (
         <div className="shrink-0 flex items-center gap-1.5 p-1.5 bg-white/40 dark:bg-[#111113]/60 backdrop-blur-md border border-slate-200 dark:border-white/5 rounded-2xl mb-4 overflow-x-auto custom-scrollbar">
           {[
             { id: "files", label: "Files", icon: Folder, count: data.files.length + data.directories.length },
@@ -737,8 +786,17 @@ export default function GitHubChamber() {
         </div>
       )}
 
-      {/* ── TAB PANELS ── */}
-      {isRepoView && activeGitTab !== "files" ? (
+      {/* ── MAIN CHAMBER BODY ── */}
+      {authLoading ? (
+        <FileBrowserSkeleton viewMode={viewMode} />
+      ) : !githubConnected ? (
+        <GitHubConnectView
+          onConnect={connectGithub}
+          isConnecting={isConnecting}
+          error={error}
+          disconnectedNotice={disconnectedNotice}
+        />
+      ) : isRepoView && activeGitTab !== "files" ? (
         <div className="flex-1 pb-16">
           {activeGitTab === "commits" && (
             <GitCommitHistoryView
@@ -803,9 +861,14 @@ export default function GitHubChamber() {
           </div>
           <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">GitHub Error</h3>
           <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{error}</p>
-          <Button onClick={() => fetchContents()} variant="outline" className="px-6 py-2 text-sm">
-            Retry Connection
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => fetchContents()} variant="outline" className="px-6 py-2 text-sm">
+              Retry Connection
+            </Button>
+            <Button onClick={connectGithub} className="px-6 py-2 text-sm bg-accent-primary text-accent-foreground font-bold">
+              Reconnect GitHub
+            </Button>
+          </div>
         </div>
       ) : allItems.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
@@ -959,18 +1022,19 @@ export default function GitHubChamber() {
             />
           </div>
 
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              type="checkbox"
+          <div className="pt-1">
+            <Checkbox
               id="isPrivate"
               checked={isPrivate}
               onChange={(e) => setIsPrivate(e.target.checked)}
-              className="rounded border-slate-300 text-accent-primary focus:ring-accent-primary"
-            />
-            <label htmlFor="isPrivate" className="text-sm font-medium flex items-center gap-1.5 cursor-pointer">
-              {isPrivate ? <Lock size={14} className="text-amber-400" /> : <Globe size={14} className="text-emerald-400" />}
-              <span>Make this repository private</span>
-            </label>
+              variant="accent"
+              size="md"
+            >
+              <div className="text-sm font-medium flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                {isPrivate ? <Lock size={14} className="text-amber-400" /> : <Globe size={14} className="text-emerald-400" />}
+                <span>Make this repository private</span>
+              </div>
+            </Checkbox>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
