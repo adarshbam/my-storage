@@ -89,7 +89,12 @@ function ScrollToHashElement() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+    <ThemeProvider
+      defaultTheme="dark"
+      defaultAccent="coral-ember"
+      storageKey="vite-ui-theme"
+      accentStorageKey="vite-ui-accent-v2"
+    >
       <AuthProvider>
         <PlanProvider>
           <BrowserRouter>

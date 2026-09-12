@@ -137,6 +137,9 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
           newUser.integrations.googleDrive.connected = false;
           setUser(newUser);
         }
+        if (location.pathname.startsWith("/dashboard/google-drive")) {
+          navigate("/dashboard/google-drive");
+        }
       }
     } catch (error) {
       console.error("Drive disconnect error:", error);
@@ -661,25 +664,37 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                   )}
                 </Link>
               ) : (
-                <button
-                  onClick={() => setIsDriveConsentOpen(true)}
+                <Link
+                  to="/dashboard/google-drive"
+                  onClick={handleNavClick}
                   onMouseEnter={() => setHoveredPath("drive")}
                   onMouseLeave={() => setHoveredPath(null)}
-                  title={!isExpanded ? "Link Google Drive" : undefined}
+                  title={!isExpanded ? "Google Drive Chamber" : undefined}
                   className={`relative flex items-center h-12 w-full rounded-xl overflow-hidden text-left transition-all duration-300 ${
-                    hoveredPath === "drive"
+                    isActive("/dashboard/google-drive")
+                      ? "bg-accent-soft shadow-accent-glow-sm"
+                      : hoveredPath === "drive"
                       ? "bg-accent-soft shadow-accent-glow-sm"
                       : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
                   }`}
                 >
+                  {isActive("/dashboard/google-drive") && (
+                    <div
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full"
+                      style={{
+                        backgroundColor: "var(--accent-primary)",
+                        boxShadow: "0 0 12px var(--accent-glow)",
+                      }}
+                    />
+                  )}
                   <div
                     className={`w-12 shrink-0 flex items-center justify-center transition-all duration-300 ${
-                      hoveredPath === "drive"
+                      isActive("/dashboard/google-drive") || hoveredPath === "drive"
                         ? "text-accent-primary"
                         : "text-slate-400 dark:text-white/30"
                     }`}
                     style={
-                      hoveredPath === "drive"
+                      isActive("/dashboard/google-drive") || hoveredPath === "drive"
                         ? { filter: "drop-shadow(0 0 8px var(--accent-glow))" }
                         : {}
                     }
@@ -687,11 +702,17 @@ export default function NavigationRail({ isMobileOpen, setIsMobileOpen }) {
                     <VaultDriveIcon size={20} />
                   </div>
                   {isExpanded && (
-                    <span className="whitespace-nowrap font-medium text-sm transition-opacity duration-300 text-slate-500 dark:text-white/40">
-                      Link Drive
+                    <span
+                      className={`whitespace-nowrap font-medium text-sm transition-opacity duration-300 ${
+                        isActive("/dashboard/google-drive")
+                          ? "text-slate-900 dark:text-white font-semibold"
+                          : "text-slate-500 dark:text-white/40"
+                      }`}
+                    >
+                      Google Drive
                     </span>
                   )}
-                </button>
+                </Link>
               )}
             </div>
           )}

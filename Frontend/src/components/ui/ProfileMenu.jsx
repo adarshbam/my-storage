@@ -532,7 +532,7 @@ export default function ProfileMenu({
                     Color theme
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    11 curated presets in Dark & Light
+                    {palettes.length} curated presets in Dark & Light
                   </p>
                 </div>
                 <button

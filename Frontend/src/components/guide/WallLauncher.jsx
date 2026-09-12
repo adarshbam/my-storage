@@ -352,7 +352,7 @@ export default function WallLauncher() {
             <div className="relative hidden min-[480px]:flex flex-col text-left pr-1 pointer-events-none">
               <span className="text-xs font-black tracking-wider text-slate-900 dark:text-white uppercase flex items-center gap-1.5">
                 Wally Guide
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10B981]" />
+                <span className="w-2 h-2 rounded-full bg-accent-primary animate-pulse shadow-[0_0_8px_var(--accent-glow)]" />
               </span>
               <span className="text-[10px] text-slate-500 dark:text-white/50 font-semibold tracking-tight">
                 Tutorials & Help

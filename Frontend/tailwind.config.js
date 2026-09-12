@@ -18,7 +18,10 @@ export default {
           panel: "rgb(var(--bg-panel-rgb) / <alpha-value>)",
           elevated: "rgb(var(--bg-elevated-rgb) / <alpha-value>)",
           subtle: "rgb(var(--bg-subtle-rgb) / <alpha-value>)",
-          // Dynamic Emerald mapped directly to active accent tokens
+          // Dynamic theme tokens mapped directly to active accent tokens
+          coral: "rgb(var(--accent-primary-rgb) / <alpha-value>)",
+          "coral-soft": "var(--accent-soft)",
+          "coral-dark": "var(--accent-active)",
           emerald: "rgb(var(--accent-primary-rgb) / <alpha-value>)",
           "emerald-soft": "var(--accent-soft)",
           "emerald-dark": "var(--accent-active)",

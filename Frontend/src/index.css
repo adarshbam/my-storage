@@ -37,17 +37,17 @@
     --glass-bg: rgba(255, 255, 255, 0.82);
     --glass-border: rgba(15, 23, 42, 0.08);
 
-    /* Default Emerald Green accent in Light Mode */
-    --accent-primary-rgb: 5 150 105;
-    --accent-hover-rgb: 4 120 87;
-    --accent-active-rgb: 6 95 70;
-    --accent-primary: #059669;
-    --accent-hover: #047857;
-    --accent-active: #065F46;
+    /* Default Coral Ember accent in Light Mode */
+    --accent-primary-rgb: 225 29 72;
+    --accent-hover-rgb: 190 18 60;
+    --accent-active-rgb: 159 18 57;
+    --accent-primary: #E11D48;
+    --accent-hover: #BE123C;
+    --accent-active: #9F1239;
     --accent-foreground: #ffffff;
-    --accent-soft: rgba(16, 185, 129, 0.1);
-    --accent-border: rgba(16, 185, 129, 0.25);
-    --accent-glow: rgba(16, 185, 129, 0.18);
+    --accent-soft: rgba(244, 63, 94, 0.1);
+    --accent-border: rgba(244, 63, 94, 0.25);
+    --accent-glow: rgba(244, 63, 94, 0.18);
 
     --radius-sm: 0.5rem;
     --radius-md: 0.75rem;
@@ -109,17 +109,17 @@
     --glass-bg: rgba(10, 14, 20, 0.85);
     --glass-border: rgba(255, 255, 255, 0.09);
 
-    /* Default Emerald Green accent in Dark Mode */
-    --accent-primary-rgb: 16 185 129;
-    --accent-hover-rgb: 52 211 153;
-    --accent-active-rgb: 5 150 105;
-    --accent-primary: #10B981;
-    --accent-hover: #34D399;
-    --accent-active: #059669;
+    /* Default Coral Ember accent in Dark Mode */
+    --accent-primary-rgb: 244 63 94;
+    --accent-hover-rgb: 251 113 133;
+    --accent-active-rgb: 225 29 72;
+    --accent-primary: #F43F5E;
+    --accent-hover: #FB7185;
+    --accent-active: #E11D48;
     --accent-foreground: #ffffff;
-    --accent-soft: rgba(16, 185, 129, 0.14);
-    --accent-border: rgba(16, 185, 129, 0.35);
-    --accent-glow: rgba(16, 185, 129, 0.16);
+    --accent-soft: rgba(244, 63, 94, 0.14);
+    --accent-border: rgba(244, 63, 94, 0.35);
+    --accent-glow: rgba(244, 63, 94, 0.16);
 
     /* Semantic Status Tokens (Dark) */
     --status-success: #10b981;
@@ -458,6 +458,7 @@
   flex-shrink: 0;
 }
 
+.status-dot-coral { background-color: #f43f5e; box-shadow: 0 0 8px rgba(244, 63, 94, 0.6); }
 .status-dot-emerald { background-color: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
 .status-dot-purple { background-color: #8b5cf6; box-shadow: 0 0 8px rgba(139, 92, 246, 0.6); }
 .status-dot-cyan { background-color: #06b6d4; box-shadow: 0 0 8px rgba(6, 182, 212, 0.6); }

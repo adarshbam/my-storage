@@ -2,9 +2,16 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 export const THEME_PALETTES = [
   {
+    id: "coral-ember",
+    name: "Coral Ember",
+    desc: "Signature pink-coral Media Engine accent (Default)",
+    swatch: "#F43F5E",
+    colorHex: "#F43F5E",
+  },
+  {
     id: "grove-green",
     name: "Emerald Green",
-    desc: "Vivid cryptographic vault emerald (Default)",
+    desc: "Vivid cryptographic vault emerald",
     swatch: "#10B981",
     colorHex: "#10B981",
   },
@@ -44,13 +51,6 @@ export const THEME_PALETTES = [
     colorHex: "#EC4899",
   },
   {
-    id: "coral-ember",
-    name: "Coral Ember",
-    desc: "Signature pink-coral Media Engine accent",
-    swatch: "#F43F5E",
-    colorHex: "#F43F5E",
-  },
-  {
     id: "sunset-orange",
     name: "Sunset Orange",
     desc: "Warm radiant ember & glowing amber",
@@ -62,16 +62,16 @@ export const THEME_PALETTES = [
 const ThemeProviderContext = createContext({
   theme: "dark",
   setTheme: () => null,
-  accent: "grove-green",
+  accent: "coral-ember",
   setAccent: () => null,
 });
 
 export function ThemeProvider({
   children,
   defaultTheme = "dark",
-  defaultAccent = "grove-green",
+  defaultAccent = "coral-ember",
   storageKey = "vite-ui-theme",
-  accentStorageKey = "vite-ui-accent",
+  accentStorageKey = "vite-ui-accent-v2",
   ...props
 }) {
   const [theme, setThemeState] = useState(() => {
@@ -79,7 +79,16 @@ export function ThemeProvider({
   });
 
   const [accent, setAccentState] = useState(() => {
-    const stored = localStorage.getItem(accentStorageKey);
+    let stored = localStorage.getItem(accentStorageKey);
+    if (!stored) {
+      const legacy = localStorage.getItem("vite-ui-accent");
+      if (legacy && legacy !== "grove-green" && THEME_PALETTES.some((p) => p.id === legacy)) {
+        stored = legacy;
+        try {
+          localStorage.setItem(accentStorageKey, stored);
+        } catch (_) {}
+      }
+    }
     if (stored === "signal-red" || stored === "ember-orange") return "sunset-orange";
     if (stored && THEME_PALETTES.some((p) => p.id === stored)) return stored;
     return defaultAccent;

@@ -14,6 +14,7 @@ import FileBrowserSkeleton from "../drive/FileBrowserSkeleton";
 import EmptyState from "../drive/EmptyState";
 import { VaultDriveIcon } from "../ui/VaultIcons";
 import GoogleDriveConsentModal from "../drive/GoogleDriveConsentModal";
+import GoogleDriveConnectView from "./GoogleDriveConnectView";
 import {
   ArrowLeft,
   Upload,
@@ -84,8 +85,10 @@ export default function GoogleDriveChamber() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get("q") || searchParams.get("search") || "";
-  const { user, setUser } = useAuth();
+  const { user, setUser, loading: authLoading } = useAuth();
   const { hasFeature } = usePlan();
+  const driveConnected = Boolean(user?.integrations?.googleDrive?.connected);
+  const [disconnectedNotice, setDisconnectedNotice] = useState(false);
   const outletContext = useOutletContext() || {};
   const { downloadFile, openShareModal } = outletContext;
 
@@ -150,6 +153,15 @@ export default function GoogleDriveChamber() {
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
+        if (res.status === 403 || res.status === 401 || errData.error?.toLowerCase().includes("not connected") || errData.message?.toLowerCase().includes("not connected")) {
+          if (user?.integrations?.googleDrive?.connected) {
+            const newUser = { ...user };
+            if (newUser.integrations?.googleDrive) {
+              newUser.integrations.googleDrive.connected = false;
+              setUser(newUser);
+            }
+          }
+        }
         throw new Error(errData.error || errData.message || "Failed to load Google Drive files");
       }
 
@@ -215,16 +227,21 @@ export default function GoogleDriveChamber() {
   };
 
   useEffect(() => {
+    if (!driveConnected || authLoading) {
+      setLoading(false);
+      return;
+    }
     fetchDriveContents();
     setSelectedItems([]);
-  }, [driveFolderId, searchQuery]);
+  }, [driveFolderId, searchQuery, driveConnected, authLoading]);
 
   // Listen for global refresh
   useEffect(() => {
+    if (!driveConnected || authLoading) return;
     const handleRefresh = () => fetchDriveContents(true);
     window.addEventListener("vault:refresh", handleRefresh);
     return () => window.removeEventListener("vault:refresh", handleRefresh);
-  }, [driveFolderId, searchQuery]);
+  }, [driveFolderId, searchQuery, driveConnected, authLoading]);
 
   // Reconnect Google Drive if token expires
   const reconnectGoogleDrive = useGoogleLogin({
@@ -249,6 +266,7 @@ export default function GoogleDriveChamber() {
             setUser(newUser);
           }
           setError(null);
+          setDisconnectedNotice(false);
           setIsConsentModalOpen(false);
           fetchDriveContents();
         } else {
@@ -289,7 +307,13 @@ export default function GoogleDriveChamber() {
             setUser(newUser);
           }
         }
-        navigate("/dashboard");
+        setData({ directories: [], files: [] });
+        setError(null);
+        setSelectedItems([]);
+        setDisconnectedNotice(true);
+        if (driveFolderId) {
+          navigate("/dashboard/google-drive");
+        }
       }
     } catch (err) {
       console.error("Drive disconnect error:", err);
@@ -991,7 +1015,7 @@ export default function GoogleDriveChamber() {
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 flex-wrap min-w-0">
           {/* Smart Back Button: hidden on Google Drive root, navigates to parent or Drive root */}
-          {Boolean(driveFolderId) && (
+          {driveConnected && Boolean(driveFolderId) && (
             <button
               onClick={handleGoBack}
               className="p-2 text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all border border-slate-200 dark:border-white/10 mr-1 shadow-sm shrink-0 active:scale-95 cursor-pointer"
@@ -1018,28 +1042,35 @@ export default function GoogleDriveChamber() {
             </Link>
           </div>
 
-          {breadcrumbs.slice(1).map((b, idx) => (
-            <div
-              key={b.id || idx}
-              className="flex items-center gap-1 text-sm font-medium"
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "move";
-              }}
-              onDrop={(e) => handleFolderDrop(e, { _id: b.id, name: b.name })}
-            >
-              <ChevronRight size={14} className="text-slate-400" />
-              <Link
-                to={`/dashboard/google-drive/${b.id}`}
-                className="text-slate-600 dark:text-white/70 hover:text-accent-primary transition-colors truncate max-w-[150px]"
-                title={`Navigate or drop to move to ${b.name}`}
-              >
-                {b.name}
-              </Link>
-            </div>
-          ))}
+          {!driveConnected && (
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              Chamber Offline
+            </span>
+          )}
 
-          {searchQuery && (
+          {driveConnected &&
+            breadcrumbs.slice(1).map((b, idx) => (
+              <div
+                key={b.id || idx}
+                className="flex items-center gap-1 text-sm font-medium"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                }}
+                onDrop={(e) => handleFolderDrop(e, { _id: b.id, name: b.name })}
+              >
+                <ChevronRight size={14} className="text-slate-400" />
+                <Link
+                  to={`/dashboard/google-drive/${b.id}`}
+                  className="text-slate-600 dark:text-white/70 hover:text-accent-primary transition-colors truncate max-w-[150px]"
+                  title={`Navigate or drop to move to ${b.name}`}
+                >
+                  {b.name}
+                </Link>
+              </div>
+            ))}
+
+          {driveConnected && searchQuery && (
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-xs font-mono text-slate-300">
               <Search size={12} />
               <span>"{searchQuery}"</span>
@@ -1048,6 +1079,7 @@ export default function GoogleDriveChamber() {
         </div>
 
         {/* Action Buttons */}
+        {driveConnected && (
         <div className="flex items-center gap-2 flex-wrap shrink-0">
           <Button
             onClick={() => {
@@ -1187,51 +1219,29 @@ export default function GoogleDriveChamber() {
             <span className="hidden md:inline">Disconnect</span>
           </button>
         </div>
+        )}
       </div>
 
-      {/* ── ERROR OR RECONNECT STATE ── */}
-      {error && (
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 max-w-lg mx-auto">
-          <div className="w-20 h-20 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-3xl flex items-center justify-center mb-5 shadow-[0_0_30px_rgba(245,158,11,0.15)]">
-            <VaultDriveIcon size={38} />
-          </div>
-          <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
-            Google Drive Authorization Expired
-          </h3>
-          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
-            {error?.includes("invalid_grant") || error?.includes("expired")
-              ? "Your Google Drive session has expired or the token was revoked. Reconnect your Google account to restore instant access."
-              : error}
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button
-              onClick={() => setIsConsentModalOpen(true)}
-              disabled={reconnectingDrive}
-              className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 flex items-center gap-2 font-medium shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
-            >
-              {reconnectingDrive ? (
-                <Loader2 size={18} className="animate-spin" />
-              ) : (
-                <VaultDriveIcon size={18} />
-              )}
-              <span>{reconnectingDrive ? "Connecting..." : "Reconnect Google Drive"}</span>
-            </Button>
-            <Button
-              onClick={() => fetchDriveContents()}
-              variant="outline"
-              className="px-5 py-2.5 text-slate-700 dark:text-white"
-            >
-              Retry Connection
-            </Button>
-          </div>
-        </div>
+      {/* ── DISCONNECTED OR AUTHORIZATION EXPIRED STATE ── */}
+      {(!driveConnected || error) && (
+        authLoading ? (
+          <FileBrowserSkeleton viewMode={viewMode} />
+        ) : (
+          <GoogleDriveConnectView
+            onConnect={reconnectGoogleDrive}
+            isConnecting={reconnectingDrive}
+            error={error}
+            disconnectedNotice={disconnectedNotice}
+            onRetry={fetchDriveContents}
+          />
+        )
       )}
 
       {/* ── LOADING SKELETON ── */}
-      {loading && !error && <FileBrowserSkeleton viewMode={viewMode} />}
+      {driveConnected && loading && !error && <FileBrowserSkeleton viewMode={viewMode} />}
 
       {/* ── EMPTY STATE ── */}
-      {!loading && !error && allItems.length === 0 && (
+      {driveConnected && !loading && !error && allItems.length === 0 && (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
           <EmptyState
             type="empty"
@@ -1246,7 +1256,7 @@ export default function GoogleDriveChamber() {
       )}
 
       {/* ── CONTENT (GRID / LIST) ── */}
-      {!loading && !error && allItems.length > 0 && (
+      {driveConnected && !loading && !error && allItems.length > 0 && (
         <div
           className="flex-1 pb-16 px-1 pt-2 sm:px-2"
           onClick={handleBackgroundClick}

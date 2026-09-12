@@ -70,8 +70,8 @@ export default function WallMascot({
             </linearGradient>
 
             <linearGradient id="wall-emerald-accent" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="var(--accent-primary, #10B981)" />
-              <stop offset="100%" stopColor="var(--accent-active, #059669)" />
+              <stop offset="0%" stopColor="var(--accent-primary, #F43F5E)" />
+              <stop offset="100%" stopColor="var(--accent-active, #E11D48)" />
             </linearGradient>
 
             <linearGradient id="stick-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
