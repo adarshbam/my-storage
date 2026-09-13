@@ -2,16 +2,9 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 export const THEME_PALETTES = [
   {
-    id: "coral-ember",
-    name: "Coral Ember",
-    desc: "Signature pink-coral Media Engine accent (Default)",
-    swatch: "#F43F5E",
-    colorHex: "#F43F5E",
-  },
-  {
     id: "grove-green",
     name: "Emerald Green",
-    desc: "Vivid cryptographic vault emerald",
+    desc: "Vivid cryptographic vault emerald (Default)",
     swatch: "#10B981",
     colorHex: "#10B981",
   },
@@ -51,6 +44,13 @@ export const THEME_PALETTES = [
     colorHex: "#EC4899",
   },
   {
+    id: "coral-ember",
+    name: "Coral Ember",
+    desc: "Signature pink-coral Media Engine accent",
+    swatch: "#F43F5E",
+    colorHex: "#F43F5E",
+  },
+  {
     id: "sunset-orange",
     name: "Sunset Orange",
     desc: "Warm radiant ember & glowing amber",
@@ -62,16 +62,16 @@ export const THEME_PALETTES = [
 const ThemeProviderContext = createContext({
   theme: "dark",
   setTheme: () => null,
-  accent: "coral-ember",
+  accent: "grove-green",
   setAccent: () => null,
 });
 
 export function ThemeProvider({
   children,
   defaultTheme = "dark",
-  defaultAccent = "coral-ember",
+  defaultAccent = "grove-green",
   storageKey = "vite-ui-theme",
-  accentStorageKey = "vite-ui-accent-v2",
+  accentStorageKey = "vite-ui-accent-v3",
   ...props
 }) {
   const [theme, setThemeState] = useState(() => {
@@ -81,8 +81,14 @@ export function ThemeProvider({
   const [accent, setAccentState] = useState(() => {
     let stored = localStorage.getItem(accentStorageKey);
     if (!stored) {
-      const legacy = localStorage.getItem("vite-ui-accent");
-      if (legacy && legacy !== "grove-green" && THEME_PALETTES.some((p) => p.id === legacy)) {
+      const legacy = localStorage.getItem("vite-ui-accent-v2") || localStorage.getItem("vite-ui-accent");
+      if (
+        legacy &&
+        legacy !== "coral-ember" &&
+        legacy !== "signal-red" &&
+        legacy !== "ember-orange" &&
+        THEME_PALETTES.some((p) => p.id === legacy)
+      ) {
         stored = legacy;
         try {
           localStorage.setItem(accentStorageKey, stored);

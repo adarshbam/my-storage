@@ -31,11 +31,11 @@ if (typeof window !== "undefined") {
 // 🔒 Professional Security Hardening: Self-XSS Console Warning (Discord-style brand matching)
 console.log(
   "%cWait!",
-  "font-size: 60px; font-weight: 900; color: #f43f5e; text-shadow: 0 0 20px rgba(244, 63, 94, 0.4); font-family: system-ui, -apple-system, sans-serif; margin-bottom: 12px;"
+  "font-size: 60px; font-weight: 900; color: #10b981; text-shadow: 0 0 20px rgba(16, 185, 129, 0.4); font-family: system-ui, -apple-system, sans-serif; margin-bottom: 12px;"
 );
 console.log(
   "%cIf someone told you to copy/paste something here, there's an 11/10 chance you're being scammed.",
-  "font-size: 18px; font-weight: 700; color: #fb7185; font-family: system-ui, -apple-system, sans-serif; margin-bottom: 12px;"
+  "font-size: 18px; font-weight: 700; color: #34d399; font-family: system-ui, -apple-system, sans-serif; margin-bottom: 12px;"
 );
 console.log(
   "%cPasting anything in here could give attackers access to your Vault storage account and files.",

@@ -91,9 +91,9 @@ function App() {
   return (
     <ThemeProvider
       defaultTheme="dark"
-      defaultAccent="coral-ember"
+      defaultAccent="grove-green"
       storageKey="vite-ui-theme"
-      accentStorageKey="vite-ui-accent-v2"
+      accentStorageKey="vite-ui-accent-v3"
     >
       <AuthProvider>
         <PlanProvider>
