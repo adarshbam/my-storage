@@ -55,6 +55,23 @@ export const CLOUDFLARE_CDN_DOMAIN = process.env.CLOUDFLARE_CDN_DOMAIN;
 export const MAX_DEVICES_LIMIT =
   parseInt(process.env.MAX_DEVICES_LIMIT, 10) || 3;
 
+// Special Demonstration & Verification Accounts
+export const GOOGLE_TESTER_EMAIL = (
+  process.env.GOOGLE_TESTER_EMAIL || "google-reviewer@yourvaultstorage.com"
+).toLowerCase().trim();
+export const GOOGLE_TESTER_PASSWORD =
+  process.env.GOOGLE_TESTER_PASSWORD || "VaultReviewer2026!";
+export const GOOGLE_TESTER_NAME =
+  process.env.GOOGLE_TESTER_NAME || "Google App Reviewer";
+
+export const RECRUITER_EMAIL = (
+  process.env.RECRUITER_EMAIL || "recruiter@yourvaultstorage.com"
+).toLowerCase().trim();
+export const RECRUITER_PASSWORD =
+  process.env.RECRUITER_PASSWORD || "VaultRecruiter2026!";
+export const RECRUITER_NAME =
+  process.env.RECRUITER_NAME || "Recruiter Portfolio Demo";
+
 export const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: false,

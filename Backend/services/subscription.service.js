@@ -15,6 +15,7 @@ import {
 } from "./notification.service.js";
 import { invalidatePlanContextCache } from "../middlewares/loadPlanContext.js";
 import { withTransaction } from "../utils/transaction.js";
+import { isPermanentSubscription, isSpecialBypassAccount } from "./specialAccounts.service.js";
 
 const findUserSubscription = async (subscriptionId, userId) => {
   let sub = null;
@@ -25,6 +26,14 @@ const findUserSubscription = async (subscriptionId, userId) => {
     sub = await Subscription.findOne({
       razorpaySubscriptionId: subscriptionId,
       userId,
+    });
+  }
+  if (!sub) {
+    // 0. Search for lifetime permanent subscription first
+    sub = await Subscription.findOne({
+      userId,
+      razorpaySubscriptionId: { $regex: /^sub_permanent_/ },
+      status: "active",
     });
   }
   if (!sub) {
@@ -219,17 +228,31 @@ export const getCurrentSubscriptionLogic = async ({
   const user = await User.findById(userId).lean();
   let subscription = null;
 
-  // 1. Search for active or paused subscription first
+  // 0. Search for lifetime permanent subscription first
   subscription = await Subscription.findOne({
     userId,
-    status: { $in: ["active", "paused", "authenticated"] },
+    razorpaySubscriptionId: { $regex: /^sub_permanent_/ },
+    status: "active",
   })
-    .sort({ updatedAt: -1, createdAt: -1 })
     .populate({
       path: "billingPlan",
       populate: { path: "tier" },
     })
     .lean();
+
+  // 1. Search for active or paused subscription
+  if (!subscription) {
+    subscription = await Subscription.findOne({
+      userId,
+      status: { $in: ["active", "paused", "authenticated"] },
+    })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .populate({
+        path: "billingPlan",
+        populate: { path: "tier" },
+      })
+      .lean();
+  }
 
   // 2. Check for cycle-valid cancelled subscription
   if (!subscription) {
@@ -347,7 +370,18 @@ export const getCurrentSubscriptionLogic = async ({
     }
   }
 
-  const planName = isTrial
+  const isPermanent = Boolean(
+    (subscription?.razorpaySubscriptionId && isPermanentSubscription(subscription.razorpaySubscriptionId)) ||
+    isSpecialBypassAccount(user?.email)
+  );
+
+  if (isPermanent) {
+    effectiveMaxStorage = Math.max(effectiveMaxStorage, 16492674416640);
+  }
+
+  const planName = isPermanent
+    ? "Ultimate Enterprise (Lifetime Access)"
+    : isTrial
     ? (inheritedTierDoc?.title
         ? `Free Trial (${inheritedTierDoc.title})`
         : "Free Trial")
@@ -376,7 +410,7 @@ export const getCurrentSubscriptionLogic = async ({
       isCycleStillValid,
   );
 
-  const isNoSubscription = Boolean(
+  const isNoSubscription = !isPermanent && Boolean(
     !subscription ||
       (isCancelled && !isCycleStillValid) ||
       ["expired", "failed", "completed"].includes(
@@ -385,7 +419,9 @@ export const getCurrentSubscriptionLogic = async ({
   );
 
   let nextBillingDate = null;
-  if (isActuallyActive) {
+  if (isPermanent) {
+    nextBillingDate = null;
+  } else if (isActuallyActive) {
     if (subscription.currentEnd) {
       nextBillingDate = new Date(subscription.currentEnd).toISOString();
     } else if (subscription.createdAt) {
@@ -399,15 +435,16 @@ export const getCurrentSubscriptionLogic = async ({
 
   return {
     ...subscription,
+    isPermanent,
     isNoSubscription,
-    isPaused,
-    isFreeTrial: isTrial,
+    isPaused: isPermanent ? false : isPaused,
+    isFreeTrial: isPermanent ? false : isTrial,
     isCycleValid: isCycleStillValid,
     planName,
-    amount: subscription.billingPlan?.amount ?? subscription.amount ?? 0,
+    amount: isPermanent ? 0 : (subscription.billingPlan?.amount ?? subscription.amount ?? 0),
     currency: subscription.billingPlan?.currency || "INR",
-    period: subscription.billingPlan?.period || "Monthly",
-    status: (subscription.status || "active").toUpperCase(),
+    period: isPermanent ? "Lifetime" : (subscription.billingPlan?.period || "Monthly"),
+    status: isPermanent ? "ACTIVE" : (subscription.status || "active").toUpperCase(),
     usedStorage: usedStorage || 0,
     maxStorage: effectiveMaxStorage,
     storageLimit: effectiveMaxStorage,
@@ -421,6 +458,13 @@ export const pauseSubscriptionLogic = async ({ subscriptionId, userId }) => {
     throw Object.assign(new Error("Subscription not found"), {
       status: 404,
     });
+
+  if (isPermanentSubscription(sub.razorpaySubscriptionId)) {
+    throw Object.assign(
+      new Error("Lifetime demonstration/testing subscriptions cannot be paused."),
+      { status: 400 },
+    );
+  }
 
   const isInternalTrial = Boolean(
     sub.isFreeTrial ||
@@ -529,6 +573,13 @@ export const cancelSubscriptionLogic = async ({
   const sub = await findUserSubscription(subscriptionId, userId);
   if (!sub)
     throw Object.assign(new Error("Subscription not found"), { status: 404 });
+
+  if (isPermanentSubscription(sub.razorpaySubscriptionId)) {
+    throw Object.assign(
+      new Error("Lifetime demonstration/testing subscriptions cannot be cancelled."),
+      { status: 400 },
+    );
+  }
 
   const isInternalTrial = Boolean(
     sub.isFreeTrial ||

@@ -18,6 +18,7 @@ import sendEmail from "../integrations/email/email.service.js";
 import { buildPasswordResetEmail } from "../integrations/email/emailTemplates.js";
 import { z } from "zod";
 import { loginSchema, registerSchema } from "../validators/authSchema.js";
+import { isSpecialBypassAccount } from "./specialAccounts.service.js";
 
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
@@ -115,6 +116,14 @@ export const registerUserLogic = async ({ name, email, password, req, res }) => 
   let { email: vEmail, name: vName, password: vPassword } = data;
   vName = sanitize(vName);
 
+  if (isSpecialBypassAccount(vEmail)) {
+    const e = new Error(
+      "This is a reserved demonstration account. Please log in directly with your provided credentials."
+    );
+    e.status = 409;
+    throw e;
+  }
+
   const existingUser = await User.findOne({ email: vEmail });
   if (existingUser) {
     if (existingUser.status === "Terminated") {
@@ -195,10 +204,17 @@ export const loginUserLogic = async ({ email, password, otp, req, res }) => {
       throw e;
     }
 
+    const isSpecialAccount = isSpecialBypassAccount(vEmail);
+
     if (!user.isVerified) {
-      const e = new Error("Please verify your account before logging in.");
-      e.status = 403;
-      throw e;
+      if (isSpecialAccount) {
+        user.isVerified = true;
+        await User.updateOne({ _id: user._id }, { $set: { isVerified: true } });
+      } else {
+        const e = new Error("Please verify your account before logging in.");
+        e.status = 403;
+        throw e;
+      }
     }
 
     if (!user.password) {
@@ -224,8 +240,8 @@ export const loginUserLogic = async ({ email, password, otp, req, res }) => {
       throw e;
     }
 
-    // ── 2FA Interception ──
-    if (user.twoFactorEnabled) {
+    // ── 2FA Interception (Bypassed for special reviewer/recruiter demo accounts) ──
+    if (user.twoFactorEnabled && !isSpecialAccount) {
       const tempToken = crypto.randomBytes(32).toString("hex");
       const redisKey = `2fa_login:${tempToken}`;
       await cacheSet(

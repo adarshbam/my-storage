@@ -373,16 +373,26 @@ export default function BillingPlansPage() {
   const statusConfig = statusConfigs[status] || statusConfigs.NO_SUBSCRIPTION;
   const StatusIcon = statusConfig.icon;
 
-  const displayPrice = isNoSubscription
+  const isPermanent = Boolean(
+    subscription?.isPermanent ||
+    subscription?.razorpaySubscriptionId?.startsWith("sub_permanent_")
+  );
+
+  const displayPrice = isPermanent
+    ? "Lifetime"
+    : isNoSubscription
     ? "₹0"
     : `₹${subscription?.amount ?? 0}`;
 
-  const displayPeriod = isNoSubscription
+  const displayPeriod = isPermanent
+    ? "Access"
+    : isNoSubscription
     ? "/no cost"
     : `/${subscription?.period?.toLowerCase() || "month"}`;
 
-  const nextBillingDisplay =
-    status === "PAUSED"
+  const nextBillingDisplay = isPermanent
+    ? "Lifetime Access (Never Expires)"
+    : status === "PAUSED"
       ? subscription?.currentEnd
         ? `Paused (Paid until ${new Date(subscription.currentEnd).toLocaleDateString("en-IN", {
             day: "numeric",
@@ -533,7 +543,12 @@ export default function BillingPlansPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                {isNoSubscription ? (
+                {isPermanent ? (
+                  <div className="px-4 py-2.5 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 shadow-sm">
+                    <CheckCircle2 size={15} />
+                    Permanent Demonstration Subscription
+                  </div>
+                ) : isNoSubscription ? (
                   <button
                     onClick={() => {
                       document

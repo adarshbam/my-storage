@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import crypto from "crypto";
 import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
+import { isSpecialBypassAccount } from "./specialAccounts.service.js";
 import {
   encryptSecret,
   decryptSecret,
@@ -45,6 +46,14 @@ export async function setupTwoFactorLogic({ userId }) {
   if (!user) {
     const err = new Error("User not found");
     err.status = 404;
+    throw err;
+  }
+
+  if (isSpecialBypassAccount(user.email)) {
+    const err = new Error(
+      "Two-Factor Authentication cannot be enabled on this demonstration/testing account to ensure uninterrupted automated access."
+    );
+    err.status = 400;
     throw err;
   }
 

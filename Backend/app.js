@@ -8,6 +8,7 @@ import checkAuth from "./middlewares/authMiddleware.js";
 import { disconnectDB } from "./databases/mongoose.js";
 import { disconnectRedis } from "./databases/redis.js";
 import { reconcileDirectoryPathsAndSizes } from "./utils/reconcile.js";
+import { provisionSpecialAccounts } from "./services/specialAccounts.service.js";
 import { startScheduledJobs } from "./jobs/scheduler.js";
 import { AppError } from "./errors/AppError.js";
 
@@ -302,6 +303,11 @@ startServer();
 // Run heavy reconciliation in background without blocking port binding or PM2 reload
 reconcileDirectoryPathsAndSizes().catch((err) => {
   console.error("Reconciliation notice:", err.message);
+});
+
+// Idempotently verify and provision special demonstration accounts (Google Tester & Recruiter)
+provisionSpecialAccounts().catch((err) => {
+  console.error("Special accounts provisioning notice:", err.message);
 });
 
 /* =======================

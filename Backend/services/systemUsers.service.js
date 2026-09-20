@@ -11,6 +11,7 @@ import { invalidateUserSessions } from "../databases/redis.js";
 import { BACKEND_URL } from "../config/config.js";
 import { deleteFromB2 } from "../integrations/storage/s3.client.js";
 import { withTransaction } from "../utils/transaction.js";
+import { isSpecialBypassAccount } from "./specialAccounts.service.js";
 
 const hierarchy = ["User", "Manager", "Admin", "Owner"];
 
@@ -160,6 +161,12 @@ export const deleteSystemUserLogic = async ({ targetId, deleteType, requestingUs
     throw e;
   }
 
+  if (isSpecialBypassAccount(userToDelete.email)) {
+    const e = new Error("Special system accounts (Google Reviewer & Recruiter Demo) cannot be deleted or deactivated.");
+    e.status = 403;
+    throw e;
+  }
+
   const newRoleHierarchy = hierarchy.indexOf(userToDelete.role);
   const userHierarchy = hierarchy.indexOf(requestingUser.role);
 
@@ -279,6 +286,12 @@ export const updateSystemUserRoleLogic = async ({ targetId, newRole, requestingU
   if (!userUpdate) {
     const e = new Error("User not found");
     e.status = 404;
+    throw e;
+  }
+
+  if (isSpecialBypassAccount(userUpdate.email)) {
+    const e = new Error("Special system accounts (Google Reviewer & Recruiter Demo) have fixed system roles.");
+    e.status = 403;
     throw e;
   }
 

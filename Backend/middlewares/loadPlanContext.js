@@ -7,6 +7,7 @@ import PlanTier from "../models/planTierModel.js";
 import Feature from "../models/featureModel.js";
 import SystemConfig from "../models/systemConfigModel.js";
 import { cacheGet, cacheSet, cacheDel, invalidateUserSessions } from "../databases/redis.js";
+import { isSpecialBypassAccount, isPermanentSubscription } from "../services/specialAccounts.service.js";
 
 export const invalidatePlanContextCache = async (userId) => {
   if (!userId) return;
@@ -140,8 +141,12 @@ export const loadPlanContext = async (req, res, next) => {
               Date.now())),
     );
 
+    // Check if user is a special permanent account (Google Tester or Recruiter Demo)
+    const isSpecial = isSpecialBypassAccount(user.email);
+    const isPermanent = isSpecial || isPermanentSubscription(subscription?.razorpaySubscriptionId);
+
     // Free trial expiration check: if trial end date has passed, update status to expired
-    const isTrialSub = Boolean(
+    const isTrialSub = !isPermanent && Boolean(
       subscription &&
       (subscription.isFreeTrial ||
        subscription.amount === 0 ||
@@ -149,7 +154,7 @@ export const loadPlanContext = async (req, res, next) => {
        subscription.billingPlan?.slug === "free-trail")
     );
 
-    const isTrialExpired = Boolean(
+    const isTrialExpired = !isPermanent && Boolean(
       isTrialSub &&
       (
         (subscription.currentEnd && new Date(subscription.currentEnd).getTime() <= Date.now()) ||
@@ -168,11 +173,12 @@ export const loadPlanContext = async (req, res, next) => {
     }
 
     const isSubActive = Boolean(
-      subscription &&
+      isPermanent ||
+      (subscription &&
       !isTrialExpired &&
       (["active", "authenticated", "paused"].includes(
         subscription.status?.toLowerCase(),
-      ) || isCycleStillValid)
+      ) || isCycleStillValid))
     );
 
     const hasActiveSubscription = Boolean(isSubActive);
@@ -248,6 +254,18 @@ export const loadPlanContext = async (req, res, next) => {
       );
     }
 
+    // Fallback: If billingPlan is missing for a permanent subscription, auto-link to Ultimate
+    if (!billingPlan && isPermanent) {
+      billingPlan =
+        (await BillingPlan.findOne({
+          slug: { $regex: /^ultimate$/i },
+          active: true,
+        }).populate("tier").lean()) ||
+        (await BillingPlan.findOne({
+          slug: { $regex: /^ultimate$/i },
+        }).populate("tier").lean());
+    }
+
     // Fallback: If billingPlan is missing for a free trial subscription, auto-link
     if (!billingPlan && isTrialSub) {
       billingPlan =
@@ -260,7 +278,7 @@ export const loadPlanContext = async (req, res, next) => {
     const slug = (billingPlan?.slug || (isTrialSub ? "free-trial" : "novice"))?.replace("trail", "trial");
     const isTrial = Boolean(isTrialSub || slug === "free-trial");
 
-    let targetSlug = slug;
+    let targetSlug = isPermanent ? "ultimate" : slug;
     let inheritedBillingPlan = null;
     if (isTrial) {
       const sysConfig = await SystemConfig.findOne({ key: "global" }).lean();
@@ -390,6 +408,10 @@ export const loadPlanContext = async (req, res, next) => {
         5368709120;
     }
 
+    if (isPermanent) {
+      effectiveStorage = Math.max(effectiveStorage, 16492674416640);
+    }
+
     // Filter out features that have been disabled globally by the owner
     const activeFeatures = (rawFeatures || []).filter(
       (f) => f && typeof f === "object" && f.enabled !== false,
@@ -409,7 +431,7 @@ export const loadPlanContext = async (req, res, next) => {
 
     const configPermissions = configuration?.rules?.permissions || {};
 
-    const effectivePermissions = isPaused
+    let effectivePermissions = isPaused
       ? {
           allowUpload: false,
           allowDownload: true,
@@ -428,6 +450,18 @@ export const loadPlanContext = async (req, res, next) => {
           allowCopy: configPermissions.allowCopy ?? defaultPermissions.allowCopy,
           allowDelete: configPermissions.allowDelete ?? defaultPermissions.allowDelete,
         };
+
+    if (isPermanent) {
+      effectivePermissions = {
+        allowUpload: true,
+        allowDownload: true,
+        allowSharing: true,
+        allowEdit: true,
+        allowMove: true,
+        allowCopy: true,
+        allowDelete: true,
+      };
+    }
 
     const defaultLimits = {
       storageLimit: effectiveStorage,
