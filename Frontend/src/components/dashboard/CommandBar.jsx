@@ -219,6 +219,24 @@ export default function CommandBar({
       aliases: ["/tutorials"],
       icon: Sparkles,
     },
+    ...(user?.integrations?.googleDrive?.connected
+      ? [
+          {
+            name: "Google Drive",
+            path: "/dashboard/google-drive",
+            icon: VaultDriveIcon,
+          },
+        ]
+      : []),
+    ...(user?.integrations?.github?.connected
+      ? [
+          {
+            name: "GitHub",
+            path: "/dashboard/github",
+            icon: VaultGitIcon,
+          },
+        ]
+      : []),
     ...(isManagerOrAdmin
       ? [
           {
@@ -417,7 +435,7 @@ export default function CommandBar({
       )}
 
       {/* LEFT: System Identity */}
-      <div className="flex items-center gap-2 sm:gap-3 w-auto sm:w-[240px] shrink-0">
+      <div className="flex items-center gap-2 sm:gap-3 w-auto md:w-[240px] shrink-0">
         <button
           onClick={() => setIsMobileOpen(!isMobileOpen)}
           className={`md:hidden p-1.5 -ml-1 mr-1 rounded-xl border transition-all shadow-[inset_0_0_10px_rgba(0,212,165,0.05)] flex items-center justify-center

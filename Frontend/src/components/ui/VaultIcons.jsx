@@ -71,81 +71,80 @@ export const VaultGitIcon = GitHubLogo;
  * Beautiful modern multi-color gradient with alpha mask.
  * Compatible with Light & Dark themes, preserving glowing drop-shadows.
  */
-export const GoogleDriveLogo = ({ className = "", size = 24 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 192 192"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-  >
-    <mask
-      id="vault-gdrive-mask"
-      width="168"
-      height="154"
-      x="12"
-      y="18"
-      maskUnits="userSpaceOnUse"
-      style={{ maskType: "alpha" }}
+export const GoogleDriveLogo = ({ className = "", size = 24 }) => {
+  const uid = React.useId ? React.useId().replace(/:/g, "_") : "gd";
+  const clipId = `vault-gdrive-clip-${uid}`;
+  const gradYellow = `vault-gdrive-gy-${uid}`;
+  const gradBlue = `vault-gdrive-gb-${uid}`;
+  const gradGreen = `vault-gdrive-gg-${uid}`;
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 192 192"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
     >
-      <path
-        fill="#b43333"
-        d="M63.09 37c14.626-25.333 51.193-25.334 65.819 0l45.033 78c14.626 25.334-3.657 57.001-32.91 57.001H50.967c-29.253 0-47.536-31.667-32.91-57.001z"
-      />
-    </mask>
-    <g mask="url(#vault-gdrive-mask)">
-      <path
-        fill="url(#vault-gdrive-grad-yellow)"
-        d="M206.905 172.02h-91.888l-19.015-32.934 45.944-79.578z"
-      />
-      <path
-        fill="url(#vault-gdrive-grad-blue)"
-        d="M-14.919 172.006 50.04 59.494v.002L31.032 92.422h38.02L115 172.004l-129.918.001z"
-      />
-      <path
-        fill="url(#vault-gdrive-grad-green)"
-        d="M96.007-20.085 141.954 59.5l-19.011 32.928H31.048z"
-      />
-    </g>
-    <defs>
-      <linearGradient
-        id="vault-gdrive-grad-yellow"
-        x1="193.6"
-        x2="103.09"
-        y1="165.6"
-        y2="111.21"
-        gradientUnits="userSpaceOnUse"
-      >
-        <stop offset=".09" stopColor="#ffe921" />
-        <stop offset="1" stopColor="#fec700" />
-      </linearGradient>
-      <linearGradient
-        id="vault-gdrive-grad-blue"
-        x1="114.4"
-        x2="15.53"
-        y1="181.61"
-        y2="121.8"
-        gradientUnits="userSpaceOnUse"
-      >
-        <stop offset=".15" stopColor="#a9a8ff" />
-        <stop offset=".33" stopColor="#6d97ff" />
-        <stop offset=".48" stopColor="#3186ff" />
-      </linearGradient>
-      <linearGradient
-        id="vault-gdrive-grad-green"
-        x1="128.88"
-        x2="28.7"
-        y1="37.88"
-        y2="84.64"
-        gradientUnits="userSpaceOnUse"
-      >
-        <stop offset=".55" stopColor="#0ebc5f" />
-        <stop offset=".85" stopColor="#78c9ff" />
-      </linearGradient>
-    </defs>
-  </svg>
-);
+      <clipPath id={clipId}>
+        <path
+          d="M63.09 37c14.626-25.333 51.193-25.334 65.819 0l45.033 78c14.626 25.334-3.657 57.001-32.91 57.001H50.967c-29.253 0-47.536-31.667-32.91-57.001z"
+        />
+      </clipPath>
+      <g clipPath={`url(#${clipId})`}>
+        <path
+          fill={`url(#${gradYellow})`}
+          d="M206.905 172.02h-91.888l-19.015-32.934 45.944-79.578z"
+        />
+        <path
+          fill={`url(#${gradBlue})`}
+          d="M-14.919 172.006 50.04 59.494v.002L31.032 92.422h38.02L115 172.004l-129.918.001z"
+        />
+        <path
+          fill={`url(#${gradGreen})`}
+          d="M96.007-20.085 141.954 59.5l-19.011 32.928H31.048z"
+        />
+      </g>
+      <defs>
+        <linearGradient
+          id={gradYellow}
+          x1="193.6"
+          x2="103.09"
+          y1="165.6"
+          y2="111.21"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset=".09" stopColor="#ffe921" />
+          <stop offset="1" stopColor="#fec700" />
+        </linearGradient>
+        <linearGradient
+          id={gradBlue}
+          x1="114.4"
+          x2="15.53"
+          y1="181.61"
+          y2="121.8"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset=".15" stopColor="#a9a8ff" />
+          <stop offset=".33" stopColor="#6d97ff" />
+          <stop offset=".48" stopColor="#3186ff" />
+        </linearGradient>
+        <linearGradient
+          id={gradGreen}
+          x1="128.88"
+          x2="28.7"
+          y1="37.88"
+          y2="84.64"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset=".55" stopColor="#0ebc5f" />
+          <stop offset=".85" stopColor="#78c9ff" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+};
 
 export const VaultDriveIcon = GoogleDriveLogo;
 

@@ -1011,9 +1011,9 @@ export default function GoogleDriveChamber() {
       )}
 
       {/* ── CHAMBER HEADER TOOLBAR ── */}
-      <div className="shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-white/5">
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-white/5">
         {/* Breadcrumb Navigation */}
-        <div className="flex items-center gap-2 flex-wrap min-w-0">
+        <div className="flex items-center gap-2 flex-wrap min-w-fit">
           {/* Smart Back Button: hidden on Google Drive root, navigates to parent or Drive root */}
           {driveConnected && Boolean(driveFolderId) && (
             <button
@@ -1034,7 +1034,7 @@ export default function GoogleDriveChamber() {
           >
             <Link
               to="/dashboard/google-drive"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-accent-soft hover:bg-accent-soft/80 border border-accent-border text-accent-primary font-bold text-sm transition-all duration-150 cursor-pointer shadow-sm active:scale-95 shrink-0"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-accent-soft hover:bg-accent-soft/80 border border-accent-border text-accent-primary font-bold text-sm transition-all duration-150 cursor-pointer shadow-sm active:scale-95 shrink-0 whitespace-nowrap"
               title="Return to Google Drive root (Drop items here to move to root)"
             >
               <VaultDriveIcon size={18} />
@@ -1080,7 +1080,7 @@ export default function GoogleDriveChamber() {
 
         {/* Action Buttons */}
         {driveConnected && (
-        <div className="flex items-center gap-2 flex-wrap shrink-0">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
           <Button
             onClick={() => {
               if (selectedItems.length > 0) {
@@ -1182,6 +1182,22 @@ export default function GoogleDriveChamber() {
               />
             )}
           </Button>
+
+          {/* Open in actual Google Drive */}
+          <a
+            href={
+              driveFolderId && driveFolderId !== "root"
+                ? `https://drive.google.com/drive/folders/${driveFolderId}`
+                : "https://drive.google.com/drive/my-drive"
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3.5 py-1.5 text-xs flex items-center gap-1.5 font-bold border border-accent-border/40 hover:bg-accent-soft text-slate-700 dark:text-white rounded-xl transition-all shrink-0 cursor-pointer shadow-sm"
+            title="Open current folder in actual Google Drive (drive.google.com)"
+          >
+            <ExternalLink size={14} className="text-accent-primary shrink-0" />
+            <span>Open in Drive</span>
+          </a>
 
           {/* View Mode Toggle */}
           <div className="flex items-center bg-slate-100 dark:bg-white/[0.06] rounded-xl p-1 border border-slate-200 dark:border-white/10">

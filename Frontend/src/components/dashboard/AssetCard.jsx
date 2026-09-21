@@ -116,7 +116,7 @@ const getItemTypeInfo = (item, isDirectory, provider, specialView) => {
       };
     }
     return {
-      typeLabel: "DRIVE FOLDER",
+      typeLabel: "FOLDER",
       listLabel: "Drive Folder",
       badgeLabel: "GOOGLE DRIVE",
     };

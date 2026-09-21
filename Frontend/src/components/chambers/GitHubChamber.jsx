@@ -555,9 +555,9 @@ export default function GitHubChamber() {
   return (
     <div className="flex-1 min-w-0 w-full flex flex-col relative">
       {/* ── CHAMBER HEADER TOOLBAR ── */}
-      <div className="shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-200 dark:border-white/5">
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-200 dark:border-white/5">
         {/* Breadcrumb Navigation & Branch Dropdown */}
-        <div className="flex items-center gap-2 flex-wrap min-w-0">
+        <div className="flex items-center gap-2 flex-wrap min-w-fit">
           {/* Smart Back Button: hidden on GitHub chamber root, navigates up to parent or chamber */}
           {githubConnected && isRepoView && (
             <button
@@ -571,7 +571,7 @@ export default function GitHubChamber() {
 
           <Link
             to="/dashboard/github"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-soft hover:bg-accent-soft/80 border border-accent-border hover:border-accent-border/60 text-accent-primary font-bold text-sm transition-all duration-150 cursor-pointer shadow-sm active:scale-95 shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-soft hover:bg-accent-soft/80 border border-accent-border hover:border-accent-border/60 text-accent-primary font-bold text-sm transition-all duration-150 cursor-pointer shadow-sm active:scale-95 shrink-0 whitespace-nowrap"
             title="Return to GitHub Repositories"
           >
             <VaultGitIcon size={18} />
@@ -618,7 +618,7 @@ export default function GitHubChamber() {
 
         {/* Header Action Buttons */}
         {githubConnected && (
-        <div className="flex items-center gap-2 flex-wrap shrink-0">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
           <Button
             onClick={() => {
               if (selectedItems.length > 0) {
