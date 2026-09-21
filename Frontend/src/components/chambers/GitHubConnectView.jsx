@@ -18,7 +18,7 @@ export default function GitHubConnectView({
   error = null,
   disconnectedNotice = false,
 }) {
-  const [hasAgreed, setHasAgreed] = useState(true);
+  const [hasAgreed, setHasAgreed] = useState(false);
 
   const handleConnectClick = () => {
     if (!hasAgreed || isConnecting) return;

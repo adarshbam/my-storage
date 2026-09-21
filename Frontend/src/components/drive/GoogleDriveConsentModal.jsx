@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
@@ -21,6 +21,12 @@ export default function GoogleDriveConsentModal({
   isConnecting = false,
 }) {
   const [hasAgreed, setHasAgreed] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setHasAgreed(false);
+    }
+  }, [isOpen]);
 
   const handleAuthorize = () => {
     if (!hasAgreed || isConnecting) return;

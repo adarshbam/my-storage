@@ -36,7 +36,7 @@ export default function EditLinkModal({ isOpen, onClose, link, onUpdated }) {
       );
       setMaxDownloads(link.maxDownloads ? String(link.maxDownloads) : "");
       setIsActive(link.isActive !== false);
-      setOwnerAgreed(link.permission && link.permission.includes("owner"));
+      setOwnerAgreed(false);
     }
   }, [link, isOpen]);
 
