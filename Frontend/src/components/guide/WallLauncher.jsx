@@ -14,7 +14,6 @@ import {
   Play,
   RotateCcw,
   CheckCircle2,
-  HelpCircle,
   Volume2,
   VolumeX,
   Lightbulb,
@@ -33,31 +32,13 @@ const SAFE_MARGIN = 16;
 // Module-scoped active singleton tracking to strictly ensure only ONE Wally launcher can ever mount/render
 let activeLauncherInstanceId = null;
 
-// Calculate default corner position (bottom-right)
-const getDefaultPosition = () => {
-  if (typeof window === "undefined") return { x: 20, y: 20 };
-  const isMobile = window.innerWidth < 480;
-  const width = isMobile ? 56 : 180;
-  const height = 52;
-  const margin = window.innerWidth < 480 ? 10 : SAFE_MARGIN;
+// Calculate current element dimensions safely (unaffected by CSS transform scale)
+const getButtonDimensions = (el) => {
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 480;
   return {
-    x: Math.max(margin, window.innerWidth - width - margin),
-    y: Math.max(margin, window.innerHeight - height - margin),
+    width: el?.offsetWidth || (isMobile ? 56 : 180),
+    height: el?.offsetHeight || 52,
   };
-};
-
-// Retrieve previously saved position or fallback to default
-const getInitialPosition = () => {
-  try {
-    const saved = localStorage.getItem(STORAGE_POS_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (typeof parsed.x === "number" && typeof parsed.y === "number") {
-        return parsed;
-      }
-    }
-  } catch {}
-  return getDefaultPosition();
 };
 
 export default function WallLauncher() {
@@ -104,30 +85,56 @@ export default function WallLauncher() {
   }, []);
 
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState(getInitialPosition);
+  // null means anchored to default bottom-right corner (right: 16px, bottom: 16px)
+  const [position, setPosition] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const buttonRef = useRef(null);
-  const currentPosRef = useRef(position);
+  const currentPosRef = useRef(null);
   const isDraggingRef = useRef(false);
   const hasMovedRef = useRef(false);
   const startPointerRef = useRef({ x: 0, y: 0 });
   const startPosRef = useRef({ x: 0, y: 0 });
   const justDraggedRef = useRef(false);
 
+  // Only show Wally on authenticated workspace pages (e.g. /dashboard, /profile, /users, /billing, /tutorials, etc.)
+  // Hide on public landing page, authentication screens, or when logged out
+  const isPublicRoute =
+    !user ||
+    location.pathname === "/" ||
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname === "/reset-password" ||
+    location.pathname.startsWith("/share") ||
+    location.pathname.startsWith("/shared-access") ||
+    location.pathname.startsWith("/s/") ||
+    location.pathname === "/privacy" ||
+    location.pathname === "/terms" ||
+    location.pathname === "/security";
+
+  // Clear any legacy persisted coordinates on mount and reset to default bottom-right when first appearing
+  useEffect(() => {
+    try {
+      localStorage.removeItem(STORAGE_POS_KEY);
+    } catch {}
+    setPosition(null);
+    currentPosRef.current = null;
+  }, [isPublicRoute]);
+
   // Keep ref synchronized with position state
   useEffect(() => {
     currentPosRef.current = position;
   }, [position]);
 
-  // Window resize listener: automatically clamp position so Wally is never cropped or pushed offscreen
+  // Window resize listener: automatically clamp custom dragged position so Wally is never cropped or pushed offscreen
   useEffect(() => {
     const handleResize = () => {
       setPosition((prev) => {
-        const rect = buttonRef.current?.getBoundingClientRect() || { width: 180, height: 52 };
+        if (!prev) return null;
+        const { width, height } = getButtonDimensions(buttonRef.current);
         const margin = window.innerWidth < 480 ? 10 : SAFE_MARGIN;
-        const maxX = Math.max(margin, window.innerWidth - rect.width - margin);
-        const maxY = Math.max(margin, window.innerHeight - rect.height - margin);
+        const maxX = Math.max(margin, window.innerWidth - width - margin);
+        const maxY = Math.max(margin, window.innerHeight - height - margin);
 
         const clampedX = Math.max(margin, Math.min(maxX, prev.x));
         const clampedY = Math.max(margin, Math.min(maxY, prev.y));
@@ -135,9 +142,6 @@ export default function WallLauncher() {
         if (clampedX !== prev.x || clampedY !== prev.y) {
           const next = { x: clampedX, y: clampedY };
           currentPosRef.current = next;
-          try {
-            localStorage.setItem(STORAGE_POS_KEY, JSON.stringify(next));
-          } catch {}
           return next;
         }
         return prev;
@@ -145,7 +149,6 @@ export default function WallLauncher() {
     };
 
     window.addEventListener("resize", handleResize);
-    handleResize();
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -156,7 +159,19 @@ export default function WallLauncher() {
     isDraggingRef.current = true;
     hasMovedRef.current = false;
     startPointerRef.current = { x: e.clientX, y: e.clientY };
-    startPosRef.current = { x: currentPosRef.current.x, y: currentPosRef.current.y };
+
+    if (currentPosRef.current) {
+      startPosRef.current = { x: currentPosRef.current.x, y: currentPosRef.current.y };
+    } else {
+      const el = buttonRef.current;
+      const { width, height } = getButtonDimensions(el);
+      const margin = window.innerWidth < 480 ? 10 : SAFE_MARGIN;
+      const rect = el?.getBoundingClientRect();
+      startPosRef.current = {
+        x: rect && rect.width > 0 ? rect.left : Math.max(margin, window.innerWidth - width - margin),
+        y: rect && rect.height > 0 ? rect.top : Math.max(margin, window.innerHeight - height - margin),
+      };
+    }
 
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -178,12 +193,12 @@ export default function WallLauncher() {
       }
     }
 
-    const rect = buttonRef.current?.getBoundingClientRect() || { width: 180, height: 52 };
+    const { width, height } = getButtonDimensions(buttonRef.current);
     const margin = window.innerWidth < 480 ? 10 : SAFE_MARGIN;
     const minX = margin;
-    const maxX = Math.max(margin, window.innerWidth - rect.width - margin);
+    const maxX = Math.max(margin, window.innerWidth - width - margin);
     const minY = margin;
-    const maxY = Math.max(margin, window.innerHeight - rect.height - margin);
+    const maxY = Math.max(margin, window.innerHeight - height - margin);
 
     const rawX = startPosRef.current.x + dx;
     const rawY = startPosRef.current.y + dy;
@@ -212,10 +227,6 @@ export default function WallLauncher() {
       setTimeout(() => {
         justDraggedRef.current = false;
       }, 120);
-
-      try {
-        localStorage.setItem(STORAGE_POS_KEY, JSON.stringify(currentPosRef.current));
-      } catch {}
     } else {
       setIsDragging(false);
       setIsOpen(true);
@@ -243,9 +254,8 @@ export default function WallLauncher() {
 
   const handleResetPosition = (e) => {
     e?.stopPropagation?.();
-    const def = getDefaultPosition();
-    setPosition(def);
-    currentPosRef.current = def;
+    setPosition(null);
+    currentPosRef.current = null;
     try {
       localStorage.removeItem(STORAGE_POS_KEY);
     } catch {}
@@ -287,21 +297,6 @@ export default function WallLauncher() {
   ];
   const randomTip = tips[0];
 
-  // Only show Wally on authenticated workspace pages (e.g. /dashboard, /profile, /users, /billing, /tutorials, etc.)
-  // Hide on public landing page, authentication screens, or when logged out
-  const isPublicRoute =
-    !user ||
-    location.pathname === "/" ||
-    location.pathname === "/login" ||
-    location.pathname === "/register" ||
-    location.pathname === "/reset-password" ||
-    location.pathname.startsWith("/share") ||
-    location.pathname.startsWith("/shared-access") ||
-    location.pathname.startsWith("/s/") ||
-    location.pathname === "/privacy" ||
-    location.pathname === "/terms" ||
-    location.pathname === "/security";
-
   // If tour is active, secondary duplicate instance, or on a public page, do not render
   if (isTourOpen || !isPrimaryInstance || isPublicRoute) return null;
 
@@ -312,13 +307,22 @@ export default function WallLauncher() {
          ───────────────────────────────────────────────────────────── */}
       {!isOpen && (
         <div
-          style={{
-            position: "fixed",
-            left: `${position.x}px`,
-            top: `${position.y}px`,
-            zIndex: 40,
-          }}
-          className="font-sans select-none touch-none"
+          style={
+            position
+              ? {
+                  position: "fixed",
+                  left: `${position.x}px`,
+                  top: `${position.y}px`,
+                  zIndex: 40,
+                }
+              : {
+                  position: "fixed",
+                  zIndex: 40,
+                }
+          }
+          className={`font-sans select-none touch-none ${
+            position ? "" : "right-2.5 bottom-2.5 min-[480px]:right-4 min-[480px]:bottom-4"
+          }`}
         >
           <motion.button
             ref={buttonRef}
