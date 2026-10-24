@@ -151,9 +151,12 @@ export default function GoogleDriveChamber() {
       }
 
       const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        if (res.status === 403 || res.status === 401 || errData.error?.toLowerCase().includes("not connected") || errData.message?.toLowerCase().includes("not connected")) {
+      const contentType = res.headers.get("content-type") || "";
+      const isJson = contentType.includes("application/json");
+
+      if (!res.ok || !isJson) {
+        const errData = isJson ? await res.json().catch(() => ({})) : {};
+        if (!isJson || res.status === 403 || res.status === 401 || errData.error?.toLowerCase().includes("not connected") || errData.message?.toLowerCase().includes("not connected")) {
           if (user?.integrations?.googleDrive?.connected) {
             const newUser = { ...user };
             if (newUser.integrations?.googleDrive) {
@@ -162,7 +165,13 @@ export default function GoogleDriveChamber() {
             }
           }
         }
-        throw new Error(errData.error || errData.message || "Failed to load Google Drive files");
+        throw new Error(
+          errData.error ||
+            errData.message ||
+            (!isJson
+              ? "Google Drive integration is not connected or your authorization session expired. Please reconnect Google Drive."
+              : "Failed to load Google Drive files")
+        );
       }
 
       const resData = await res.json();

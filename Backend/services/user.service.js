@@ -99,8 +99,18 @@ export const getUserProfile = async ({ userId, user }) => {
       usedStorage,
       theme: currentUser.theme || "dark",
       integrations: {
-        googleDrive: { connected: !!currentUser.integrations?.googleDrive?.connected },
-        github: { connected: !!currentUser.integrations?.github?.connected },
+        googleDrive: {
+          connected: Boolean(
+            currentUser.integrations?.googleDrive?.connected &&
+            currentUser.integrations?.googleDrive?.refreshToken
+          ),
+        },
+        github: {
+          connected: Boolean(
+            currentUser.integrations?.github?.connected &&
+            currentUser.integrations?.github?.accessToken
+          ),
+        },
       },
     };
   } catch (err) {

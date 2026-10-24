@@ -41,8 +41,15 @@ async function getAuthenticatedAccessToken(req, requireWrite = false) {
 
     const user = await User.findById(ownerId).select("integrations").lean();
     if (!user?.integrations?.github?.accessToken) {
-      const err = new Error("Github not connected");
-      err.statusCode = 403;
+      if (user?.integrations?.github?.connected) {
+        await User.updateOne(
+          { _id: ownerId },
+          { $set: { "integrations.github.connected": false } },
+        ).catch(() => {});
+        await invalidateUserSessions(ownerId.toString()).catch(() => {});
+      }
+      const err = new Error("GitHub not connected. Please connect your GitHub account.");
+      err.statusCode = 401;
       throw err;
     }
 

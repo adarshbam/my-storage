@@ -608,7 +608,9 @@ export default function FileBrowser({ specialView }) {
       }
 
       const response = await fetch(url, { credentials: "include" });
-      if (response.ok) {
+      const contentType = response.headers.get("content-type") || "";
+      const isJson = contentType.includes("application/json");
+      if (response.ok && isJson) {
         if (specialView === "shared" && !folderId) {
           const result = await response.json();
           const dirs = [];
@@ -817,16 +819,16 @@ export default function FileBrowser({ specialView }) {
       ]);
 
       let defaultBranchName = "";
-      if (repoRes.ok) {
-        const repoData = await repoRes.json();
+      if (repoRes.ok && (repoRes.headers.get("content-type") || "").includes("application/json")) {
+        const repoData = await repoRes.json().catch(() => ({}));
         defaultBranchName =
           repoData.details?.default_branch ||
           repoData.default_branch ||
           "";
       }
 
-      if (branchRes.ok) {
-        const branchData = await branchRes.json();
+      if (branchRes.ok && (branchRes.headers.get("content-type") || "").includes("application/json")) {
+        const branchData = await branchRes.json().catch(() => ({}));
         const branchList = Array.isArray(branchData)
           ? branchData
           : branchData.branches || [];

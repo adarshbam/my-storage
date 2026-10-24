@@ -44,12 +44,17 @@ class ApiClient {
       err.response = { data: error, status: response.status };
       throw err;
     }
-    const contentType = response.headers.get("content-type");
+    const contentType = response.headers.get("content-type") || "";
     let data;
-    if (contentType && contentType.includes("application/json")) {
+    if (contentType.includes("application/json")) {
       data = await response.json();
     } else {
       const text = await response.text();
+      if (text.trim().toLowerCase().startsWith("<!doctype") || text.trim().toLowerCase().startsWith("<html")) {
+        const err = new Error("Authorization required or service unavailable. Please check your integration connection.");
+        err.status = 403;
+        throw err;
+      }
       try {
         data = JSON.parse(text);
       } catch {

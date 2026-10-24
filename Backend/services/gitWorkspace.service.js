@@ -18,8 +18,14 @@ async function getGithubToken(req) {
   const ownerId = await resolveIntegrationOwnerId(req);
   const user = await User.findById(ownerId).select("integrations rootDirId").lean();
   if (!user?.integrations?.github?.accessToken) {
-    const err = new Error("GitHub not connected");
-    err.statusCode = 403;
+    if (user?.integrations?.github?.connected) {
+      await User.updateOne(
+        { _id: ownerId },
+        { $set: { "integrations.github.connected": false } },
+      ).catch(() => {});
+    }
+    const err = new Error("GitHub not connected. Please connect your GitHub account.");
+    err.statusCode = 401;
     throw err;
   }
   return {

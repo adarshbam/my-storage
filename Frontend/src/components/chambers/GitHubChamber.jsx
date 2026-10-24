@@ -296,13 +296,13 @@ export default function GitHubChamber() {
       ]);
 
       let defaultBranchName = "";
-      if (repoRes.ok) {
-        const repoData = await repoRes.json();
+      if (repoRes.ok && (repoRes.headers.get("content-type") || "").includes("application/json")) {
+        const repoData = await repoRes.json().catch(() => ({}));
         defaultBranchName = repoData.details?.default_branch || repoData.default_branch || "";
       }
 
-      if (branchRes.ok) {
-        const branchData = await branchRes.json();
+      if (branchRes.ok && (branchRes.headers.get("content-type") || "").includes("application/json")) {
+        const branchData = await branchRes.json().catch(() => ({}));
         const branchList = Array.isArray(branchData) ? branchData : branchData.branches || [];
         setBranches(branchList);
         if (!selectedBranch) {
@@ -338,9 +338,19 @@ export default function GitHubChamber() {
       }
 
       const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        if (res.status === 403 && (errData.error?.toLowerCase().includes("not connected") || errData.message?.toLowerCase().includes("not connected"))) {
+      const contentType = res.headers.get("content-type") || "";
+      const isJson = contentType.includes("application/json");
+
+      if (!res.ok || !isJson) {
+        const errData = isJson ? await res.json().catch(() => ({})) : {};
+        const isAuthOrConnectionError =
+          !isJson ||
+          res.status === 401 ||
+          res.status === 403 ||
+          errData.error?.toLowerCase().includes("not connected") ||
+          errData.message?.toLowerCase().includes("not connected");
+
+        if (isAuthOrConnectionError) {
           if (user?.integrations?.github?.connected) {
             const newUser = { ...user };
             if (newUser.integrations?.github) {
@@ -349,7 +359,13 @@ export default function GitHubChamber() {
             }
           }
         }
-        throw new Error(errData.error || errData.message || "Failed to load GitHub contents");
+        throw new Error(
+          errData.error ||
+            errData.message ||
+            (!isJson
+              ? "GitHub integration is not connected or your authorization session expired. Please reconnect GitHub."
+              : "Failed to load GitHub contents")
+        );
       }
 
       const result = await res.json();

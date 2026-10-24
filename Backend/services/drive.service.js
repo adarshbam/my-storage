@@ -70,8 +70,13 @@ async function getAuthenticatedClient(req, requireWrite = false) {
 
     const client = await getDriveClient(ownerId);
     if (!client) {
-      const err = new Error("Google Drive not connected");
-      err.statusCode = 403;
+      await User.updateOne(
+        { _id: ownerId },
+        { $set: { "integrations.googleDrive.connected": false } },
+      ).catch(() => {});
+      await invalidateUserSessions(ownerId.toString()).catch(() => {});
+      const err = new Error("Google Drive not connected. Please connect your Google Drive account.");
+      err.statusCode = 401;
       throw err;
     }
 
