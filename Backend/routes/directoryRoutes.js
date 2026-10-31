@@ -5,6 +5,7 @@ import { loadPlanContext } from "../middlewares/loadPlanContext.js";
 import { requireRule } from "../middlewares/requireRule.js";
 import {
   createDirectory,
+  ensureDirectoryTree,
   deleteDirectory,
   getDirectoryById,
   moveItems,
@@ -18,6 +19,7 @@ import { validate } from "../middlewares/validationMiddleware.js";
 import {
   getDirectoryByIdSchema,
   createDirectorySchema,
+  ensureDirectoryTreeSchema,
   renameDirectorySchema,
   deleteDirectorySchema,
   moveDirectorySchema,
@@ -74,6 +76,18 @@ router.get(
   directoryReadLimiter,
   validate(getDirectoryByIdSchema),
   getDirectoryById,
+);
+
+// Atomic directory tree resolution for folder drag-and-drop
+router.post(
+  ["/ensure-tree", "/:parentDirId/ensure-tree"],
+  checkAuth,
+  loadPlanContext,
+  requireRule("allowUpload"),
+  standardWriteLimiter,
+  throttle(100, 15, "dir-ensure-tree"),
+  validate(ensureDirectoryTreeSchema),
+  ensureDirectoryTree,
 );
 
 router.post(

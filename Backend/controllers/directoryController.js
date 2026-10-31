@@ -32,18 +32,38 @@ export const createDirectory = async (req, res, next) => {
     if (!parentDirId || parentDirId === "undefined") {
       parentDirId = req.user.rootDirId.toString();
     }
-    await directoryService.createDirectoryLogic({
+    const directory = await directoryService.createDirectoryLogic({
       name: req.body.foldername ?? "new-folder",
       parentDirId,
       userId: req.user.id,
       userRole: req.user.role,
       rootDirId: req.user.rootDirId.toString()
     });
-    return res.status(201).json({ success: true, message: "Folder created successfully" });
+    return res.status(201).json({ success: true, message: "Folder created successfully", directory });
   } catch (error) {
     if (error.code === 11000 || error.code === "EEXIST") {
       return res.status(409).json({ error: "Folder already exists" });
     }
+    if (error.status) return res.status(error.status).json({ error: error.message });
+    next(error);
+  }
+};
+
+export const ensureDirectoryTree = async (req, res, next) => {
+  try {
+    let parentDirId = req.params.parentDirId;
+    if (!parentDirId || parentDirId === "undefined") {
+      parentDirId = req.user.rootDirId.toString();
+    }
+    const tree = await directoryService.ensureDirectoryTreeLogic({
+      parentDirId,
+      paths: req.body.paths || [],
+      userId: req.user.id,
+      userRole: req.user.role,
+      rootDirId: req.user.rootDirId.toString(),
+    });
+    return res.status(200).json({ success: true, tree });
+  } catch (error) {
     if (error.status) return res.status(error.status).json({ error: error.message });
     next(error);
   }

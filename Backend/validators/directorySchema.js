@@ -19,6 +19,15 @@ export const createDirectorySchema = {
   }),
 };
 
+export const ensureDirectoryTreeSchema = {
+  params: z.object({
+    parentDirId: optionalObjectIdSchema.optional(),
+  }),
+  body: z.object({
+    paths: z.array(z.string().min(1)).min(1, "At least one path is required"),
+  }),
+};
+
 export const renameDirectorySchema = {
   params: z.object({
     dirId: objectIdSchema,

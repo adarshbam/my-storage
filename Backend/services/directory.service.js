@@ -858,6 +858,123 @@ export const createDirectoryLogic = async ({ name, parentDirId, userId, userRole
 
   await cacheDel("dir:meta:" + parentDirId);
   await cacheDel("dir:contents:" + parentDirId);
+
+  return {
+    _id: dirId.toString(),
+    name,
+    parentDir: parentDirId,
+    path: dirPath,
+  };
+};
+
+export const sortTreePathsByDepth = (paths = []) => {
+  const unique = Array.from(
+    new Set(
+      paths
+        .map((p) => (typeof p === "string" ? p.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "") : ""))
+        .filter(Boolean),
+    ),
+  );
+  return unique.sort((a, b) => {
+    const depthA = a.split("/").length;
+    const depthB = b.split("/").length;
+    if (depthA !== depthB) return depthA - depthB;
+    return a.localeCompare(b);
+  });
+};
+
+export const ensureDirectoryTreeLogic = async ({
+  parentDirId,
+  paths = [],
+  userId,
+  userRole,
+  rootDirId,
+}) => {
+  const req = { user: { id: userId, role: userRole } };
+  let effectiveParentId = parentDirId;
+  if (!effectiveParentId || effectiveParentId === "root" || effectiveParentId === "undefined") {
+    effectiveParentId = rootDirId.toString();
+  }
+
+  let ownerId = userId;
+  // Verify parent directory access
+  if (effectiveParentId && effectiveParentId !== rootDirId.toString()) {
+    const parentDir = await Directory.findOne({ _id: effectiveParentId })
+      .select("userId path")
+      .lean();
+    if (parentDir && parentDir.userId) {
+      ownerId = parentDir.userId.toString();
+      const canWrite = await verifyItemAccess(
+        ownerId,
+        req,
+        effectiveParentId,
+        "directory",
+        "write",
+        parentDir.path,
+      );
+      if (!canWrite) {
+        const error = new Error("You are not authorized to create folders in this directory");
+        error.status = 403;
+        throw error;
+      }
+    }
+  }
+
+  const sortedPaths = sortTreePathsByDepth(paths);
+  const resolvedMap = { "": effectiveParentId };
+  const affectedParentIds = new Set([effectiveParentId]);
+
+  for (const relPath of sortedPaths) {
+    const parts = relPath.split("/");
+    const folderName = parts[parts.length - 1];
+    const parentPath = parts.slice(0, -1).join("/");
+    const resolvedParentId = resolvedMap[parentPath] || effectiveParentId;
+
+    // Check if directory already exists under resolved parent
+    let existingDir = await Directory.findOne({
+      parentDir: resolvedParentId,
+      name: folderName,
+      userId: ownerId,
+    })
+      .select("_id")
+      .lean();
+
+    if (existingDir) {
+      resolvedMap[relPath] = existingDir._id.toString();
+    } else {
+      const newDirId = new mongoose.Types.ObjectId();
+      const dirPath = await getDirectoryPath(newDirId, resolvedParentId);
+
+      await withTransaction(async (session) => {
+        await Directory.create(
+          [
+            {
+              _id: newDirId,
+              name: folderName,
+              path: dirPath,
+              userId: ownerId,
+              type: "directory",
+              parentDir: resolvedParentId,
+            },
+          ],
+          { session },
+        );
+      });
+
+      resolvedMap[relPath] = newDirId.toString();
+      affectedParentIds.add(resolvedParentId);
+    }
+  }
+
+  // Clear Redis cache for all affected parent directories
+  await Promise.all(
+    Array.from(affectedParentIds).flatMap((id) => [
+      cacheDel("dir:meta:" + id),
+      cacheDel("dir:contents:" + id),
+    ]),
+  );
+
+  return resolvedMap;
 };
 
 export const renameDirectoryLogic = async ({ dirId, name, userId, userRole }) => {
