@@ -166,35 +166,41 @@ const TransferManager = forwardRef((props, ref) => {
   });
 
   const uploadFile = useCallback(
-    (file, dirId, existingId = null, startByte = 0) => {
+    (fileOrItem, dirId, existingId = null, startByte = 0) => {
+      const file = fileOrItem?.file || fileOrItem;
+      if (!file || typeof file.slice !== 'function' || fileOrItem?.isDirectory) return;
+
+      const targetDir = fileOrItem?.dirId || file?.targetDirId || dirId;
+      const displayName = fileOrItem?.relativePath || file?.relativePath || file?.name;
       const id = existingId || generateObjectId();
 
       if (!existingId) {
         const isPlanBlocked = isNoPlan || isNoSubscription || allowUpload === false;
         if (isPlanBlocked) {
           const subMsg = canUseFreeTrial
-            ? "Subscription required. Start 30-Day Free Trial to upload."
-            : "Active subscription required. Please choose a plan to upload.";
+            ? 'Subscription required. Start 30-Day Free Trial to upload.'
+            : 'Active subscription required. Please choose a plan to upload.';
           setTransfers((prev) => [
             ...prev,
             {
               _id: id,
-              type: "upload",
-              name: file.name,
+              type: 'upload',
+              name: displayName,
               progress: 0,
               loaded: 0,
               total: file.size,
-              status: "error",
+              status: 'error',
               errorMessage: subMsg,
               speed: 0,
               timeRemaining: 0,
               file: file,
-              dirId: dirId,
+              dirId: targetDir,
+              relativePath: fileOrItem?.relativePath || file?.relativePath,
               requiresSubscription: true,
             },
           ]);
           setMinimized(false);
-          window.dispatchEvent(new CustomEvent("subscription:prompt"));
+          window.dispatchEvent(new CustomEvent('subscription:prompt'));
           return;
         }
 
@@ -203,17 +209,18 @@ const TransferManager = forwardRef((props, ref) => {
             ...prev,
             {
               _id: id,
-              type: "upload",
-              name: file.name,
+              type: 'upload',
+              name: displayName,
               progress: 0,
               loaded: 0,
               total: file.size,
-              status: "error",
+              status: 'error',
               errorMessage: `File exceeds upload limit (${formatSize(effectiveMaxFileSize)})`,
               speed: 0,
               timeRemaining: 0,
               file: file,
-              dirId: dirId,
+              dirId: targetDir,
+              relativePath: fileOrItem?.relativePath || file?.relativePath,
             },
           ]);
           setMinimized(false);
@@ -223,21 +230,22 @@ const TransferManager = forwardRef((props, ref) => {
           ...prev,
           {
             _id: id,
-            type: "upload",
-            name: file.name,
+            type: 'upload',
+            name: displayName,
             progress: 0,
             loaded: 0,
             total: file.size,
-            status: "queued",
+            status: 'queued',
             speed: 0,
             timeRemaining: 0,
             file: file,
-            dirId: dirId,
+            dirId: targetDir,
+            relativePath: fileOrItem?.relativePath || file?.relativePath,
           },
         ]);
         setMinimized(false);
       } else {
-        updateTransfer(id, { status: "queued", speed: 0 });
+        updateTransfer(id, { status: 'queued', speed: 0 });
       }
     },
     [updateTransfer, effectiveMaxFileSize, isNoPlan, isNoSubscription, allowUpload, canUseFreeTrial],
@@ -247,29 +255,42 @@ const TransferManager = forwardRef((props, ref) => {
     (files, dirId) => {
       const isPlanBlocked = isNoPlan || isNoSubscription || allowUpload === false;
       const subMsg = canUseFreeTrial
-        ? "Subscription required. Start 30-Day Free Trial to upload."
-        : "Active subscription required. Please choose a plan to upload.";
+        ? 'Subscription required. Start 30-Day Free Trial to upload.'
+        : 'Active subscription required. Please choose a plan to upload.';
 
       if (isPlanBlocked) {
-        window.dispatchEvent(new CustomEvent("subscription:prompt"));
+        window.dispatchEvent(new CustomEvent('subscription:prompt'));
       }
 
-      const newTransfers = files.map((file) => {
-        let status = "queued";
+      const fileList = Array.isArray(files) ? files : Array.from(files || []);
+      const validItems = fileList.filter((item) => {
+        if (!item || item.isDirectory) return false;
+        const f = item.file || item;
+        return f && typeof f.slice === 'function';
+      });
+
+      if (validItems.length === 0) return;
+
+      const newTransfers = validItems.map((item) => {
+        const file = item.file || item;
+        const targetDir = item.dirId || file.targetDirId || dirId;
+        const displayName = item.relativePath || file.relativePath || file.name;
+
+        let status = 'queued';
         let errorMessage = undefined;
 
         if (isPlanBlocked) {
-          status = "error";
+          status = 'error';
           errorMessage = subMsg;
         } else if (file.size > effectiveMaxFileSize) {
-          status = "error";
+          status = 'error';
           errorMessage = `File exceeds upload limit (${formatSize(effectiveMaxFileSize)})`;
         }
 
         return {
           _id: generateObjectId(),
-          type: "upload",
-          name: file.name,
+          type: 'upload',
+          name: displayName,
           progress: 0,
           loaded: 0,
           total: file.size,
@@ -278,7 +299,8 @@ const TransferManager = forwardRef((props, ref) => {
           speed: 0,
           timeRemaining: 0,
           file: file,
-          dirId: dirId,
+          dirId: targetDir,
+          relativePath: item.relativePath || file.relativePath || null,
           requiresSubscription: isPlanBlocked,
         };
       });
