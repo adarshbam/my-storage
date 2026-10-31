@@ -199,7 +199,7 @@ export default function EmbedVideoPlayerPage() {
       : s.controls !== false;
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-black overflow-hidden relative group">
+    <div className="fixed inset-0 w-full h-full bg-black overflow-hidden group">
       <VideoPlayer
         key={activeStreamUrl}
         src={activeStreamUrl}
