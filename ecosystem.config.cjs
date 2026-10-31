@@ -1,8 +1,11 @@
+const path = require("path");
+
 module.exports = {
   apps: [
     {
       name: "vault-backend",
-      script: "./Backend/app.js",
+      cwd: __dirname,
+      script: path.join(__dirname, "Backend", "app.js"),
       instances: 2,
       exec_mode: "cluster",
       wait_ready: true,
