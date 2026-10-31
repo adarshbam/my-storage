@@ -25,6 +25,8 @@ import {
   uploadVaultMultipartPartUrl,
   uploadVaultMultipartComplete,
   uploadVaultMultipartAbort,
+  updateFilePublicAccess,
+  getFilePublicAccess,
 } from "../controllers/fileController.js";
 import { validate } from "../middlewares/validationMiddleware.js";
 import {
@@ -46,6 +48,8 @@ import {
   uploadVaultMultipartPartUrlSchema,
   uploadVaultMultipartCompleteSchema,
   uploadVaultMultipartAbortSchema,
+  updateFilePublicAccessSchema,
+  getFilePublicAccessSchema,
 } from "../validators/fileSchema.js";
 import {
   searchLimiter,
@@ -276,6 +280,24 @@ router.delete(
   throttle(100, 12, "file-delete"),
   validate(deleteFileSchema),
   deleteFile,
+);
+
+
+router.get(
+  "/:fileId/public-access",
+  checkAuth,
+  directoryReadLimiter,
+  validate(getFilePublicAccessSchema),
+  getFilePublicAccess,
+);
+
+router.post(
+  "/:fileId/public-access",
+  checkAuth,
+  loadPlanContext,
+  standardWriteLimiter,
+  validate(updateFilePublicAccessSchema),
+  updateFilePublicAccess,
 );
 
 export default router;

@@ -19,7 +19,14 @@ import {
 } from "../databases/redis.js";
 import { deleteByParentChain } from "./trash.service.js";
 import { copyInB2, deleteFromB2, deleteMultipleFromB2 } from "../integrations/storage/s3.client.js";
-import { createCloudflareCdnDownloadUrl } from "../integrations/cdn/cloudflare.service.js";
+import {
+  createCloudflareCdnDownloadUrl,
+  generatePublicMediaToken,
+  createPublicMediaCdnUrl,
+} from "../integrations/cdn/cloudflare.service.js";
+import { CLIENT_URL, BACKEND_URL } from "../config/config.js";
+import crypto from "node:crypto";
+import { extractHostname, matchDomainPattern } from "./file.service.js";
 import User from "../models/userModel.js";
 import {
   storageThresholdReached,
@@ -1359,4 +1366,326 @@ export const deleteItemsBatchLogic = async ({ items, userId, userRole, permanent
   await Promise.all(
     Array.from(keysToInvalidate).map((key) => cacheDel(key)),
   );
+};
+
+
+// ==========================================
+// Folder Public Media & Manifest Services
+// ==========================================
+
+export const updateDirectoryPublicAccessLogic = async ({
+  dirId,
+  userId,
+  userRole,
+  planContext,
+  enabled,
+  allowedOrigins = ["*"],
+  playerSettings = {},
+}) => {
+  const req = { user: { id: userId, role: userRole } };
+  const dir = await Directory.findOne({ _id: dirId })
+    .select("userId name path publicAccess")
+    .lean();
+
+  if (!dir) {
+    const error = new Error("Directory not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const ownerId = dir.userId ? dir.userId.toString() : req.user.id;
+  const canWrite = await verifyItemAccess(
+    ownerId,
+    req,
+    dirId,
+    "directory",
+    "write",
+    dir.path,
+  );
+  if (!canWrite) {
+    const error = new Error("You are not authorized to update sharing settings for this directory");
+    error.status = 403;
+    throw error;
+  }
+
+  let publicToken = dir.publicAccess?.token;
+  if (enabled && !publicToken) {
+    publicToken = crypto.randomBytes(16).toString("hex");
+  }
+
+  const cleanOrigins = Array.isArray(allowedOrigins) && allowedOrigins.length > 0
+    ? allowedOrigins.map((o) => o.trim()).filter(Boolean)
+    : ["*"];
+
+  const updatedPublicAccess = {
+    enabled: Boolean(enabled),
+    token: enabled ? publicToken : (dir.publicAccess?.token || null),
+    allowedOrigins: cleanOrigins.length > 0 ? cleanOrigins : ["*"],
+    playerSettings: {
+      accentColor: playerSettings.accentColor || dir.publicAccess?.playerSettings?.accentColor || "#00f0ff",
+      hideBranding: Boolean(playerSettings.hideBranding ?? dir.publicAccess?.playerSettings?.hideBranding ?? false),
+      customWatermark: {
+        url: playerSettings.customWatermark?.url ?? dir.publicAccess?.playerSettings?.customWatermark?.url ?? "",
+        position: playerSettings.customWatermark?.position || dir.publicAccess?.playerSettings?.customWatermark?.position || "top-right",
+        clickUrl: playerSettings.customWatermark?.clickUrl ?? dir.publicAccess?.playerSettings?.customWatermark?.clickUrl ?? "",
+        opacity: typeof playerSettings.customWatermark?.opacity === "number" ? playerSettings.customWatermark.opacity : (dir.publicAccess?.playerSettings?.customWatermark?.opacity ?? 0.8),
+      },
+      autoPlay: Boolean(playerSettings.autoPlay ?? dir.publicAccess?.playerSettings?.autoPlay ?? false),
+      loop: Boolean(playerSettings.loop ?? dir.publicAccess?.playerSettings?.loop ?? false),
+      muted: Boolean(playerSettings.muted ?? dir.publicAccess?.playerSettings?.muted ?? false),
+      controls: Boolean(playerSettings.controls ?? dir.publicAccess?.playerSettings?.controls ?? true),
+      aspectRatio: playerSettings.aspectRatio || dir.publicAccess?.playerSettings?.aspectRatio || "16:9",
+      borderRadius: playerSettings.borderRadius || dir.publicAccess?.playerSettings?.borderRadius || "12px",
+    },
+    views: dir.publicAccess?.views || 0,
+    updatedAt: new Date(),
+  };
+
+  await Directory.updateOne({ _id: dirId }, { $set: { publicAccess: updatedPublicAccess } });
+
+  let manifestUrl = null;
+  let items = [];
+
+  if (enabled && publicToken) {
+    manifestUrl = `${BACKEND_URL}/share/public-folder/${publicToken}/manifest`;
+    
+    const files = await File.find({ parentDir: dirId })
+      .select("_id name extension size contentVersion hasThumbnail")
+      .lean();
+
+    items = files.map((file) => {
+      const edgeToken = generatePublicMediaToken({
+        fileId: file._id,
+        contentVersion: file.contentVersion || 1,
+        allowedOrigins: updatedPublicAccess.allowedOrigins,
+      });
+
+      const streamUrl = createPublicMediaCdnUrl({
+        fileId: file._id,
+        extension: file.extension || "",
+        token: edgeToken,
+        filename: file.name,
+      });
+
+      const embedUrl = `${CLIENT_URL}/embed/${publicToken}?fileId=${file._id}`;
+      const cleanAspect = (updatedPublicAccess.playerSettings.aspectRatio || "16:9").replace(":", "/");
+      const iframeCode = `<iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="aspect-ratio: ${cleanAspect}; border-radius: ${updatedPublicAccess.playerSettings.borderRadius};"></iframe>`;
+      const videoTagCode = `<video src="${streamUrl}" controls playsinline preload="metadata"></video>`;
+
+      return {
+        id: file._id,
+        name: file.name,
+        size: file.size,
+        extension: file.extension,
+        streamUrl,
+        embedUrl,
+        iframeCode,
+        videoTagCode,
+      };
+    });
+  }
+
+  const primaryItem = items.length > 0 ? items[0] : null;
+  const streamUrl = primaryItem ? primaryItem.streamUrl : "";
+  const embedUrl = updatedPublicAccess.enabled && publicToken
+    ? `${CLIENT_URL}/embed/${publicToken}`
+    : "";
+
+  return {
+    success: true,
+    publicAccess: updatedPublicAccess,
+    manifestUrl,
+    items,
+    streamUrl,
+    embedUrl,
+  };
+};
+
+export const getDirectoryPublicAccessLogic = async ({ dirId, userId, userRole }) => {
+  const req = { user: { id: userId, role: userRole } };
+  const dir = await Directory.findOne({ _id: dirId })
+    .select("userId name path publicAccess")
+    .lean();
+
+  if (!dir) {
+    const error = new Error("Directory not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const ownerId = dir.userId ? dir.userId.toString() : req.user.id;
+  const canRead = await verifyItemAccess(
+    ownerId,
+    req,
+    dirId,
+    "directory",
+    "read",
+    dir.path,
+  );
+  if (!canRead) {
+    const error = new Error("Unauthorized to access sharing settings");
+    error.status = 403;
+    throw error;
+  }
+
+  const publicAccess = dir.publicAccess || {
+    enabled: false,
+    token: null,
+    allowedOrigins: ["*"],
+    playerSettings: {
+      accentColor: "#00f0ff",
+      hideBranding: false,
+      customWatermark: { url: "", position: "top-right", clickUrl: "", opacity: 0.8 },
+      autoPlay: false,
+      loop: false,
+      muted: false,
+      controls: true,
+      aspectRatio: "16:9",
+      borderRadius: "12px",
+    },
+    views: 0,
+  };
+
+  let manifestUrl = null;
+  let items = [];
+
+  if (publicAccess.enabled && publicAccess.token) {
+    manifestUrl = `${BACKEND_URL}/share/public-folder/${publicAccess.token}/manifest`;
+
+    const files = await File.find({ parentDir: dirId })
+      .select("_id name extension size contentVersion hasThumbnail")
+      .lean();
+
+    items = files.map((file) => {
+      const edgeToken = generatePublicMediaToken({
+        fileId: file._id,
+        contentVersion: file.contentVersion || 1,
+        allowedOrigins: publicAccess.allowedOrigins,
+      });
+
+      const streamUrl = createPublicMediaCdnUrl({
+        fileId: file._id,
+        extension: file.extension || "",
+        token: edgeToken,
+        filename: file.name,
+      });
+
+      const embedUrl = `${CLIENT_URL}/embed/${publicAccess.token}?fileId=${file._id}`;
+      const cleanAspect = (publicAccess.playerSettings?.aspectRatio || "16:9").replace(":", "/");
+      const iframeCode = `<iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="aspect-ratio: ${cleanAspect}; border-radius: ${publicAccess.playerSettings?.borderRadius || "12px"};"></iframe>`;
+      const videoTagCode = `<video src="${streamUrl}" controls playsinline preload="metadata"></video>`;
+
+      return {
+        id: file._id,
+        name: file.name,
+        size: file.size,
+        extension: file.extension,
+        streamUrl,
+        embedUrl,
+        iframeCode,
+        videoTagCode,
+      };
+    });
+  }
+
+  const primaryItem = items.length > 0 ? items[0] : null;
+  const streamUrl = primaryItem ? primaryItem.streamUrl : "";
+  const embedUrl = publicAccess.enabled && publicAccess.token
+    ? `${CLIENT_URL}/embed/${publicAccess.token}`
+    : "";
+
+  return {
+    publicAccess,
+    manifestUrl,
+    items,
+    streamUrl,
+    embedUrl,
+  };
+};
+
+export const getPublicFolderManifestByTokenLogic = async ({ token, origin, referer, fileId }) => {
+  if (!token) {
+    const error = new Error("Token is required");
+    error.status = 400;
+    throw error;
+  }
+
+  const dir = await Directory.findOne({
+    "publicAccess.token": token,
+    "publicAccess.enabled": true,
+  })
+    .select("_id name publicAccess")
+    .lean();
+
+  if (!dir) {
+    const error = new Error("Public folder not found or has been revoked");
+    error.status = 404;
+    throw error;
+  }
+
+  const allowedOrigins = dir.publicAccess.allowedOrigins || ["*"];
+  const isAllowedAnywhere = allowedOrigins.includes("*");
+
+  if (!isAllowedAnywhere) {
+    const clientHost = extractHostname(origin) || extractHostname(referer);
+    const isDomainAllowed = allowedOrigins.some((pattern) => matchDomainPattern(clientHost, pattern));
+    if (!isDomainAllowed) {
+      const error = new Error("Embedding is restricted to authorized domains for this folder");
+      error.status = 403;
+      error.code = "DOMAIN_RESTRICTED";
+      throw error;
+    }
+  }
+
+  Directory.updateOne({ _id: dir._id }, { $inc: { "publicAccess.views": 1 } }).catch((err) =>
+    console.error("Async view increment failed:", err.message)
+  );
+
+  const query = { parentDir: dir._id };
+  if (fileId) {
+    query._id = fileId;
+  }
+
+  const files = await File.find(query)
+    .select("_id name extension size contentVersion hasThumbnail")
+    .lean();
+
+  const items = files.map((file) => {
+    const edgeToken = generatePublicMediaToken({
+      fileId: file._id,
+      contentVersion: file.contentVersion || 1,
+      allowedOrigins,
+    });
+
+    const streamUrl = createPublicMediaCdnUrl({
+      fileId: file._id,
+      extension: file.extension || "",
+      token: edgeToken,
+      filename: file.name,
+    });
+
+    const embedUrl = `${CLIENT_URL}/embed/${token}?fileId=${file._id}`;
+    const cleanAspect = (dir.publicAccess.playerSettings?.aspectRatio || "16:9").replace(":", "/");
+    const iframeCode = `<iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="aspect-ratio: ${cleanAspect}; border-radius: ${dir.publicAccess.playerSettings?.borderRadius || "12px"};"></iframe>`;
+    const videoTagCode = `<video src="${streamUrl}" controls playsinline preload="metadata"></video>`;
+
+    return {
+      id: file._id,
+      name: file.name,
+      size: file.size,
+      extension: file.extension,
+      streamUrl,
+      embedUrl,
+      iframeCode,
+      videoTagCode,
+    };
+  });
+
+  return {
+    folderId: dir._id,
+    folderName: dir.name,
+    playerSettings: dir.publicAccess.playerSettings,
+    items,
+    totalItems: items.length,
+  };
 };

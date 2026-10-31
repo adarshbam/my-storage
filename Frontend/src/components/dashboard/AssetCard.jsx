@@ -20,6 +20,7 @@ import {
   FolderOpen,
   FileCode,
   FolderInput,
+  Globe,
 } from "lucide-react";
 import getFileImage, { renderFileIcon } from "../../lib/FileImages";
 import { formatSize, isSpecialFolder } from "../../lib/utils";
@@ -181,6 +182,7 @@ export default function AssetCard({
   onCloneToVault = null,
   onEdit = null,
   onMove = null,
+  onPublicMedia = null,
   specialView = null,
 }) {
   const navigate = useNavigate();
@@ -370,6 +372,12 @@ export default function AssetCard({
             <div className="status-dot status-dot-accent" />
             <span className="text-[10px] text-slate-500 dark:text-white/50">Encrypted</span>
           </div>
+          {item.publicAccess?.enabled && (
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-sans text-[11px] font-medium">
+              <Globe size={11} className="shrink-0" />
+              <span>CDN Live</span>
+            </div>
+          )}
           {(item.isShared || provider !== "local") && (
             <div className="flex items-center gap-1">
               <div className="status-dot status-dot-accent" />
@@ -443,6 +451,18 @@ export default function AssetCard({
               title="Share"
             >
               <Share2 size={16} />
+            </button>
+          )}
+          {!isTrash && !isSpecial && provider === "local" && onPublicMedia && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPublicMedia(item, isDirectory ? "directory" : "file");
+              }}
+              className="p-1.5 text-slate-400 hover:text-emerald-500 bg-slate-100 dark:bg-black/40 hover:bg-emerald-500/10 rounded-lg transition-all"
+              title="Public Stream & Embed"
+            >
+              <Globe size={16} />
             </button>
           )}
           {onDetails && (
@@ -620,6 +640,15 @@ export default function AssetCard({
             <EncryptionBadgeIcon size={12} className="text-accent-primary" />
             <span className="text-[10px] font-mono text-white/70">AES-256</span>
           </div>
+          {item.publicAccess?.enabled && (
+            <div
+              className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-emerald-500/20 backdrop-blur-md border border-emerald-500/40 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+              title="Public Stream & Embed Active"
+            >
+              <Globe size={10} className="shrink-0" />
+              <span className="text-[9px] font-mono font-bold uppercase tracking-wider">CDN Live</span>
+            </div>
+          )}
           {item.vaultWorkspace?.rootDirectoryId && (
             <div
               className="flex items-center gap-1 px-1.5 py-1 rounded-md backdrop-blur-md border border-accent-border bg-accent-soft text-accent-primary font-mono font-bold text-[9px] uppercase tracking-wider shadow-sm"
@@ -854,6 +883,18 @@ export default function AssetCard({
               >
                 <Share2 size={14} className="shrink-0 text-accent-primary" />
                 Share
+              </button>
+            )}
+            {!isTrash && !isSpecial && provider === "local" && onPublicMedia && (
+              <button
+                onClick={() => {
+                  closeMenu();
+                  onPublicMedia(item, isDirectory ? "directory" : "file");
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-slate-700 dark:text-white/80 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors rounded-xl"
+              >
+                <Globe size={14} className="shrink-0 text-emerald-500" />
+                Public Stream & Embed
               </button>
             )}
             {canCopyCut && onCopy && (

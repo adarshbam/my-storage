@@ -11,6 +11,8 @@ import {
   renameDirectory,
   copyItems,
   deleteItemsBatch,
+  updateDirectoryPublicAccess,
+  getDirectoryPublicAccess,
 } from "../controllers/directoryController.js";
 import { validate } from "../middlewares/validationMiddleware.js";
 import {
@@ -21,6 +23,8 @@ import {
   moveDirectorySchema,
   copyDirectorySchema,
   deleteDirectoryBatchSchema,
+  updateDirectoryPublicAccessSchema,
+  getDirectoryPublicAccessSchema,
 } from "../validators/directorySchema.js";
 import { standardWriteLimiter, directoryReadLimiter } from "../middlewares/rateLimiter.js";
 import throttle from "../utils/throttle.js";
@@ -103,6 +107,24 @@ router.delete(
   throttle(100, 12, "dir-delete"),
   validate(deleteDirectorySchema),
   deleteDirectory,
+);
+
+
+router.get(
+  "/:dirId/public-access",
+  checkAuth,
+  directoryReadLimiter,
+  validate(getDirectoryPublicAccessSchema),
+  getDirectoryPublicAccess,
+);
+
+router.post(
+  "/:dirId/public-access",
+  checkAuth,
+  loadPlanContext,
+  standardWriteLimiter,
+  validate(updateDirectoryPublicAccessSchema),
+  updateDirectoryPublicAccess,
 );
 
 export default router;

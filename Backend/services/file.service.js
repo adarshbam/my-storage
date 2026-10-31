@@ -38,7 +38,12 @@ import { processThumbnailInWorker } from "./workerPool.service.js";
 import {
   createCloudflareCdnDownloadUrl,
   createCdnDownloadUrl,
+  generatePublicMediaToken,
+  createPublicMediaCdnUrl,
+  verifyPublicMediaToken,
 } from "../integrations/cdn/cloudflare.service.js";
+import { CLIENT_URL, BACKEND_URL } from "../config/config.js";
+import crypto from "node:crypto";
 import { withTransaction } from "../utils/transaction.js";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -2118,4 +2123,289 @@ export const saveFileLogic = async ({ fileId, userId, userRole, content }) => {
     await cacheDel("dir:meta:" + file.parentDir.toString());
     await cacheDel("dir:contents:" + file.parentDir.toString());
   }
+};
+
+
+// ==========================================
+// Public Media & Embed Stream Services
+// ==========================================
+
+export function extractHostname(urlStr) {
+  if (!urlStr || typeof urlStr !== "string") return null;
+  try {
+    const parsed = new URL(urlStr.startsWith("http") ? urlStr : `https://${urlStr}`);
+    return parsed.hostname.toLowerCase();
+  } catch {
+    return urlStr.replace(/^https?:\/\//i, "").split(/[:/]/)[0].toLowerCase();
+  }
+}
+
+export function matchDomainPattern(host, pattern) {
+  if (!host || !pattern) return false;
+  const h = host.toLowerCase().trim();
+  const p = pattern.toLowerCase().trim();
+  if (p === "*" || p === h) return true;
+  if (p.startsWith("*.")) {
+    const rootDomain = p.slice(2);
+    return h === rootDomain || h.endsWith(`.${rootDomain}`);
+  }
+  return false;
+}
+
+export const updateFilePublicAccessLogic = async ({
+  fileId,
+  userId,
+  userRole,
+  planContext,
+  enabled,
+  allowedOrigins = ["*"],
+  playerSettings = {},
+}) => {
+  const req = { user: { id: userId, role: userRole } };
+  const file = await File.findOne({ _id: fileId })
+    .select("userId name extension size contentVersion publicAccess path")
+    .lean();
+
+  if (!file) {
+    const error = new Error("File not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const ownerId = file.userId ? file.userId.toString() : req.user.id;
+  const canWrite = await verifyItemAccess(
+    ownerId,
+    req,
+    fileId,
+    "file",
+    "write",
+    file.path,
+  );
+  if (!canWrite) {
+    const error = new Error("You are not authorized to update sharing settings for this file");
+    error.status = 403;
+    throw error;
+  }
+
+  let publicToken = file.publicAccess?.token;
+  if (enabled && !publicToken) {
+    publicToken = crypto.randomBytes(16).toString("hex");
+  }
+
+  const cleanOrigins = Array.isArray(allowedOrigins) && allowedOrigins.length > 0
+    ? allowedOrigins.map((o) => o.trim()).filter(Boolean)
+    : ["*"];
+
+  const updatedPublicAccess = {
+    enabled: Boolean(enabled),
+    token: enabled ? publicToken : (file.publicAccess?.token || null),
+    allowedOrigins: cleanOrigins.length > 0 ? cleanOrigins : ["*"],
+    playerSettings: {
+      accentColor: playerSettings.accentColor || file.publicAccess?.playerSettings?.accentColor || "#00f0ff",
+      hideBranding: Boolean(playerSettings.hideBranding ?? file.publicAccess?.playerSettings?.hideBranding ?? false),
+      customWatermark: {
+        url: playerSettings.customWatermark?.url ?? file.publicAccess?.playerSettings?.customWatermark?.url ?? "",
+        position: playerSettings.customWatermark?.position || file.publicAccess?.playerSettings?.customWatermark?.position || "top-right",
+        clickUrl: playerSettings.customWatermark?.clickUrl ?? file.publicAccess?.playerSettings?.customWatermark?.clickUrl ?? "",
+        opacity: typeof playerSettings.customWatermark?.opacity === "number" ? playerSettings.customWatermark.opacity : (file.publicAccess?.playerSettings?.customWatermark?.opacity ?? 0.8),
+      },
+      autoPlay: Boolean(playerSettings.autoPlay ?? file.publicAccess?.playerSettings?.autoPlay ?? false),
+      loop: Boolean(playerSettings.loop ?? file.publicAccess?.playerSettings?.loop ?? false),
+      muted: Boolean(playerSettings.muted ?? file.publicAccess?.playerSettings?.muted ?? false),
+      controls: Boolean(playerSettings.controls ?? file.publicAccess?.playerSettings?.controls ?? true),
+      aspectRatio: playerSettings.aspectRatio || file.publicAccess?.playerSettings?.aspectRatio || "16:9",
+      borderRadius: playerSettings.borderRadius || file.publicAccess?.playerSettings?.borderRadius || "12px",
+    },
+    views: file.publicAccess?.views || 0,
+    updatedAt: new Date(),
+  };
+
+  await File.updateOne({ _id: fileId }, { $set: { publicAccess: updatedPublicAccess } });
+
+  let streamUrl = null;
+  let embedUrl = null;
+  let iframeCode = null;
+  let videoTagCode = null;
+
+  if (enabled && publicToken) {
+    const edgeToken = generatePublicMediaToken({
+      fileId: file._id,
+      contentVersion: file.contentVersion || 1,
+      allowedOrigins: updatedPublicAccess.allowedOrigins,
+    });
+
+    streamUrl = createPublicMediaCdnUrl({
+      fileId: file._id,
+      extension: file.extension || "",
+      token: edgeToken,
+      filename: file.name,
+    });
+
+    embedUrl = `${CLIENT_URL}/embed/${publicToken}`;
+    const cleanAspect = (updatedPublicAccess.playerSettings.aspectRatio || "16:9").replace(":", "/");
+    iframeCode = `<iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="aspect-ratio: ${cleanAspect}; border-radius: ${updatedPublicAccess.playerSettings.borderRadius};"></iframe>`;
+    videoTagCode = `<video src="${streamUrl}" controls playsinline preload="metadata"></video>`;
+  }
+
+  return {
+    success: true,
+    publicAccess: updatedPublicAccess,
+    streamUrl,
+    embedUrl,
+    iframeCode,
+    videoTagCode,
+  };
+};
+
+export const getFilePublicAccessLogic = async ({ fileId, userId, userRole }) => {
+  const req = { user: { id: userId, role: userRole } };
+  const file = await File.findOne({ _id: fileId })
+    .select("userId name extension size contentVersion publicAccess path")
+    .lean();
+
+  if (!file) {
+    const error = new Error("File not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const ownerId = file.userId ? file.userId.toString() : req.user.id;
+  const canRead = await verifyItemAccess(
+    ownerId,
+    req,
+    fileId,
+    "file",
+    "read",
+    file.path,
+  );
+  if (!canRead) {
+    const error = new Error("Unauthorized to access sharing settings");
+    error.status = 403;
+    throw error;
+  }
+
+  const publicAccess = file.publicAccess || {
+    enabled: false,
+    token: null,
+    allowedOrigins: ["*"],
+    playerSettings: {
+      accentColor: "#00f0ff",
+      hideBranding: false,
+      customWatermark: { url: "", position: "top-right", clickUrl: "", opacity: 0.8 },
+      autoPlay: false,
+      loop: false,
+      muted: false,
+      controls: true,
+      aspectRatio: "16:9",
+      borderRadius: "12px",
+    },
+    views: 0,
+  };
+
+  let streamUrl = null;
+  let embedUrl = null;
+  let iframeCode = null;
+  let videoTagCode = null;
+
+  if (publicAccess.enabled && publicAccess.token) {
+    const edgeToken = generatePublicMediaToken({
+      fileId: file._id,
+      contentVersion: file.contentVersion || 1,
+      allowedOrigins: publicAccess.allowedOrigins,
+    });
+
+    streamUrl = createPublicMediaCdnUrl({
+      fileId: file._id,
+      extension: file.extension || "",
+      token: edgeToken,
+      filename: file.name,
+    });
+
+    embedUrl = `${CLIENT_URL}/embed/${publicAccess.token}`;
+    const cleanAspect = (publicAccess.playerSettings?.aspectRatio || "16:9").replace(":", "/");
+    iframeCode = `<iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="aspect-ratio: ${cleanAspect}; border-radius: ${publicAccess.playerSettings?.borderRadius || "12px"};"></iframe>`;
+    videoTagCode = `<video src="${streamUrl}" controls playsinline preload="metadata"></video>`;
+  }
+
+  return {
+    publicAccess,
+    streamUrl,
+    embedUrl,
+    iframeCode,
+    videoTagCode,
+  };
+};
+
+export const getPublicMediaByTokenLogic = async ({ token, origin, referer }) => {
+  if (!token) {
+    const error = new Error("Token is required");
+    error.status = 400;
+    throw error;
+  }
+
+  const file = await File.findOne({
+    "publicAccess.token": token,
+    "publicAccess.enabled": true,
+  })
+    .select("_id name extension size contentVersion publicAccess hasThumbnail")
+    .lean();
+
+  if (!file) {
+    const dir = await Directory.findOne({
+      "publicAccess.token": token,
+      "publicAccess.enabled": true,
+    })
+      .select("_id name publicAccess")
+      .lean();
+
+    if (dir) {
+      const { getPublicFolderManifestByTokenLogic } = await import("./directory.service.js");
+      return await getPublicFolderManifestByTokenLogic({ token, origin, referer });
+    }
+
+    const error = new Error("Public media not found or has been revoked");
+    error.status = 404;
+    throw error;
+  }
+
+  const allowedOrigins = file.publicAccess.allowedOrigins || ["*"];
+  const isAllowedAnywhere = allowedOrigins.includes("*");
+
+  if (!isAllowedAnywhere) {
+    const clientHost = extractHostname(origin) || extractHostname(referer);
+    const isDomainAllowed = allowedOrigins.some((pattern) => matchDomainPattern(clientHost, pattern));
+    if (!isDomainAllowed) {
+      const error = new Error("Embedding is restricted to authorized domains for this video");
+      error.status = 403;
+      error.code = "DOMAIN_RESTRICTED";
+      throw error;
+    }
+  }
+
+  File.updateOne({ _id: file._id }, { $inc: { "publicAccess.views": 1 } }).catch((err) =>
+    console.error("Async view increment failed:", err.message)
+  );
+
+  const edgeToken = generatePublicMediaToken({
+    fileId: file._id,
+    contentVersion: file.contentVersion || 1,
+    allowedOrigins,
+  });
+
+  const streamUrl = createPublicMediaCdnUrl({
+    fileId: file._id,
+    extension: file.extension || "",
+    token: edgeToken,
+    filename: file.name,
+  });
+
+  return {
+    fileId: file._id,
+    name: file.name,
+    extension: file.extension,
+    size: file.size,
+    streamUrl,
+    playerSettings: file.publicAccess.playerSettings,
+    views: (file.publicAccess.views || 0) + 1,
+  };
 };

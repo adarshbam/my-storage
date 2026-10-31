@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Unlink,
   Info,
+  Globe,
 } from "lucide-react";
 import { formatSize } from "../../lib/utils";
 import { SERVER_URL } from "../../lib/api";
@@ -42,6 +43,7 @@ export default function FileCard({
   viewMode = "grid",
   isIntegrationRoot = false,
   readOnly = false,
+  onPublicMedia = null,
   ...props
 }) {
   const [showMenu, setShowMenu] = useState(false);
@@ -134,6 +136,12 @@ export default function FileCard({
       onDrop={readOnly ? undefined : (e) => onDrop(e, item)}
       {...props}
     >
+            {viewMode === "grid" && item?.publicAccess?.enabled && (
+        <div className="absolute top-2 left-2 z-20 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/90 text-white text-[9px] font-semibold backdrop-blur-md shadow-sm" title="Public Stream Active">
+          <Globe size={10} />
+          <span>CDN Live</span>
+        </div>
+      )}
       {/* Visual Thumbnail Area */}
       <div
         className={
@@ -268,6 +276,17 @@ export default function FileCard({
             >
               <Info size={14} /> Details
             </button>
+                        {!isTrash && !isIntegrationRoot && onPublicMedia && (
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  onPublicMedia(item, type);
+                }}
+                className="w-full text-left px-3.5 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 flex items-center gap-2"
+              >
+                <Globe size={14} className="text-emerald-500" /> Public Stream & Embed
+              </button>
+            )}
             {!isTrash && (
               <>
                 <button

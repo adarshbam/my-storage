@@ -14,6 +14,7 @@ export default {
         vault: {
           black: "#030706",
           bg: "rgb(var(--bg-base-rgb) / <alpha-value>)",
+          base: "rgb(var(--bg-base-rgb) / <alpha-value>)",
           surface: "rgb(var(--bg-surface-rgb) / <alpha-value>)",
           panel: "rgb(var(--bg-panel-rgb) / <alpha-value>)",
           elevated: "rgb(var(--bg-elevated-rgb) / <alpha-value>)",

@@ -1,6 +1,6 @@
 // Cloudflare Edge Gateway Worker for Vault Storage CDN
 // Proxies Backblaze B2 Private Bucket via Bandwidth Alliance with HMAC Edge Authentication,
-// Edge Caching (caches.default), Range Streaming, and Full CORS Support.
+// Edge Caching (caches.default), Range Streaming, Domain Restrictions, and Full CORS Support.
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -92,9 +92,15 @@ export default {
       // 1. Handle CORS Preflight (OPTIONS)
       // ------------------------------------------------------------
       if (request.method === "OPTIONS") {
+        const origin = request.headers.get("Origin");
+        const headers = new Headers(CORS_HEADERS);
+        if (origin) {
+          headers.set("Access-Control-Allow-Origin", origin);
+          headers.set("Vary", "Origin");
+        }
         return new Response(null, {
           status: 204,
-          headers: CORS_HEADERS,
+          headers,
         });
       }
 
@@ -121,9 +127,12 @@ export default {
           body.purgeThumbnail === true ||
           url.searchParams.get("purgeThumbnail") === "true";
 
-        if (!targetPath || !targetPath.startsWith("/files/")) {
+        if (
+          !targetPath ||
+          (!targetPath.startsWith("/files/") && !targetPath.startsWith("/media/"))
+        ) {
           return createCorsJsonResponse(
-            { error: "Invalid target path (must start with /files/)" },
+            { error: "Invalid target path (must start with /files/ or /media/)" },
             400,
           );
         }
@@ -181,6 +190,15 @@ export default {
 
         objectKey = fileName;
         routeType = "file";
+      } else if (pathname.startsWith("/media/")) {
+        const fileName = decodeURIComponent(pathname.slice("/media/".length));
+
+        if (!fileName || fileName.includes("/")) {
+          return createCorsResponse("Invalid media path.", 400);
+        }
+
+        objectKey = fileName;
+        routeType = "public-media";
       } else {
         return createCorsResponse("Not Found.", 404);
       }
@@ -193,65 +211,151 @@ export default {
       }
 
       // ------------------------------------------------------------
-      // 7. Validate version, expiry, and signature parameters
+      // 7. Authentication & Token Verification
       // ------------------------------------------------------------
-      const v = url.searchParams.get("v");
-      const expires = url.searchParams.get("exp");
-      const signature = url.searchParams.get("sig");
+      let v;
+      let effectiveAllowedOrigin = "*";
 
-      if (!v || !expires || !signature) {
-        return createCorsResponse("Signed URL required.", 401);
-      }
+      const publicToken = url.searchParams.get("token");
+      const isPublicMediaRequest =
+        routeType === "public-media" ||
+        (Boolean(publicToken) && publicToken.includes("."));
 
-      const versionNum = Number(v);
-      if (!Number.isInteger(versionNum) || versionNum < 1) {
-        return createCorsResponse("Invalid version parameter.", 400);
-      }
+      if (isPublicMediaRequest) {
+        // --- Mode A: Stateless Public Media Stream ---
+        if (!publicToken || !publicToken.includes(".")) {
+          return createCorsResponse("Public media token required.", 401);
+        }
 
-      const expiresAt = Number(expires);
-      if (!Number.isInteger(expiresAt)) {
-        return createCorsResponse("Invalid expiration.", 400);
-      }
+        const [payloadB64, providedSig] = publicToken.split(".");
+        if (!payloadB64 || !providedSig) {
+          return createCorsResponse("Invalid public media token.", 400);
+        }
 
-      const now = Math.floor(Date.now() / 1000);
-      if (expiresAt <= now) {
-        return createCorsResponse("Signed URL has expired.", 403);
+        // Verify HMAC-SHA256 signature over payloadB64
+        const key = await crypto.subtle.importKey(
+          "raw",
+          new TextEncoder().encode(env.CDN_SIGNING_SECRET),
+          {
+            name: "HMAC",
+            hash: "SHA-256",
+          },
+          false,
+          ["verify"],
+        );
+
+        const sigBytes = hexToBytes(providedSig);
+        if (!sigBytes) {
+          return createCorsResponse("Invalid token signature.", 403);
+        }
+
+        const validSignature = await crypto.subtle.verify(
+          "HMAC",
+          key,
+          sigBytes,
+          new TextEncoder().encode(payloadB64),
+        );
+
+        if (!validSignature) {
+          return createCorsResponse("Tampered or invalid public media token.", 403);
+        }
+
+        const payload = decodeBase64Url(payloadB64);
+        if (!payload || !payload.f) {
+          return createCorsResponse("Invalid token payload.", 400);
+        }
+
+        // Verify token matches requested fileId
+        const requestedFileId = objectKey.replace(/.[^/.]+$/, "");
+        if (String(payload.f) !== requestedFileId) {
+          return createCorsResponse("Token not authorized for this media file.", 403);
+        }
+
+        // Enforce domain restrictions
+        const allowedOrigins = payload.o || ["*"];
+        const isAllowedAnywhere = allowedOrigins.includes("*");
+
+        const requestOrigin = request.headers.get("Origin");
+        const requestReferer = request.headers.get("Referer");
+
+        if (!isAllowedAnywhere) {
+          const clientHost = extractHost(requestOrigin) || extractHost(requestReferer);
+          const isPermitted = isDomainAllowed(clientHost, allowedOrigins);
+          if (!isPermitted) {
+            return createCorsResponse(
+              "Forbidden: Domain not authorized to stream or embed this media asset.",
+              403,
+              { "X-Vault-Security": "Domain-Restricted" },
+            );
+          }
+        }
+
+        if (
+          requestOrigin &&
+          (isAllowedAnywhere || isDomainAllowed(extractHost(requestOrigin), allowedOrigins))
+        ) {
+          effectiveAllowedOrigin = requestOrigin;
+        }
+
+        v = payload.v || 1;
+      } else {
+        // --- Mode B: Standard Private Signed URL ---
+        v = url.searchParams.get("v");
+        const expires = url.searchParams.get("exp");
+        const signature = url.searchParams.get("sig");
+
+        if (!v || !expires || !signature) {
+          return createCorsResponse("Signed URL required.", 401);
+        }
+
+        const versionNum = Number(v);
+        if (!Number.isInteger(versionNum) || versionNum < 1) {
+          return createCorsResponse("Invalid version parameter.", 400);
+        }
+
+        const expiresAt = Number(expires);
+        if (!Number.isInteger(expiresAt)) {
+          return createCorsResponse("Invalid expiration.", 400);
+        }
+
+        const now = Math.floor(Date.now() / 1000);
+        if (expiresAt <= now) {
+          return createCorsResponse("Signed URL has expired.", 403);
+        }
+
+        // Verify HMAC-SHA256 signature
+        const dataToVerify = `${pathname}:${v}:${expires}`;
+
+        const key = await crypto.subtle.importKey(
+          "raw",
+          new TextEncoder().encode(env.CDN_SIGNING_SECRET),
+          {
+            name: "HMAC",
+            hash: "SHA-256",
+          },
+          false,
+          ["verify"],
+        );
+
+        const providedSignatureBytes = hexToBytes(signature);
+        if (!providedSignatureBytes) {
+          return createCorsResponse("Invalid signature.", 403);
+        }
+
+        const validSignature = await crypto.subtle.verify(
+          "HMAC",
+          key,
+          providedSignatureBytes,
+          new TextEncoder().encode(dataToVerify),
+        );
+
+        if (!validSignature) {
+          return createCorsResponse("Invalid signature.", 403);
+        }
       }
 
       // ------------------------------------------------------------
-      // 8. Verify HMAC-SHA256 signature
-      // ------------------------------------------------------------
-      const dataToVerify = `${pathname}:${v}:${expires}`;
-
-      const key = await crypto.subtle.importKey(
-        "raw",
-        new TextEncoder().encode(env.CDN_SIGNING_SECRET),
-        {
-          name: "HMAC",
-          hash: "SHA-256",
-        },
-        false,
-        ["verify"],
-      );
-
-      const providedSignatureBytes = hexToBytes(signature);
-      if (!providedSignatureBytes) {
-        return createCorsResponse("Invalid signature.", 403);
-      }
-
-      const validSignature = await crypto.subtle.verify(
-        "HMAC",
-        key,
-        providedSignatureBytes,
-        new TextEncoder().encode(dataToVerify),
-      );
-
-      if (!validSignature) {
-        return createCorsResponse("Invalid signature.", 403);
-      }
-
-      // ------------------------------------------------------------
-      // 9. Check Cloudflare Cache (caches.default) using canonical key
+      // 8. Check Cloudflare Cache (caches.default) using canonical key
       // ------------------------------------------------------------
       const isDownload =
         url.searchParams.get("action") === "download" ||
@@ -260,17 +364,17 @@ export default {
       const requestedName =
         url.searchParams.get("name") || objectKey.split("/").pop();
 
-      const cache = caches.default;
+      const cache = typeof caches !== 'undefined' ? caches.default : null;
       const canonicalUrl = `${url.origin}${pathname}?v=${v}`;
       const cacheKey = new Request(canonicalUrl, {
         method: "GET",
         headers: request.headers,
       });
 
-      const cachedResponse = await cache.match(cacheKey);
-      if (cachedResponse) {
+      const cachedResponse = cache ? await cache.match(cacheKey) : null;
+      if (cache && cachedResponse) {
         const dynamicHeaders = new Headers(cachedResponse.headers);
-        applyCors(dynamicHeaders);
+        applyCors(dynamicHeaders, effectiveAllowedOrigin);
 
         const disposition = createContentDisposition(requestedName, isDownload);
         if (disposition) {
@@ -295,7 +399,7 @@ export default {
       }
 
       // ------------------------------------------------------------
-      // 10. Authenticate with Backblaze B2 (with in-memory token cache)
+      // 9. Authenticate with Backblaze B2 (with in-memory token cache)
       // ------------------------------------------------------------
       if (!env.B2_APPLICATION_KEY_ID || !env.B2_APPLICATION_KEY) {
         return createCorsResponse("B2 credentials are not configured.", 500);
@@ -310,7 +414,7 @@ export default {
       }
 
       // ------------------------------------------------------------
-      // 11. Fetch object from Backblaze B2
+      // 10. Fetch object from Backblaze B2
       // ------------------------------------------------------------
       const bucketName =
         env.B2_BUCKET_NAME ||
@@ -354,10 +458,10 @@ export default {
       }
 
       // ------------------------------------------------------------
-      // 12. Build Final Response Headers & Cache in Cloudflare Edge
+      // 11. Build Final Response Headers & Cache in Cloudflare Edge
       // ------------------------------------------------------------
       const headers = new Headers();
-      applyCors(headers);
+      applyCors(headers, effectiveAllowedOrigin);
 
       // Detect and enforce accurate MIME type
       const mimeType = getMimeType(
@@ -390,7 +494,7 @@ export default {
       }
 
       // If full 200 response (not a range slice), cache in caches.default
-      if (downloadResponse.status === 200) {
+      if (cache && downloadResponse.status === 200) {
         const cachePutKey = new Request(canonicalUrl, {
           method: "GET",
         });
@@ -461,12 +565,12 @@ async function getB2Auth(env) {
     );
   }
 
-  const auth = await authResponse.json();
-  const downloadUrl = auth.apiInfo?.storageApi?.downloadUrl;
-  const token = auth.authorizationToken;
+  const authData = await authResponse.json();
+  const token = authData.authorizationToken;
+  const downloadUrl = authData.downloadUrl;
 
-  if (!downloadUrl || !token) {
-    throw new Error("Invalid B2 authorization payload");
+  if (!token || !downloadUrl) {
+    throw new Error("Invalid B2 authorization response");
   }
 
   cachedB2Auth = {
@@ -506,9 +610,13 @@ function getMimeType(filenameOrKey, b2ContentType) {
 // ------------------------------------------------------------
 // Helper: Apply CORS headers to a Headers instance
 // ------------------------------------------------------------
-function applyCors(headers) {
+function applyCors(headers, effectiveOrigin = "*") {
   for (const [k, v] of Object.entries(CORS_HEADERS)) {
     headers.set(k, v);
+  }
+  if (effectiveOrigin && effectiveOrigin !== "*") {
+    headers.set("Access-Control-Allow-Origin", effectiveOrigin);
+    headers.set("Vary", "Origin");
   }
 }
 
@@ -545,6 +653,62 @@ function hexToBytes(hex) {
     bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
   }
   return bytes;
+}
+
+// ------------------------------------------------------------
+// Helper: Decode base64url JSON payload
+// ------------------------------------------------------------
+function decodeBase64Url(str) {
+  try {
+    let base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+    while (base64.length % 4) {
+      base64 += "=";
+    }
+    const jsonStr = atob(base64);
+    return JSON.parse(jsonStr);
+  } catch {
+    return null;
+  }
+}
+
+// ------------------------------------------------------------
+// Helper: Extract hostname from URL or header
+// ------------------------------------------------------------
+function extractHost(urlStr) {
+  if (!urlStr) return null;
+  try {
+    const parsed = new URL(urlStr.startsWith("http") ? urlStr : `https://${urlStr}`);
+    return parsed.hostname.toLowerCase();
+  } catch {
+    return urlStr.replace(/^https?:\/\//i, "").split(/[:/]/)[0].toLowerCase();
+  }
+}
+
+// ------------------------------------------------------------
+// Helper: Check if client host matches domain whitelist
+// ------------------------------------------------------------
+function isDomainAllowed(clientHost, allowedOrigins) {
+  if (!Array.isArray(allowedOrigins) || allowedOrigins.includes("*")) {
+    return true;
+  }
+  if (!clientHost) {
+    return false;
+  }
+  const host = clientHost.toLowerCase().trim();
+  for (const pattern of allowedOrigins) {
+    const p = pattern.toLowerCase().trim();
+    if (p === "*" || p === host) return true;
+    if (p.startsWith("*.")) {
+      const rootDomain = p.slice(2);
+      if (host === rootDomain || host.endsWith("." + rootDomain)) {
+        return true;
+      }
+    }
+    if (p.startsWith("localhost") && host === "localhost") {
+      return true;
+    }
+  }
+  return false;
 }
 
 // ------------------------------------------------------------

@@ -36,6 +36,33 @@ const fileSchema = new Schema(
       type: String,
       default: null,
     },
+    publicAccess: {
+      enabled: { type: Boolean, default: false },
+      token: { type: String, default: null },
+      allowedOrigins: { type: [String], default: ["*"] },
+      playerSettings: {
+        accentColor: { type: String, default: "#00f0ff" },
+        hideBranding: { type: Boolean, default: false },
+        customWatermark: {
+          url: { type: String, default: "" },
+          position: {
+            type: String,
+            enum: ["top-left", "top-right", "bottom-left", "bottom-right"],
+            default: "top-right",
+          },
+          clickUrl: { type: String, default: "" },
+          opacity: { type: Number, default: 0.8, min: 0, max: 1 },
+        },
+        autoPlay: { type: Boolean, default: false },
+        loop: { type: Boolean, default: false },
+        muted: { type: Boolean, default: false },
+        controls: { type: Boolean, default: true },
+        aspectRatio: { type: String, default: "16:9" },
+        borderRadius: { type: String, default: "12px" },
+      },
+      views: { type: Number, default: 0 },
+      updatedAt: { type: Date, default: null },
+    },
     gitStatus: {
       status: {
         type: String,
@@ -66,6 +93,8 @@ fileSchema.index({ userId: 1, starred: 1 });
 fileSchema.index({ userId: 1, createdAt: -1 });
 fileSchema.index({ userId: 1, openedAt: -1 });
 fileSchema.index({ parentDir: 1, name: 1 });
+fileSchema.index({ "publicAccess.token": 1 }, { sparse: true });
+fileSchema.index({ "publicAccess.enabled": 1 });
 
 const File = model("File", fileSchema);
 export default File;

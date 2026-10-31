@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Calendar, HardDrive, Shield, FileType, User } from "lucide-react";
+import { X, Calendar, HardDrive, Shield, FileType, User, Globe } from "lucide-react";
 import { formatSize, formatDate, isSpecialFolder } from "../../lib/utils";
 import {
   VaultDriveIcon,
@@ -10,7 +10,7 @@ import { SERVER_URL } from "../../lib/api";
 import getFileImage, { renderFileIcon } from "../../lib/FileImages";
 import { useThumbnailUrl } from "../../lib/thumbnailCache";
 
-export default function FileDetailsModal({ item, onClose }) {
+export default function FileDetailsModal({ item, onClose, onPublicMedia }) {
   const { thumbnailUrl, error: thumbCdnError } = useThumbnailUrl(item);
   const [thumbSrc, setThumbSrc] = useState(thumbnailUrl);
   const [triedFallback, setTriedFallback] = useState(false);
@@ -307,6 +307,34 @@ export default function FileDetailsModal({ item, onClose }) {
               </div>
             </div>
           </div>
+          {!item.isTrash && provider === "local" && (
+            <div className="flex items-center gap-3 pt-2 mt-2 border-t border-slate-100 dark:border-white/5">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center border bg-emerald-500/10 border-emerald-500/30">
+                <Globe size={14} className="text-emerald-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-white/40">
+                  Public Streaming & CDN
+                </p>
+                <div className="flex items-center justify-between mt-0.5">
+                  <span className="text-xs font-medium text-slate-700 dark:text-white/80">
+                    {item.publicAccess?.enabled ? "Active on Edge CDN" : "Private (Default)"}
+                  </span>
+                  {onPublicMedia && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onPublicMedia(item, isDirectory ? "directory" : "file");
+                      }}
+                      className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                    >
+                      Configure →
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

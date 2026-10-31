@@ -1,5 +1,19 @@
 import SystemConfig from "../models/systemConfigModel.js";
 
+export const parseFileSizeToBytes = (val, unit) => {
+  const num = Number(val);
+  if (!num || isNaN(num)) return 500 * 1024 * 1024;
+  const u = (unit || "MB").toUpperCase();
+  const multipliers = {
+    B: 1,
+    KB: 1024,
+    MB: 1024 * 1024,
+    GB: 1024 * 1024 * 1024,
+    TB: 1024 * 1024 * 1024 * 1024,
+  };
+  return num * (multipliers[u] || 1024 * 1024);
+};
+
 // Helper to get configuration, ensuring a document always exists
 export const getSystemConfigHelper = async () => {
   let config = await SystemConfig.findOne({ key: "global" });
@@ -7,14 +21,31 @@ export const getSystemConfigHelper = async () => {
     config = await SystemConfig.create({
       key: "global",
       maxDevicesLimit: 3,
-      maxFileSizeLimit: 50 * 1024 * 1024,
+      maxFileSizeValue: 500,
+      maxFileSizeUnit: "MB",
+      maxFileSizeLimit: 500 * 1024 * 1024,
     });
+  } else if (!config.maxFileSizeLimit) {
+    const computed = parseFileSizeToBytes(config.maxFileSizeValue, config.maxFileSizeUnit);
+    config.maxFileSizeLimit = computed;
+    await SystemConfig.updateOne(
+      { _id: config._id },
+      { $set: { maxFileSizeLimit: computed } },
+    );
   }
   return config;
 };
 
 export const getSystemConfigLogic = async () => {
-  return await getSystemConfigHelper();
+  const config = await getSystemConfigHelper();
+  const configObj = config.toObject ? config.toObject() : { ...config };
+  if (!configObj.maxFileSizeLimit) {
+    configObj.maxFileSizeLimit = parseFileSizeToBytes(
+      configObj.maxFileSizeValue,
+      configObj.maxFileSizeUnit,
+    );
+  }
+  return configObj;
 };
 
 export const updateSystemConfigLogic = async ({ maxDevicesLimit, maxFileSizeLimit, userRole }) => {

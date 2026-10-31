@@ -72,3 +72,48 @@ export const deleteDirectoryBatchSchema = {
     .optional(),
 };
 
+export const updateDirectoryPublicAccessSchema = {
+  params: z.object({
+    dirId: objectIdSchema,
+  }),
+  body: z.object({
+    enabled: z.boolean(),
+    allowedOrigins: z.array(z.string().trim().max(150)).optional().default(["*"]),
+    playerSettings: z
+      .object({
+        accentColor: z
+          .string()
+          .trim()
+          .regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)
+          .optional()
+          .default("#00f0ff"),
+        hideBranding: z.boolean().optional().default(false),
+        customWatermark: z
+          .object({
+            url: z.string().optional().default(""),
+            position: z
+              .enum(["top-left", "top-right", "bottom-left", "bottom-right"])
+              .optional()
+              .default("top-right"),
+            clickUrl: z.string().optional().default(""),
+            opacity: z.number().min(0).max(1).optional().default(0.8),
+          })
+          .optional()
+          .default({}),
+        autoPlay: z.boolean().optional().default(false),
+        loop: z.boolean().optional().default(false),
+        muted: z.boolean().optional().default(false),
+        controls: z.boolean().optional().default(true),
+        aspectRatio: z.enum(["16:9", "9:16", "4:3", "1:1"]).optional().default("16:9"),
+        borderRadius: z.string().optional().default("12px"),
+      })
+      .optional()
+      .default({}),
+  }),
+};
+
+export const getDirectoryPublicAccessSchema = {
+  params: z.object({
+    dirId: objectIdSchema,
+  }),
+};

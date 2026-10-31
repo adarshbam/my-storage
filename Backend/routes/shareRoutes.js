@@ -3,6 +3,8 @@ import checkAuth from "../middlewares/authMiddleware.js";
 import { loadPlanContext } from "../middlewares/loadPlanContext.js";
 import { requireFeature } from "../middlewares/requireFeature.js";
 import { requireRule } from "../middlewares/requireRule.js";
+import { getPublicMediaByToken } from "../controllers/fileController.js";
+import { getPublicFolderManifestByToken } from "../controllers/directoryController.js";
 import {
   generateShareLink,
   getShareLinks,
@@ -107,5 +109,12 @@ router.post(
   validate(claimShareAccessSchema),
   claimShareAccess,
 );
+
+
+// PUBLIC: Get media stream and player settings for public embed
+router.get("/public-media/:token", lightReadLimiter, getPublicMediaByToken);
+
+// PUBLIC: Get public folder manifest for batch media embedding
+router.get("/public-folder/:token/manifest", lightReadLimiter, getPublicFolderManifestByToken);
 
 export default router;

@@ -27,6 +27,7 @@ import "prismjs/themes/prism-tomorrow.css";
 import Modal from "../ui/Modal";
 import AssetCard from "../dashboard/AssetCard";
 import FileDetailsModal from "../dashboard/FileDetailsModal";
+import PublicMediaModal from "../dashboard/PublicMediaModal";
 import PlanStatusBanner from "../dashboard/PlanStatusBanner";
 import SecureRelayView from "../relay/SecureRelayView";
 import { usePlan } from "../../context/PlanContext";
@@ -144,6 +145,12 @@ export default function FileBrowser({ specialView }) {
   const [error, setError] = useState(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const [detailsItem, setDetailsItem] = useState(null);
+  const [publicMediaItem, setPublicMediaItem] = useState(null);
+  const [isPublicMediaOpen, setIsPublicMediaOpen] = useState(false);
+  const handleOpenPublicMedia = (item, type = "file") => {
+    setPublicMediaItem({ item, type });
+    setIsPublicMediaOpen(true);
+  };
   const folderCache = useRef(globalFolderCache);
 
   const location = useLocation();
@@ -2529,6 +2536,7 @@ export default function FileBrowser({ specialView }) {
                   (specialView === "github" && dir.provider === "github")
                 }
                 onShare={openShareModal}
+                onPublicMedia={(item) => handleOpenPublicMedia(item, "directory")}
                 onViewHistory={(item) => setFileForHistory(item)}
                 onConfigureBackup={(item) => {
                   setBackupTargetDirectory(item);
@@ -2587,6 +2595,7 @@ export default function FileBrowser({ specialView }) {
               isBeingDragged={activeDraggedIds.includes(file._id)}
               isDragOver={dragOverTargetId === file._id}
               onShare={openShareModal}
+              onPublicMedia={(item) => handleOpenPublicMedia(item, "file")}
               onViewHistory={(item) => setFileForHistory(item)}
             />
           ))}
@@ -2707,6 +2716,21 @@ export default function FileBrowser({ specialView }) {
             </>
           )}
           <div className="h-4 w-px bg-slate-700"></div>
+          {selectedItems.length === 1 && !isSpecialFolder(selectedItems[0], specialView) && (
+            <>
+              <div className="h-4 w-px bg-slate-700"></div>
+              <button
+                onClick={() => {
+                  const it = selectedItems[0];
+                  handleOpenPublicMedia(it, it.type === "directory" ? "directory" : "file");
+                }}
+                className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm"
+                title="Single Item Public Stream"
+              >
+                <Globe size={16} className="text-emerald-500" /> Public Stream
+              </button>
+            </>
+          )}
           <button
             onClick={() => {
               openShareModal(selectedItems);
@@ -2774,8 +2798,46 @@ export default function FileBrowser({ specialView }) {
         <FileDetailsModal
           item={detailsItem}
           onClose={() => setDetailsItem(null)}
+          onPublicMedia={handleOpenPublicMedia}
         />
       )}
+      {/* Public Media Studio Modal (Edge Streaming & Custom Player) */}
+      {isPublicMediaOpen && publicMediaItem && (
+        <PublicMediaModal
+          isOpen={isPublicMediaOpen}
+          onClose={() => {
+            setIsPublicMediaOpen(false);
+            setPublicMediaItem(null);
+          }}
+          item={publicMediaItem.item}
+          type={publicMediaItem.type}
+          onUpdated={(updatedAccess) => {
+            setData((prev) => {
+              if (!prev) return prev;
+              if (publicMediaItem.type === "directory") {
+                return {
+                  ...prev,
+                  directories: (prev.directories || []).map((d) =>
+                    d._id === publicMediaItem.item._id
+                      ? { ...d, publicAccess: updatedAccess }
+                      : d
+                  ),
+                };
+              } else {
+                return {
+                  ...prev,
+                  files: (prev.files || []).map((f) =>
+                    f._id === publicMediaItem.item._id
+                      ? { ...f, publicAccess: updatedAccess }
+                      : f
+                  ),
+                };
+              }
+            });
+          }}
+        />
+      )}
+
 
       <Suspense fallback={<FilePreviewSkeleton type="modal-shell" />}>
         {!!previewFile && (

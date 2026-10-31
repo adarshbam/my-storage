@@ -7,9 +7,10 @@ const systemConfigSchema = new Schema(
     maxFileSizeValue: { type: Number, default: 500 },
     maxFileSizeUnit: {
       type: String,
-      enum: ["KB", "MB", "GB"],
+      enum: ["B", "KB", "MB", "GB", "TB"],
       default: "MB",
     },
+    maxFileSizeLimit: { type: Number, default: 500 * 1024 * 1024 },
     sessionTimeoutValue: { type: Number, default: 24 },
     sessionTimeoutUnit: {
       type: String,

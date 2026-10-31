@@ -396,3 +396,55 @@ export const uploadVaultMultipartAbort = async (req, res, next) => {
     next(error);
   }
 };
+
+
+export const updateFilePublicAccess = async (req, res, next) => {
+  try {
+    const data = await fileService.updateFilePublicAccessLogic({
+      fileId: req.params.fileId,
+      userId: req.user.id,
+      userRole: req.user.role,
+      planContext: req.planContext,
+      enabled: req.body.enabled,
+      allowedOrigins: req.body.allowedOrigins,
+      playerSettings: req.body.playerSettings,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status && !res.headersSent) return res.status(error.status).json({ error: error.message });
+    next(error);
+  }
+};
+
+export const getFilePublicAccess = async (req, res, next) => {
+  try {
+    const data = await fileService.getFilePublicAccessLogic({
+      fileId: req.params.fileId,
+      userId: req.user.id,
+      userRole: req.user.role,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status && !res.headersSent) return res.status(error.status).json({ error: error.message });
+    next(error);
+  }
+};
+
+export const getPublicMediaByToken = async (req, res, next) => {
+  try {
+    const data = await fileService.getPublicMediaByTokenLogic({
+      token: req.params.token,
+      origin: req.headers.origin,
+      referer: req.headers.referer,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status && !res.headersSent) {
+      return res.status(error.status).json({
+        error: error.message,
+        code: error.code || "PUBLIC_MEDIA_ERROR",
+      });
+    }
+    next(error);
+  }
+};

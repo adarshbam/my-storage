@@ -18,6 +18,7 @@ import WallyAcademyPage from "./pages/WallyAcademyPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import SecurityPolicyPage from "./pages/SecurityPolicyPage";
+const EmbedVideoPlayerPage = lazy(() => import("./pages/EmbedVideoPlayerPage"));
 
 // Landing Page Components
 import Navbar from "./components/sections/Navbar";
@@ -107,6 +108,14 @@ function App() {
                   <Route path="/privacy" element={<PrivacyPolicyPage />} />
                   <Route path="/terms" element={<TermsOfServicePage />} />
                   <Route path="/security" element={<SecurityPolicyPage />} />
+                  <Route
+                    path="/embed/:token"
+                    element={<EmbedVideoPlayerPage />}
+                  />
+                  <Route
+                    path="/embed/player/:token"
+                    element={<EmbedVideoPlayerPage />}
+                  />
                   <Route
                     path="/shared-access/:token"
                     element={<SharedAccessClaim />}

@@ -239,6 +239,19 @@ export const getOwnerSettingsLogic = async ({ userRole }) => {
       }).lean(),
     ]);
 
+  if (systemConfig && !systemConfig.maxFileSizeLimit) {
+    const val = Number(systemConfig.maxFileSizeValue) || 500;
+    const unit = (systemConfig.maxFileSizeUnit || "MB").toUpperCase();
+    const multipliers = {
+      B: 1,
+      KB: 1024,
+      MB: 1024 * 1024,
+      GB: 1024 * 1024 * 1024,
+      TB: 1024 * 1024 * 1024 * 1024,
+    };
+    systemConfig.maxFileSizeLimit = val * (multipliers[unit] || 1024 * 1024);
+  }
+
   // 3. Fallback Auto-heal ONLY if database is uninitialized or missing tiers/plans
   if (!planTiers.length || !billingPlans.length || !planTierConfigurations.length) {
     const allFeatureIds = (features || []).map((f) => f._id);
@@ -376,9 +389,25 @@ export const updateGlobalLimitsLogic = async ({ limits, userRole }) => {
     freeTrialInheritedTier,
   } = limits;
 
+  let computedMaxFileSizeLimit = maxFileSizeLimit;
+  if (maxFileSizeValue !== undefined) {
+    const val = Number(maxFileSizeValue) || 0;
+    const unit = (maxFileSizeUnit || "MB").toUpperCase();
+    const multipliers = {
+      B: 1,
+      KB: 1024,
+      MB: 1024 * 1024,
+      GB: 1024 * 1024 * 1024,
+      TB: 1024 * 1024 * 1024 * 1024,
+    };
+    computedMaxFileSizeLimit = val * (multipliers[unit] || 1024 * 1024);
+  } else if (!computedMaxFileSizeLimit) {
+    computedMaxFileSizeLimit = 500 * 1024 * 1024;
+  }
+
   const updateDoc = {
     maxDevicesLimit,
-    maxFileSizeLimit,
+    maxFileSizeLimit: computedMaxFileSizeLimit,
     defaultStorageUnit,
     maxFileSizeUnit,
     maxFileSizeValue,

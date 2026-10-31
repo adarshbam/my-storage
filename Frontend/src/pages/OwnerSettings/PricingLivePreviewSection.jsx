@@ -106,7 +106,10 @@ export default function PricingLivePreviewSection({
       </div>
 
       {/* Embedded Live Preview Canvas */}
-      <div className="w-full bg-slate-100 dark:bg-vault-base/90 p-6 md:p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/10 relative overflow-hidden shadow-2xl space-y-6">
+      <div className="w-full bg-slate-100/90 dark:bg-vault-bg p-6 md:p-8 rounded-[2.5rem] border border-slate-200/80 dark:border-white/10 relative overflow-hidden shadow-2xl space-y-6">
+        {/* Subtle Ambient Top Radial Aura matching Public Pricing Page */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-56 bg-[radial-gradient(ellipse,rgba(var(--accent-primary-rgb),0.09)_0%,transparent_70%)] pointer-events-none" />
+
         {(() => {
           const period = isYearly ? "Yearly" : "Monthly";
           const freeTrialTier = planTiers.find(
@@ -152,14 +155,17 @@ export default function PricingLivePreviewSection({
                 return (
                   <div
                     key={freeTrialTier.slug}
-                    className="relative rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-5 sm:p-7 border border-accent-border/40 bg-accent-soft/20 dark:bg-accent-soft/10 flex flex-col xl:flex-row xl:items-center justify-between gap-5 transition-all duration-300 shadow-lg shadow-accent-glow/10"
+                    className="relative rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-5 sm:p-7 border border-accent-primary/30 dark:border-accent-primary/25 bg-white/95 dark:bg-vault-surface/90 backdrop-blur-xl flex flex-col xl:flex-row xl:items-center justify-between gap-5 transition-all duration-300 shadow-lg shadow-accent-glow/10 overflow-hidden"
                   >
+                    {/* Subtle ambient tint across the free trial card */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-accent-primary/[0.04] via-transparent to-transparent pointer-events-none" />
+
                     {/* Left Info: Badge, Title, Description, Price */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 min-w-0">
+                    <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 min-w-0">
                       <div className="min-w-0">
                         {freeTrialTier.badge && (
                           <div className="mb-2">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-accent-soft text-accent-primary border border-accent-border shadow-accent-glow-sm">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-accent-primary/10 text-accent-primary border border-accent-primary/25 shadow-accent-glow-sm">
                               <Sparkles size={10} /> {freeTrialTier.badge}
                             </span>
                           </div>
@@ -167,7 +173,7 @@ export default function PricingLivePreviewSection({
                         <h3 className="text-xl min-[360px]:text-2xl font-black text-slate-900 dark:text-white truncate">
                           {freeTrialTier.title}
                         </h3>
-                        <p className="text-xs text-slate-600 dark:text-white/50 font-medium mt-1">
+                        <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-1">
                           {storageText} • Inheriting features from {inheritedTier?.title || inheritedSlug}
                         </p>
                       </div>
@@ -177,20 +183,20 @@ export default function PricingLivePreviewSection({
                         <span className="text-2xl min-[360px]:text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
                           {symbol}0
                         </span>
-                        <span className="text-xs text-slate-500 dark:text-white/40 font-semibold">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
                           /30-day trial
                         </span>
                       </div>
                     </div>
 
                     {/* Right Info: Rule Highlights, Feature Pills & CTA */}
-                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-start xl:justify-end">
+                    <div className="relative z-10 flex flex-wrap items-center gap-3 sm:gap-4 justify-start xl:justify-end">
                       {/* Highlights */}
-                      <div className="flex flex-wrap items-center gap-2.5 text-[11px] font-semibold rounded-2xl p-2.5 px-3.5 border border-accent-border/30 bg-accent-soft/30 text-accent-primary">
+                      <div className="flex flex-wrap items-center gap-2.5 text-[11px] font-semibold rounded-2xl p-2.5 px-3.5 border border-accent-primary/25 bg-accent-primary/10 text-accent-primary">
                         <div>Max Devices: <span className="font-bold">{getRuleVal(tierRules, "maxConnectedDevices", 3)} Sessions</span></div>
-                        <div className="w-px h-3 bg-accent-border/40" />
+                        <div className="w-px h-3 bg-accent-primary/20" />
                         <div>Speed: <span className="font-bold">{getRuleVal(tierRules, "uploadSpeedMultiplier", 1)}x</span></div>
-                        <div className="w-px h-3 bg-accent-border/40" />
+                        <div className="w-px h-3 bg-accent-primary/20" />
                         <div>History: <span className="font-bold">{getRuleVal(tierRules, "versionHistoryDays", 30)}d</span></div>
                       </div>
 
@@ -199,7 +205,7 @@ export default function PricingLivePreviewSection({
                         {tierFeatures.slice(0, 2).map((feat) => (
                           <div
                             key={feat._id}
-                            className="flex items-center gap-1.5 bg-white/10 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-3 py-1.5 rounded-xl text-xs text-slate-800 dark:text-white/80 font-medium"
+                            className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 px-3 py-1.5 rounded-xl text-xs text-slate-700 dark:text-slate-300 font-medium"
                           >
                             <Check size={12} className="text-accent-primary shrink-0" />
                             <span>{feat.title}</span>
@@ -209,7 +215,7 @@ export default function PricingLivePreviewSection({
 
                       <button
                         type="button"
-                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs shadow-accent-glow bg-accent-primary hover:opacity-90 active:scale-95 text-accent-foreground transition-all duration-300 shrink-0"
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs shadow-accent-glow bg-accent-primary hover:opacity-90 active:scale-95 text-accent-foreground transition-all duration-300 shrink-0 cursor-pointer"
                       >
                         Get Started Free
                       </button>
@@ -242,10 +248,10 @@ export default function PricingLivePreviewSection({
                   return (
                     <div
                       key={tier.slug}
-                      className={`relative rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-5 md:p-7 border flex flex-col justify-between transition-all duration-300 ${
+                      className={`relative rounded-2xl sm:rounded-3xl p-4 min-[360px]:p-5 md:p-7 border flex flex-col justify-between transition-all duration-300 backdrop-blur-xl ${
                         isPopular
-                          ? "border-accent-primary shadow-2xl shadow-accent-glow/20 ring-2 ring-accent-border/50 bg-white/90 dark:bg-vault-surface/90"
-                          : "border-slate-200 dark:border-white/10 bg-white/80 dark:bg-vault-surface/60 hover:border-accent-border/80 hover:shadow-xl hover:shadow-accent-glow/10"
+                          ? "border-accent-primary shadow-2xl shadow-accent-glow/20 ring-2 ring-accent-primary/30 bg-white/95 dark:bg-vault-surface/95"
+                          : "border-slate-200 dark:border-white/10 bg-white/90 dark:bg-vault-surface/90 hover:border-accent-primary/50 hover:shadow-xl hover:shadow-accent-glow/10"
                       }`}
                     >
                       {/* Badge */}
@@ -261,36 +267,36 @@ export default function PricingLivePreviewSection({
 
                       <div className="flex-1 flex flex-col">
                         {/* Title & Subtitle */}
-                        <h3 className="text-xl min-[360px]:text-2xl font-black text-slate-900 dark:text-white mb-1">
+                        <h3 className="text-xl min-[360px]:text-2xl font-black text-slate-900 dark:text-white mb-1 tracking-tight">
                           {tier.title}
                         </h3>
-                        <p className="text-xs text-slate-600 dark:text-white/50 font-medium mb-4 min-h-[32px]">
+                        <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mb-4 min-h-[32px] leading-relaxed">
                           {storageText} • {tier.description}
                         </p>
 
                         {/* Price Display */}
                         <div className="flex items-baseline gap-1 mb-5 pb-5 border-b border-slate-200 dark:border-white/10">
-                          <span className="text-2xl min-[360px]:text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
+                          <span className="text-2xl min-[360px]:text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
                             {symbol}
                             {planObj.amount}
                           </span>
-                          <span className="text-xs text-slate-500 dark:text-white/40 font-semibold">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
                             /{isYearly ? "yr" : "mo"}
                           </span>
                         </div>
 
                         {/* Rule summary highlights */}
-                        <div className="mb-5 text-[11px] font-semibold rounded-2xl p-3 space-y-1.5 border border-slate-200 dark:border-white/10 bg-slate-100/70 dark:bg-white/[0.03]">
-                          <div className="flex justify-between">
-                            <span className="text-slate-600 dark:text-white/60">Max Devices:</span>
+                        <div className="mb-5 text-[11px] font-semibold rounded-2xl p-3.5 space-y-2 border border-slate-200 dark:border-white/10 bg-slate-100/70 dark:bg-white/[0.04]">
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-600 dark:text-slate-400">Max Devices:</span>
                             <span className="text-slate-900 dark:text-white font-bold">{getRuleVal(tierRules, "maxConnectedDevices", 3)} Sessions</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-600 dark:text-white/60">Upload Speed:</span>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-600 dark:text-slate-400">Upload Speed:</span>
                             <span className="text-slate-900 dark:text-white font-bold">{getRuleVal(tierRules, "uploadSpeedMultiplier", 1)}x</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-600 dark:text-white/60">Version History:</span>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-600 dark:text-slate-400">Version History:</span>
                             <span className="text-slate-900 dark:text-white font-bold">{getRuleVal(tierRules, "versionHistoryDays", 30)} Days</span>
                           </div>
                         </div>
@@ -300,7 +306,7 @@ export default function PricingLivePreviewSection({
                           {tierFeatures.slice(0, 5).map((feat) => (
                             <div
                               key={feat._id}
-                              className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-white/80"
+                              className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300"
                             >
                               <Check size={14} className="text-accent-primary shrink-0" />
                               <span className="truncate">{feat.title}</span>
@@ -319,7 +325,7 @@ export default function PricingLivePreviewSection({
                                 {tierFeatures.slice(5).map((feat) => (
                                   <div
                                     key={feat._id}
-                                    className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-white/80"
+                                    className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300"
                                   >
                                     <Check size={14} className="text-accent-primary shrink-0" />
                                     <span className="truncate">{feat.title}</span>
@@ -358,7 +364,7 @@ export default function PricingLivePreviewSection({
 
                       <button
                         type="button"
-                        className={`w-full py-3.5 rounded-xl font-bold text-xs shadow-md transition-all duration-300 active:scale-95 ${
+                        className={`w-full py-3.5 rounded-xl font-bold text-xs shadow-md transition-all duration-300 active:scale-95 cursor-pointer ${
                           isPopular
                             ? "bg-accent-primary hover:opacity-90 text-accent-foreground shadow-accent-glow"
                             : "bg-slate-200 dark:bg-white/10 hover:bg-accent-primary hover:text-accent-foreground text-slate-800 dark:text-white"

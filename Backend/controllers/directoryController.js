@@ -133,3 +133,56 @@ export const deleteItemsBatch = async (req, res, next) => {
     next(error);
   }
 };
+
+
+export const updateDirectoryPublicAccess = async (req, res, next) => {
+  try {
+    const data = await directoryService.updateDirectoryPublicAccessLogic({
+      dirId: req.params.dirId,
+      userId: req.user.id,
+      userRole: req.user.role,
+      planContext: req.planContext,
+      enabled: req.body.enabled,
+      allowedOrigins: req.body.allowedOrigins,
+      playerSettings: req.body.playerSettings,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status && !res.headersSent) return res.status(error.status).json({ error: error.message });
+    next(error);
+  }
+};
+
+export const getDirectoryPublicAccess = async (req, res, next) => {
+  try {
+    const data = await directoryService.getDirectoryPublicAccessLogic({
+      dirId: req.params.dirId,
+      userId: req.user.id,
+      userRole: req.user.role,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status && !res.headersSent) return res.status(error.status).json({ error: error.message });
+    next(error);
+  }
+};
+
+export const getPublicFolderManifestByToken = async (req, res, next) => {
+  try {
+    const data = await directoryService.getPublicFolderManifestByTokenLogic({
+      token: req.params.token,
+      origin: req.headers.origin,
+      referer: req.headers.referer,
+      fileId: req.query.fileId,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status && !res.headersSent) {
+      return res.status(error.status).json({
+        error: error.message,
+        code: error.code || "PUBLIC_FOLDER_ERROR",
+      });
+    }
+    next(error);
+  }
+};

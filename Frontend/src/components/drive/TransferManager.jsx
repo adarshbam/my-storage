@@ -38,7 +38,7 @@ const TransferManager = forwardRef((props, ref) => {
   const [transfers, setTransfers] = useState([]);
   const [minimized, setMinimized] = useState(false);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
-  const [maxFileSize, setMaxFileSize] = useState(50 * 1024 * 1024);
+  const [maxFileSize, setMaxFileSize] = useState(500 * 1024 * 1024);
   const downloadReaders = useRef({});
   const abortControllers = useRef({});
   const downloadWritables = useRef({});
@@ -67,6 +67,20 @@ const TransferManager = forwardRef((props, ref) => {
     maxUploadFileSize || 5368709120,
   );
 
+  const parseSizeToBytes = useCallback((val, unit) => {
+    const num = Number(val);
+    if (!num || isNaN(num)) return null;
+    const u = (unit || "MB").toUpperCase();
+    const multipliers = {
+      B: 1,
+      KB: 1024,
+      MB: 1024 * 1024,
+      GB: 1024 * 1024 * 1024,
+      TB: 1024 * 1024 * 1024 * 1024,
+    };
+    return num * (multipliers[u] || 1024 * 1024);
+  }, []);
+
   useEffect(() => {
     async function loadConfig() {
       try {
@@ -75,8 +89,12 @@ const TransferManager = forwardRef((props, ref) => {
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.maxFileSizeLimit) {
-            setMaxFileSize(data.maxFileSizeLimit);
+          let limitBytes = data.maxFileSizeLimit;
+          if (!limitBytes && data.maxFileSizeValue) {
+            limitBytes = parseSizeToBytes(data.maxFileSizeValue, data.maxFileSizeUnit);
+          }
+          if (limitBytes) {
+            setMaxFileSize(limitBytes);
           }
         }
       } catch (err) {
@@ -84,7 +102,17 @@ const TransferManager = forwardRef((props, ref) => {
       }
     }
     loadConfig();
-  }, []);
+
+    const handleSync = () => {
+      loadConfig();
+    };
+    window.addEventListener("plan:updated", handleSync);
+    window.addEventListener("subscription:updated", handleSync);
+    return () => {
+      window.removeEventListener("plan:updated", handleSync);
+      window.removeEventListener("subscription:updated", handleSync);
+    };
+  }, [parseSizeToBytes]);
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -181,7 +209,7 @@ const TransferManager = forwardRef((props, ref) => {
               loaded: 0,
               total: file.size,
               status: "error",
-              errorMessage: "File exceeds upload limit",
+              errorMessage: `File exceeds upload limit (${formatSize(effectiveMaxFileSize)})`,
               speed: 0,
               timeRemaining: 0,
               file: file,
@@ -235,7 +263,7 @@ const TransferManager = forwardRef((props, ref) => {
           errorMessage = subMsg;
         } else if (file.size > effectiveMaxFileSize) {
           status = "error";
-          errorMessage = "File exceeds upload limit";
+          errorMessage = `File exceeds upload limit (${formatSize(effectiveMaxFileSize)})`;
         }
 
         return {
