@@ -69,7 +69,8 @@ import {
   CloudUpload,
 } from "lucide-react";
 
-import { batchDelete, recordItemOpened } from "../../api/files.api";
+import { batchDelete, recordItemOpened, ensureDirectoryTree } from "../../api/files.api";
+import { scanDroppedItems } from "../../lib/folderDropScanner";
 import { useFiles } from "../../hooks/useFiles";
 import { useSelectionBox } from "../../hooks/useSelectionBox";
 import { useClipboard } from "../../hooks/useClipboard";
@@ -1924,9 +1925,11 @@ export default function FileBrowser({ specialView }) {
       return;
     }
 
-    // Handle Desktop Upload SECOND
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const files = Array.from(e.dataTransfer.files);
+    // Handle Desktop Upload (Files & Full Folders) SECOND
+    if (
+      (e.dataTransfer.items && e.dataTransfer.items.length > 0) ||
+      (e.dataTransfer.files && e.dataTransfer.files.length > 0)
+    ) {
       let targetDirId = folderId; // default to current vault folder
 
       const targetId = targetItem?._id || targetItem?.id;
@@ -1948,7 +1951,51 @@ export default function FileBrowser({ specialView }) {
         targetDirId = `drive:${driveFolderId || "root"}`;
       }
 
-      uploadFile(files, targetDirId);
+      if (!planAllowsMutation) {
+        window.dispatchEvent(new CustomEvent("subscription:prompt"));
+        return;
+      }
+
+      // Universal scan across FileSystemEntries (recursively draining directory batches)
+      const scanned = await scanDroppedItems(e.dataTransfer.items, e.dataTransfer.files);
+
+      if (scanned.isFolderDrop && scanned.directories.length > 0) {
+        const isVaultTarget =
+          !targetDirId ||
+          (!targetDirId.startsWith("github:") && !targetDirId.startsWith("drive:"));
+
+        if (isVaultTarget) {
+          try {
+            const cleanTargetId = targetDirId || user?.rootDirId;
+            const res = await ensureDirectoryTree(cleanTargetId, scanned.directories);
+            const dirMap = res?.tree || res?.data?.tree || {};
+
+            // Instant UI settle: refresh so newly created folder(s) appear on dashboard immediately!
+            fetchFiles();
+
+            // Queue nested files mapped to their newly resolved folder IDs
+            if (scanned.files.length > 0) {
+              const filesToUpload = scanned.files.map((f) => ({
+                file: f.file,
+                dirId: dirMap[f.folderPath] || cleanTargetId,
+                relativePath: f.relativePath,
+              }));
+              uploadFile(filesToUpload, cleanTargetId);
+            }
+            return;
+          } catch (treeErr) {
+            console.error("Failed to ensure directory tree for dropped folder:", treeErr);
+          }
+        }
+      }
+
+      // Standard / fallback files upload
+      const filesToUpload =
+        scanned.files.length > 0
+          ? scanned.files.map((f) => f.file)
+          : Array.from(e.dataTransfer.files || []);
+
+      uploadFile(filesToUpload, targetDirId);
       return;
     }
   };
@@ -1962,48 +2009,32 @@ export default function FileBrowser({ specialView }) {
     e.preventDefault();
     e.stopPropagation();
     if (isReadOnly) {
-      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      if (
+        (e.dataTransfer.items && e.dataTransfer.items.length > 0) ||
+        (e.dataTransfer.files && e.dataTransfer.files.length > 0)
+      ) {
         window.dispatchEvent(new CustomEvent("subscription:prompt"));
       }
       return;
     }
 
-    // Check if it's an internal drag landing in the empty zone
-    const draggedItemsStr = e.dataTransfer.getData("draggedItems");
-    const singleDraggedItemStr = e.dataTransfer.getData("draggedItem");
-
-    if (draggedItemsStr || singleDraggedItemStr) {
-      // It's an internal drag. Target is the CURRENT folder.
-      let target = null;
-      if (
-        specialView === "google-drive" ||
-        specialView === "google-drive-folder"
-      ) {
-        target = { _id: driveFolderId || "root", provider: "google_drive" };
-      } else if (specialView === "github-repo") {
-        target = { githubPath: githubPath, provider: "github" };
-      } else {
-        target = { _id: folderId || user?.rootDirId };
-      }
-      handleDrop(e, target);
-      return;
+    // Determine target for zone drop (current folder or active chamber view)
+    let target = null;
+    if (
+      specialView === "google-drive" ||
+      specialView === "google-drive-folder"
+    ) {
+      target = { _id: driveFolderId || "root", provider: "google_drive" };
+    } else if (specialView === "github-repo") {
+      target = { githubPath: githubPath, provider: "github" };
+    } else {
+      target = { _id: folderId || user?.rootDirId };
     }
 
-    // Otherwise handle desktop upload
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const files = Array.from(e.dataTransfer.files);
-      let targetDirId = folderId;
-      if (
-        specialView === "google-drive" ||
-        specialView === "google-drive-folder"
-      ) {
-        targetDirId = `drive:${driveFolderId || "root"}`;
-      }
-      uploadFile(files, targetDirId);
-    }
+    handleDrop(e, target);
   };
 
-  const breadcrumbs = getBreadcrumbs();
+    const breadcrumbs = getBreadcrumbs();
 
   if (specialView === "shared" && !folderId) {
     return (
