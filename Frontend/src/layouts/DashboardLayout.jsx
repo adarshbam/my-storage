@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { SERVER_URL } from "../lib/api";
+import { ensureDirectoryTree } from "../api/files.api";
 import { getProfilePicUrl } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
 import { usePlan } from "../context/PlanContext";

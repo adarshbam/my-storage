@@ -5,6 +5,7 @@ import Button from "../ui/Button";
 import { cn, formatSize } from "../../lib/utils";
 import { renderFileIcon } from "../../lib/FileImages";
 import { usePlan } from "../../context/PlanContext";
+import { scanDroppedItems } from "../../lib/folderDropScanner";
 
 export default function FileUploadModal({
   isOpen,
@@ -14,6 +15,7 @@ export default function FileUploadModal({
 }) {
   const [dragActive, setDragActive] = useState(false);
   const [files, setFiles] = useState([]);
+  const [directories, setDirectories] = useState([]);
   const inputRef = useRef(null);
 
   const handleDrag = useCallback((e) => {
@@ -48,6 +50,7 @@ export default function FileUploadModal({
 
   const clearAllFiles = () => {
     setFiles([]);
+    setDirectories([]);
   };
 
   const { isNoPlan, isNoSubscription, allowUpload } = usePlan();
@@ -70,7 +73,7 @@ export default function FileUploadModal({
     }
   };
 
-  const totalSize = files.reduce((acc, f) => acc + f.size, 0);
+  const totalSize = files.reduce((acc, f) => acc + (f.file ? f.file.size : f.size), 0);
 
   return (
     <Modal
@@ -111,7 +114,7 @@ export default function FileUploadModal({
           </div>
 
           <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1 tracking-tight">
-            Drag & drop your files here
+            Drag & drop your files or folders here
           </h3>
           <p className="text-slate-500 dark:text-white/60 text-xs max-w-sm mb-4 leading-relaxed">
             Encrypted client-side before transit. Only your key can decrypt them.
@@ -143,11 +146,13 @@ export default function FileUploadModal({
             </div>
 
             <div className="max-h-56 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-              {files.map((file, index) => {
+              {files.map((item, index) => {
+                const file = item.file || item;
+                const displayName = item.relativePath || file.name;
                 const ext = file.name.split(".").pop() || "";
                 return (
                   <div
-                    key={`${file.name}-${index}`}
+                    key={`${displayName}-${index}`}
                     className="flex items-center justify-between p-3 bg-white dark:bg-vault-panel/60 border border-slate-200/90 dark:border-white/5 rounded-2xl shadow-sm hover:border-slate-300 dark:hover:border-white/15 transition-all"
                   >
                     <div className="flex items-center gap-3 overflow-hidden">
@@ -156,7 +161,7 @@ export default function FileUploadModal({
                       </div>
                       <div className="overflow-hidden">
                         <p className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[240px] sm:max-w-[340px]">
-                          {file.name}
+                          {displayName}
                         </p>
                         <p className="text-[11px] font-mono text-slate-500 dark:text-white/40 mt-0.5">
                           {formatSize(file.size)}
