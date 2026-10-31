@@ -270,7 +270,14 @@ export default function EmbedVideoPlayerPage() {
                       >
                         {String(idx + 1).padStart(2, "0")}
                       </span>
-                      <span className="truncate flex-1">{item.name}</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="truncate block font-medium leading-tight">{item.name}</span>
+                        {item.subfolder && (
+                          <span className="text-[9px] font-mono opacity-60 block truncate pt-0.5">
+                            📁 {item.subfolder}
+                          </span>
+                        )}
+                      </div>
                       {isSelected && (
                         <Play
                           size={12}

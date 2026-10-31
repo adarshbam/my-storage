@@ -740,7 +740,7 @@ async function purgeFileCache(
   purgeThumbnail = false,
   version = null,
 ) {
-  const cache = caches.default;
+  const cache = typeof caches !== 'undefined' ? caches.default : null;
   const purged = [];
 
   const fileUrls = version

@@ -15,6 +15,7 @@ import {
   Play,
   RotateCw,
   FolderOpen,
+  Folder,
   Eye,
   CheckCircle,
   ListVideo,
@@ -83,11 +84,13 @@ export default function PublicMediaModal({ isOpen, onClose, item, type = "file",
   const [streamUrl, setStreamUrl] = useState("");
   const [embedUrl, setEmbedUrl] = useState("");
   const [folderItems, setFolderItems] = useState([]);
+  const [folderSubfolders, setFolderSubfolders] = useState([]);
   const [manifestUrl, setManifestUrl] = useState("");
   const [copiedKey, setCopiedKey] = useState(null);
 
   // Folder Playlist State
   const [selectedClipId, setSelectedClipId] = useState(null);
+  const [selectedSubfolderFilter, setSelectedSubfolderFilter] = useState("all");
   const [clipSearch, setClipSearch] = useState("");
 
   useEffect(() => {
@@ -135,6 +138,7 @@ export default function PublicMediaModal({ isOpen, onClose, item, type = "file",
 
         if (data.items && Array.isArray(data.items)) {
           setFolderItems(data.items);
+          setFolderSubfolders(Array.isArray(data.subfolders) ? data.subfolders : []);
           if (data.items.length > 0) {
             setSelectedClipId((prev) => (prev && data.items.some((i) => i.id === prev) ? prev : data.items[0].id));
             setStreamUrl(data.streamUrl || data.items[0].streamUrl || "");
@@ -143,6 +147,7 @@ export default function PublicMediaModal({ isOpen, onClose, item, type = "file",
           }
         } else {
           setStreamUrl(data.streamUrl || "");
+          setFolderSubfolders([]);
         }
 
         setEmbedUrl(data.embedUrl || "");
@@ -206,6 +211,7 @@ export default function PublicMediaModal({ isOpen, onClose, item, type = "file",
 
         if (data.items && Array.isArray(data.items)) {
           setFolderItems(data.items);
+          setFolderSubfolders(Array.isArray(data.subfolders) ? data.subfolders : []);
           if (data.items.length > 0) {
             setSelectedClipId((prev) => (prev && data.items.some((i) => i.id === prev) ? prev : data.items[0].id));
             setStreamUrl(data.streamUrl || data.items[0].streamUrl || "");
@@ -214,6 +220,7 @@ export default function PublicMediaModal({ isOpen, onClose, item, type = "file",
           }
         } else {
           setStreamUrl(data.streamUrl || "");
+          setFolderSubfolders([]);
         }
 
         setEmbedUrl(data.embedUrl || "");
@@ -287,12 +294,31 @@ export default function PublicMediaModal({ isOpen, onClose, item, type = "file",
       : `<video src="${currentActiveStreamUrl}" ${autoPlay ? "autoplay " : ""}${loop ? "loop " : ""}${muted ? "muted " : ""}${controls ? "controls " : ""}playsinline preload="metadata"></video>`
     : "";
 
-  const filteredFolderItems = folderItems.filter((f) =>
-    clipSearch ? f.name.toLowerCase().includes(clipSearch.toLowerCase()) : true
-  );
+  const filteredFolderItems = folderItems.filter((f) => {
+    // 1. Subfolder filter
+    if (selectedSubfolderFilter === "root") {
+      if (f.subfolder) return false;
+    } else if (selectedSubfolderFilter !== "all") {
+      const isMatch =
+        (f.subfolderId && String(f.subfolderId) === String(selectedSubfolderFilter)) ||
+        (f.subfolder && f.subfolder === selectedSubfolderFilter);
+      if (!isMatch) return false;
+    }
+
+    // 2. Search query filter
+    if (clipSearch) {
+      const q = clipSearch.toLowerCase();
+      const matchesName = f.name?.toLowerCase().includes(q);
+      const matchesSubfolder = f.subfolder?.toLowerCase().includes(q);
+      return matchesName || matchesSubfolder;
+    }
+    return true;
+  });
 
   const handleExportAllUrlsText = () => {
-    const text = folderItems.map((f) => `${f.name}: ${f.streamUrl}`).join("\n");
+    const text = folderItems
+      .map((f) => (f.subfolder ? `[${f.subfolder}] ${f.name}: ${f.streamUrl}` : `${f.name}: ${f.streamUrl}`))
+      .join("\n");
     copyToClipboard(text, "export-txt");
   };
 
@@ -303,6 +329,8 @@ export default function PublicMediaModal({ isOpen, onClose, item, type = "file",
         name: f.name,
         size: f.size,
         extension: f.extension,
+        subfolder: f.subfolder || null,
+        subfolderId: f.subfolderId || null,
         streamUrl: f.streamUrl,
         embedUrl: f.embedUrl,
       })),
@@ -569,8 +597,49 @@ export default function PublicMediaModal({ isOpen, onClose, item, type = "file",
                     )}
                   </div>
 
+                  {/* Subfolder Category Filters */}
+                  {folderSubfolders.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <button
+                        onClick={() => setSelectedSubfolderFilter("all")}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                          selectedSubfolderFilter === "all"
+                            ? "bg-accent-primary text-black font-bold shadow-sm"
+                            : "bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-white/70 hover:bg-slate-300 dark:hover:bg-white/15"
+                        }`}
+                      >
+                        All ({folderItems.length})
+                      </button>
+                      <button
+                        onClick={() => setSelectedSubfolderFilter("root")}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                          selectedSubfolderFilter === "root"
+                            ? "bg-accent-primary text-black font-bold shadow-sm"
+                            : "bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-white/70 hover:bg-slate-300 dark:hover:bg-white/15"
+                        }`}
+                      >
+                        Root ({folderItems.filter((f) => !f.subfolder).length})
+                      </button>
+                      {folderSubfolders.map((sf) => (
+                        <button
+                          key={sf.id}
+                          onClick={() => setSelectedSubfolderFilter(sf.id)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                            selectedSubfolderFilter === sf.id
+                              ? "bg-accent-primary text-black font-bold shadow-sm"
+                              : "bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-white/70 hover:bg-slate-300 dark:hover:bg-white/15"
+                          }`}
+                        >
+                          <Folder size={11} />
+                          <span>{sf.name}</span>
+                          <span className="opacity-75">({sf.itemCount})</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 gap-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
-                    {folderItems.map((clip, idx) => {
+                    {filteredFolderItems.map((clip, idx) => {
                       const isCurrent = activeClip?.id === clip.id;
                       const cType = getFileType(clip.extension, clip.name);
                       return (
@@ -603,9 +672,17 @@ export default function PublicMediaModal({ isOpen, onClose, item, type = "file",
                               <p className="text-xs font-semibold truncate leading-tight">
                                 {clip.name}
                               </p>
-                              <span className="text-[10px] text-slate-400 dark:text-white/40 font-mono">
-                                {clip.size ? formatSize(clip.size) : ""} • {clip.extension?.toUpperCase() || cType.toUpperCase()}
-                              </span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[10px] text-slate-400 dark:text-white/40 font-mono">
+                                  {clip.size ? formatSize(clip.size) : ""} • {clip.extension?.toUpperCase() || cType.toUpperCase()}
+                                </span>
+                                {clip.subfolder && (
+                                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-accent-soft text-accent-primary border border-accent-border font-semibold flex items-center gap-1">
+                                    <Folder size={9} />
+                                    <span>{clip.subfolder}</span>
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
 
@@ -617,7 +694,7 @@ export default function PublicMediaModal({ isOpen, onClose, item, type = "file",
                             )}
                             <button
                               onClick={() => copyToClipboard(clip.streamUrl, `clip-stream-${clip.id}`)}
-                              className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/10 hover:bg-accent-soft text-slate-600 dark:text-white/70 hover:text-accent-primary transition-all text-[11px] font-semibold flex items-center gap-1"
+                              className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/10 hover:bg-accent-soft text-slate-600 dark:text-white/70 hover:text-accent-primary transition-all text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
                               title="Copy Direct Edge CDN Stream URL"
                             >
                               {copiedKey === `clip-stream-${clip.id}` ? (
@@ -1025,7 +1102,7 @@ export default function PublicMediaModal({ isOpen, onClose, item, type = "file",
 
                   {/* Individual Media Clips Table */}
                   {folderItems.length > 0 && (
-                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-2">
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 space-y-3">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
                           4. Individual Folder Assets ({folderItems.length})
@@ -1041,6 +1118,46 @@ export default function PublicMediaModal({ isOpen, onClose, item, type = "file",
                           />
                         </div>
                       </div>
+
+                      {folderSubfolders.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          <button
+                            onClick={() => setSelectedSubfolderFilter("all")}
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-all cursor-pointer ${
+                              selectedSubfolderFilter === "all"
+                                ? "bg-accent-primary text-black font-bold"
+                                : "bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-white/70 hover:bg-slate-300 dark:hover:bg-white/15"
+                            }`}
+                          >
+                            All ({folderItems.length})
+                          </button>
+                          <button
+                            onClick={() => setSelectedSubfolderFilter("root")}
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-all cursor-pointer ${
+                              selectedSubfolderFilter === "root"
+                                ? "bg-accent-primary text-black font-bold"
+                                : "bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-white/70 hover:bg-slate-300 dark:hover:bg-white/15"
+                            }`}
+                          >
+                            Root ({folderItems.filter((f) => !f.subfolder).length})
+                          </button>
+                          {folderSubfolders.map((sf) => (
+                            <button
+                              key={sf.id}
+                              onClick={() => setSelectedSubfolderFilter(sf.id)}
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                                selectedSubfolderFilter === sf.id
+                                  ? "bg-accent-primary text-black font-bold"
+                                  : "bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-white/70 hover:bg-slate-300 dark:hover:bg-white/15"
+                              }`}
+                            >
+                              <Folder size={10} />
+                              <span>{sf.name}</span>
+                              <span className="opacity-75">({sf.itemCount})</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
 
                       <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1 pt-1">
                         {filteredFolderItems.map((f, idx) => {
@@ -1061,9 +1178,17 @@ export default function PublicMediaModal({ isOpen, onClose, item, type = "file",
                                   <span className="truncate font-semibold text-slate-800 dark:text-white/80 block">
                                     {f.name}
                                   </span>
-                                  <span className="text-[10px] text-slate-400 dark:text-white/40 font-mono">
-                                    {f.size ? formatSize(f.size) : ""} • {f.extension?.toUpperCase() || fType.toUpperCase()}
-                                  </span>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[10px] text-slate-400 dark:text-white/40 font-mono">
+                                      {f.size ? formatSize(f.size) : ""} • {f.extension?.toUpperCase() || fType.toUpperCase()}
+                                    </span>
+                                    {f.subfolder && (
+                                      <span className="px-1.5 py-0.2 rounded bg-accent-soft text-accent-primary border border-accent-border font-semibold text-[9px] flex items-center gap-1">
+                                        <Folder size={9} />
+                                        <span>{f.subfolder}</span>
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">

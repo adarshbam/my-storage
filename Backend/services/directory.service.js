@@ -1490,6 +1490,49 @@ export const deleteItemsBatchLogic = async ({ items, userId, userRole, permanent
 // Folder Public Media & Manifest Services
 // ==========================================
 
+/**
+ * Helper to fetch all files and subdirectories recursively for a published directory.
+ */
+const getPublishedFolderHierarchy = async (dirId) => {
+  const subDirs = await Directory.find({ path: dirId, _id: { $ne: dirId } })
+    .select("_id name path parentDir")
+    .lean();
+
+  const subDirMap = new Map();
+  const subDirIds = subDirs.map((sd) => {
+    subDirMap.set(sd._id.toString(), sd.name);
+    return sd._id;
+  });
+
+  const allDirIds = [dirId, ...subDirIds];
+
+  const files = await File.find({
+    parentDir: { $in: allDirIds },
+    uploadStatus: { $ne: "uploading" },
+  })
+    .select("_id name extension size contentVersion hasThumbnail parentDir createdAt")
+    .sort({ createdAt: 1 })
+    .lean();
+
+  const subfolders = subDirs.map((sd) => {
+    const itemCount = files.filter(
+      (f) => f.parentDir && f.parentDir.toString() === sd._id.toString()
+    ).length;
+    return {
+      id: sd._id,
+      name: sd.name,
+      itemCount,
+    };
+  });
+
+  return {
+    subDirs,
+    subDirMap,
+    files,
+    subfolders,
+  };
+};
+
 export const updateDirectoryPublicAccessLogic = async ({
   dirId,
   userId,
@@ -1562,15 +1605,15 @@ export const updateDirectoryPublicAccessLogic = async ({
 
   let manifestUrl = null;
   let items = [];
+  let subfolders = [];
 
   if (enabled && publicToken) {
     manifestUrl = `${BACKEND_URL}/share/public-folder/${publicToken}/manifest`;
     
-    const files = await File.find({ parentDir: dirId })
-      .select("_id name extension size contentVersion hasThumbnail")
-      .lean();
+    const hierarchy = await getPublishedFolderHierarchy(dirId);
+    subfolders = hierarchy.subfolders;
 
-    items = files.map((file) => {
+    items = hierarchy.files.map((file) => {
       const edgeToken = generatePublicMediaToken({
         fileId: file._id,
         contentVersion: file.contentVersion || 1,
@@ -1589,11 +1632,16 @@ export const updateDirectoryPublicAccessLogic = async ({
       const iframeCode = `<iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="aspect-ratio: ${cleanAspect}; border-radius: ${updatedPublicAccess.playerSettings.borderRadius};"></iframe>`;
       const videoTagCode = `<video src="${streamUrl}" controls playsinline preload="metadata"></video>`;
 
+      const isSubfolder = file.parentDir && file.parentDir.toString() !== dirId.toString();
+      const subfolderName = isSubfolder ? (hierarchy.subDirMap.get(file.parentDir.toString()) || null) : null;
+
       return {
         id: file._id,
         name: file.name,
         size: file.size,
         extension: file.extension,
+        subfolder: subfolderName,
+        subfolderId: isSubfolder ? file.parentDir : null,
         streamUrl,
         embedUrl,
         iframeCode,
@@ -1613,6 +1661,7 @@ export const updateDirectoryPublicAccessLogic = async ({
     publicAccess: updatedPublicAccess,
     manifestUrl,
     items,
+    subfolders,
     streamUrl,
     embedUrl,
   };
@@ -1665,15 +1714,15 @@ export const getDirectoryPublicAccessLogic = async ({ dirId, userId, userRole })
 
   let manifestUrl = null;
   let items = [];
+  let subfolders = [];
 
   if (publicAccess.enabled && publicAccess.token) {
     manifestUrl = `${BACKEND_URL}/share/public-folder/${publicAccess.token}/manifest`;
 
-    const files = await File.find({ parentDir: dirId })
-      .select("_id name extension size contentVersion hasThumbnail")
-      .lean();
+    const hierarchy = await getPublishedFolderHierarchy(dirId);
+    subfolders = hierarchy.subfolders;
 
-    items = files.map((file) => {
+    items = hierarchy.files.map((file) => {
       const edgeToken = generatePublicMediaToken({
         fileId: file._id,
         contentVersion: file.contentVersion || 1,
@@ -1692,11 +1741,16 @@ export const getDirectoryPublicAccessLogic = async ({ dirId, userId, userRole })
       const iframeCode = `<iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="aspect-ratio: ${cleanAspect}; border-radius: ${publicAccess.playerSettings?.borderRadius || "12px"};"></iframe>`;
       const videoTagCode = `<video src="${streamUrl}" controls playsinline preload="metadata"></video>`;
 
+      const isSubfolder = file.parentDir && file.parentDir.toString() !== dirId.toString();
+      const subfolderName = isSubfolder ? (hierarchy.subDirMap.get(file.parentDir.toString()) || null) : null;
+
       return {
         id: file._id,
         name: file.name,
         size: file.size,
         extension: file.extension,
+        subfolder: subfolderName,
+        subfolderId: isSubfolder ? file.parentDir : null,
         streamUrl,
         embedUrl,
         iframeCode,
@@ -1715,6 +1769,7 @@ export const getDirectoryPublicAccessLogic = async ({ dirId, userId, userRole })
     publicAccess,
     manifestUrl,
     items,
+    subfolders,
     streamUrl,
     embedUrl,
   };
@@ -1758,16 +1813,9 @@ export const getPublicFolderManifestByTokenLogic = async ({ token, origin, refer
     console.error("Async view increment failed:", err.message)
   );
 
-  const query = { parentDir: dir._id };
-  if (fileId) {
-    query._id = fileId;
-  }
+  const hierarchy = await getPublishedFolderHierarchy(dir._id);
 
-  const files = await File.find(query)
-    .select("_id name extension size contentVersion hasThumbnail")
-    .lean();
-
-  const items = files.map((file) => {
+  const items = hierarchy.files.map((file) => {
     const edgeToken = generatePublicMediaToken({
       fileId: file._id,
       contentVersion: file.contentVersion || 1,
@@ -1786,11 +1834,16 @@ export const getPublicFolderManifestByTokenLogic = async ({ token, origin, refer
     const iframeCode = `<iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="aspect-ratio: ${cleanAspect}; border-radius: ${dir.publicAccess.playerSettings?.borderRadius || "12px"};"></iframe>`;
     const videoTagCode = `<video src="${streamUrl}" controls playsinline preload="metadata"></video>`;
 
+    const isSubfolder = file.parentDir && file.parentDir.toString() !== dir._id.toString();
+    const subfolderName = isSubfolder ? (hierarchy.subDirMap.get(file.parentDir.toString()) || null) : null;
+
     return {
       id: file._id,
       name: file.name,
       size: file.size,
       extension: file.extension,
+      subfolder: subfolderName,
+      subfolderId: isSubfolder ? file.parentDir : null,
       streamUrl,
       embedUrl,
       iframeCode,
@@ -1802,7 +1855,9 @@ export const getPublicFolderManifestByTokenLogic = async ({ token, origin, refer
     folderId: dir._id,
     folderName: dir.name,
     playerSettings: dir.publicAccess.playerSettings,
+    subfolders: hierarchy.subfolders,
     items,
+    selectedFileId: fileId || (items[0] ? items[0].id : null),
     totalItems: items.length,
   };
 };
