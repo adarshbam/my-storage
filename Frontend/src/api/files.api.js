@@ -9,6 +9,12 @@ export const getDirectoryContents = (dirId, params = {}) => {
 export const createDirectory = (parentDirId, data) => 
   apiClient.post(parentDirId ? `/directory/${parentDirId}` : '/directory', data);
 
+
+export const ensureDirectoryTree = (parentDirId, paths) => {
+  const url = parentDirId ? `/directory/${parentDirId}/ensure-tree` : '/directory/ensure-tree';
+  return apiClient.post(url, { paths });
+};
+
 export const renameDirectory = (dirId, data) => apiClient.patch(`/directory/${dirId}`, data);
 export const deleteDirectory = (dirId, params = {}) => {
   const query = new URLSearchParams(params).toString();
