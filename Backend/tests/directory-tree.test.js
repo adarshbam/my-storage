@@ -27,6 +27,7 @@ async function runDirectoryTreeTests() {
   console.log("  ✅ PASS: ensureDirectoryTreeLogic function is exported");
 
   console.log("\nAll Directory Tree unit tests passed!\n");
+  process.exit(0);
 }
 
 runDirectoryTreeTests().catch((err) => {
