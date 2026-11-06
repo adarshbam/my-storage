@@ -1,209 +1,80 @@
-# Vault Cloud Storage & Workspace Platform
+# Vault Storage
 
-A high-performance personal cloud storage platform and developer workspace engine with Direct-to-S3 Multipart Uploads, Cloudflare Edge CDN Caching, and bi-directional Google Drive & GitHub integrations.
+A connected workspace for Vault files, GitHub repositories, and Google Drive.
 
----
+[Explore the demo](https://yourvaultstorage.com/) · [GitHub adapter](Backend/services/github.service.js) · [Drive adapter](Backend/services/drive.service.js)
 
-## 1. The Problem and Intended Users
+## Origin and my contribution
 
-### The Problem
-Traditional personal cloud storage services (like Google Drive or Dropbox) operate as isolated silos separate from developer source control systems like GitHub. Developers and educators frequently need to:
-- Move assets and dataset archives between cloud drives and Git repositories without downloading tens of gigabytes to local disk first.
-- Manage and inspect repository file trees directly from cloud storage without requiring a full local git CLI environment.
-- Stream large files directly to object storage with zero egress bandwidth overhead and without tying up web server memory buffers.
+Built on the ProCodrr Node.js course storage project taught by Anurag Singh. I contributed to teaching and course development for that foundation.
 
-### Intended Users
-- **Full-Stack & Systems Developers** who require unified object storage with integrated version control and cloud drive sync.
-- **Technical Educators and Content Teams** distributing course assets, source files, and project archives across dual cloud platforms.
+I independently built the GitHub and Google Drive integrations and their React workspaces, cross-service transfer extensions, owner controls, runtime plan rules, and billing.
 
----
+## What to explore
 
-## 2. What Works Today
+- **Connected workspaces:** browse GitHub repositories and Drive folders alongside Vault storage; create repositories and work with repository files and branches.
+- **Transfers:** Vault ↔ Google Drive and Vault → GitHub transfer paths. Do not assume a direct Drive ↔ GitHub operation.
+- **Owner controls and plans:** owner-managed configuration, Redis invalidation after plan edits, and per-request entitlement resolution for feature access.
+- **File upload and delivery:** the browser requests signed multipart URLs, uploads parts directly to Backblaze B2, then asks the API to finalize. A Cloudflare Worker checks signed reads before cache/origin access.
 
-- **Direct-to-S3 Chunked Multipart Uploads**: Clients stream large files directly to Backblaze B2 (AWS S3-compatible) using presigned URLs, bypassing application server memory and bandwidth bottlenecks.
-- **Zero-Egress Cloudflare Edge CDN**: Custom Cloudflare Worker validates HMAC-SHA256 signatures (`path:v:expires`), checks `caches.default`, and caches streaming byte ranges at edge nodes via the Backblaze Bandwidth Alliance.
-- **GitHub Integration & Workspace Engine**:
-  - Connects user GitHub accounts via OAuth2 with encrypted access token storage.
-  - Programmatic GitHub repository creation directly from the storage dashboard.
-  - Repository tree cloning directly into Vault storage folders.
-  - In-memory Git blob SHA-1 calculation (`blob <size>\0<content>`).
-  - Staging area workbench and atomic multi-file commit generation via GitHub Git Data REST API.
-- **Google Drive Integration**:
-  - Connects Google Drive via OAuth2 with refresh token rotation.
-  - Browses remote Drive hierarchies and streams files directly to and from object storage.
-- **Cross-Platform Transfer Engine**:
-  - Transfers files directly between Google Drive and GitHub repositories through the platform without requiring local machine disk intermediate storage.
-- **Hierarchical Storage Engine**:
-  - Nested folder trees with ancestor path arrays (`[rootId, parentId, childId]`) for \(O(1)\) subtree authorization.
-  - Multi-document ACID transactions (`withTransaction`) for transactional directory size rollups.
-  - Soft-delete trash lifecycles with 30-day scheduled automated purging.
-- **Multi-Factor Authentication & Security**:
-  - Argon2id password hashing with custom salt rounds.
-  - RFC 6238 TOTP (Google Authenticator) with AES-256-GCM encrypted secret keys and 10 hashed one-time backup recovery codes.
-  - Phone and email verification via deterministic SHA-256 phone hashing.
+React · Node.js · Express · MongoDB · Redis · Backblaze B2 · Cloudflare Workers.
 
----
+## Architecture and tradeoffs
 
-## 3. My Specific Contribution and Project Origin
+The API handles authorization, metadata, signing, and completion; browser upload bytes go directly to B2. Signed delivery follows browser → Worker → cache or B2. GitHub and Drive are separate integrations, not required hops in that upload path.
 
-### Origin & Foundation
-This project originated from the reference cloud storage system designed for the comprehensive **ProCodrr Node.js Backend Course** taught by **Anurag Singh** (`anuragsinghbam`). **Adarsh Singh** contributed to the core course curriculum project as a technical teaching and course development assistant.
+| Decision | Benefit | Tradeoff |
+| --- | --- | --- |
+| GitHub REST Contents and Refs | Repository operations without a local clone | Per-file Contents writes are not atomic multi-file tree commits |
+| Direct multipart uploads | File bytes bypass the API upload path | Client coordinates parts, ETags, retries, and completion |
+| Signed Worker reads | Signature and expiry checks precede cache lookup | Cache freshness and signed-link lifetime need separate consideration |
+| Runtime entitlement resolution | Requests use current plan rules after owner edits | Source presence does not establish a tested paid subscription lifecycle |
 
-### Independent Personal Extensions by Adarsh Singh
-Following the core course foundation, Adarsh Singh independently designed, implemented, and extended the platform with the following advanced subsystems:
+## Evidence and boundaries
 
-1. **GitHub Workspace Engine (`Backend/services/github.service.js` - 2,888 LOC)**:
-   - Built the entire GitHub integration service from scratch.
-   - Implemented in-browser repository creation (`createRepositoryLogic`), remote branch cloning, tree inspection, and directory synchronization into object storage.
-   - Authored the in-memory Git blob SHA-1 calculation and multi-file tree commit pipeline invoking GitHub's Git Data API.
-2. **Google Drive Integration (`Backend/services/drive.service.js` - 979 LOC)**:
-   - Built Google Drive OAuth2 integration with token refresh flows.
-   - Developed bi-directional file streaming handlers between Google Drive APIs and S3-compatible object storage buckets.
-3. **Cross-Platform Transfer Pipeline**:
-   - Engineered the transfer bridge allowing files and directories to move seamlessly between Google Drive and GitHub repositories without local staging.
-4. **Enhanced React 19 Frontend**:
-   - Built the interactive Git workbench UI components, repository selector modals, and dual-cloud Drive import/export interfaces.
+Portfolio checks recorded on 25 October 2026 include a small multipart upload with byte-identical signed downloads, Vault ↔ Drive API copies, and Vault → GitHub transfer, branch, commit, and comparison operations in a disposable repository.
 
----
+Those checks do not establish successful move/delete semantics, transfer byte integrity across every provider, direct Drive ↔ GitHub transfers, checkout completion, or ordinary paid-tier expiry enforcement. Owner settings and billing screens were observed; plan enforcement was source-reviewed. A permanent demo account is not evidence of the ordinary paid lifecycle.
 
-## 4. Architecture and Important Decisions Supported by Code
+No production-scale, latency, zero-egress-cost, or absolute-security guarantee is made. Cloud/provider limits and billing depend on configuration and current service terms.
 
-```
-                                    ┌────────────────────────────┐
-                                    │    React 19 SPA (Vite)     │
-                                    │   TailwindCSS / Lucide     │
-                                    └──────────────┬─────────────┘
-                                                   │
-                 ┌─────────────────────────────────┼─────────────────────────────────┐
-                 │ 1. Direct Multipart Upload (PUT)│ 2. Signed CDN Stream (GET/Range)│ 3. REST API & Auth (JSON)
-                 ▼                                 ▼                                 ▼
-┌───────────────────────────────┐  ┌───────────────────────────────┐  ┌───────────────────────────────┐
-│     Backblaze B2 (S3 API)     │  │   Cloudflare Edge Worker CDN  │  │   Express.js 5 Backend API    │
-│  - Chunked Object Storage     │◄─┤  - HMAC-SHA256 Sig Verify     │  │  - Thin Controllers / Services│
-│  - In-memory Part Assembly    │  │  - Edge Cache (caches.default)│  │  - Direct S3 Presigner        │
-│  - WebP Thumbnail Storage     │  │  - Bandwidth Alliance (0 Egress) │ - GitHub/Drive Connectors    │
-└───────────────────────────────┘  └───────────────────────────────┘  └───────┬───────────────┬───────┘
-                                                                              │               │
-                                           ┌──────────────────────────────────┘               └──────────────────────────────────┐
-                                           ▼                                                                                     ▼
-                            ┌───────────────────────────────┐                                                     ┌───────────────────────────────┐
-                            │      MongoDB (Mongoose 9)     │                                                     │        Redis In-Memory        │
-                            │  - ACID Multi-Doc Transactions│                                                     │  - Distributed Session Cache  │
-                            │  - Compound Indexed Schemas   │                                                     │  - Cron Lockouts              │
-                            │  - Tree Paths & Rollup Invariants                                                  │  - Cache-Aside Directory Tree │
-                            └───────────────────────────────┘                                                     └───────────────────────────────┘
-```
+## Implementation entry points
 
-### Key Engineering Decisions:
-1. **Direct S3 Uploads via Presigned URLs**: Rather than streaming multi-gigabyte uploads through Express server memory (which degrades event loop responsiveness), the backend generates S3 multipart presigned URLs. The browser uploads parts concurrently directly to Backblaze B2.
-2. **Edge URL Verification with Web Crypto**: The Cloudflare Edge Worker validates HMAC-SHA256 tokens using the Web Crypto API without contacting the origin database, ensuring sub-50ms cache hits and absolute protection against unauthorized bucket egress.
-3. **In-Memory Git Object Tree Construction**: Rather than spawning local `git` CLI binaries on the host system, `github.service.js` interacts directly with GitHub's REST API, constructing git trees and commit blobs in-memory for zero host-disk dependencies.
+- [Upload manager](Frontend/src/hooks/useUploadManager.js)
+- [Storage signing](Backend/integrations/storage/s3.client.js)
+- [Signed delivery Worker](cloudflare-worker/src/worker.js)
+- [GitHub integration](Backend/services/github.service.js) and [Drive integration](Backend/services/drive.service.js)
+- [Plan context](Backend/middlewares/loadPlanContext.js), [feature checks](Backend/middlewares/requireFeature.js), and [plan updates](Backend/services/plan.service.js)
+- [Owner settings interface](Frontend/src/pages/OwnerSettings/OwnerSettings.jsx)
 
----
+## Local setup
 
-## 5. Setup Instructions and Required Configuration
+Use Node.js 24 for the documented development environment, plus MongoDB and Redis, a Backblaze B2/S3-compatible bucket, and provider credentials for the integrations you configure.
 
-### Prerequisites
-- **Node.js**: `v20.x` or higher
-- **MongoDB**: `v6.0+` (Replica set enabled for multi-document transactions)
-- **Redis**: `v6.2+`
-- **Backblaze B2** bucket (or AWS S3-compatible storage)
-- **GitHub OAuth App** & **Google Cloud Console OAuth Credentials**
+1. Install backend dependencies, copy [Backend/.env.example](Backend/.env.example) to `Backend/.env`, and configure the services used by the API.
+2. Install frontend dependencies and configure [Frontend/.env.example](Frontend/.env.example) as `Frontend/.env`.
+3. Run the backend and frontend in separate terminals:
 
-### Backend Setup
 ```bash
 cd Backend
 npm install
-cp .env.example .env
-```
-Start the backend API server:
-```bash
 npm run dev
-# Server listens on http://localhost:4000
 ```
 
-### Frontend Setup
 ```bash
 cd Frontend
 npm install
-cp .env.example .env
-```
-Start the Vite development client:
-```bash
 npm run dev
-# Client listens on http://localhost:5173
 ```
 
-### Cloudflare Worker Deployment
-```bash
-cd cloudflare-worker
-npm install
-npx wrangler secret put CDN_SIGNING_SECRET
-npx wrangler secret put B2_APPLICATION_KEY_ID
-npx wrangler secret put B2_APPLICATION_KEY
-npm run deploy
-```
+For signed CDN delivery, inspect the [Worker package scripts](cloudflare-worker/package.json) and [Worker source](cloudflare-worker/src/worker.js) before configuring your own Cloudflare resources. Local startup is not a production deployment guide.
 
-### Required Configuration Parameter Names (No Secrets)
-| Service | Environment Variable Names |
-| :--- | :--- |
-| **Backend Core** | `PORT`, `NODE_ENV`, `CLIENT_ORIGIN`, `COOKIE_SECRET`, `JWT_SECRET` |
-| **Databases** | `MONGO_URI`, `REDIS_URI` |
-| **Object Storage** | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET_NAME`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` |
-| **Edge CDN** | `CDN_BASE_URL`, `CDN_SIGNING_SECRET` |
-| **GitHub OAuth** | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_CALLBACK_URL` |
-| **Google Drive OAuth** | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL` |
-| **Payments** | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` |
-| **Frontend** | `VITE_API_BASE_URL` |
+Keep service credentials in your own environment configuration. Do not commit them.
 
----
+## Focused backend checks
 
-## 6. Reproducible Example
+The repository includes checks for security helpers, email templates, and notification behavior:
 
-### Creating a GitHub Repository & Pushing Files via Vault API
-
-```bash
-# 1. Create a new GitHub repository directly through Vault
-curl -X POST http://localhost:4000/api/v1/github/repos \
-  -H "Content-Type: application/json" \
-  -H "Cookie: token=<SESSION_COOKIE>" \
-  -d '{
-    "name": "my-new-vault-sync-repo",
-    "description": "Created and synced via Vault Cloud Storage",
-    "private": true
-  }'
-
-# 2. Transfer a file from Vault Storage to the new GitHub repository
-curl -X POST http://localhost:4000/api/v1/github/repos/commit \
-  -H "Content-Type: application/json" \
-  -H "Cookie: token=<SESSION_COOKIE>" \
-  -d '{
-    "repo": "my-new-vault-sync-repo",
-    "branch": "main",
-    "message": "feat: initial commit synced from Vault Storage",
-    "files": [
-      {
-        "vaultFileId": "65b9e0f312c49a001a1b2c3d",
-        "targetPath": "docs/architecture.png"
-      }
-    ]
-  }'
-```
-
----
-
-## 7. Tests Actually Run and What They Establish
-
-All automated tests were run on Node.js v24 against the backend test suites:
-
-| Test Suite | File | What It Establishes | Verified Result |
-| :--- | :--- | :--- | :--- |
-| **Security & Cryptography** | `Backend/tests/security.test.js` | Validates E.164 phone normalization, AES-256-GCM TOTP secret encryption/decryption, OTP hashing, and RFC 6238 TOTP verification. | **18 Passed, 0 Failed** |
-| **Email Template Engine** | `Backend/tests/email-templates.test.js` | Validates OTP, password reset, and recovery email HTML formatting, brand headers, and expiry parameters. | **25 Passed, 0 Failed** |
-| **Notification Lifecycle & Idempotency** | `Backend/tests/notifications.test.js` | Validates event key deduplication, multi-user authorization isolation, read/dismiss states, and storage quota alert thresholds. | **35 Passed, 0 Failed** |
-| **Total Test Assertions** | — | Comprehensive core backend verification | **78 Passed, 0 Failed** |
-
-To execute the test suites:
 ```bash
 cd Backend
 node tests/security.test.js
@@ -211,17 +82,11 @@ node tests/email-templates.test.js
 node tests/notifications.test.js
 ```
 
----
+These commands do not constitute an end-to-end check of uploads, OAuth, transfers, payments, or plan enforcement. No fresh pass count is asserted by this documentation update.
 
-## 8. Known Limitations and Roadmap
+## Current limits
 
-### Known Limitations
-- **GitHub API Rate Limits**: In-memory repository cloning and recursive tree traversals consume GitHub REST API rate limits (5,000 requests/hour for authenticated users); large repositories with thousands of files require batch pagination.
-- **Large Dual-Cloud File Transfers**: Streaming very large single files (>100MB) directly between Google Drive and GitHub can experience timeouts on constrained server connections without chunked retry resume logic.
-- **Merge Conflict Resolution**: In-browser Git operations support atomic tree commits and branch creation; interactive visual three-way merge conflict resolution is not supported.
-
-### Roadmap
-- [ ] **WebAssembly Git Engine**: Integrate `isomorphic-git` inside client web workers for client-side diffing, reducing backend GitHub REST API calls.
-- [ ] **Chunked Dual-Cloud Resume**: Implement chunked resumable transfers for Google Drive to S3 and GitHub transfers with Redis-tracked progress states.
-- [ ] **Interactive Visual Merge Tool**: Build a side-by-side visual conflict resolution editor in the React workbench for Git branch merges.
-- [ ] **Webhook Auto-Sync**: Implement incoming GitHub repository webhook listeners to automatically trigger Vault folder updates when external commits occur.
+- GitHub operations consume provider API quotas; per-file requests trade atomic batch behavior for a simpler adapter.
+- Transfers can fail or be interrupted. A successful copy is not proof of successful source removal or resumable recovery.
+- GitHub file editing is not an interactive three-way merge tool.
+- Demo availability and source behavior can differ; the observations above are dated rather than a claim about every current deployment.
