@@ -1,92 +1,73 @@
 # Vault Storage
 
-A connected workspace for Vault files, GitHub repositories, and Google Drive.
+A file-storage application with GitHub and Google Drive workspaces, signed media delivery, and owner-managed plans.
 
-[Explore the demo](https://yourvaultstorage.com/) · [GitHub adapter](Backend/services/github.service.js) · [Drive adapter](Backend/services/drive.service.js)
+[Open Vault](https://yourvaultstorage.com/) · [Architecture](docs/ARCHITECTURE.md) · [API map](docs/API.md) · [Security boundaries](docs/SECURITY.md)
 
-## Origin and my contribution
+![Vault displaying the author's public GitHub repository in its connected workspace](docs/screenshots/github-workspace.webp)
 
-Built on the ProCodrr Node.js course storage project taught by Anurag Singh. I contributed to teaching and course development for that foundation.
+*GitHub workspace, captured 25 October 2026. Product labels in the screenshot are not a security certification.*
 
-I independently built the GitHub and Google Drive integrations and their React workspaces, cross-service transfer extensions, owner controls, runtime plan rules, and billing.
+## What I built
 
-## What to explore
+I developed the full Vault implementation while working with Anurag Singh on ProCodrr's Node.js storage-course material; the teaching version is simplified. My implementation includes the GitHub and Drive workspaces, transfers, owner controls, runtime plan rules, billing, and storage/media workflows. Vault is deployed and used by external users.
 
-- **Connected workspaces:** browse GitHub repositories and Drive folders alongside Vault storage; create repositories and work with repository files and branches.
-- **Transfers:** Vault ↔ Google Drive and Vault → GitHub transfer paths. Do not assume a direct Drive ↔ GitHub operation.
-- **Owner controls and plans:** owner-managed configuration, Redis invalidation after plan edits, and per-request entitlement resolution for feature access.
-- **File upload and delivery:** the browser requests signed multipart URLs, uploads parts directly to Backblaze B2, then asks the API to finalize. A Cloudflare Worker checks signed reads before cache/origin access.
+## Main workflows
 
-React · Node.js · Express · MongoDB · Redis · Backblaze B2 · Cloudflare Workers.
+- **Store files:** browser-managed multipart uploads to Backblaze B2, folder navigation, previews, downloads, and trash.
+- **Work with GitHub:** browse and edit repository files; clone into a Vault workspace, stage changes, and build a multi-file Git commit.
+- **Connect Drive:** browse folders and transfer between Vault and Google Drive; export Vault files to GitHub.
+- **Share media:** public file/folder access, embeddable playback, allowed-origin settings, and player customization.
+- **Manage access:** accounts, owner controls, subscriptions, and per-request feature/plan checks.
 
-## Architecture and tradeoffs
+React · Node.js/Express · MongoDB · Redis · Backblaze B2 · Cloudflare Workers.
 
-The API handles authorization, metadata, signing, and completion; browser upload bytes go directly to B2. Signed delivery follows browser → Worker → cache or B2. GitHub and Drive are separate integrations, not required hops in that upload path.
+## How a file travels
 
-| Decision | Benefit | Tradeoff |
-| --- | --- | --- |
-| GitHub REST Contents and Refs | Repository operations without a local clone | Per-file Contents writes are not atomic multi-file tree commits |
-| Direct multipart uploads | File bytes bypass the API upload path | Client coordinates parts, ETags, retries, and completion |
-| Signed Worker reads | Signature and expiry checks precede cache lookup | Cache freshness and signed-link lifetime need separate consideration |
-| Runtime entitlement resolution | Requests use current plan rules after owner edits | Source presence does not establish a tested paid subscription lifecycle |
+```mermaid
+flowchart TD
+    Browser[Browser] -->|Authorize and sign| API[Express API]
+    API --> Metadata[MongoDB and Redis]
+    Browser -->|Upload parts directly| B2[Backblaze B2]
+    Browser -->|Signed read| Worker[Cloudflare Worker]
+    Worker -->|Cache miss| B2
+    Worker -->|File response| Browser
+```
 
-## Evidence and boundaries
+The API handles permissions, metadata, upload signing, and completion. The Worker validates reads before cache/origin access. [Detailed flows and tradeoffs](docs/ARCHITECTURE.md).
 
-Portfolio checks recorded on 25 October 2026 include a small multipart upload with byte-identical signed downloads, Vault ↔ Drive API copies, and Vault → GitHub transfer, branch, commit, and comparison operations in a disposable repository.
+## Run locally
 
-Those checks do not establish successful move/delete semantics, transfer byte integrity across every provider, direct Drive ↔ GitHub transfers, checkout completion, or ordinary paid-tier expiry enforcement. Owner settings and billing screens were observed; plan enforcement was source-reviewed. A permanent demo account is not evidence of the ordinary paid lifecycle.
+Use Node.js 24, MongoDB, Redis, and a configured B2/S3-compatible bucket. Copy and configure [Backend/.env.example](Backend/.env.example) and [Frontend/.env.example](Frontend/.env.example) as their respective `.env` files before starting. OAuth, payments, and media delivery need their own provider configuration.
 
-No production-scale, latency, zero-egress-cost, or absolute-security guarantee is made. Cloud/provider limits and billing depend on configuration and current service terms.
+Run in separate terminals:
 
-## Implementation entry points
-
-- [Upload manager](Frontend/src/hooks/useUploadManager.js)
-- [Storage signing](Backend/integrations/storage/s3.client.js)
-- [Signed delivery Worker](cloudflare-worker/src/worker.js)
-- [GitHub integration](Backend/services/github.service.js) and [Drive integration](Backend/services/drive.service.js)
-- [Plan context](Backend/middlewares/loadPlanContext.js), [feature checks](Backend/middlewares/requireFeature.js), and [plan updates](Backend/services/plan.service.js)
-- [Owner settings interface](Frontend/src/pages/OwnerSettings/OwnerSettings.jsx)
-
-## Local setup
-
-Use Node.js 24 for the documented development environment, plus MongoDB and Redis, a Backblaze B2/S3-compatible bucket, and provider credentials for the integrations you configure.
-
-1. Install backend dependencies, copy [Backend/.env.example](Backend/.env.example) to `Backend/.env`, and configure the services used by the API.
-2. Install frontend dependencies and configure [Frontend/.env.example](Frontend/.env.example) as `Frontend/.env`.
-3. Run the backend and frontend in separate terminals:
-
-```bash
+```sh
 cd Backend
 npm install
 npm run dev
 ```
 
-```bash
+```sh
 cd Frontend
 npm install
 npm run dev
 ```
 
-For signed CDN delivery, inspect the [Worker package scripts](cloudflare-worker/package.json) and [Worker source](cloudflare-worker/src/worker.js) before configuring your own Cloudflare resources. Local startup is not a production deployment guide.
+[Backend setup](Backend/README.md) · [Frontend setup](Frontend/README.md) · [Worker setup](cloudflare-worker/README.md).
 
-Keep service credentials in your own environment configuration. Do not commit them.
+## Read the implementation
 
-## Focused backend checks
+| Question | Start here |
+| --- | --- |
+| Upload, cache, Git, and entitlement decisions | [Architecture](docs/ARCHITECTURE.md) |
+| Feature scope and evidence | [Features](docs/FEATURES.md) |
+| Real route prefixes and examples | [API map](docs/API.md) |
+| Metadata and storage relationships | [Data model](docs/DATA-MODEL.md) |
+| Authentication, sharing, and known boundaries | [Security notes](docs/SECURITY.md) |
 
-The repository includes checks for security helpers, email templates, and notification behavior:
+## Verification and limits
 
-```bash
-cd Backend
-node tests/security.test.js
-node tests/email-templates.test.js
-node tests/notifications.test.js
-```
+The repository contains [focused backend checks](Backend/README.md#checks). Dated portfolio checks exercised small uploads/downloads and selected provider-copy/commit operations. They do not establish every move/delete, interrupted transfer, checkout, or paid-tier lifecycle. Exact adoption counts, latency, operating cost, and production capacity are not asserted here.
 
-These commands do not constitute an end-to-end check of uploads, OAuth, transfers, payments, or plan enforcement. No fresh pass count is asserted by this documentation update.
-
-## Current limits
-
-- GitHub operations consume provider API quotas; per-file requests trade atomic batch behavior for a simpler adapter.
-- Transfers can fail or be interrupted. A successful copy is not proof of successful source removal or resumable recovery.
-- GitHub file editing is not an interactive three-way merge tool.
-- Demo availability and source behavior can differ; the observations above are dated rather than a claim about every current deployment.
+GitHub has two distinct write paths: ordinary Contents API file edits and the Git workspace's blob/tree/commit/ref sequence. Neither is a transaction spanning GitHub, MongoDB, and B2. The architecture guide explains the boundary.

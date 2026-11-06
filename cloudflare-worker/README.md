@@ -1,58 +1,39 @@
-# Vault Storage CDN Worker (`vault-storage-cdn`)
+# Vault delivery Worker
 
-This directory contains the source-controlled Cloudflare Worker for Vault Storage file and thumbnail delivery from private Backblaze B2 storage.
+Cloudflare Worker for signed file, thumbnail, and public-media reads from Backblaze B2.
 
-## Architecture
+[Application architecture](../docs/ARCHITECTURE.md) · [Security boundaries](../docs/SECURITY.md) · [Implementation](src/worker.js)
 
-```
-Authenticated User (Express App)
-  ↓ (generates HMAC signed URL)
-Cloudflare Worker (vault-storage-cdn)
-  ↓ (authenticates via B2 API)
-Private Backblaze B2 Bucket (secure-vault-storage)
-```
-
-## Structure
-
-```
-cloudflare-worker/
-├── src/
-│   └── worker.js         # Exact source code of deployed Worker
-├── wrangler.toml         # Wrangler configuration targeting 'vault-storage-cdn'
-├── package.json          # Node scripts and wrangler dependency
-├── .dev.vars.example     # Secrets template for local testing
-└── .gitignore            # Excludes node_modules, .wrangler, and .dev.vars
+```mermaid
+flowchart TD
+    Request[Read request] --> Verify[Validate signature and access conditions]
+    Verify --> Cache{Eligible cached response?}
+    Cache -->|Hit| Reply[Return file response]
+    Cache -->|Miss| B2[Fetch Backblaze B2]
+    B2 --> Reply
+    B2 -. Eligible full response .-> Cache
 ```
 
-## Environment Secrets (Configured on Cloudflare)
+## Read modes
 
-The production worker relies on the following secrets configured in Cloudflare Dashboard / Wrangler secrets:
-- `CDN_SIGNING_SECRET`: HMAC-SHA256 secret used to verify signed URLs (`${path}:${expires}`).
-- `B2_APPLICATION_KEY_ID`: Backblaze B2 Application Key ID.
-- `B2_APPLICATION_KEY`: Backblaze B2 Application Key.
+- **Ordinary file/thumbnail URLs:** HMAC-SHA256 covers path, content version, and expiry; signature/expiry validation precedes cache lookup.
+- **Public media:** a signed encoded payload identifies the file and allowed origins. The Worker checks the payload and configured domain policy before serving it. This is not DRM or protection against a client copying downloaded bytes.
 
-> **Security**: Never commit secrets or `.dev.vars` to Git.
+Canonical versioned cache keys avoid treating every expiring signed query as a separate object. The implementation handles Range requests; only eligible full responses are cached. Browser cache lifetime, Worker cache state, and authorization-token lifetime are separate.
 
-## Commands
+## Configure and run locally
 
-- **Install dependencies locally**:
-  ```bash
-  npm install
-  ```
+Use the repository's [package scripts](package.json) and [Wrangler configuration](wrangler.toml). Create an ignored `.dev.vars` for local bindings using the names below; a checked-in example file is not present.
 
-- **Run local development server**:
-  ```bash
-  npm run dev
-  ```
-  *(Requires `.dev.vars` configured locally)*
+```sh
+npm install
+npm run dev
+```
 
-- **Deploy to Cloudflare (Updates existing `vault-storage-cdn` worker)**:
-  ```bash
-  npm run deploy
-  ```
-  *(Requires running `npx wrangler login` once beforehand)*
+The Worker needs `CDN_SIGNING_SECRET`, `B2_APPLICATION_KEY_ID`, and `B2_APPLICATION_KEY`, plus the non-secret configuration referenced by the implementation. The backend signing configuration must match the Worker. Never copy credential values into documentation or client bundles.
 
-- **Tail live logs**:
-  ```bash
-  npm run tail
-  ```
+`npm run deploy` updates the configured Cloudflare Worker; it is an operational action, not a local verification step. `npm run tail` reads its logs. No deployment is performed by reading this guide.
+
+## Limits
+
+Cache hits can avoid repeated origin fetches. This does not establish a latency target, a globally replicated cache, instant revocation of client-cached content, or a zero-cost application. The repository source is not independent proof of the exact deployed revision.
