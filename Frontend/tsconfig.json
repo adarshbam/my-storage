@@ -1,0 +1,17 @@
+{
+  "include": ["src/main.jsx", "src/**/.tsx", "**/*.ts"],
+  "exclude": ["node_modules"],
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "types": ["vite/client"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true
+  }
+}
