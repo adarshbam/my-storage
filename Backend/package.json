@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "nodemon --env-file=.env app.js",
     "start": "node app.js",
-    "seed:special-accounts": "node scripts/seedSpecialAccounts.js"
+    "seed:special-accounts": "node scripts/seedSpecialAccounts.js",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test:unit": "node --import tsx --test \"tests/unit/*.test.js\""
   },
   "keywords": [],
   "author": "",

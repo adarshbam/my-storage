@@ -1,0 +1,55 @@
+name: vault-isolated-test
+
+services:
+  mongodb-test:
+    image: mongo:8.0
+    restart: "no"
+
+    ports:
+      - "127.0.0.1:27018:27017"
+
+    volumes:
+      - mongodb-test-data:/data/db
+
+    healthcheck:
+      test:
+        ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis-test:
+    image: redis:7-alpine
+    restart: "no"
+
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+
+    ports:
+      - "127.0.0.1:6380:6379"
+
+    volumes:
+      - redis-test-data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  s3-test:
+    image: motoserver/moto:5.2.5
+    restart: "no"
+
+    environment:
+      MOTO_PORT: "5000"
+
+    ports:
+      - "127.0.0.1:5001:5000"
+
+volumes:
+  mongodb-test-data:
+  redis-test-data:

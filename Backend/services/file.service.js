@@ -5,7 +5,7 @@ import {
   hasWriteAccess,
   verifyItemAccess,
 } from "../utils/integrationHelper.js";
-import { escapeRegExp } from "../utils/escapeRegExp.js";
+import { escapeRegExp } from "../utils/escapeRegExp.ts";
 import sharp from "sharp";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
@@ -28,7 +28,11 @@ import {
   deleteFromB2,
   getObjectFromB2,
 } from "../integrations/storage/s3.client.js";
-import { GetObjectCommand, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  HeadObjectCommand,
+} from "@aws-sdk/client-s3";
 import {
   updateParentDirectorySize,
   getDirectoryPath,
@@ -59,9 +63,17 @@ const getAllDescendantIds = (rootDirId, allDirs) => {
   return descendants;
 };
 
-export const searchFiles = async ({ query, ext, maxSize, userId, userRole, rootDirId, parentId }) => {
+export const searchFiles = async ({
+  query,
+  ext,
+  maxSize,
+  userId,
+  userRole,
+  rootDirId,
+  parentId,
+}) => {
   const req = { user: { id: userId, role: userRole } };
-  
+
   if (!query && !ext && !maxSize) {
     const error = new Error("Search query required");
     error.status = 400;
@@ -183,7 +195,10 @@ export const searchFiles = async ({ query, ext, maxSize, userId, userRole, rootD
     : matchingDirs;
 
   // Filter FilesDB
-  const fileSearchFilter = { ...searchFilter, uploadStatus: { $ne: "uploading" } };
+  const fileSearchFilter = {
+    ...searchFilter,
+    uploadStatus: { $ne: "uploading" },
+  };
   const matchingFiles = await File.find(fileSearchFilter).select("-__v").lean();
 
   const finalMatchingFiles = validParentIds
@@ -249,9 +264,7 @@ export const searchFiles = async ({ query, ext, maxSize, userId, userRole, rootD
     filesCountMap = new Map(
       filesCounts.map((c) => [c._id.toString(), c.count]),
     );
-    dirsCountMap = new Map(
-      dirsCounts.map((c) => [c._id.toString(), c.count]),
-    );
+    dirsCountMap = new Map(dirsCounts.map((c) => [c._id.toString(), c.count]));
   }
 
   // 4. Map final matching directories
@@ -422,7 +435,10 @@ export const getThumbnailLogic = async ({ fileId, userId, userRole, res }) => {
       const command = new GetObjectCommand(s3Params);
       const s3Response = await s3Client.send(command);
       res.setHeader("Content-Type", "image/webp");
-      res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+      res.setHeader(
+        "Cache-Control",
+        "public, max-age=86400, stale-while-revalidate=604800",
+      );
       return s3Response.Body.pipe(res);
     } catch (webpErr) {
       // Fallback: check legacy .jpg thumbnail if present
@@ -434,7 +450,10 @@ export const getThumbnailLogic = async ({ fileId, userId, userRole, res }) => {
         const legacyCommand = new GetObjectCommand(legacyParams);
         const legacyRes = await s3Client.send(legacyCommand);
         res.setHeader("Content-Type", "image/jpeg");
-        res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+        res.setHeader(
+          "Cache-Control",
+          "public, max-age=86400, stale-while-revalidate=604800",
+        );
         return legacyRes.Body.pipe(res);
       } catch (jpgErr) {
         console.warn(
@@ -502,11 +521,17 @@ export const getThumbnailLogic = async ({ fileId, userId, userRole, res }) => {
       }
 
       res.setHeader("Content-Type", "image/webp");
-      res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+      res.setHeader(
+        "Cache-Control",
+        "public, max-age=86400, stale-while-revalidate=604800",
+      );
       return res.send(workerResult.data);
     }
   } catch (genErr) {
-    console.error("Failed multithreaded on-demand thumbnail generation:", genErr);
+    console.error(
+      "Failed multithreaded on-demand thumbnail generation:",
+      genErr,
+    );
     const error = new Error("Thumbnail not available");
     error.status = 404;
     throw error;
@@ -573,7 +598,13 @@ export const ensureWebpThumbnailExists = async ({
   // 2. Generate on-demand in Worker Thread purely in-memory (Zero Disk I/O)
   try {
     let workerResult;
-    const effectiveExt = fileExt || (file.extension ? (file.extension.startsWith(".") ? file.extension : `.${file.extension}`) : "");
+    const effectiveExt =
+      fileExt ||
+      (file.extension
+        ? file.extension.startsWith(".")
+          ? file.extension
+          : `.${file.extension}`
+        : "");
 
     if (SUPPORTED_IMAGE_THUMBNAIL_EXTENSIONS.includes(fileExt)) {
       const s3Params = {
@@ -689,7 +720,10 @@ export const createThumbnailCdnUrlLogic = async ({
 
   // Ensure WebP thumbnail exists in B2 before returning CDN URL
   await ensureWebpThumbnailExists({ file, fileId, isTrash }).catch((err) =>
-    console.warn("ensureWebpThumbnailExists warning in createThumbnailCdnUrlLogic:", err.message)
+    console.warn(
+      "ensureWebpThumbnailExists warning in createThumbnailCdnUrlLogic:",
+      err.message,
+    ),
   );
 
   const url = createCloudflareCdnDownloadUrl({
@@ -710,9 +744,7 @@ export const createThumbnailCdnUrlLogic = async ({
 export const markFileOpenedLogic = async ({ fileId, userId, userRole }) => {
   const req = { user: { id: userId, role: userRole } };
 
-  const file = await File.findOne({ _id: fileId })
-    .select("userId path")
-    .lean();
+  const file = await File.findOne({ _id: fileId }).select("userId path").lean();
 
   if (!file) {
     const error = new Error("File not found");
@@ -782,8 +814,12 @@ export const createFileCdnUrlLogic = async ({
   }
 
   // Asynchronously update openedAt timestamp without blocking CDN URL response
-  File.updateOne({ _id: fileId }, { $set: { openedAt: new Date() } }).catch((err) =>
-    console.error("openedAt async update failed in createFileCdnUrlLogic:", err),
+  File.updateOne({ _id: fileId }, { $set: { openedAt: new Date() } }).catch(
+    (err) =>
+      console.error(
+        "openedAt async update failed in createFileCdnUrlLogic:",
+        err,
+      ),
   );
 
   const url = createCloudflareCdnDownloadUrl({
@@ -801,12 +837,20 @@ export const createFileCdnUrlLogic = async ({
   };
 };
 
-export const getFileLogic = async ({ fileId, userId, userRole, range, action, ifNoneMatch, res }) => {
+export const getFileLogic = async ({
+  fileId,
+  userId,
+  userRole,
+  range,
+  action,
+  ifNoneMatch,
+  res,
+}) => {
   const req = { user: { id: userId, role: userRole } };
 
   // Update openedAt timestamp asynchronously without blocking file read response
-  File.updateOne({ _id: fileId }, { $set: { openedAt: new Date() } }).catch((err) =>
-    console.error("openedAt async update failed:", err),
+  File.updateOne({ _id: fileId }, { $set: { openedAt: new Date() } }).catch(
+    (err) => console.error("openedAt async update failed:", err),
   );
 
   const file = await File.findOne({ _id: fileId })
@@ -926,7 +970,11 @@ export const getFileLogic = async ({ fileId, userId, userRole, range, action, if
     };
 
     const cleanExt = (file.extension || "").toLowerCase();
-    if (action !== "download" && cleanExt && textExtensions.includes(cleanExt)) {
+    if (
+      action !== "download" &&
+      cleanExt &&
+      textExtensions.includes(cleanExt)
+    ) {
       res.setHeader("Content-Type", "text/plain; charset=utf-8");
     } else if (action !== "download" && cleanExt && MIME_MAP[cleanExt]) {
       res.setHeader("Content-Type", MIME_MAP[cleanExt]);
@@ -994,16 +1042,25 @@ export const getStarredItems = async (userId, rootDirId) => {
     ? { userId, starred: true, uploadStatus: { $ne: "uploading" } }
     : { starred: true, uploadStatus: { $ne: "uploading" } };
   const dirFilter = userId
-    ? { userId, starred: true, ...(rootDirId ? { _id: { $ne: rootDirId } } : {}) }
+    ? {
+        userId,
+        starred: true,
+        ...(rootDirId ? { _id: { $ne: rootDirId } } : {}),
+      }
     : { starred: true };
 
-  const [starredFiles, starredDirectories, integrationStarred] = await Promise.all([
-    File.find(fileFilter).lean(),
-    Directory.find(dirFilter).lean(),
-    userId
-      ? StarredItem.find({ userId, starred: true, provider: { $ne: "local" } }).lean()
-      : [],
-  ]);
+  const [starredFiles, starredDirectories, integrationStarred] =
+    await Promise.all([
+      File.find(fileFilter).lean(),
+      Directory.find(dirFilter).lean(),
+      userId
+        ? StarredItem.find({
+            userId,
+            starred: true,
+            provider: { $ne: "local" },
+          }).lean()
+        : [],
+    ]);
 
   const populatedDirs = await populateDirectoryItemCounts(starredDirectories);
 
@@ -1102,7 +1159,7 @@ export const setStarredItem = async ({
               ...(metadata ? { metadata } : {}),
             },
           },
-          { session, returnDocument: "after" }
+          { session, returnDocument: "after" },
         );
         return {
           ...updated.toObject(),
@@ -1127,7 +1184,7 @@ export const setStarredItem = async ({
               metadata,
             },
           ],
-          { session }
+          { session },
         );
         return {
           ...created.toObject(),
@@ -1151,7 +1208,7 @@ export const setStarredItem = async ({
       starredItem = await Directory.findOneAndUpdate(
         { _id: itemId },
         { $set: { starred: nextStarred } },
-        { session, returnDocument: "after" }
+        { session, returnDocument: "after" },
       );
       // Sync into StarredItem table in same transaction
       await StarredItem.findOneAndUpdate(
@@ -1164,7 +1221,7 @@ export const setStarredItem = async ({
             provider: "local",
           },
         },
-        { session, upsert: true }
+        { session, upsert: true },
       );
     } else {
       const file = await File.findOne({ _id: itemId }).session(session);
@@ -1177,7 +1234,7 @@ export const setStarredItem = async ({
       starredItem = await File.findOneAndUpdate(
         { _id: itemId },
         { $set: { starred: nextStarred } },
-        { session, returnDocument: "after" }
+        { session, returnDocument: "after" },
       );
       // Sync into StarredItem table in same transaction
       await StarredItem.findOneAndUpdate(
@@ -1192,7 +1249,7 @@ export const setStarredItem = async ({
             provider: "local",
           },
         },
-        { session, upsert: true }
+        { session, upsert: true },
       );
     }
 
@@ -1224,12 +1281,12 @@ export const recordItemOpenedLogic = async ({
     if (type === "directory") {
       await Directory.updateOne(
         { _id: itemId, userId },
-        { $set: { openedAt: now } }
+        { $set: { openedAt: now } },
       ).catch(() => {});
     } else {
       await File.updateOne(
         { _id: itemId, userId },
-        { $set: { openedAt: now } }
+        { $set: { openedAt: now } },
       ).catch(() => {});
     }
   } else {
@@ -1248,7 +1305,7 @@ export const recordItemOpenedLogic = async ({
           metadata: metadata || {},
         },
       },
-      { upsert: true, returnDocument: "after" }
+      { upsert: true, returnDocument: "after" },
     ).catch((err) => console.error("RecentItem upsert error:", err));
   }
 
@@ -1261,30 +1318,37 @@ export const recordItemOpenedLogic = async ({
 };
 
 export const getRecentItems = async (userId, rootDirId) => {
-  const [recentFiles, recentDirectories, recentIntegrations, starredList] = await Promise.all([
-    File.find({ userId, openedAt: { $ne: null }, uploadStatus: { $ne: "uploading" } })
-      .sort({ openedAt: -1 })
-      .limit(15)
-      .lean(),
-    Directory.find({
-      userId,
-      openedAt: { $ne: null },
-      ...(rootDirId ? { _id: { $ne: rootDirId } } : {}),
-    })
-      .sort({ openedAt: -1 })
-      .limit(15)
-      .lean(),
-    RecentItem.find({ userId, openedAt: { $ne: null } })
-      .sort({ openedAt: -1 })
-      .limit(15)
-      .lean(),
-    userId
-      ? StarredItem.find({ userId, starred: true }).select("itemId provider").lean()
-      : [],
-  ]);
+  const [recentFiles, recentDirectories, recentIntegrations, starredList] =
+    await Promise.all([
+      File.find({
+        userId,
+        openedAt: { $ne: null },
+        uploadStatus: { $ne: "uploading" },
+      })
+        .sort({ openedAt: -1 })
+        .limit(15)
+        .lean(),
+      Directory.find({
+        userId,
+        openedAt: { $ne: null },
+        ...(rootDirId ? { _id: { $ne: rootDirId } } : {}),
+      })
+        .sort({ openedAt: -1 })
+        .limit(15)
+        .lean(),
+      RecentItem.find({ userId, openedAt: { $ne: null } })
+        .sort({ openedAt: -1 })
+        .limit(15)
+        .lean(),
+      userId
+        ? StarredItem.find({ userId, starred: true })
+            .select("itemId provider")
+            .lean()
+        : [],
+    ]);
 
   const starredSet = new Set(
-    (starredList || []).map((s) => `${s.provider}:${s.itemId}`)
+    (starredList || []).map((s) => `${s.provider}:${s.itemId}`),
   );
 
   const populatedDirs = await populateDirectoryItemCounts(recentDirectories);
@@ -1303,7 +1367,9 @@ export const getRecentItems = async (userId, rootDirId) => {
         })
       : null;
 
-    const isStarred = Boolean(file.starred || starredSet.has(`local:${fileIdStr}`));
+    const isStarred = Boolean(
+      file.starred || starredSet.has(`local:${fileIdStr}`),
+    );
 
     return {
       ...file,
@@ -1318,7 +1384,9 @@ export const getRecentItems = async (userId, rootDirId) => {
 
   const processedDirs = populatedDirs.map((dir) => {
     const dirIdStr = dir._id.toString();
-    const isStarred = Boolean(dir.starred || starredSet.has(`local:${dirIdStr}`));
+    const isStarred = Boolean(
+      dir.starred || starredSet.has(`local:${dirIdStr}`),
+    );
     return {
       ...dir,
       isStarred,
@@ -1354,9 +1422,18 @@ export const getRecentItems = async (userId, rootDirId) => {
   return combined;
 };
 
-export const uploadFileLogic = async ({ userId, userRole, parentDirId, rootDirId, fileBuffer, actualFileSize, headers, fileId }) => {
+export const uploadFileLogic = async ({
+  userId,
+  userRole,
+  parentDirId,
+  rootDirId,
+  fileBuffer,
+  actualFileSize,
+  headers,
+  fileId,
+}) => {
   const req = { user: { id: userId, role: userRole } };
-  
+
   const parsedSize = parseInt(sanitize(headers.filesize), 10);
   const fileSize = Number.isNaN(parsedSize) ? 0 : parsedSize;
 
@@ -1377,7 +1454,9 @@ export const uploadFileLogic = async ({ userId, userRole, parentDirId, rootDirId
         parentDir.path,
       );
       if (!canWrite) {
-        const error = new Error("You are not authorized to upload files in this directory");
+        const error = new Error(
+          "You are not authorized to upload files in this directory",
+        );
         error.status = 403;
         throw error;
       }
@@ -1388,8 +1467,7 @@ export const uploadFileLogic = async ({ userId, userRole, parentDirId, rootDirId
   const fileName = sanitize(headers.filename);
   const ext = path.extname(fileName);
   const fullFileName = `${id}${ext}`;
-  const contentType =
-    headers["content-type"] || "application/octet-stream";
+  const contentType = headers["content-type"] || "application/octet-stream";
 
   // Upload main file to Backblaze B2
   await uploadToB2({
@@ -1442,7 +1520,10 @@ export const uploadFileLogic = async ({ userId, userRole, parentDirId, rootDirId
       hasThumbnail = true;
     }
   } catch (tErr) {
-    console.error("Multithreaded upload thumbnail generation error:", tErr.message);
+    console.error(
+      "Multithreaded upload thumbnail generation error:",
+      tErr.message,
+    );
   }
 
   const finalSize = actualFileSize || fileSize;
@@ -1616,7 +1697,7 @@ export const uploadVaultCompleteLogic = async ({
         uploadStatus: "completed",
         uploadId: null,
       },
-    }
+    },
   );
 
   // Trigger background thumbnail generation for media files
@@ -1635,7 +1716,10 @@ export const uploadVaultCompleteLogic = async ({
 
   if (imageExtensions.includes(ext) || videoExtensions.includes(ext)) {
     ensureWebpThumbnailExists({ file, fileId }).catch((err) =>
-      console.warn("Async thumbnail generation after single-part complete:", err.message),
+      console.warn(
+        "Async thumbnail generation after single-part complete:",
+        err.message,
+      ),
     );
   }
 
@@ -1766,7 +1850,9 @@ export const uploadVaultMultipartPartUrlLogic = async ({
   key,
 }) => {
   const req = { user: { id: userId, role: userRole } };
-  const file = await File.findOne({ _id: fileId }).select("userId path uploadId").lean();
+  const file = await File.findOne({ _id: fileId })
+    .select("userId path uploadId")
+    .lean();
 
   if (!file) {
     const error = new Error("File not found");
@@ -1814,7 +1900,9 @@ export const uploadVaultMultipartCompleteLogic = async ({
   parts,
 }) => {
   const req = { user: { id: userId, role: userRole } };
-  const file = await File.findOne({ _id: fileId }).select("userId path parentDir size extension name uploadId").lean();
+  const file = await File.findOne({ _id: fileId })
+    .select("userId path parentDir size extension name uploadId")
+    .lean();
 
   if (!file) {
     const error = new Error("File not found");
@@ -1855,7 +1943,7 @@ export const uploadVaultMultipartCompleteLogic = async ({
         uploadStatus: "completed",
         uploadId: null,
       },
-    }
+    },
   );
 
   // Trigger background thumbnail generation for media files
@@ -1874,7 +1962,10 @@ export const uploadVaultMultipartCompleteLogic = async ({
 
   if (imageExtensions.includes(ext) || videoExtensions.includes(ext)) {
     ensureWebpThumbnailExists({ file, fileId }).catch((err) =>
-      console.warn("Async thumbnail generation after multipart complete:", err.message),
+      console.warn(
+        "Async thumbnail generation after multipart complete:",
+        err.message,
+      ),
     );
   }
 
@@ -1899,7 +1990,9 @@ export const uploadVaultMultipartAbortLogic = async ({
   key,
 }) => {
   const req = { user: { id: userId, role: userRole } };
-  const file = await File.findOne({ _id: fileId }).select("userId path parentDir size uploadId extension").lean();
+  const file = await File.findOne({ _id: fileId })
+    .select("userId path parentDir size uploadId extension")
+    .lean();
 
   if (!file) {
     return { success: true };
@@ -1931,7 +2024,8 @@ export const uploadVaultMultipartAbortLogic = async ({
   }
 
   // Also delete any direct object from Backblaze B2 if key is passed or fileId+extension
-  const fileKey = key || (file.extension ? `${file._id}${file.extension}` : `${file._id}`);
+  const fileKey =
+    key || (file.extension ? `${file._id}${file.extension}` : `${file._id}`);
   if (fileKey) {
     try {
       await deleteFromB2({ key: fileKey });
@@ -1983,16 +2077,18 @@ export const renameFileLogic = async ({ fileId, name, userId, userRole }) => {
     error.status = 403;
     throw error;
   }
-  await File.updateOne(
-    { _id: fileId },
-    { $set: { name: sanitize(name) } },
-  );
+  await File.updateOne({ _id: fileId }, { $set: { name: sanitize(name) } });
   if (file && file.parentDir) {
     await cacheDel("dir:contents:" + file.parentDir.toString());
   }
 };
 
-export const deleteFileLogic = async ({ fileId, userId, permanent, userRole }) => {
+export const deleteFileLogic = async ({
+  fileId,
+  userId,
+  permanent,
+  userRole,
+}) => {
   const req = { user: { id: userId, role: userRole } };
   const fileData = await File.findOne({ _id: fileId })
     .select("userId parentDir size path extension")

@@ -12,6 +12,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import "../../config/config.js";
 
 export const s3Client = new S3Client({
   endpoint: process.env.BACKBLAZE_ENDPOINT,
@@ -24,7 +25,11 @@ export const s3Client = new S3Client({
   },
 });
 
-export const createUploadSignedUrl = async ({ key, contentType, contentLength }) => {
+export const createUploadSignedUrl = async ({
+  key,
+  contentType,
+  contentLength,
+}) => {
   const params = {
     Bucket: process.env.BACKBLAZE_BUCKET_NAME,
     Key: key,
@@ -66,7 +71,12 @@ export const initiateMultipartUpload = async ({ key, contentType }) => {
   return await s3Client.send(command);
 };
 
-export const getUploadPartSignedUrl = async ({ key, uploadId, partNumber, expiresIn = 3600 }) => {
+export const getUploadPartSignedUrl = async ({
+  key,
+  uploadId,
+  partNumber,
+  expiresIn = 3600,
+}) => {
   const command = new UploadPartCommand({
     Bucket: process.env.BACKBLAZE_BUCKET_NAME,
     Key: key,
@@ -174,7 +184,10 @@ export const copyInB2 = async ({ sourceKey, destinationKey }) => {
     });
     return await s3Client.send(command);
   } catch (err) {
-    console.error(`Failed to copy in B2 from ${sourceKey} to ${destinationKey}:`, err);
+    console.error(
+      `Failed to copy in B2 from ${sourceKey} to ${destinationKey}:`,
+      err,
+    );
     throw err;
   }
 };

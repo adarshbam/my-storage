@@ -10,7 +10,6 @@ import { disconnectRedis } from "./databases/redis.js";
 import { reconcileDirectoryPathsAndSizes } from "./utils/reconcile.js";
 import { provisionSpecialAccounts } from "./services/specialAccounts.service.js";
 import { startScheduledJobs } from "./jobs/scheduler.js";
-import { AppError } from "./errors/AppError.js";
 
 import directoryRouter from "./routes/directoryRoutes.js";
 import fileRouter from "./routes/fileRoutes.js";
@@ -34,7 +33,6 @@ import billingRouter from "./routes/billingRoutes.js";
 import notificationRouter from "./routes/notificationRoutes.js";
 import testRouter from "./routes/testRoutes.js";
 
-
 import { PORT, CLIENT_URL, SESSION_SECRET } from "./config/config.js";
 import {
   handleGithubWebhook,
@@ -45,6 +43,7 @@ import {
 const app = express();
 
 const isProduction = process.env.NODE_ENV === "production";
+const isTestEnvironment = process.env.NODE_ENV === "test";
 
 app.use((req, res, next) => {
   const host = req.headers.host || "";
@@ -232,7 +231,6 @@ app.use("/notifications", checkAuth, notificationRouter);
 app.use("/test", testRouter);
 app.use("/api/test", testRouter);
 
-
 app.use((err, req, res, next) => {
   if (res.headersSent) {
     return next(err);
@@ -282,7 +280,7 @@ app.post("/api/github-webhook", handleGithubWebhook);
 app.get("/api/github-webhook/status", getDeploymentStatus);
 app.post("/api/github-webhook/reset", resetDeploymentLock);
 
-startScheduledJobs();
+if (!isTestEnvironment) startScheduledJobs();
 
 let server;
 
@@ -300,16 +298,18 @@ function startServer() {
 // Start HTTP listener immediately so PM2 readiness handshake succeeds without delay
 startServer();
 
-// Run heavy reconciliation in background without blocking port binding or PM2 reload
-reconcileDirectoryPathsAndSizes().catch((err) => {
-  console.error("Reconciliation notice:", err.message);
-});
+if (!isTestEnvironment) {
+  // Run heavy reconciliation in background without blocking port binding or PM2 reload
+  reconcileDirectoryPathsAndSizes().catch((err) => {
+    console.error("Reconciliation notice:", err.message);
+  });
 
-// Idempotently verify and provision special demonstration accounts (Google Tester & Recruiter)
-provisionSpecialAccounts().catch((err) => {
-  console.error("Special accounts provisioning notice:", err.message);
-});
+  // Idempotently verify and provision special demonstration accounts (Google Tester & Recruiter)
 
+  provisionSpecialAccounts().catch((err) => {
+    console.error("Special accounts provisioning notice:", err.message);
+  });
+}
 /* =======================
    GRACEFUL SHUTDOWN
    ======================= */
@@ -318,7 +318,9 @@ let isShuttingDown = false;
 async function handleShutdown(signal) {
   if (isShuttingDown) return;
   isShuttingDown = true;
-  console.log(`\n🛑 [Shutdown] Received ${signal}. Draining in-flight requests...`);
+  console.log(
+    `\n🛑 [Shutdown] Received ${signal}. Draining in-flight requests...`,
+  );
 
   if (server) {
     await new Promise((resolve) => {
@@ -346,7 +348,12 @@ process.on("SIGINT", () => handleShutdown("SIGINT"));
 process.on("SIGTERM", () => handleShutdown("SIGTERM"));
 
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("⚠️ [Server] Unhandled Rejection at:", promise, "reason:", reason);
+  console.error(
+    "⚠️ [Server] Unhandled Rejection at:",
+    promise,
+    "reason:",
+    reason,
+  );
 });
 
 process.on("uncaughtException", (err) => {

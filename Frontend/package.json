@@ -9,7 +9,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node dummyTest.js"
+    "test": "vitest run",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test:ci-smoke": "node dummyTest.js"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",

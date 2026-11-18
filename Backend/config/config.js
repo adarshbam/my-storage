@@ -4,13 +4,28 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const envPath = path.resolve(__dirname, "../.env");
 
+const isTestEnvironment = process.env.NODE_ENV === "test";
+
+const envPath = path.resolve(
+  __dirname,
+  isTestEnvironment ? "../.env.test" : "../.env",
+);
+
+if (isTestEnvironment && !fs.existsSync(envPath)) {
+  throw new Error("Test environment file .env.test is missing!");
+}
+
+// Expected test-only connection targets
 if (fs.existsSync(envPath)) {
+  const EXPECTED_TEST_DB = "mongodb://127.0.0.1:27018/vault_test";
+  const EXPECTED_TEST_REDIS = "redis://127.0.0.1:6380";
+
   if (typeof process.loadEnvFile === "function") {
     try {
       process.loadEnvFile(envPath);
     } catch (e) {
+      if (isTestEnvironment) throw e;
       console.warn("Could not load .env via process.loadEnvFile:", e.message);
     }
   } else {
@@ -29,7 +44,53 @@ if (fs.existsSync(envPath)) {
         }
       }
     } catch (e) {
+      if (isTestEnvironment) throw e;
       console.warn("Could not parse .env manually:", e.message);
+    }
+  }
+
+  if (
+    isTestEnvironment &&
+    process.env.BACKBLAZE_ENDPOINT !== "http://127.0.0.1:5001"
+  ) {
+    throw new Error("Unsafe test S3 endpoint");
+  }
+
+  if (process.env.BACKBLAZE_ACCESS_KEY_ID !== "test") {
+    throw new Error("Unsafe test S3 access key");
+  }
+
+  if (isTestEnvironment) {
+    if (process.env.DB_URL !== EXPECTED_TEST_DB) {
+      throw new Error("Unsafe test MongoDB connection");
+    }
+
+    if (process.env.REDIS_URL !== EXPECTED_TEST_REDIS) {
+      throw new Error("Unsafe test Redis connection");
+    }
+
+    if (
+      !process.env.SESSION_SECRET ||
+      process.env.SESSION_SECRET === "vault-storageApp-123$"
+    ) {
+      throw new Error("A dedicated test session secret is required");
+    }
+
+    // Only allow the local Moto S3 configuration during tests.
+    if (process.env.BACKBLAZE_REGION !== "us-east-1") {
+      throw new Error("Unsafe test S3 region");
+    }
+
+    if (process.env.BACKBLAZE_ACCESS_KEY_ID !== "test") {
+      throw new Error("Unsafe test S3 access key");
+    }
+
+    if (process.env.BACKBLAZE_SECRET_ACCESS_KEY !== "test") {
+      throw new Error("Unsafe test S3 secret key");
+    }
+
+    if (process.env.BACKBLAZE_BUCKET_NAME !== "vault-test-local") {
+      throw new Error("Unsafe test S3 bucket");
     }
   }
 }
@@ -58,7 +119,9 @@ export const MAX_DEVICES_LIMIT =
 // Special Demonstration & Verification Accounts
 export const GOOGLE_TESTER_EMAIL = (
   process.env.GOOGLE_TESTER_EMAIL || "google-reviewer@yourvaultstorage.com"
-).toLowerCase().trim();
+)
+  .toLowerCase()
+  .trim();
 export const GOOGLE_TESTER_PASSWORD =
   process.env.GOOGLE_TESTER_PASSWORD || "VaultReviewer2026!";
 export const GOOGLE_TESTER_NAME =
@@ -66,7 +129,9 @@ export const GOOGLE_TESTER_NAME =
 
 export const RECRUITER_EMAIL = (
   process.env.RECRUITER_EMAIL || "recruiter@yourvaultstorage.com"
-).toLowerCase().trim();
+)
+  .toLowerCase()
+  .trim();
 export const RECRUITER_PASSWORD =
   process.env.RECRUITER_PASSWORD || "VaultRecruiter2026!";
 export const RECRUITER_NAME =
