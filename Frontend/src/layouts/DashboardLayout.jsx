@@ -281,9 +281,9 @@ export default function DashboardLayout() {
     }
   };
 
-  const handleDownload = (url, name) => {
+  const handleDownload = (url, name, fetchOptions = null) => {
     if (transferRef.current) {
-      transferRef.current.downloadFile(url, name);
+      return transferRef.current.downloadFile(url, name, undefined, 0, fetchOptions);
     }
   };
 

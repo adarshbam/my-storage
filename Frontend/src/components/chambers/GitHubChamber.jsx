@@ -35,6 +35,10 @@ import {
   Trash2,
   Clipboard,
   Share2,
+  Copy,
+  Scissors,
+  Download,
+  X,
 } from "lucide-react";
 
 import GitCommitHistoryView from "../git/GitCommitHistoryView";
@@ -189,7 +193,7 @@ export default function GitHubChamber() {
 
     const downloadName = isFolder ? `${item.name}.zip` : item.name;
     if (downloadFile) {
-      downloadFile(url, downloadName);
+      return downloadFile(url, downloadName);
     } else {
       const link = document.createElement("a");
       link.href = url;
@@ -197,6 +201,12 @@ export default function GitHubChamber() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+    }
+  };
+
+  const handleDownloadSelected = async () => {
+    for (const item of selectedItems) {
+      await handleDownload(item);
     }
   };
 
@@ -1113,6 +1123,66 @@ export default function GitHubChamber() {
             }}
           />
         </Suspense>
+      )}
+
+      {/* ── FLOATING BULK ACTION BAR ── */}
+      {selectedItems.length > 0 && (
+        <div
+          className={cn(
+            "fixed left-1/2 -translate-x-1/2 max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar bg-white/95 dark:bg-vault-surface/95 backdrop-blur-2xl text-slate-900 dark:text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-2xl border border-slate-200 dark:border-white/10 flex items-center gap-3 sm:gap-5 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300",
+            clipboard && isRepoView ? "bottom-20" : "bottom-6",
+          )}
+        >
+          <span className="font-semibold text-xs font-mono whitespace-nowrap">
+            {selectedItems.length} selected
+          </span>
+          {isRepoView && (
+            <>
+              <div className="h-4 w-px bg-slate-300 dark:bg-white/10" />
+              <button
+                onClick={() => copyItems(selectedItems, "github")}
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-accent-primary transition-colors whitespace-nowrap"
+                title="Copy to clipboard"
+              >
+                <Copy size={14} /> Copy
+              </button>
+              <button
+                onClick={() => cutItems(selectedItems, "github")}
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-accent-primary transition-colors whitespace-nowrap"
+                title="Move to clipboard (Cut)"
+              >
+                <Scissors size={14} /> Cut
+              </button>
+            </>
+          )}
+          <div className="h-4 w-px bg-slate-300 dark:bg-white/10" />
+          <button
+            onClick={handleDownloadSelected}
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-accent-primary transition-colors whitespace-nowrap"
+            title="Download selected"
+          >
+            <Download size={14} /> Download
+          </button>
+          <div className="h-4 w-px bg-slate-300 dark:bg-white/10" />
+          <button
+            onClick={() => {
+              openShareModal?.(selectedItems);
+              setSelectedItems([]);
+            }}
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-accent-primary transition-colors whitespace-nowrap"
+            title="Share selected"
+          >
+            <Share2 size={14} className="text-accent-primary" /> Share
+          </button>
+          <div className="h-4 w-px bg-slate-300 dark:bg-white/10" />
+          <button
+            onClick={() => setSelectedItems([])}
+            className="p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors shrink-0"
+            title="Clear selection"
+          >
+            <X size={14} />
+          </button>
+        </div>
       )}
 
       {/* ── FLOATING CLIPBOARD BAR (PASTE SUPPORT) ── */}

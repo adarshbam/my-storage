@@ -18,7 +18,12 @@ import {
   cacheSet,
 } from "../databases/redis.js";
 import { deleteByParentChain } from "./trash.service.js";
-import { copyInB2, deleteFromB2, deleteMultipleFromB2 } from "../integrations/storage/s3.client.js";
+import {
+  copyInB2,
+  deleteFromB2,
+  deleteMultipleFromB2,
+  getObjectFromB2,
+} from "../integrations/storage/s3.client.js";
 import {
   createCloudflareCdnDownloadUrl,
   generatePublicMediaToken,
@@ -145,11 +150,317 @@ export const getDirectoryPath = async (itemId, parentDirId) => {
   return path;
 };
 
+const ALREADY_COMPRESSED_EXTENSIONS = new Set([
+  ".mp4",
+  ".mov",
+  ".mkv",
+  ".avi",
+  ".webm",
+  ".mp3",
+  ".aac",
+  ".m4a",
+  ".ogg",
+  ".flac",
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".gif",
+  ".zip",
+  ".gz",
+  ".7z",
+  ".rar",
+]);
+
+const normalizeFileExtension = (extension) => {
+  if (!extension || typeof extension !== "string") return "";
+  return extension.startsWith(".") ? extension : `.${extension}`;
+};
+
+const sanitizeDownloadName = (name) => {
+  const cleaned = String(name || "download")
+    .replace(/[\r\n"\\/]/g, "_")
+    .trim();
+  return cleaned || "download";
+};
+
+const buildZipContentDisposition = (baseName) => {
+  const safeBase = sanitizeDownloadName(baseName);
+  const zipName = safeBase.toLowerCase().endsWith(".zip")
+    ? safeBase
+    : `${safeBase}.zip`;
+  const asciiFallback = zipName.replace(/[^\x20-\x7E]/g, "_");
+  const encoded = encodeURIComponent(zipName);
+  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encoded}`;
+};
+
+const deduplicateZipPath = (zipDirPath, rawName, usedPaths) => {
+  const baseName = String(rawName || "unnamed").replace(/[/\\]/g, "_");
+  let candidate = zipDirPath ? path.posix.join(zipDirPath, baseName) : baseName;
+  if (!usedPaths.has(candidate)) {
+    usedPaths.add(candidate);
+    return candidate;
+  }
+  const dotIdx = baseName.lastIndexOf(".");
+  const stem = dotIdx > 0 ? baseName.slice(0, dotIdx) : baseName;
+  const ext = dotIdx > 0 ? baseName.slice(dotIdx) : "";
+  let counter = 1;
+  while (usedPaths.has(candidate)) {
+    const numbered = `${stem} (${counter})${ext}`;
+    candidate = zipDirPath ? path.posix.join(zipDirPath, numbered) : numbered;
+    counter++;
+  }
+  usedPaths.add(candidate);
+  return candidate;
+};
+
+const collectDirectoryEntries = async (
+  dirId,
+  zipDirPath,
+  { FileModel, DirectoryModel, entries, emptyDirs, usedFilePaths, usedDirPaths },
+) => {
+  const dirFiles = await FileModel.find({
+    parentDir: dirId,
+    uploadStatus: { $ne: "uploading" },
+  })
+    .select("_id extension name size")
+    .lean();
+
+  for (const file of dirFiles) {
+    if (!file) continue;
+    const ext = normalizeFileExtension(
+      file.extension || path.posix.extname(file.name || ""),
+    );
+    const s3Key = `${file._id.toString()}${ext}`;
+    const zipPath = deduplicateZipPath(zipDirPath, file.name, usedFilePaths);
+    entries.push({
+      s3Key,
+      zipPath,
+      size: Number(file.size) || 0,
+      ext: ext.toLowerCase(),
+    });
+  }
+
+  const childDirs = await DirectoryModel.find({ parentDir: dirId })
+    .select("_id name")
+    .lean();
+
+  if (dirFiles.length === 0 && childDirs.length === 0 && zipDirPath) {
+    emptyDirs.push(zipDirPath);
+  }
+
+  for (const subDir of childDirs) {
+    if (!subDir) continue;
+    const subZipPath = deduplicateZipPath(zipDirPath, subDir.name, usedDirPaths);
+    await collectDirectoryEntries(subDir._id.toString(), subZipPath, {
+      FileModel,
+      DirectoryModel,
+      entries,
+      emptyDirs,
+      usedFilePaths,
+      usedDirPaths,
+    });
+  }
+};
+
+const appendStreamToArchive = (archive, bodyStream, options, isAborted) =>
+  new Promise((resolve, reject) => {
+    if (isAborted()) {
+      bodyStream?.destroy?.();
+      return reject(new Error("Download aborted by client"));
+    }
+
+    let settled = false;
+    const cleanup = () => {
+      bodyStream.removeListener("end", onEnd);
+      bodyStream.removeListener("error", onError);
+      bodyStream.removeListener("close", onClose);
+    };
+    const onEnd = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve();
+    };
+    const onError = (err) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(err);
+    };
+    const onClose = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (isAborted()) {
+        reject(new Error("Download aborted by client"));
+      } else {
+        resolve();
+      }
+    };
+
+    bodyStream.on("end", onEnd);
+    bodyStream.on("error", onError);
+    bodyStream.on("close", onClose);
+    archive.append(bodyStream, options);
+  });
+
+/**
+ * Streams a set of Vault files and directories directly from Backblaze B2 into a ZIP response.
+ */
+export const streamItemsAsZip = async ({
+  rootName,
+  files = [],
+  directories = [],
+  res,
+  deps = {},
+}) => {
+  const FileModel = deps.File || File;
+  const DirectoryModel = deps.Directory || Directory;
+  const fetchObject = deps.getObjectFromB2 || getObjectFromB2;
+
+  const entries = [];
+  const emptyDirs = [];
+  const usedFilePaths = new Set();
+  const usedDirPaths = new Set();
+
+  for (const file of files) {
+    if (!file || file.uploadStatus === "uploading") continue;
+    const ext = normalizeFileExtension(
+      file.extension || path.posix.extname(file.name || ""),
+    );
+    const s3Key = `${file._id.toString()}${ext}`;
+    const zipPath = deduplicateZipPath("", file.name, usedFilePaths);
+    entries.push({
+      s3Key,
+      zipPath,
+      size: Number(file.size) || 0,
+      ext: ext.toLowerCase(),
+    });
+  }
+
+  for (const dir of directories) {
+    if (!dir) continue;
+    const dirZipPath = deduplicateZipPath("", dir.name, usedDirPaths);
+    await collectDirectoryEntries(dir._id.toString(), dirZipPath, {
+      FileModel,
+      DirectoryModel,
+      entries,
+      emptyDirs,
+      usedFilePaths,
+      usedDirPaths,
+    });
+  }
+
+  const totalSize = entries.reduce((sum, entry) => sum + entry.size, 0);
+  const totalFiles = entries.length;
+
+  res.setHeader("Content-Disposition", buildZipContentDisposition(rootName));
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Cache-Control", "no-transform");
+  res.setHeader("X-Total-Size", totalSize);
+  res.setHeader("X-Total-Files", totalFiles);
+
+  const archive = archiver("zip", { zlib: { level: 5 } });
+  let aborted = false;
+  let activeBodyStream = null;
+  let archiveError = null;
+
+  const onClose = () => {
+    if (!res.writableEnded) {
+      aborted = true;
+      try {
+        activeBodyStream?.destroy?.();
+      } catch {
+        // Ignore stream cleanup errors
+      }
+      try {
+        archive.abort();
+      } catch {
+        // Ignore archiver abort errors
+      }
+    }
+  };
+  res.on("close", onClose);
+
+  archive.on("error", (err) => {
+    archiveError = err;
+    console.error("Archive Error:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message });
+    } else {
+      res.destroy(err);
+    }
+  });
+
+  archive.pipe(res);
+
+  try {
+    for (const emptyDir of emptyDirs) {
+      if (aborted || archiveError) break;
+      const normalizedDir = emptyDir.endsWith("/") ? emptyDir : `${emptyDir}/`;
+      archive.append(Buffer.alloc(0), { name: normalizedDir });
+    }
+
+    for (const entry of entries) {
+      if (aborted || archiveError) break;
+      const s3Res = await fetchObject({ key: entry.s3Key });
+      const bodyStream = s3Res?.Body;
+      if (!bodyStream) {
+        const missingErr = new Error(`Missing object body for key ${entry.s3Key}`);
+        missingErr.status = 404;
+        throw missingErr;
+      }
+      activeBodyStream = bodyStream;
+      const store = ALREADY_COMPRESSED_EXTENSIONS.has(entry.ext);
+      await appendStreamToArchive(
+        archive,
+        bodyStream,
+        { name: entry.zipPath, store },
+        () => aborted || Boolean(archiveError),
+      );
+      activeBodyStream = null;
+    }
+
+    if (aborted) return;
+    if (archiveError) throw archiveError;
+
+    await archive.finalize();
+  } catch (err) {
+    try {
+      activeBodyStream?.destroy?.();
+    } catch {
+      // Ignore stream cleanup errors
+    }
+    try {
+      archive.abort();
+    } catch {
+      // Ignore archiver abort errors
+    }
+    if (aborted) return;
+    if (res.headersSent) {
+      res.destroy(err);
+      return;
+    }
+    if (err.name === "NoSuchKey" && !err.status) {
+      err.status = 404;
+    }
+    throw err;
+  } finally {
+    res.removeListener("close", onClose);
+  }
+};
+
 export const getDirectorySize = async (dirId) => {
   let size = 0;
   let count = 0;
 
-  const files = await File.find({ parentDir: dirId }).select("size").lean();
+  const files = await File.find({
+    parentDir: dirId,
+    uploadStatus: { $ne: "uploading" },
+  })
+    .select("size")
+    .lean();
   for (const file of files) {
     size += file.size || 0;
     count++;
@@ -744,66 +1055,11 @@ export const getDirectoryContents = async ({ dirId, userId, userRole, action, re
   }
 
   if (action === "download") {
-    const archive = archiver("zip", { zlib: { level: 9 } });
-
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${directoryData.name}.zip"`,
-    );
-    res.setHeader("Content-Type", "application/zip");
-
-    archive.on("error", (err) => {
-      console.error("Archive Error:", err);
-      if (!res.headersSent) {
-        return res.status(500).json({ error: err.message });
-      }
+    await streamItemsAsZip({
+      rootName: directoryData.name,
+      directories: [{ _id: directoryData._id, name: directoryData.name }],
+      res,
     });
-
-    const { size, count } = await getDirectorySize(directoryData._id);
-
-    res.setHeader("X-Total-Size", size);
-    res.setHeader("X-Total-Files", count);
-
-    archive.pipe(res);
-
-    const addDirectory = async (dirId, zipPath) => {
-      const dir = await Directory.findOne({ _id: dirId })
-        .select("_id")
-        .lean();
-      if (!dir) return;
-
-      const dirFiles = await File.find({ parentDir: dirId })
-        .select("_id extension name")
-        .lean();
-      for (const file of dirFiles) {
-        if (file) {
-          const filePath = path.join(
-            "storage",
-            `${file._id.toString()}${file.extension}`,
-          );
-          archive.file(filePath, {
-            name: path.join(zipPath, file.name),
-          });
-        }
-      }
-
-      const childDirs = await Directory.find({
-        parentDir: dirId,
-      })
-        .select("_id name")
-        .lean();
-      for (const subDir of childDirs) {
-        if (subDir) {
-          await addDirectory(
-            subDir._id.toString(),
-            path.join(zipPath, subDir.name),
-          );
-        }
-      }
-    };
-
-    await addDirectory(directoryData._id, directoryData.name);
-    await archive.finalize();
     return;
   }
 
@@ -1349,6 +1605,113 @@ export const copyItemsLogic = async ({ targetDirId, items, userId, userRole, roo
   // Clear caches
   await cacheDel("dir:meta:" + targetDirId);
   await cacheDel("dir:contents:" + targetDirId);
+};
+
+export const downloadItemsBatchLogic = async ({
+  items,
+  userId,
+  userRole,
+  res,
+  deps = {},
+}) => {
+  const req = { user: { id: userId, role: userRole } };
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    const error = new Error("No items selected for download");
+    error.status = 400;
+    throw error;
+  }
+
+  const FileModel = deps.File || File;
+  const DirectoryModel = deps.Directory || Directory;
+  const accessVerifier = deps.verifyItemAccess || verifyItemAccess;
+
+  const fileIds = [
+    ...new Set(
+      items
+        .filter((i) => i.type === "file")
+        .map((i) => (i._id || i.id)?.toString())
+        .filter(Boolean),
+    ),
+  ];
+  const dirIds = [
+    ...new Set(
+      items
+        .filter((i) => i.type === "directory")
+        .map((i) => (i._id || i.id)?.toString())
+        .filter(Boolean),
+    ),
+  ];
+
+  const [files, dirs] = await Promise.all([
+    fileIds.length > 0
+      ? FileModel.find({
+          _id: { $in: fileIds },
+          uploadStatus: { $ne: "uploading" },
+        })
+          .select("-__v")
+          .lean()
+      : [],
+    dirIds.length > 0
+      ? DirectoryModel.find({ _id: { $in: dirIds } })
+          .select("-__v")
+          .lean()
+      : [],
+  ]);
+
+  if (files.length === 0 && dirs.length === 0) {
+    const error = new Error("No downloadable items found");
+    error.status = 404;
+    throw error;
+  }
+
+  for (const file of files) {
+    const ownerId = file.userId ? file.userId.toString() : req.user.id;
+    const canRead = await accessVerifier(
+      ownerId,
+      req,
+      file._id,
+      "file",
+      "read",
+      file.path,
+    );
+    if (!canRead) {
+      const error = new Error(`You are not authorized to download file: ${file.name}`);
+      error.status = 403;
+      throw error;
+    }
+  }
+
+  for (const dir of dirs) {
+    const ownerId = dir.userId ? dir.userId.toString() : req.user.id;
+    const canRead = await accessVerifier(
+      ownerId,
+      req,
+      dir._id,
+      "directory",
+      "read",
+      dir.path,
+    );
+    if (!canRead) {
+      const error = new Error(`You are not authorized to download folder: ${dir.name}`);
+      error.status = 403;
+      throw error;
+    }
+  }
+
+  const rootName =
+    files.length === 0 && dirs.length === 1
+      ? dirs[0].name
+      : files.length === 1 && dirs.length === 0
+      ? files[0].name
+      : "vault-selection";
+
+  await streamItemsAsZip({
+    rootName,
+    files,
+    directories: dirs,
+    res,
+    deps,
+  });
 };
 
 export const deleteItemsBatchLogic = async ({ items, userId, userRole, permanent }) => {

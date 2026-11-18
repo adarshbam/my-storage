@@ -317,10 +317,17 @@ const TransferManager = forwardRef((props, ref) => {
     downloadWritables,
   });
 
-  const downloadFile = async (url, filename, id = generateObjectId(), startByte = 0) => {
-    if (ownerId) {
+  const downloadFile = async (
+    url,
+    filename,
+    id = generateObjectId(),
+    startByte = 0,
+    fetchOptions = null,
+  ) => {
+    const activeOwnerId = new URLSearchParams(window.location.search).get("ownerId");
+    if (activeOwnerId && !url.includes("ownerId=")) {
       const separator = url.includes("?") ? "&" : "?";
-      url = `${url}${separator}ownerId=${ownerId}`;
+      url = `${url}${separator}ownerId=${activeOwnerId}`;
     }
 
     if (startByte === 0) {
@@ -337,6 +344,7 @@ const TransferManager = forwardRef((props, ref) => {
           speed: 0,
           timeRemaining: 0,
           url,
+          fetchOptions,
         },
       ]);
       setMinimized(false);
@@ -360,7 +368,7 @@ const TransferManager = forwardRef((props, ref) => {
         if (match) {
           const fileId = match[1];
           const cdnData = await getFileCdnUrl(fileId, {
-            ...(ownerId ? { ownerId } : {}),
+            ...(activeOwnerId ? { ownerId: activeOwnerId } : {}),
             action: "download",
           });
           if (cdnData && cdnData.url) {
@@ -372,7 +380,7 @@ const TransferManager = forwardRef((props, ref) => {
       }
     }
 
-    startDownload({ _id: id, url: streamUrl, name: filename });
+    return await startDownload({ _id: id, url: streamUrl, name: filename, fetchOptions });
   };
 
   const cancelTransfer = async (id) => {
@@ -493,7 +501,7 @@ const TransferManager = forwardRef((props, ref) => {
     if (transfer.type === "upload") {
       uploadFile(transfer.file, transfer.dirId, transfer._id, transfer.loaded);
     } else {
-      downloadFile(transfer.url, transfer.name, transfer._id, transfer.loaded);
+      downloadFile(transfer.url, transfer.name, transfer._id, transfer.loaded, transfer.fetchOptions);
     }
   };
 
@@ -504,7 +512,7 @@ const TransferManager = forwardRef((props, ref) => {
       updateTransfer(id, { status: "queued", progress: 0, loaded: 0, speed: 0, timeRemaining: 0 });
     } else {
       updateTransfer(id, { status: "active", progress: 0, loaded: 0, speed: 0, timeRemaining: 0 });
-      downloadFile(transfer.url, transfer.name, transfer._id, 0);
+      downloadFile(transfer.url, transfer.name, transfer._id, 0, transfer.fetchOptions);
     }
   };
 

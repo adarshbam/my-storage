@@ -11,6 +11,7 @@ import {
   moveItems,
   renameDirectory,
   copyItems,
+  downloadItemsBatch,
   deleteItemsBatch,
   updateDirectoryPublicAccess,
   getDirectoryPublicAccess,
@@ -24,6 +25,7 @@ import {
   deleteDirectorySchema,
   moveDirectorySchema,
   copyDirectorySchema,
+  downloadDirectoryBatchSchema,
   deleteDirectoryBatchSchema,
   updateDirectoryPublicAccessSchema,
   getDirectoryPublicAccessSchema,
@@ -35,6 +37,16 @@ const router = express.Router();
 
 router.param("parentDirId", validateIdMiddleware);
 router.param("dirId", validateIdMiddleware);
+
+router.post(
+  "/download-batch",
+  checkAuth,
+  loadPlanContext,
+  requireRule("allowDownload"),
+  directoryReadLimiter,
+  validate(downloadDirectoryBatchSchema),
+  downloadItemsBatch,
+);
 
 router.post(
   "/delete-batch",

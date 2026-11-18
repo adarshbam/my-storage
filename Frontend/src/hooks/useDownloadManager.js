@@ -9,7 +9,7 @@ export function useDownloadManager({
   downloadWritables,
 }) {
   const startDownload = useCallback(async (transfer) => {
-    const { _id, url, name } = transfer;
+    const { _id, url, name, fetchOptions } = transfer;
     updateTransfer(_id, { status: "active", speed: 0 });
 
     const controller = new AbortController();
@@ -19,6 +19,7 @@ export function useDownloadManager({
       const isCdnUrl = typeof url === 'string' && (url.includes('cdn.') || !url.startsWith(SERVER_URL));
 
       const response = await fetch(url, {
+        ...(fetchOptions || {}),
         signal: controller.signal,
         credentials: isCdnUrl ? undefined : "include",
       });
@@ -93,6 +94,11 @@ export function useDownloadManager({
             }
           }
 
+          if (loaded === 0) {
+            await writable.abort().catch(() => {});
+            throw new Error("Downloaded file was empty");
+          }
+
           await writable.close();
           updateTransfer(_id, { status: "completed", progress: 100, speed: 0, timeRemaining: 0 });
         } catch (err) {
@@ -148,6 +154,10 @@ export function useDownloadManager({
             });
             lastUpdate = now;
           }
+        }
+
+        if (loaded === 0) {
+          throw new Error("Downloaded file was empty");
         }
 
         const blob = new Blob(chunks);

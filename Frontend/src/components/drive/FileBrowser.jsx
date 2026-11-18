@@ -67,9 +67,11 @@ import {
   Workflow,
   FolderGit2,
   CloudUpload,
+  Download,
+  X,
 } from "lucide-react";
 
-import { batchDelete, recordItemOpened, ensureDirectoryTree } from "../../api/files.api";
+import { batchDelete, recordItemOpened, ensureDirectoryTree, getBatchDownloadPath } from "../../api/files.api";
 import { scanDroppedItems } from "../../lib/folderDropScanner";
 import { useFiles } from "../../hooks/useFiles";
 import { useSelectionBox } from "../../hooks/useSelectionBox";
@@ -176,7 +178,7 @@ export default function FileBrowser({ specialView }) {
     !!searchQuery ||
     !!searchExt ||
     !!searchSize;
-  const { isNoPlan, isNoSubscription, rules } = usePlan();
+  const { isNoPlan, isNoSubscription, rules, allowDownload } = usePlan();
   const planAllowsMutation = !(isNoPlan || isNoSubscription) && (rules?.permissions?.allowUpload ?? true);
   const isReadOnly =
     specialView === "shared" ||
@@ -1400,7 +1402,39 @@ export default function FileBrowser({ specialView }) {
     }
 
     const name = item.type === "directory" ? `${item.name}.zip` : item.name;
-    downloadFile(url, name);
+    return downloadFile(url, name);
+  };
+
+  const handleDownloadSelected = async () => {
+    if (!allowDownload) return;
+    const downloadable = selectedItems.filter((i) => !isSpecialFolder(i, specialView));
+    if (downloadable.length === 0) return;
+
+    if (downloadable.length === 1) {
+      await handleDownload(downloadable[0]);
+      return;
+    }
+
+    const localItems = downloadable.filter((i) => !i.provider || i.provider === "local");
+    const externalItems = downloadable.filter((i) => i.provider && i.provider !== "local");
+
+    if (localItems.length === 1) {
+      await handleDownload(localItems[0]);
+    } else if (localItems.length > 1) {
+      const payload = localItems.map((item) => ({
+        _id: item._id,
+        type: item.type === "directory" ? "directory" : "file",
+      }));
+      await downloadFile(`${SERVER_URL}${getBatchDownloadPath()}`, "vault-selection.zip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    }
+
+    for (const extItem of externalItems) {
+      await handleDownload(extItem);
+    }
   };
 
   const handleDelete = (item) => {
@@ -2722,32 +2756,43 @@ export default function FileBrowser({ specialView }) {
       )}
 
       {/* Floating Bulk Action Bar */}
-      {selectedItems.length > 0 && !isReadOnly && (
+      {selectedItems.length > 0 && (!isReadOnly || (allowDownload && selectedItems.some((i) => !isSpecialFolder(i, specialView)))) && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar bg-white/90 dark:bg-vault-surface/90 backdrop-blur-2xl text-slate-900 dark:text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] border border-black/10 dark:border-white/[0.08] flex items-center gap-3 sm:gap-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
-          <span className="font-medium text-sm">
+          <span className="font-medium text-sm whitespace-nowrap">
             {selectedItems.length} selected
           </span>
-          {selectedItems.some((i) => !isSpecialFolder(i, specialView)) && (
+          {!isReadOnly && selectedItems.some((i) => !isSpecialFolder(i, specialView)) && (
             <>
               <div className="h-4 w-px bg-slate-700"></div>
               <button
                 onClick={handleCopySelected}
-                className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm"
+                className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm whitespace-nowrap"
                 title="Bulk Copy"
               >
                 <Copy size={16} /> Copy
               </button>
               <button
                 onClick={handleCutSelected}
-                className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm"
+                className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm whitespace-nowrap"
                 title="Bulk Move"
               >
                 <Scissors size={16} /> Move
               </button>
             </>
           )}
-          <div className="h-4 w-px bg-slate-700"></div>
-          {selectedItems.length === 1 && !isSpecialFolder(selectedItems[0], specialView) && (
+          {allowDownload && selectedItems.some((i) => !isSpecialFolder(i, specialView)) && (
+            <>
+              <div className="h-4 w-px bg-slate-700"></div>
+              <button
+                onClick={handleDownloadSelected}
+                className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm whitespace-nowrap"
+                title="Download Selected"
+              >
+                <Download size={16} /> Download
+              </button>
+            </>
+          )}
+          {!isReadOnly && selectedItems.length === 1 && !isSpecialFolder(selectedItems[0], specialView) && (
             <>
               <div className="h-4 w-px bg-slate-700"></div>
               <button
@@ -2755,24 +2800,29 @@ export default function FileBrowser({ specialView }) {
                   const it = selectedItems[0];
                   handleOpenPublicMedia(it, it.type === "directory" ? "directory" : "file");
                 }}
-                className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm"
+                className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm whitespace-nowrap"
                 title="Single Item Public Stream"
               >
                 <Globe size={16} className="text-emerald-500" /> Public Stream
               </button>
             </>
           )}
-          <button
-            onClick={() => {
-              openShareModal(selectedItems);
-              setSelectedItems([]);
-            }}
-            className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm"
-            title="Bulk Share"
-          >
-            <Share2 size={16} className="text-accent-primary" /> Share
-          </button>
-          {selectedItems.some((i) => !isSpecialFolder(i, specialView)) && (
+          {!isReadOnly && (
+            <>
+              <div className="h-4 w-px bg-slate-700"></div>
+              <button
+                onClick={() => {
+                  openShareModal(selectedItems);
+                  setSelectedItems([]);
+                }}
+                className="flex items-center gap-2 text-slate-700 dark:text-slate-200 hover:text-black dark:hover:text-white transition-colors font-medium text-sm whitespace-nowrap"
+                title="Bulk Share"
+              >
+                <Share2 size={16} className="text-accent-primary" /> Share
+              </button>
+            </>
+          )}
+          {!isReadOnly && selectedItems.some((i) => !isSpecialFolder(i, specialView)) && (
             <>
               <div className="h-4 w-px bg-slate-700"></div>
               <button
@@ -2790,12 +2840,20 @@ export default function FileBrowser({ specialView }) {
                     setModalType("delete");
                   }
                 }}
-                className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors font-medium text-sm"
+                className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors font-medium text-sm whitespace-nowrap"
               >
                 <Trash2 size={16} /> Delete
               </button>
             </>
           )}
+          <div className="h-4 w-px bg-slate-700"></div>
+          <button
+            onClick={() => setSelectedItems([])}
+            className="p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors shrink-0"
+            title="Clear selection"
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
 

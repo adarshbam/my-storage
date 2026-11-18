@@ -771,7 +771,7 @@ export default function GoogleDriveChamber() {
     const name = isFolder ? `${item.name}.zip` : item.name;
 
     if (downloadFile) {
-      downloadFile(url, name);
+      return downloadFile(url, name);
     } else {
       const link = document.createElement("a");
       link.href = url;
@@ -779,6 +779,12 @@ export default function GoogleDriveChamber() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+    }
+  };
+
+  const handleDownloadSelected = async () => {
+    for (const item of selectedItems) {
+      await handleDownload(item);
     }
   };
 
@@ -1467,7 +1473,7 @@ export default function GoogleDriveChamber() {
           </button>
           <div className="h-4 w-px bg-slate-300 dark:bg-white/10" />
           <button
-            onClick={() => selectedItems.forEach(handleDownload)}
+            onClick={handleDownloadSelected}
             className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-accent-primary transition-colors"
             title="Download selected"
           >

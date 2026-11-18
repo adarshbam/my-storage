@@ -61,6 +61,27 @@ export const moveDirectorySchema = {
 
 export const copyDirectorySchema = moveDirectorySchema;
 
+export const downloadDirectoryBatchSchema = {
+  body: z
+    .array(
+      z
+        .object({
+          _id: optionalObjectIdSchema.optional(),
+          id: optionalObjectIdSchema.optional(),
+          type: z.enum(["file", "directory"]),
+        })
+        .refine((data) => data._id || data.id, {
+          message: "Either _id or id is required",
+        })
+    )
+    .min(1, "At least one item is required"),
+  query: z
+    .object({
+      ownerId: z.string().optional(),
+    })
+    .optional(),
+};
+
 export const deleteDirectoryBatchSchema = {
   body: z.array(
     z

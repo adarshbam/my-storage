@@ -34,6 +34,7 @@ export const copyItems = (targetDirId, data, params = {}) => {
 };
 
 export const batchDelete = (data) => apiClient.post('/directory/delete-batch', data);
+export const getBatchDownloadPath = () => '/directory/download-batch';
 
 export const searchFiles = (params) => {
   const query = new URLSearchParams(params).toString();

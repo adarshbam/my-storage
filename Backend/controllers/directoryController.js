@@ -22,6 +22,10 @@ export const getDirectoryById = async (req, res, next) => {
     if (error.status && !res.headersSent) {
       return res.status(error.status).json({ error: error.message, message: error.message });
     }
+    if (res.headersSent) {
+      res.destroy(error);
+      return;
+    }
     next(error);
   }
 };
@@ -135,6 +139,26 @@ export const copyItems = async (req, res, next) => {
     return res.status(201).json({ message: "Items copied successfully" });
   } catch (error) {
     if (error.status) return res.status(error.status).json({ message: error.message });
+    next(error);
+  }
+};
+
+export const downloadItemsBatch = async (req, res, next) => {
+  try {
+    await directoryService.downloadItemsBatchLogic({
+      items: req.body,
+      userId: req.user.id,
+      userRole: req.user.role,
+      res,
+    });
+  } catch (error) {
+    if (error.status && !res.headersSent) {
+      return res.status(error.status).json({ error: error.message, message: error.message });
+    }
+    if (res.headersSent) {
+      res.destroy(error);
+      return;
+    }
     next(error);
   }
 };
