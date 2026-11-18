@@ -131,8 +131,8 @@ async function testStreamItemsAsZipRecursiveAndFiltersUploading() {
   const { res, headers, getBuffer } = createMockResponse();
 
   await streamItemsAsZip({
-    rootName: "Introduction Recording",
-    directories: [{ _id: "dirRoot", name: "Introduction Recording" }],
+    rootName: "Introduction Recording ",
+    directories: [{ _id: "dirRoot", name: "Introduction Recording " }],
     res,
     deps: {
       File: mockFileModel,
@@ -146,7 +146,7 @@ async function testStreamItemsAsZipRecursiveAndFiltersUploading() {
   assert.equal(zipBuf.readUInt32LE(0), 0x04034b50, "Output must start with ZIP local file header");
 
   const entryNames = parseZipEntryNames(zipBuf);
-  assert.ok(entryNames.includes("Introduction Recording/intro.mp4"), "Root file uses POSIX path");
+  assert.ok(entryNames.includes("Introduction Recording/intro.mp4"), "Root file uses trimmed POSIX path without trailing space");
   assert.ok(
     entryNames.includes("Introduction Recording/Sub Folder/notes.txt"),
     "Nested subfolder file is included with POSIX path",
@@ -168,7 +168,7 @@ async function testStreamItemsAsZipRecursiveAndFiltersUploading() {
   assert.equal(headers["x-total-size"], 23);
   assert.equal(headers["cache-control"], "no-transform");
   assert.match(headers["content-disposition"], /Introduction Recording\.zip/);
-  console.log("  PASS: streamItemsAsZip streams B2 entries recursively with POSIX paths and excludes uploading files");
+  console.log("  PASS: streamItemsAsZip streams B2 entries recursively with sanitized POSIX paths and excludes uploading files");
 }
 
 async function testStreamErrorPropagation() {
@@ -183,7 +183,7 @@ async function testStreamErrorPropagation() {
     },
   };
   const mockGetObjectFromB2 = async ({ key }) => {
-    if (key === "f2.mp4") {
+    if (key.startsWith("f2")) {
       const err = new Error("NoSuchKey");
       err.name = "NoSuchKey";
       throw err;

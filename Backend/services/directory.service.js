@@ -179,9 +179,25 @@ const normalizeFileExtension = (extension) => {
 
 const sanitizeDownloadName = (name) => {
   const cleaned = String(name || "download")
-    .replace(/[\r\n"\\/]/g, "_")
-    .trim();
+    .replace(/[\r\n"\\/:*?<>|\x00-\x1F]/g, "_")
+    .trim()
+    .replace(/[. ]+$/g, "");
   return cleaned || "download";
+};
+
+const sanitizeZipSegment = (rawName, { isDirectory = false } = {}) => {
+  let cleaned = String(rawName || "unnamed")
+    .replace(/[/\\:*?"<>|\x00-\x1F]/g, "_")
+    .trim();
+  if (isDirectory) {
+    cleaned = cleaned.replace(/[. ]+$/g, "");
+  } else {
+    cleaned = cleaned.replace(/ +$/g, "");
+  }
+  if (!cleaned || cleaned === "." || cleaned === "..") {
+    return "unnamed";
+  }
+  return cleaned;
 };
 
 const buildZipContentDisposition = (baseName) => {
@@ -194,14 +210,14 @@ const buildZipContentDisposition = (baseName) => {
   return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encoded}`;
 };
 
-const deduplicateZipPath = (zipDirPath, rawName, usedPaths) => {
-  const baseName = String(rawName || "unnamed").replace(/[/\\]/g, "_");
+const deduplicateZipPath = (zipDirPath, rawName, usedPaths, options = {}) => {
+  const baseName = sanitizeZipSegment(rawName, options);
   let candidate = zipDirPath ? path.posix.join(zipDirPath, baseName) : baseName;
   if (!usedPaths.has(candidate)) {
     usedPaths.add(candidate);
     return candidate;
   }
-  const dotIdx = baseName.lastIndexOf(".");
+  const dotIdx = options.isDirectory ? -1 : baseName.lastIndexOf(".");
   const stem = dotIdx > 0 ? baseName.slice(0, dotIdx) : baseName;
   const ext = dotIdx > 0 ? baseName.slice(dotIdx) : "";
   let counter = 1;
@@ -212,6 +228,32 @@ const deduplicateZipPath = (zipDirPath, rawName, usedPaths) => {
   }
   usedPaths.add(candidate);
   return candidate;
+};
+
+const buildFileB2Keys = (file) => {
+  const idStr = file._id.toString();
+  const docExt =
+    file.extension !== undefined && file.extension !== null
+      ? file.extension === ""
+        ? ""
+        : normalizeFileExtension(file.extension)
+      : null;
+  const nameExt = normalizeFileExtension(path.posix.extname(file.name || ""));
+
+  const candidates = [];
+  if (docExt !== null) {
+    candidates.push(`${idStr}${docExt}`);
+  }
+  if (nameExt && !candidates.includes(`${idStr}${nameExt}`)) {
+    candidates.push(`${idStr}${nameExt}`);
+  }
+  if (!candidates.includes(idStr)) {
+    candidates.push(idStr);
+  }
+  return {
+    s3Keys: candidates,
+    ext: (docExt || nameExt || "").toLowerCase(),
+  };
 };
 
 const collectDirectoryEntries = async (
@@ -228,16 +270,16 @@ const collectDirectoryEntries = async (
 
   for (const file of dirFiles) {
     if (!file) continue;
-    const ext = normalizeFileExtension(
-      file.extension || path.posix.extname(file.name || ""),
-    );
-    const s3Key = `${file._id.toString()}${ext}`;
-    const zipPath = deduplicateZipPath(zipDirPath, file.name, usedFilePaths);
+    const { s3Keys, ext } = buildFileB2Keys(file);
+    const zipPath = deduplicateZipPath(zipDirPath, file.name, usedFilePaths, {
+      isDirectory: false,
+    });
     entries.push({
-      s3Key,
+      s3Key: s3Keys[0],
+      fallbackKeys: s3Keys.slice(1),
       zipPath,
       size: Number(file.size) || 0,
-      ext: ext.toLowerCase(),
+      ext,
     });
   }
 
@@ -251,7 +293,9 @@ const collectDirectoryEntries = async (
 
   for (const subDir of childDirs) {
     if (!subDir) continue;
-    const subZipPath = deduplicateZipPath(zipDirPath, subDir.name, usedDirPaths);
+    const subZipPath = deduplicateZipPath(zipDirPath, subDir.name, usedDirPaths, {
+      isDirectory: true,
+    });
     await collectDirectoryEntries(subDir._id.toString(), subZipPath, {
       FileModel,
       DirectoryModel,
@@ -294,6 +338,8 @@ const appendStreamToArchive = (archive, bodyStream, options, isAborted) =>
       cleanup();
       if (isAborted()) {
         reject(new Error("Download aborted by client"));
+      } else if (bodyStream.readableEnded === false) {
+        reject(new Error("Upstream object stream closed prematurely"));
       } else {
         resolve();
       }
@@ -304,6 +350,22 @@ const appendStreamToArchive = (archive, bodyStream, options, isAborted) =>
     bodyStream.on("close", onClose);
     archive.append(bodyStream, options);
   });
+
+const fetchObjectWithFallback = async (fetchObject, entry) => {
+  const keys = [entry.s3Key, ...(entry.fallbackKeys || [])];
+  let lastErr = null;
+  for (const key of keys) {
+    try {
+      return await fetchObject({ key });
+    } catch (err) {
+      lastErr = err;
+      if (err?.name !== "NoSuchKey" && err?.$metadata?.httpStatusCode !== 404) {
+        throw err;
+      }
+    }
+  }
+  throw lastErr;
+};
 
 /**
  * Streams a set of Vault files and directories directly from Backblaze B2 into a ZIP response.
@@ -326,22 +388,24 @@ export const streamItemsAsZip = async ({
 
   for (const file of files) {
     if (!file || file.uploadStatus === "uploading") continue;
-    const ext = normalizeFileExtension(
-      file.extension || path.posix.extname(file.name || ""),
-    );
-    const s3Key = `${file._id.toString()}${ext}`;
-    const zipPath = deduplicateZipPath("", file.name, usedFilePaths);
+    const { s3Keys, ext } = buildFileB2Keys(file);
+    const zipPath = deduplicateZipPath("", file.name, usedFilePaths, {
+      isDirectory: false,
+    });
     entries.push({
-      s3Key,
+      s3Key: s3Keys[0],
+      fallbackKeys: s3Keys.slice(1),
       zipPath,
       size: Number(file.size) || 0,
-      ext: ext.toLowerCase(),
+      ext,
     });
   }
 
   for (const dir of directories) {
     if (!dir) continue;
-    const dirZipPath = deduplicateZipPath("", dir.name, usedDirPaths);
+    const dirZipPath = deduplicateZipPath("", dir.name, usedDirPaths, {
+      isDirectory: true,
+    });
     await collectDirectoryEntries(dir._id.toString(), dirZipPath, {
       FileModel,
       DirectoryModel,
@@ -404,7 +468,7 @@ export const streamItemsAsZip = async ({
 
     for (const entry of entries) {
       if (aborted || archiveError) break;
-      const s3Res = await fetchObject({ key: entry.s3Key });
+      const s3Res = await fetchObjectWithFallback(fetchObject, entry);
       const bodyStream = s3Res?.Body;
       if (!bodyStream) {
         const missingErr = new Error(`Missing object body for key ${entry.s3Key}`);

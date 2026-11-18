@@ -55,7 +55,8 @@ npm run test
 
 echo "🏗️ [3/4] Building Frontend & Syncing to S3 + CloudFront..."
 npm run build
-aws s3 sync ./dist s3://yourvaultstoragefrontend --delete
+aws s3 sync ./dist s3://yourvaultstoragefrontend --delete --exclude "index.html"
+aws s3 cp ./dist/index.html s3://yourvaultstoragefrontend/index.html --cache-control "no-cache, no-store, must-revalidate" --content-type "text/html"
 aws cloudfront create-invalidation --distribution-id E1GUK9KTGYZNFE --paths "/*"
 
 # Check if Backend dependencies changed

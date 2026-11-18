@@ -40,11 +40,14 @@ export function useDownloadManager({
         throw new Error("ReadableStream not supported in this browser");
       }
 
+      let savedViaPicker = false;
       if (window.showSaveFilePicker) {
+        let writable = null;
         try {
           const handle = await window.showSaveFilePicker({ suggestedName: name });
-          const writable = await handle.createWritable();
+          writable = await handle.createWritable();
           downloadWritables.current[_id] = writable;
+          savedViaPicker = true;
 
           const reader = stream.getReader();
           downloadReaders.current[_id] = reader;
@@ -102,11 +105,21 @@ export function useDownloadManager({
           await writable.close();
           updateTransfer(_id, { status: "completed", progress: 100, speed: 0, timeRemaining: 0 });
         } catch (err) {
-          if (err.name !== "AbortError") {
+          if (!writable && (err.name === "SecurityError" || err.name === "NotAllowedError")) {
+            savedViaPicker = false;
+          } else if (err.name === "AbortError") {
+            if (!writable) {
+              controller.abort();
+              updateTransfer(_id, { status: "paused", speed: 0 });
+            }
+            return;
+          } else {
             throw err;
           }
         }
-      } else {
+      }
+
+      if (!savedViaPicker) {
         const reader = stream.getReader();
         downloadReaders.current[_id] = reader;
 
