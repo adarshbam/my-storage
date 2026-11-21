@@ -20,7 +20,7 @@ router.post(
   "/send-otp",
   checkAuth,
   phoneOtpSendLimiter,
-  throttle(2000, 1, "phone-otp-send"),
+  throttle(1000, 2, "phone-otp-send"),
   sendPhoneOtp
 );
 
@@ -47,7 +47,7 @@ router.get(
   "/trial-eligibility",
   checkAuth,
   lightReadLimiter,
-  throttle(500, 5, "phone-trial-check"),
+  throttle(250, 10, "phone-trial-check"),
   checkTrialEligibility
 );
 

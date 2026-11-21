@@ -66,7 +66,7 @@ router.post(
   "/create-plan",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "plan-create"),
+  throttle(150, 10, "plan-create"),
   validate(createPlanSchema),
   createPlan,
 );
@@ -76,7 +76,7 @@ router.patch(
   "/update-plans",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "plans-update"),
+  throttle(150, 10, "plans-update"),
   validate(updatePlansSchema),
   updatePlans,
 );
@@ -84,7 +84,7 @@ router.post(
   "/update-plans",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "plans-update"),
+  throttle(150, 10, "plans-update"),
   validate(updatePlansSchema),
   updatePlans,
 );

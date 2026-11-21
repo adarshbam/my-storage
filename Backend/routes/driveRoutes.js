@@ -107,7 +107,7 @@ router.delete(
   loadPlanContext,
   requireFeature("gdrive_sync"),
   mediumWriteLimiter,
-  throttle(300, 8, "drive-file-delete"),
+  throttle(100, 20, "drive-file-delete"),
   validate(deleteFromDriveSchema),
   deleteFromDrive,
 );
@@ -118,7 +118,7 @@ router.post(
   loadPlanContext,
   requireFeature("gdrive_sync"),
   mediumWriteLimiter,
-  throttle(300, 8, "drive-upload"),
+  throttle(100, 20, "drive-upload"),
   validate(uploadFileToDriveSchema),
   uploadFileToDrive,
 );
@@ -128,7 +128,7 @@ router.post(
   loadPlanContext,
   requireFeature("gdrive_sync"),
   mediumWriteLimiter,
-  throttle(300, 8, "drive-upload"),
+  throttle(100, 20, "drive-upload"),
   uploadFileToDrive,
 );
 // Update or Move a file/folder
@@ -138,7 +138,7 @@ router.patch(
   loadPlanContext,
   requireFeature("gdrive_sync"),
   mediumWriteLimiter,
-  throttle(300, 8, "drive-update"),
+  throttle(100, 20, "drive-update"),
   validate(updateDriveItemSchema),
   updateDriveItem,
 );
@@ -148,7 +148,7 @@ router.patch(
   loadPlanContext,
   requireFeature("gdrive_sync"),
   mediumWriteLimiter,
-  throttle(300, 8, "drive-update"),
+  throttle(100, 20, "drive-update"),
   validate(updateDriveItemSchema),
   updateDriveItem,
 );
@@ -159,7 +159,7 @@ router.put(
   loadPlanContext,
   requireFeature("gdrive_sync"),
   mediumWriteLimiter,
-  throttle(300, 8, "drive-file-save"),
+  throttle(150, 15, "drive-file-save"),
   validate(saveDriveFileSchema),
   saveDriveFile,
 );
@@ -170,7 +170,7 @@ router.post(
   loadPlanContext,
   requireFeature("gdrive_sync"),
   mediumWriteLimiter,
-  throttle(300, 8, "drive-move"),
+  throttle(100, 20, "drive-move"),
   validate(moveDriveItemsSchema),
   moveDriveItems,
 );
@@ -203,7 +203,7 @@ router.post(
   loadPlanContext,
   requireFeature("gdrive_sync"),
   mediumWriteLimiter,
-  throttle(300, 8, "drive-folder-create"),
+  throttle(100, 20, "drive-folder-create"),
   validate(uploadFileToDriveSchema), // Same schema: requires parentFolderId in params
   createDriveFolder,
 );
@@ -213,7 +213,7 @@ router.post(
   loadPlanContext,
   requireFeature("gdrive_sync"),
   mediumWriteLimiter,
-  throttle(300, 8, "drive-folder-create"),
+  throttle(100, 20, "drive-folder-create"),
   createDriveFolder,
 );
 // Download an entire folder as a .zip
@@ -223,7 +223,7 @@ router.get(
   loadPlanContext,
   requireFeature("gdrive_sync"),
   heavyOpLimiter,
-  throttle(5000, 1, "drive-folder-download"),
+  throttle(1500, 3, "drive-folder-download"),
   validate(listDriveFolderSchema),
   downloadDriveFolder,
 );
@@ -235,7 +235,7 @@ router.get(
   loadPlanContext,
   requireFeature("gdrive_sync"),
   searchLimiter,
-  throttle(200, 10, "drive-search"),
+  throttle(100, 20, "drive-search"),
   validate(searchDriveFilesSchema),
   searchDriveFiles,
 );

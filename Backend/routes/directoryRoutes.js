@@ -36,7 +36,7 @@ router.post(
   loadPlanContext,
   requireRule("allowUpload"),
   standardWriteLimiter,
-  throttle(100, 12, "dir-delete-batch"),
+  throttle(75, 20, "dir-delete-batch"),
   validate(deleteDirectoryBatchSchema),
   deleteItemsBatch,
 );
@@ -47,7 +47,7 @@ router.patch(
   loadPlanContext,
   requireRule("allowUpload"),
   standardWriteLimiter,
-  throttle(100, 12, "dir-move"),
+  throttle(50, 25, "dir-move"),
   validate(moveDirectorySchema),
   moveItems,
 );
@@ -58,12 +58,12 @@ router.post(
   loadPlanContext,
   requireRule("allowUpload"),
   standardWriteLimiter,
-  throttle(100, 12, "dir-copy"),
+  throttle(50, 25, "dir-copy"),
   validate(copyDirectorySchema),
   copyItems,
 );
 
-// High-speed directory fetching with zero artificial delay & 1,000 req/min limit
+// High-speed directory fetching with zero artificial delay & 1,800 req/min limit
 router.get(
   ["/", "/:dirId"],
   checkAuth,
@@ -78,7 +78,7 @@ router.post(
   loadPlanContext,
   requireRule("allowUpload"),
   standardWriteLimiter,
-  throttle(100, 15, "dir-create"),
+  throttle(50, 30, "dir-create"),
   validate(createDirectorySchema),
   createDirectory,
 );
@@ -89,7 +89,7 @@ router.patch(
   loadPlanContext,
   requireRule("allowUpload"),
   standardWriteLimiter,
-  throttle(100, 15, "dir-rename"),
+  throttle(50, 25, "dir-rename"),
   validate(renameDirectorySchema),
   renameDirectory,
 );
@@ -100,7 +100,7 @@ router.delete(
   loadPlanContext,
   requireRule("allowUpload"),
   standardWriteLimiter,
-  throttle(100, 12, "dir-delete"),
+  throttle(50, 25, "dir-delete"),
   validate(deleteDirectorySchema),
   deleteDirectory,
 );

@@ -51,6 +51,8 @@ import {
   searchLimiter,
   thumbnailLimiter,
   uploadLimiter,
+  uploadChunkLimiter,
+  uploadCompleteLimiter,
   standardWriteLimiter,
   directoryReadLimiter,
   mediumWriteLimiter,
@@ -94,7 +96,7 @@ router.post(
   "/:fileId/starred",
   checkAuth,
   standardWriteLimiter,
-  throttle(50, 12, "file-starred"),
+  throttle(40, 25, "file-starred"),
   setStarredItem,
 );
 
@@ -102,7 +104,7 @@ router.post(
   "/starred",
   checkAuth,
   standardWriteLimiter,
-  throttle(50, 12, "file-starred"),
+  throttle(40, 25, "file-starred"),
   setStarredItem,
 );
 
@@ -171,7 +173,7 @@ router.post(
   loadPlanContext,
   requireRule("allowUpload"),
   uploadLimiter,
-  throttle(300, 8, "file-upload"),
+  throttle(50, 30, "file-upload"),
   validate(uploadVaultInitiateSchema),
   enforceUploadLimit,
   uploadVaultInitate,
@@ -182,7 +184,7 @@ router.post(
   checkAuth,
   loadPlanContext,
   requireRule("allowUpload"),
-  standardWriteLimiter,
+  uploadCompleteLimiter,
   validate(uploadVaultCompleteSchema),
   uploadVaultComplete,
 );
@@ -190,7 +192,7 @@ router.post(
 router.post(
   "/upload-vault/abort",
   checkAuth,
-  standardWriteLimiter,
+  uploadCompleteLimiter,
   validate(uploadVaultAbortSchema),
   uploadVaultAbort,
 );
@@ -201,7 +203,7 @@ router.post(
   loadPlanContext,
   requireRule("allowUpload"),
   uploadLimiter,
-  throttle(300, 8, "file-upload"),
+  throttle(50, 30, "file-upload"),
   validate(uploadVaultMultipartInitiateSchema),
   enforceUploadLimit,
   uploadVaultMultipartInitiate,
@@ -212,7 +214,7 @@ router.post(
   checkAuth,
   loadPlanContext,
   requireRule("allowUpload"),
-  uploadLimiter,
+  uploadChunkLimiter,
   validate(uploadVaultMultipartPartUrlSchema),
   uploadVaultMultipartPartUrl,
 );
@@ -222,7 +224,7 @@ router.post(
   checkAuth,
   loadPlanContext,
   requireRule("allowUpload"),
-  standardWriteLimiter,
+  uploadCompleteLimiter,
   validate(uploadVaultMultipartCompleteSchema),
   uploadVaultMultipartComplete,
 );
@@ -230,7 +232,7 @@ router.post(
 router.post(
   "/upload-vault/multipart/abort",
   checkAuth,
-  standardWriteLimiter,
+  uploadCompleteLimiter,
   validate(uploadVaultMultipartAbortSchema),
   uploadVaultMultipartAbort,
 );
@@ -241,7 +243,7 @@ router.post(
   loadPlanContext,
   requireRule("allowUpload"),
   uploadLimiter,
-  throttle(300, 8, "file-upload"),
+  throttle(50, 30, "file-upload"),
   validate(uploadFileSchema),
   enforceUploadLimit,
   uploadFile,
@@ -253,7 +255,7 @@ router.patch(
   loadPlanContext,
   requireRule("allowUpload"),
   standardWriteLimiter,
-  throttle(100, 12, "file-rename"),
+  throttle(50, 25, "file-rename"),
   validate(renameFileSchema),
   renameFile,
 );
@@ -263,7 +265,7 @@ router.put(
   loadPlanContext,
   requireRule("allowUpload"),
   mediumWriteLimiter,
-  throttle(300, 8, "file-save"),
+  throttle(150, 15, "file-save"),
   validate(saveFileSchema),
   saveFile,
 );
@@ -273,7 +275,7 @@ router.delete(
   loadPlanContext,
   requireRule("allowUpload"),
   standardWriteLimiter,
-  throttle(100, 12, "file-delete"),
+  throttle(50, 25, "file-delete"),
   validate(deleteFileSchema),
   deleteFile,
 );

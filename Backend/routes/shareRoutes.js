@@ -39,7 +39,7 @@ router.post(
   requireFeature("share_links"),
   requireRule("allowSharing"),
   shareLimiter,
-  throttle(500, 5, "share-generate"),
+  throttle(200, 15, "share-generate"),
   validate(generateShareLinkSchema),
   generateShareLink,
 );
@@ -70,7 +70,7 @@ router.delete(
   "/link/:linkId",
   checkAuth,
   shareLimiter,
-  throttle(300, 8, "share-revoke"),
+  throttle(150, 15, "share-revoke"),
   validate(revokeShareLinkSchema),
   revokeShareLink,
 );
@@ -103,7 +103,7 @@ router.post(
   checkAuth,
   loadPlanContext,
   shareLimiter,
-  throttle(500, 5, "share-claim"),
+  throttle(200, 15, "share-claim"),
   validate(claimShareAccessSchema),
   claimShareAccess,
 );

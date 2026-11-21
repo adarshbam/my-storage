@@ -42,7 +42,7 @@ router.delete(
   loadPlanContext,
   requireRule("allowUpload"),
   heavyOpLimiter,
-  throttle(5000, 1, "trash-empty"),
+  throttle(2000, 2, "trash-empty"),
   emptyTrash,
 );
 router.post(
@@ -51,7 +51,7 @@ router.post(
   loadPlanContext,
   requireRule("allowUpload"),
   standardWriteLimiter,
-  throttle(200, 10, "trash-restore-file"),
+  throttle(75, 20, "trash-restore-file"),
   validate(restoreFileSchema),
   restoreFile,
 );
@@ -61,7 +61,7 @@ router.delete(
   loadPlanContext,
   requireRule("allowUpload"),
   standardWriteLimiter,
-  throttle(200, 10, "trash-delete-file"),
+  throttle(75, 20, "trash-delete-file"),
   validate(deleteFileForeverSchema),
   deleteFileForever,
 );
@@ -71,7 +71,7 @@ router.post(
   loadPlanContext,
   requireRule("allowUpload"),
   standardWriteLimiter,
-  throttle(200, 10, "trash-restore-dir"),
+  throttle(75, 20, "trash-restore-dir"),
   validate(restoreDirectorySchema),
   restoreDirectory,
 );
@@ -81,7 +81,7 @@ router.delete(
   loadPlanContext,
   requireRule("allowUpload"),
   standardWriteLimiter,
-  throttle(200, 10, "trash-delete-dir"),
+  throttle(75, 20, "trash-delete-dir"),
   validate(deleteDirectoryForeverSchema),
   deleteDirectoryForever,
 );
@@ -91,7 +91,7 @@ router.post(
   loadPlanContext,
   requireRule("allowUpload"),
   heavyOpLimiter,
-  throttle(5000, 1, "trash-batch-delete"),
+  throttle(1500, 3, "trash-batch-delete"),
   validate(batchDeleteSchema),
   batchDelete,
 );
@@ -101,7 +101,7 @@ router.post(
   loadPlanContext,
   requireRule("allowUpload"),
   heavyOpLimiter,
-  throttle(5000, 1, "trash-batch-restore"),
+  throttle(1500, 3, "trash-batch-restore"),
   validate(batchRestoreSchema),
   batchRestore,
 );

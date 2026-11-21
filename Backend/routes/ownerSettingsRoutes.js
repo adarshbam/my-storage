@@ -45,7 +45,7 @@ router.get(
   checkAuth,
   requireOwner,
   lightReadLimiter,
-  throttle(100, 15, "owner-settings-get"),
+  throttle(100, 20, "owner-settings-get"),
   getOwnerSettings,
 );
 
@@ -54,14 +54,14 @@ router.patch(
   "/global",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "owner-global"),
+  throttle(150, 10, "owner-global"),
   updateGlobalLimits,
 );
 router.post(
   "/global",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "owner-global"),
+  throttle(150, 10, "owner-global"),
   updateGlobalLimits,
 );
 
@@ -70,14 +70,14 @@ router.post(
   "/tier",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "owner-tier-create"),
+  throttle(150, 10, "owner-tier-create"),
   createPlanTier,
 );
 router.post(
   "/tiers/create",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "owner-tier-create"),
+  throttle(150, 10, "owner-tier-create"),
   createPlanTier,
 );
 
@@ -86,7 +86,7 @@ router.patch(
   "/tier/active",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "owner-tier-active"),
+  throttle(150, 10, "owner-tier-active"),
   updatePlanTierActive,
 );
 
@@ -95,7 +95,7 @@ router.patch(
   "/tiers",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "owner-tiers-update"),
+  throttle(150, 10, "owner-tiers-update"),
   updatePlanTiers,
 );
 
@@ -104,14 +104,14 @@ router.patch(
   "/features",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "owner-features"),
+  throttle(150, 10, "owner-features"),
   updateFeatures,
 );
 router.post(
   "/features",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "owner-features"),
+  throttle(150, 10, "owner-features"),
   updateFeatures,
 );
 
@@ -120,14 +120,14 @@ router.patch(
   "/configurations",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "owner-configs"),
+  throttle(150, 10, "owner-configs"),
   updateTierConfigurations,
 );
 router.post(
   "/configurations",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "owner-configs"),
+  throttle(150, 10, "owner-configs"),
   updateTierConfigurations,
 );
 

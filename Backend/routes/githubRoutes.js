@@ -134,7 +134,7 @@ router.get(
 router.post(
   "/repositories",
   heavyOpLimiter,
-  throttle(1000, 3, "gh-repo-create"),
+  throttle(500, 5, "gh-repo-create"),
   validate(createRepositorySchema),
   createRepository,
 );
@@ -151,7 +151,7 @@ router.post(
 router.post(
   "/transfer-from-vault",
   mediumWriteLimiter,
-  throttle(500, 6, "gh-transfer-from"),
+  throttle(150, 15, "gh-transfer-from"),
   validate(transferGithubFromVaultSchema),
   transferFromVault,
 );
@@ -160,7 +160,7 @@ router.post(
 router.post(
   "/move",
   mediumWriteLimiter,
-  throttle(300, 8, "gh-move"),
+  throttle(100, 20, "gh-move"),
   validate(moveGithubItemsSchema),
   moveGithubItems,
 );
@@ -169,7 +169,7 @@ router.post(
 router.patch(
   "/repositories/:owner/:repo/rename",
   mediumWriteLimiter,
-  throttle(300, 8, "gh-rename"),
+  throttle(100, 20, "gh-rename"),
   validate(renameGithubItemSchema),
   renameGithubItem,
 );
@@ -182,7 +182,7 @@ router.patch(
 router.get(
   "/repositories/:owner/:repo/branches",
   directoryReadLimiter,
-  throttle(100, 20, "gh-branches"),
+  throttle(50, 30, "gh-branches"),
   validate(listBranchesSchema),
   listBranches,
 );
@@ -191,7 +191,7 @@ router.get(
 router.post(
   "/repositories/:owner/:repo/branches",
   mediumWriteLimiter,
-  throttle(200, 10, "gh-branch-create"),
+  throttle(100, 15, "gh-branch-create"),
   validate(createBranchSchema),
   createBranch,
 );
@@ -200,7 +200,7 @@ router.post(
 router.delete(
   "/repositories/:owner/:repo/branches/:branch",
   mediumWriteLimiter,
-  throttle(300, 8, "gh-branch-delete"),
+  throttle(150, 12, "gh-branch-delete"),
   validate(deleteBranchSchema),
   deleteBranch,
 );
@@ -221,7 +221,7 @@ router.get(
 router.get(
   "/repositories/:owner/:repo/commits",
   directoryReadLimiter,
-  throttle(100, 30, "gh-commits"),
+  throttle(50, 40, "gh-commits"),
   validate(listCommitsSchema),
   listCommits,
 );
@@ -258,7 +258,7 @@ router.get(
 router.post(
   "/repositories/:owner/:repo/git/restore",
   mediumWriteLimiter,
-  throttle(300, 8, "gh-git-restore"),
+  throttle(150, 15, "gh-git-restore"),
   validate(restoreFileSchema),
   restoreFile,
 );
@@ -267,7 +267,7 @@ router.post(
 router.post(
   "/repositories/:owner/:repo/git/revert",
   mediumWriteLimiter,
-  throttle(300, 8, "gh-git-revert"),
+  throttle(150, 15, "gh-git-revert"),
   validate(revertCommitSchema),
   revertCommit,
 );
@@ -276,7 +276,7 @@ router.post(
 router.post(
   "/repositories/:owner/:repo/git/reset",
   mediumWriteLimiter,
-  throttle(500, 5, "gh-git-reset"),
+  throttle(300, 8, "gh-git-reset"),
   validate(resetBranchSchema),
   resetBranch,
 );
@@ -285,7 +285,7 @@ router.post(
 router.post(
   "/repositories/:owner/:repo/git/cherry-pick",
   mediumWriteLimiter,
-  throttle(300, 8, "gh-git-cherry-pick"),
+  throttle(150, 15, "gh-git-cherry-pick"),
   validate(cherryPickSchema),
   cherryPickCommit,
 );
@@ -294,7 +294,7 @@ router.post(
 router.post(
   "/repositories/:owner/:repo/git/merge",
   mediumWriteLimiter,
-  throttle(300, 8, "gh-git-merge"),
+  throttle(150, 15, "gh-git-merge"),
   validate(mergeBranchSchema),
   mergeBranch,
 );
@@ -307,7 +307,7 @@ router.post(
 router.get(
   "/repositories/:owner/:repo/pulls",
   directoryReadLimiter,
-  throttle(100, 20, "gh-prs-list"),
+  throttle(50, 30, "gh-prs-list"),
   validate(listPullRequestsSchema),
   listPullRequests,
 );
@@ -316,7 +316,7 @@ router.get(
 router.post(
   "/repositories/:owner/:repo/pulls",
   mediumWriteLimiter,
-  throttle(300, 8, "gh-pr-create"),
+  throttle(150, 12, "gh-pr-create"),
   validate(createPullRequestSchema),
   createPullRequest,
 );
@@ -333,7 +333,7 @@ router.get(
 router.put(
   "/repositories/:owner/:repo/pulls/:pull_number/merge",
   mediumWriteLimiter,
-  throttle(500, 6, "gh-pr-merge"),
+  throttle(250, 10, "gh-pr-merge"),
   validate(mergePullRequestSchema),
   mergePullRequest,
 );
@@ -358,7 +358,7 @@ router.get(
 router.post(
   "/repositories/:owner/:repo/pulls/:pull_number/reviews",
   mediumWriteLimiter,
-  throttle(300, 8, "gh-pr-review"),
+  throttle(150, 12, "gh-pr-review"),
   validate(submitPRReviewSchema),
   submitPRReview,
 );
@@ -375,7 +375,7 @@ router.get(
 router.post(
   "/repositories/:owner/:repo/pulls/:pull_number/comments",
   mediumWriteLimiter,
-  throttle(200, 10, "gh-pr-comment"),
+  throttle(100, 15, "gh-pr-comment"),
   validate(createPRCommentSchema),
   createPRComment,
 );
@@ -388,7 +388,7 @@ router.post(
 router.get(
   "/repositories/:owner/:repo/search",
   searchLimiter,
-  throttle(100, 20, "gh-search"),
+  throttle(50, 30, "gh-search"),
   validate(searchRepositorySchema),
   searchRepository,
 );
@@ -413,7 +413,7 @@ router.get(
 router.get(
   "/repositories/:owner/:repo/download",
   heavyOpLimiter,
-  throttle(5000, 1, "gh-repo-download"),
+  throttle(1500, 3, "gh-repo-download"),
   validate(downloadRepositorySchema),
   downloadRepository,
 );
@@ -422,7 +422,7 @@ router.get(
 router.get(
   "/repositories/:owner/:repo/folder-download/*path",
   heavyOpLimiter,
-  throttle(5000, 1, "gh-folder-download"),
+  throttle(1500, 3, "gh-folder-download"),
   validate(downloadFolderSchema),
   downloadFolder,
 );
@@ -431,7 +431,7 @@ router.get(
 router.delete(
   "/repositories/:owner/:repo/*path",
   mediumWriteLimiter,
-  throttle(300, 8, "gh-folder-delete"),
+  throttle(100, 20, "gh-folder-delete"),
   validate(deleteFolderSchema),
   deleteFolder,
 );
@@ -465,7 +465,7 @@ router.get(
 router.post(
   "/file/:owner/:repo/*path",
   mediumWriteLimiter,
-  throttle(300, 8, "gh-file-create"),
+  throttle(100, 20, "gh-file-create"),
   validate(createFileSchema),
   createFile,
 );
@@ -474,7 +474,7 @@ router.post(
 router.put(
   "/file/:owner/:repo/*path",
   mediumWriteLimiter,
-  throttle(300, 8, "gh-file-update"),
+  throttle(100, 20, "gh-file-update"),
   validate(updateFilesSchema),
   updateFiles,
 );
@@ -483,7 +483,7 @@ router.put(
 router.delete(
   "/file/:owner/:repo/*path",
   mediumWriteLimiter,
-  throttle(300, 8, "gh-file-delete"),
+  throttle(100, 20, "gh-file-delete"),
   validate(deleteFileSchema),
   deleteFile,
 );
@@ -495,7 +495,7 @@ router.delete(
 router.get(
   "/repositories/:owner/:repo/releases",
   directoryReadLimiter,
-  throttle(100, 30, "gh-releases-list"),
+  throttle(50, 40, "gh-releases-list"),
   validate(listReleasesSchema),
   listReleases
 );
@@ -503,7 +503,7 @@ router.get(
 router.post(
   "/repositories/:owner/:repo/releases",
   heavyOpLimiter,
-  throttle(2000, 3, "gh-release-create"),
+  throttle(1000, 5, "gh-release-create"),
   validate(createReleaseSchema),
   createRelease
 );
@@ -518,7 +518,7 @@ router.delete(
 router.post(
   "/repositories/:owner/:repo/releases/:releaseId/assets",
   heavyOpLimiter,
-  throttle(2000, 3, "gh-release-asset-upload"),
+  throttle(750, 6, "gh-release-asset-upload"),
   validate(uploadReleaseAssetSchema),
   uploadReleaseAssetFromVault
 );
@@ -526,7 +526,7 @@ router.post(
 router.post(
   "/repositories/:owner/:repo/releases/assets/:assetId/download-to-vault",
   heavyOpLimiter,
-  throttle(3000, 2, "gh-release-asset-download"),
+  throttle(1000, 4, "gh-release-asset-download"),
   validate(downloadReleaseAssetSchema),
   downloadReleaseAssetToVault
 );
@@ -538,7 +538,7 @@ router.post(
 router.get(
   "/repositories/:owner/:repo/actions/workflows",
   directoryReadLimiter,
-  throttle(100, 30, "gh-actions-workflows"),
+  throttle(50, 40, "gh-actions-workflows"),
   validate(listWorkflowsSchema),
   listWorkflows
 );
@@ -546,7 +546,7 @@ router.get(
 router.get(
   "/repositories/:owner/:repo/actions/runs",
   directoryReadLimiter,
-  throttle(100, 30, "gh-actions-runs"),
+  throttle(50, 40, "gh-actions-runs"),
   validate(listWorkflowRunsSchema),
   listWorkflowRuns
 );
@@ -554,7 +554,7 @@ router.get(
 router.post(
   "/repositories/:owner/:repo/actions/workflows/:workflowId/dispatches",
   mediumWriteLimiter,
-  throttle(1000, 5, "gh-actions-dispatch"),
+  throttle(500, 8, "gh-actions-dispatch"),
   validate(dispatchWorkflowSchema),
   dispatchWorkflow
 );
@@ -569,7 +569,7 @@ router.get(
 router.post(
   "/repositories/:owner/:repo/actions/artifacts/:artifactId/import-to-vault",
   heavyOpLimiter,
-  throttle(3000, 2, "gh-artifact-import"),
+  throttle(1000, 4, "gh-artifact-import"),
   validate(importWorkflowArtifactSchema),
   importWorkflowArtifactToVault
 );

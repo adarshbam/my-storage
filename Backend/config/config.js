@@ -18,7 +18,8 @@ if (isTestEnvironment && !fs.existsSync(envPath)) {
 
 // Expected test-only connection targets
 if (fs.existsSync(envPath)) {
-  const EXPECTED_TEST_DB = "mongodb://127.0.0.1:27018/vault_test";
+  const EXPECTED_TEST_DB =
+    "mongodb://127.0.0.1:27018/vault_test?replicaSet=rs0&directConnection=true";
   const EXPECTED_TEST_REDIS = "redis://127.0.0.1:6380";
 
   if (typeof process.loadEnvFile === "function") {

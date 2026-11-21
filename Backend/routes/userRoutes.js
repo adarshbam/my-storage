@@ -44,8 +44,8 @@ const router = express.Router();
 
 router.get("/", checkAuth, lightReadLimiter, getUser);
 
-router.post("/register", registerLimiter, throttle(2000, 2, "register"), registerUser);
-router.post("/login", loginLimiter, throttle(1500, 3, "login"), loginUser);
+router.post("/register", registerLimiter, throttle(1000, 3, "register"), registerUser);
+router.post("/login", loginLimiter, throttle(800, 5, "login"), loginUser);
 router.post(
   "/auth/google",
   loginLimiter,
@@ -57,21 +57,21 @@ router.get("/auth/github", loginLimiter, throttle(500, 5, "oauth-github"), authG
 router.post(
   "/auth/forgot-password",
   passwordResetLimiter,
-  throttle(2000, 2, "forgot-pwd"),
+  throttle(1500, 3, "forgot-pwd"),
   validate(forgotPasswordSchema),
   forgotPassword,
 );
 router.post(
   "/auth/reset-password",
   passwordResetSubmitLimiter,
-  throttle(2000, 2, "reset-pwd"),
+  throttle(1000, 3, "reset-pwd"),
   validate(resetPasswordSchema),
   resetPassword,
 );
 
 router.post("/logout", throttle(100, 10, "logout"), logoutUser);
 router.post("/logout-all", checkAuth, throttle(500, 3, "logout-all"), logoutAllDevices);
-router.post("/profilepic", checkAuth, profilePicLimiter, throttle(1000, 3, "profilepic-upload"), uploadProfilePic);
+router.post("/profilepic", checkAuth, profilePicLimiter, throttle(500, 5, "profilepic-upload"), uploadProfilePic);
 router.get(
   "/profilepic",
   lightReadLimiter,

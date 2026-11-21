@@ -18,7 +18,7 @@ const sourceConfig = fileURLToPath(
 
 const testEnvContents = [
   "NODE_ENV=test",
-  "DB_URL=mongodb://127.0.0.1:27018/vault_test",
+  "DB_URL=mongodb://127.0.0.1:27018/vault_test?replicaSet=rs0&directConnection=true",
   "REDIS_URL=redis://127.0.0.1:6380",
   "SESSION_SECRET=isolated-unit-test-secret-123456789",
 

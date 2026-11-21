@@ -19,7 +19,7 @@ router.post(
   "/send-otp",
   checkAuth,
   recoveryEmailSendLimiter,
-  throttle(2000, 1, "sec-email-otp-send"),
+  throttle(1000, 2, "sec-email-otp-send"),
   sendSecondaryRecoveryEmailOtp
 );
 

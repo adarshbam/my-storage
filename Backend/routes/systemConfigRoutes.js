@@ -16,7 +16,7 @@ router.patch(
   "/",
   checkAuth,
   adminLimiter,
-  throttle(300, 5, "sysconfig-update"),
+  throttle(150, 10, "sysconfig-update"),
   updateSystemConfig,
 );
 

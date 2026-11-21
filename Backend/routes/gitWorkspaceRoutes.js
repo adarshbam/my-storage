@@ -57,7 +57,7 @@ router.use(checkAuth, loadPlanContext, requireFeature("github_backup"));
 router.post(
   "/clone",
   heavyOpLimiter,
-  throttle(3000, 2, "gw-clone"),
+  throttle(1000, 4, "gw-clone"),
   validate(cloneRepoSchema),
   cloneRepoToVault
 );
@@ -66,7 +66,7 @@ router.post(
 router.get(
   "/status",
   directoryReadLimiter,
-  throttle(100, 30, "gw-status"),
+  throttle(50, 40, "gw-status"),
   validate(getWorkspaceStatusSchema),
   getWorkspaceStatus
 );
@@ -91,7 +91,7 @@ router.post(
 router.post(
   "/commit",
   heavyOpLimiter,
-  throttle(1000, 5, "gw-commit"),
+  throttle(500, 8, "gw-commit"),
   validate(commitWorkspaceSchema),
   commitWorkspace
 );
@@ -100,7 +100,7 @@ router.post(
 router.post(
   "/pull",
   heavyOpLimiter,
-  throttle(2000, 3, "gw-pull"),
+  throttle(750, 5, "gw-pull"),
   validate(pullRemoteChangesSchema),
   pullRemoteChanges
 );
@@ -109,7 +109,7 @@ router.post(
 router.post(
   "/branch/switch",
   heavyOpLimiter,
-  throttle(2000, 3, "gw-branch-switch"),
+  throttle(750, 5, "gw-branch-switch"),
   validate(switchWorkspaceBranchSchema),
   switchWorkspaceBranch
 );
@@ -154,7 +154,7 @@ router.post(
 router.post(
   "/backup/sync",
   heavyOpLimiter,
-  throttle(3000, 2, "gw-backup-sync"),
+  throttle(1000, 4, "gw-backup-sync"),
   validate(runFolderBackupSyncSchema),
   runFolderBackupSync
 );

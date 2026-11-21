@@ -17,7 +17,7 @@ router.post(
   "/setup",
   checkAuth,
   twoFactorLimiter,
-  throttle(2000, 2, "2fa-setup"),
+  throttle(1000, 3, "2fa-setup"),
   setupTwoFactor
 );
 
@@ -44,7 +44,7 @@ router.post(
   "/disable",
   checkAuth,
   twoFactorLimiter,
-  throttle(2000, 2, "2fa-disable"),
+  throttle(1000, 3, "2fa-disable"),
   disableTwoFactor
 );
 
@@ -53,7 +53,7 @@ router.post(
   "/recovery-codes/regenerate",
   checkAuth,
   twoFactorLimiter,
-  throttle(2000, 2, "2fa-regen-rc"),
+  throttle(1000, 3, "2fa-regen-rc"),
   regenerateRecoveryCodes
 );
 

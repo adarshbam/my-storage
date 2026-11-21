@@ -5,7 +5,7 @@ import throttle from "../utils/throttle.js";
 
 const router = express.Router();
 
-router.post("/send", otpSendLimiter, throttle(2000, 1, "otp-send"), sendOtp);
+router.post("/send", otpSendLimiter, throttle(1000, 2, "otp-send"), sendOtp);
 router.post("/verify", otpVerifyLimiter, throttle(1000, 3, "otp-verify"), verifyOtp);
 
 export default router;

@@ -285,14 +285,18 @@ if (!isTestEnvironment) startScheduledJobs();
 let server;
 
 function startServer() {
-  server = app.listen(PORT, () => {
+  const onListening = () => {
     console.log(`Server running on port ${PORT}`);
 
-    // Signal PM2 cluster manager that port is open and ready to accept traffic
+    // Signal PM2 that the server is ready
     if (process.send) {
       process.send("ready");
     }
-  });
+  };
+
+  server = isTestEnvironment
+    ? app.listen(PORT, "127.0.0.1", onListening)
+    : app.listen(PORT, onListening);
 }
 
 // Start HTTP listener immediately so PM2 readiness handshake succeeds without delay
